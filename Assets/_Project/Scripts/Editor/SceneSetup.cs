@@ -106,6 +106,7 @@ namespace Callbreak.Editor
             so.FindProperty("_curtain").objectReferenceValue = curtain;
             so.FindProperty("_dialog").objectReferenceValue = dialogObject.GetComponentInChildren<DialogView>(true);
             so.FindProperty("_avatars").objectReferenceValue = EnsureAvatarLibrary();
+            so.FindProperty("_cardSprites").objectReferenceValue = TableCardBuilder.EnsureLibrary();
             SetAutoInject(so, root);
             so.ApplyModifiedPropertiesWithoutUndo();
 

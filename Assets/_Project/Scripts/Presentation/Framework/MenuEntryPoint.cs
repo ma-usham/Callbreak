@@ -1,6 +1,8 @@
 using System;
+using System.Threading;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Ports;
+using Callbreak.Application.Rooms;
 using Callbreak.Application.Settings;
 using UnityEngine.InputSystem;
 using VContainer.Unity;
@@ -20,20 +22,30 @@ namespace Callbreak.Presentation.Framework
         private readonly ISettingsService _settings;
         private readonly IAudioService _audio;
         private readonly IDialogs _dialogs;
+        private readonly IRoomService _rooms;
 
-        public MenuEntryPoint(ScreenRouter router, IAppFlow flow, ISettingsService settings, IAudioService audio, IDialogs dialogs)
+        public MenuEntryPoint(ScreenRouter router, IAppFlow flow, ISettingsService settings, IAudioService audio, IDialogs dialogs, IRoomService rooms)
         {
             _router = router;
             _flow = flow;
             _settings = settings;
             _audio = audio;
             _dialogs = dialogs;
+            _rooms = rooms;
         }
 
         public void Start()
         {
             _settings.Changed += ApplySettings;
             ApplySettings();
+
+            // Coming back to anywhere but the lobby means the player is done with the room.
+            IRoomSession room = _rooms.Current;
+            if (room != null && _flow.PendingMenuEntry != MenuEntry.PrivateLobby)
+            {
+                _ = room.LeaveAsync(CancellationToken.None);
+            }
+
             _router.ShowStack(StackFor(_flow.PendingMenuEntry));
             _audio.PlayMusic(MusicTrack.Menu);
         }
@@ -58,7 +70,7 @@ namespace Callbreak.Presentation.Framework
         {
             switch (entry)
             {
-                case MenuEntry.PrivateLobby when _router.Has(ScreenId.PrivateLobby):
+                case MenuEntry.PrivateLobby when _router.Has(ScreenId.PrivateLobby) && _rooms.Current != null:
                     return new[] { ScreenId.MainMenu, ScreenId.PlayWithFriends, ScreenId.PrivateLobby };
                 case MenuEntry.Matchmaking when _router.Has(ScreenId.Matchmaking):
                     return new[] { ScreenId.MainMenu, ScreenId.Matchmaking };

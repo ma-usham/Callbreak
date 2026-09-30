@@ -39,6 +39,7 @@ namespace Callbreak.Bootstrap
         [SerializeField] private LoadingCurtain _curtain;
         [SerializeField] private DialogView _dialog;
         [SerializeField] private AvatarLibrary _avatars;
+        [SerializeField] private CardSpriteProvider _cardSprites;
         [SerializeField] private GenericTransport _roomTransport;
 
         protected override void Awake()
@@ -76,6 +77,7 @@ namespace Callbreak.Bootstrap
                 .WithParameter(_audioLibrary);
 
             builder.RegisterInstance(_avatars);
+            builder.RegisterInstance(_cardSprites);
 
             // Layers above every scene: dialogs, toasts and the loading curtain (GDD §23).
             builder.RegisterComponent(_dialog);
