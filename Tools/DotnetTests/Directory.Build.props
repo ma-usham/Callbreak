@@ -1,0 +1,16 @@
+<Project>
+  <!-- Mirrors Unity 6000.3's compiler settings so code that builds here builds in the Editor. -->
+  <PropertyGroup>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <UnityScripts>$(MSBuildThisFileDirectory)..\..\Assets\_Project\Scripts</UnityScripts>
+    <UnityTests>$(MSBuildThisFileDirectory)..\..\Assets\_Project\Tests\EditMode</UnityTests>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)bin\$(MSBuildProjectName)\</BaseOutputPath>
+  </PropertyGroup>
+</Project>
