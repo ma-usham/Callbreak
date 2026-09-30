@@ -1,15 +1,19 @@
 {
   // Screen 03 - Join Room (GDD §11). Rects are mockup pixels on 03-join-room.png.
   // Shared menu background and shared kit; only what is unique here is cut or derived from the mockup.
-  // Shared icons and the logo keep their own proportions (rects from ArtSource/Working/CreateRoom/derive/derive.sh
-  // tool fiticon|fitlogo: the sprite's glyph centred on this mockup's glyph at one scale).
+  // Generated kit art (ArtSource/Kit/*.map.csv) is placed at the rects its map rows give, icons at the
+  // opacity that gives this mockup's ink colour in the middle of a stroke (the generated icons are pure
+  // black; the map's "mockup ink" averages in the soft stroke edges, which is too light for thin strokes).
+  // The older shared icons and the logo keep their own proportions (rects from
+  // ArtSource/Working/CreateRoom/derive/derive.sh tool fiticon|fitlogo: the sprite's glyph centred on this
+  // mockup's glyph at one scale).
   "name": "JoinRoom",
   "mockup": "03-join-room.png",
   "background": "shared",
   "nodes": [
     { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [44.8, 41.2, 87.3, 87.3],
       "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
-    { "id": "BackIcon", "parent": "BackButton", "rect": [64.47, 61.64, 49.12, 47.16], "use": "UI/Common/Icon_Back.png", "hole": false },
+    { "id": "BackIcon", "parent": "BackButton", "rect": [69.30, 65.97, 38.76, 37.92], "use": "UI/Icons/Icon_Back.png", "opacity": 0.995 },
     { "id": "AvatarRing", "kind": "button", "bind": "ProfileButton", "group": "HeaderLeft", "shape": "ellipse", "rect": [163.9, 38.0, 95.6, 95.6],
       "use": "UI/Avatars/UI_AvatarRing.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15 },
     { "id": "Avatar", "parent": "AvatarRing", "shape": "ellipse", "rect": [169.1, 43.1, 85.0, 85.0], "use": "UI/Avatars/Avatar_Default.png" },
@@ -25,10 +29,9 @@
     // Generated kit panel (ArtSource/Kit/Panels.map.csv) at the panel's measured edge.
     { "id": "Panel", "shape": "roundrect", "radius": 24.5, "rect": [423.3, 202.6, 825.9, 672.3],
       "use": "UI/Panels/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
-    // The enter-room icon: a 1x cut of this mockup's own glyph as a placeholder (screen 01's 2x cut of the same
-    // icon carries visible matte noise); both get the same kit icon when it exists.
-    // Ink box 766.5,229.1 127.3 x 115.4; the rect adds a 2 px fringe.
-    { "id": "EnterIcon", "parent": "Panel", "shape": "ink", "rect": [764, 227, 132, 120], "out": "Icon_EnterRoom" },
+    // This mockup draws the enter-room icon wider than the kit's: the icon map's stretched rect (4% wider,
+    // 2.6% lower than the icon's own proportions [766.05, 227.08, 127.07, 120.30]) puts its frame on the mockup's.
+    { "id": "EnterIcon", "parent": "Panel", "rect": [763.00, 228.39, 132.14, 117.16], "use": "UI/Icons/Icon_EnterRoom.png", "opacity": 0.98 },
     { "id": "Title", "kind": "label", "parent": "Panel", "text": "Enter room code", "font": "SerifBold", "rect": [604, 350, 468, 70], "key": "ui.join_room.title" },
     { "id": "Helper", "kind": "label", "parent": "Panel", "text": "Ask your friend for their 6-character code.", "font": "SansMedium", "rect": [538, 424, 596, 40], "key": "ui.join_room.helper" },
 
@@ -51,9 +54,7 @@
 
     { "id": "PasteButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [689.54, 612.93, 293.2, 70.31],
       "use": "UI/Buttons/UI_ButtonSecondary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png", "shadowDrop": 2, "shadowOpacity": 0.4 },
-    // The copy/paste glyph is cut here once (placeholder; ink box 741.7,629.2 36.0 x 38.1, the rect adds a
-    // 2 px fringe); screen 04 reuses it for its copy button.
-    { "id": "PasteIcon", "parent": "PasteButton", "shape": "ink", "rect": [739, 627, 41, 43], "out": "Icon_Copy" },
+    { "id": "PasteIcon", "parent": "PasteButton", "rect": [740.71, 627.76, 38.18, 40.79], "use": "UI/Icons/Icon_Copy.png", "opacity": 0.995 },
     { "id": "PasteLabel", "kind": "label", "parent": "PasteButton", "text": "Paste Code", "font": "SansSemiBold", "align": "left", "rect": [798, 632, 142, 34], "key": "ui.join_room.paste" },
 
     { "id": "JoinButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [500.5, 697.6, 670.3, 107.9],

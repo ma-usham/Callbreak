@@ -2,7 +2,10 @@
   // Screen 02 - Create Room (GDD §11). Rects are mockup pixels on 02-create-room.png.
   // Shared menu background and shared kit (panels, buttons, header discs, avatar, divider, logo,
   // common icons); only what is unique to this screen is cut from the mockup.
-  // Shared icons and logos keep their own proportions: their rects come from
+  // Generated kit art (ArtSource/Kit/*.map.csv) is placed at the rects its map rows give, icons at the
+  // opacity that gives this mockup's ink colour in the middle of a stroke (the generated icons are pure
+  // black; the map's "mockup ink" averages in the soft stroke edges, which is too light for thin strokes). The older
+  // shared icons and the logo keep their own proportions: their rects come from
   // `ArtSource/Working/CreateRoom/derive/derive.sh tool fiticon|fitlogo`, which centres the sprite's glyph on
   // this mockup's glyph at one scale (the mockups redraw the same icon a little differently per screen).
   "name": "CreateRoom",
@@ -11,7 +14,7 @@
   "nodes": [
     { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [57.5, 45.1, 82.7, 82.7],
       "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
-    { "id": "BackIcon", "parent": "BackButton", "rect": [76.04, 64.47, 47.10, 45.21], "use": "UI/Common/Icon_Back.png", "hole": false },
+    { "id": "BackIcon", "parent": "BackButton", "rect": [80.90, 68.62, 37.14, 36.33], "use": "UI/Icons/Icon_Back.png" },
     { "id": "AvatarRing", "kind": "button", "bind": "ProfileButton", "group": "HeaderLeft", "shape": "ellipse", "rect": [168.5, 35.3, 94.2, 94.2],
       "use": "UI/Avatars/UI_AvatarRing.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15 },
     { "id": "Avatar", "parent": "AvatarRing", "shape": "ellipse", "rect": [174.1, 40.7, 83.2, 83.2], "use": "UI/Avatars/Avatar_Default.png" },
@@ -34,22 +37,26 @@
       "use": "UI/Panels/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
     { "id": "Title", "kind": "label", "parent": "Panel", "text": "Your table", "font": "SerifBold", "rect": [705, 240, 265, 64], "key": "ui.create_room.title" },
     { "id": "Subtitle", "kind": "label", "parent": "Panel", "text": "SET UP A TABLE FOR YOUR FRIENDS", "font": "SansSemiBold", "tracked": true, "rect": [612, 303, 450, 25], "key": "ui.create_room.subtitle" },
-    { "id": "TitleDivider", "parent": "Panel", "rect": [727.48, 333.46, 223.39, 21.79], "use": "UI/Common/Deco_TitleDivider.png", "hole": false },
+    // The generated title divider, built from parts (ArtSource/Kit/Decor.title-divider.csv): the diamond at
+    // its own size and the line sprite stretched to this mockup's line length, as it is on the right and
+    // mirrored on the left ("mirror", applied by ScreenExtras.Apply from the customizer).
+    { "id": "TitleLineLeft", "parent": "Panel", "rect": [703.5, 341.9, 124.8, 4.2], "use": "UI/Decor/Deco_TitleDivider_Line.png", "mirror": true },
+    { "id": "TitleDiamond", "parent": "Panel", "rect": [828.1, 336.1, 15.8, 15.8], "use": "UI/Decor/Deco_TitleDivider_Diamond.png" },
+    { "id": "TitleLineRight", "parent": "Panel", "rect": [843.6, 341.9, 126.1, 4.2], "use": "UI/Decor/Deco_TitleDivider_Line.png" },
 
     { "id": "RoomNameCaption", "kind": "label", "parent": "Panel", "text": "Room name", "font": "SansBold", "align": "left", "rect": [557, 363, 134, 33], "key": "ui.create_room.room_name" },
     { "id": "RoomNameField", "kind": "input", "parent": "Panel", "shape": "roundrect", "radius": 14.3, "rect": [562.0, 398.9, 548.8, 63.2], "use": "UI_Field_RoomName" },
     { "id": "RoomNameText", "kind": "label", "parent": "RoomNameField", "text": "Friends' Table", "font": "SansSemiBold", "align": "left", "rect": [582, 412, 182, 40] },
 
-    // Generated kit card; its corners are drawn for radius 21, so sliceScale 21 / 15 gives this tile's radius 15.
-    { "id": "PlayersTile", "parent": "Panel", "shape": "roundrect", "radius": 15, "rect": [555.4, 483.8, 270.7, 98.1], "sliceScale": 1.4,
+    // Generated kit card; its corners are drawn for radius 22, so sliceScale 22 / 15 gives this tile's radius 15.
+    { "id": "PlayersTile", "parent": "Panel", "shape": "roundrect", "radius": 15, "rect": [555.4, 483.8, 270.7, 98.1], "sliceScale": 1.45,
       "use": "UI/Panels/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
     { "id": "PlayersIcon", "parent": "PlayersTile", "rect": [576.75, 508.94, 67.37, 46.56], "use": "UI/Icons/Icon_Friends.png", "hole": false },
     { "id": "PlayersCaption", "kind": "label", "parent": "PlayersTile", "text": "Players", "font": "SansBold", "align": "left", "rect": [659, 503, 78, 26], "key": "ui.create_room.players" },
     { "id": "PlayersValue", "kind": "label", "parent": "PlayersTile", "text": "4 players", "font": "SansBold", "align": "left", "rect": [659, 530, 120, 32] },
-    { "id": "MatchTile", "parent": "Panel", "shape": "roundrect", "radius": 15, "rect": [846.3, 483.8, 270.8, 98.2], "sliceScale": 1.4,
+    { "id": "MatchTile", "parent": "Panel", "shape": "roundrect", "radius": 15, "rect": [846.3, 483.8, 270.8, 98.2], "sliceScale": 1.45,
       "use": "UI/Panels/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
-    // Placeholder cut (ink box 877.0,511.4 49.7 x 46.4; the rect adds a 2 px fringe).
-    { "id": "MatchIcon", "parent": "MatchTile", "shape": "ink", "rect": [875, 509, 54, 51], "out": "Icon_Cards" },
+    { "id": "MatchIcon", "parent": "MatchTile", "rect": [875.80, 510.09, 52.19, 48.71], "use": "UI/Icons/Icon_Cards.png", "opacity": 0.99 },
     { "id": "MatchCaption", "kind": "label", "parent": "MatchTile", "text": "Match length", "font": "SansBold", "align": "left", "rect": [949, 503, 133, 25], "key": "ui.create_room.match_length" },
     { "id": "MatchValue", "kind": "label", "parent": "MatchTile", "text": "5 rounds", "font": "SansBold", "align": "left", "rect": [949, 530, 110, 32] },
 
@@ -64,8 +71,7 @@
     { "id": "TurnLabel15", "kind": "label", "parent": "TurnTrack", "text": "15 sec", "font": "SansSemiBold", "rect": [686, 648, 78, 31], "key": "ui.create_room.turn_15", "hole": false },
     { "id": "TurnLabel30", "kind": "label", "parent": "TurnTrack", "text": "30 sec", "font": "SansSemiBold", "ink": "light", "rect": [911, 648, 82, 31], "key": "ui.create_room.turn_30", "hole": false },
 
-    // Placeholder cut (ink box 663.1,712.1 26.2 x 32.6; the rect adds a 2 px fringe).
-    { "id": "LockIcon", "parent": "Panel", "shape": "ink", "rect": [661, 710, 31, 37], "out": "Icon_Lock" },
+    { "id": "LockIcon", "parent": "Panel", "rect": [661.65, 710.38, 28.61, 35.55], "use": "UI/Icons/Icon_Lock.png", "opacity": 0.99 },
     { "id": "PrivateNote", "kind": "label", "parent": "Panel", "text": "Private room · Invite with a code", "font": "SansSemiBold", "align": "left", "rect": [697, 714, 318, 34], "key": "ui.create_room.private_note" },
 
     { "id": "CreateButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [544.3, 761.9, 583.9, 98.0],

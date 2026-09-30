@@ -7,11 +7,12 @@ using UnityEngine;
 namespace Callbreak.Presentation.Screens
 {
     /// <summary>
-    /// GDD §11 screen 03: join a friend's table with a six-character room code. Errors shake the
-    /// code boxes and replace the footer line with the message. Not interactable (fewer than six
-    /// valid characters): the Join button's disabled look, label and chevron dimmed. Busy (while
-    /// joining): the button keeps its look, a spinner takes the chevron's place, and the button,
-    /// the code boxes and Paste ignore taps.
+    /// GDD §11 screen 03: join a friend's table with a six-character room code. Errors give the
+    /// code boxes their error look, shake them (not with reduce motion) and replace the footer
+    /// line with the message. Not interactable (fewer than six valid characters): the Join
+    /// button's disabled look, label and chevron dimmed. Busy (while joining): the button keeps
+    /// its look, a spinner takes the chevron's place, and the button, the code boxes and Paste
+    /// ignore taps.
     /// </summary>
     public sealed class JoinRoomView : UIScreen
     {
@@ -25,6 +26,7 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private TMP_Text _joinButtonLabel;
         [SerializeField] private UnityEngine.UI.Image _joinChevron;
         [SerializeField] private GameObject _joinSpinner;
+        [SerializeField] private UnityEngine.UI.Image _avatar;
         [SerializeField] private TMP_Text _playerName;
         [SerializeField] private CodeInput _codeInput;
         [SerializeField] private GameObject _footer;
@@ -48,6 +50,18 @@ namespace Callbreak.Presentation.Screens
             }
         }
 
+        /// <summary>The player's avatar in the header. A missing sprite keeps the current picture.</summary>
+        public void SetAvatar(Sprite avatar)
+        {
+            if (avatar != null)
+            {
+                _avatar.sprite = avatar;
+            }
+        }
+
+        /// <summary>Reduce motion (GDD §13): an error no longer shakes the boxes; they only take their error look.</summary>
+        public void SetReduceMotion(bool on) => _codeInput.ReduceMotion = on;
+
         /// <summary>Fills the boxes (e.g. after Paste or from an invite link); does not raise <see cref="CodeChanged"/>.</summary>
         public void SetCode(string code) => _codeInput.SetCodeWithoutNotify(code);
 
@@ -65,20 +79,25 @@ namespace Callbreak.Presentation.Screens
             RenderJoinButton();
         }
 
-        /// <summary>Shakes the boxes and shows the message where the footer line is, in Heading Burgundy.</summary>
+        /// <summary>
+        /// Gives the boxes their error look, shakes them and shows the message where the footer
+        /// line is, in Heading Burgundy.
+        /// </summary>
         public void ShowError(string message)
         {
             _errorLabel.text = message;
             _errorLabel.gameObject.SetActive(true);
             _footer.SetActive(false);
+            _codeInput.SetError(true);
             _codeInput.Shake();
         }
 
-        /// <summary>Puts the footer line back.</summary>
+        /// <summary>Puts the footer line and the boxes' normal look back.</summary>
         public void ClearError()
         {
             _errorLabel.gameObject.SetActive(false);
             _footer.SetActive(true);
+            _codeInput.SetError(false);
         }
 
         private void OnEnable()

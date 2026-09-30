@@ -9,13 +9,14 @@ namespace Callbreak.Editor.Screens
 {
     /// <summary>
     /// Screen 03: assembles the <see cref="CodeInput"/> (six boxes, one hidden TMP_InputField over
-    /// them, a stronger-rim focus look per box) and the error line that replaces the footer.
+    /// them, a focus look and an error look per box) and the error line that replaces the footer.
     /// All six letters take the size fitted on the mockup's "B" and are centred in their boxes.
     /// </summary>
     public static class JoinRoomCustomizer
     {
         private const int ReferenceLetter = 1;                                  // the mockup's "B"
         private const float FocusRimGrow = 1.2f;                                // mockup px around the box
+        private const float ErrorRimGrow = 2f;                                  // mockup px around the box
         private const float HeaderGap = 20f;                                    // mockup px kept free between the player name and the logo
         private const float SpinnerArc = 0.75f;                                 // the part of the ring that is drawn
         private const float ErrorGap = 10f;                                     // mockup px between the error line and the footer rules
@@ -75,6 +76,7 @@ namespace Callbreak.Editor.Screens
 
             var letters = new TMP_Text[CodeInput.Length];
             var focusLooks = new GameObject[CodeInput.Length];
+            var errorLooks = new GameObject[CodeInput.Length];
             for (int i = 0; i < CodeInput.Length; i++)
             {
                 if (!ctx.Nodes.TryGetValue($"CodeBox{i}", out RectTransform box) || !ctx.Nodes.TryGetValue($"CodeLetter{i}", out RectTransform letter))
@@ -84,7 +86,8 @@ namespace Callbreak.Editor.Screens
                 }
 
                 letters[i] = letter.GetComponent<TMP_Text>();
-                focusLooks[i] = AddFocusRim(ctx, box, $"CodeBox{i}");
+                focusLooks[i] = AddRim(ctx, box, $"CodeBox{i}", "FocusRim", FocusRim, FocusRimGrow);
+                errorLooks[i] = AddRim(ctx, box, $"CodeBox{i}", "ErrorRim", ErrorColor, ErrorRimGrow);
             }
 
             // One size and one baseline for all six, fitted on the reference letter; each character
@@ -112,35 +115,38 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_input").objectReferenceValue = input;
             SetArray(so.FindProperty("_letters"), letters);
             SetArray(so.FindProperty("_focusLooks"), focusLooks);
+            SetArray(so.FindProperty("_errorLooks"), errorLooks);
             so.FindProperty("_shakeTarget").objectReferenceValue = root;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         /// <summary>
-        /// The focus look: the box's own sprite, tinted with its outline brown and a little larger,
-        /// behind the box, so the rim reads thicker. Hidden until the box is the next to fill.
+        /// A rim look: the box's own sprite in one colour and a little larger, behind the box, so
+        /// that colour shows around it. The focus look uses the boxes' outline brown (the rim reads
+        /// thicker) and shows on the next box to fill; the error look uses Heading Burgundy and
+        /// shows on all six. The mockup shows neither state. Hidden by default.
         /// </summary>
-        private static GameObject AddFocusRim(ScreenBuildContext ctx, RectTransform box, string id)
+        private static GameObject AddRim(ScreenBuildContext ctx, RectTransform box, string id, string name, Color color, float grow)
         {
             var face = box.Find("Face") as RectTransform;
             Image faceImage = face != null ? face.GetComponent<Image>() : null;
             if (faceImage == null)
             {
-                ctx.Warnings.Add($"{id}: no face for the focus rim");
+                ctx.Warnings.Add($"{id}: no face for {name}");
                 return null;
             }
 
-            var rimObject = new GameObject("FocusRim", typeof(RectTransform));
+            var rimObject = new GameObject(name, typeof(RectTransform));
             var rim = (RectTransform)rimObject.transform;
             rim.SetParent(box, false);
             rim.anchorMin = face.anchorMin;
             rim.anchorMax = face.anchorMax;
             rim.pivot = face.pivot;
             rim.anchoredPosition = face.anchoredPosition;
-            rim.sizeDelta = face.sizeDelta + UiBuildKit.FromMock(2f * FocusRimGrow, 2f * FocusRimGrow);
+            rim.sizeDelta = face.sizeDelta + UiBuildKit.FromMock(2f * grow, 2f * grow);
             rim.SetSiblingIndex(face.GetSiblingIndex());
             Image image = UiBuildKit.AddImage(rim, faceImage.sprite, false);
-            image.color = FocusRim;
+            image.color = color;
             rimObject.SetActive(false);
             return rimObject;
         }

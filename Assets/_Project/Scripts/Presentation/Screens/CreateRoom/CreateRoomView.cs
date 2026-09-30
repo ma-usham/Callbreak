@@ -11,7 +11,9 @@ namespace Callbreak.Presentation.Screens
     /// Players and Match length tiles are fixed in v1 but their values are rendered, not baked.
     /// Not interactable (the name is not valid yet): the button's disabled look, label and chevron
     /// dimmed. Busy (the room is being created): the button keeps its look, a spinner takes the
-    /// chevron's place and taps are ignored, so a double tap never creates two rooms.
+    /// chevron's place and taps are ignored, so a double tap never creates two rooms. An error
+    /// (offline, service unavailable, rate-limited) shows its message where the "Private room"
+    /// line is; the presenter makes the button read Retry meanwhile.
     /// </summary>
     public sealed class CreateRoomView : UIScreen
     {
@@ -25,11 +27,15 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private TMP_Text _createButtonLabel;
         [SerializeField] private UnityEngine.UI.Image _createChevron;
         [SerializeField] private GameObject _createSpinner;
+        [SerializeField] private UnityEngine.UI.Image _avatar;
         [SerializeField] private TMP_Text _playerName;
         [SerializeField] private TMP_InputField _roomNameField;
         [SerializeField] private TMP_Text _playersValue;
         [SerializeField] private TMP_Text _matchValue;
         [SerializeField] private SelectableGroup _turnSelector;
+        [SerializeField] private GameObject _lockIcon;
+        [SerializeField] private GameObject _privateNote;
+        [SerializeField] private TMP_Text _errorLabel;
 
         private bool _createInteractable = true;
         private bool _busy;
@@ -43,6 +49,15 @@ namespace Callbreak.Presentation.Screens
         public event Action<int> TurnSecondsChanged;
 
         public void SetPlayerName(string playerName) => SetText(_playerName, playerName);
+
+        /// <summary>The player's avatar in the header. A missing sprite keeps the current picture.</summary>
+        public void SetAvatar(Sprite avatar)
+        {
+            if (avatar != null)
+            {
+                _avatar.sprite = avatar;
+            }
+        }
 
         /// <summary>The field's text ("{Name}'s Table" by default); does not raise <see cref="RoomNameChanged"/>.</summary>
         public void SetRoomName(string roomName)
@@ -66,6 +81,26 @@ namespace Callbreak.Presentation.Screens
         {
             _busy = busy;
             RenderCreateButton();
+        }
+
+        /// <summary>The button's words: "Create Room", or "Retry" while an error shows.</summary>
+        public void SetCreateLabel(string label) => SetText(_createButtonLabel, label);
+
+        /// <summary>Shows the message where the "Private room" line is, in Heading Burgundy.</summary>
+        public void ShowError(string message)
+        {
+            SetText(_errorLabel, message);
+            _errorLabel.gameObject.SetActive(true);
+            _lockIcon.SetActive(false);
+            _privateNote.SetActive(false);
+        }
+
+        /// <summary>Puts the "Private room" line back.</summary>
+        public void ClearError()
+        {
+            _errorLabel.gameObject.SetActive(false);
+            _lockIcon.SetActive(true);
+            _privateNote.SetActive(true);
         }
 
         /// <summary>The Players tile's value ("4 players").</summary>

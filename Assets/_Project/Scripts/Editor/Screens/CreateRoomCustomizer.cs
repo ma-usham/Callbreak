@@ -11,7 +11,8 @@ namespace Callbreak.Editor.Screens
     /// Screen 02: turns the room-name field into a <see cref="TMP_InputField"/> (the fitted label
     /// is its text, a copy of it in a dimmed colour its placeholder) and the 15 sec | 30 sec control
     /// into a <see cref="SelectableGroup"/>. The mockup draws the crimson pill on 30 sec only; the
-    /// 15 sec pill is the same sprite at the mirrored position (the track is symmetric).
+    /// 15 sec pill is the same sprite at the mirrored position (the track is symmetric). It also
+    /// adds the error line that takes the "Private room" line's place when creating a room fails.
     /// </summary>
     public static class CreateRoomCustomizer
     {
@@ -21,13 +22,76 @@ namespace Callbreak.Editor.Screens
         private const int RoomNameMaxLength = 20;   // GDD §11 screen 02: 3-20 characters
         private const float HeaderGap = 20f;        // mockup px kept free between the player name and the logo
         private const float SpinnerArc = 0.75f;     // the part of the ring that is drawn
+        private const float ErrorInset = 12f;       // mockup px kept free between the error line and the button's ends
+        private const float ChevronGap = 16f;       // mockup px kept free between the button's words and its chevron
+        private static readonly Color ErrorColor = new Color32(0x7A, 0x10, 0x16, 0xFF);   // Heading Burgundy (GDD §12)
 
         public static void Customize(ScreenBuildContext ctx)
         {
+            ScreenExtras.Apply(ctx);   // "mirror" on the title divider's left line
             BuildRoomNameField(ctx);
             BuildTurnSelector(ctx);
             BuildSpinner(ctx, "CreateSpinner");
+            BuildErrorLabel(ctx);
             BoundPlayerName(ctx);
+            BoundCreateLabel(ctx);
+        }
+
+        /// <summary>
+        /// The error line (GDD §11 screen 02: "inline message with Retry"): the "Private room"
+        /// note's fitted style in Heading Burgundy, on the note's baseline, centred on the button
+        /// below it and no wider than it. Hidden until ShowError, which hides the lock and the note.
+        /// </summary>
+        private static void BuildErrorLabel(ScreenBuildContext ctx)
+        {
+            if (!ctx.Nodes.TryGetValue("PrivateNote", out RectTransform note) || !ctx.Nodes.ContainsKey("CreateButton"))
+            {
+                ctx.Warnings.Add("PrivateNote: needs the PrivateNote and CreateButton nodes; no error line");
+                return;
+            }
+
+            var errorObject = Object.Instantiate(note.gameObject, note.parent, false);
+            errorObject.name = "ErrorLabel";
+            errorObject.transform.SetSiblingIndex(note.GetSiblingIndex() + 1);
+            var localized = errorObject.GetComponent<LocalizedText>();
+            if (localized != null)
+            {
+                Object.DestroyImmediate(localized);
+            }
+
+            var label = errorObject.GetComponent<TMP_Text>();
+            label.text = "Could not create the room";       // design-time sample; the presenter sets the message
+            label.enableVertexGradient = false;
+            label.color = ErrorColor;
+            label.alignment = TextAlignmentOptions.Baseline;
+
+            // The note is set from its left edge, after the lock; the message is centred instead.
+            LayoutNode noteNode = ctx.Node("PrivateNote");
+            LayoutNode button = ctx.Node("CreateButton");
+            float parentCentreX = !string.IsNullOrEmpty(noteNode.parent) && ctx.Nodes.ContainsKey(noteNode.parent)
+                ? ctx.Node(noteNode.parent).Centre.x
+                : UiBuildKit.ScreenCentre.x;
+            var rect = (RectTransform)errorObject.transform;
+            rect.pivot = new Vector2(0.5f, rect.pivot.y);
+            rect.anchoredPosition = new Vector2((button.Centre.x - parentCentreX) * UiBuildKit.ScaleX, rect.anchoredPosition.y);
+            Bound(label, button.rect[2] - 2f * ErrorInset, 0.75f);
+
+            errorObject.SetActive(false);
+            ctx.Bound["_errorLabel"] = label;
+        }
+
+        /// <summary>
+        /// The button's words change (Retry while an error shows) and differ by language: they
+        /// shrink a little, then end in an ellipsis, before they reach the chevron.
+        /// </summary>
+        private static void BoundCreateLabel(ScreenBuildContext ctx)
+        {
+            if (ctx.Nodes.TryGetValue("CreateButtonLabel", out RectTransform label) && ctx.Nodes.ContainsKey("CreateChevron"))
+            {
+                float[] ink = ctx.Node("CreateButtonLabel").inkBox;
+                float centre = (ink[0] + ink[2]) / 2f;
+                Bound(label.GetComponent<TMP_Text>(), 2f * (ctx.Node("CreateChevron").rect[0] - ChevronGap - centre), 0.7f);
+            }
         }
 
         /// <summary>

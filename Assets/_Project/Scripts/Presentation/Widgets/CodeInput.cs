@@ -11,7 +11,9 @@ namespace Callbreak.Presentation.Widgets
     /// typing, backspace and paste; each box shows one character. Input is uppercased and anything
     /// outside the <see cref="RoomCode"/> alphabet is dropped. Typing always continues at the end,
     /// so the boxes fill left to right and backspace steps back. The next box to fill shows a
-    /// stronger rim while the field has focus, and <see cref="Shake"/> signals an error.
+    /// stronger rim while the field has focus. An error gives every box its error look
+    /// (<see cref="SetError"/>) and shakes the row (<see cref="Shake"/>, unless
+    /// <see cref="ReduceMotion"/> is on).
     /// </summary>
     public sealed class CodeInput : MonoBehaviour
     {
@@ -23,6 +25,7 @@ namespace Callbreak.Presentation.Widgets
         [SerializeField] private TMP_InputField _input;
         [SerializeField] private TMP_Text[] _letters;
         [SerializeField] private GameObject[] _focusLooks;
+        [SerializeField] private GameObject[] _errorLooks;
         [SerializeField] private RectTransform _shakeTarget;
         [SerializeField] private float _shakeDistance = 12f;
 
@@ -30,6 +33,7 @@ namespace Callbreak.Presentation.Widgets
         private Vector2 _restPosition;
         private bool _restKnown;
         private bool _focused;
+        private bool _error;
 
         /// <summary>Raised when the user types, deletes or pastes; carries the normalised code.</summary>
         public event Action<string> Changed;
@@ -42,6 +46,12 @@ namespace Callbreak.Presentation.Widgets
             set => _input.interactable = value;
         }
 
+        /// <summary>
+        /// Reduce motion (GDD §13): <see cref="Shake"/> leaves the boxes where they are, so an
+        /// error shows by their error look and the message alone.
+        /// </summary>
+        public bool ReduceMotion { get; set; }
+
         /// <summary>Shows a code (normalised first) without raising <see cref="Changed"/>.</summary>
         public void SetCodeWithoutNotify(string code)
         {
@@ -53,11 +63,27 @@ namespace Callbreak.Presentation.Widgets
         /// <summary>Gives the field keyboard focus (opens the on-screen keyboard on phones).</summary>
         public void Focus() => _input.ActivateInputField();
 
-        /// <summary>Three horizontal shakes over 400 ms (GDD §11: the boxes shake on a join error).</summary>
+        /// <summary>
+        /// The boxes' error look on or off: a rim in the error colour on all six. While it is on
+        /// it takes the focus rim's place.
+        /// </summary>
+        public void SetError(bool on)
+        {
+            if (_error != on)
+            {
+                _error = on;
+                Render();
+            }
+        }
+
+        /// <summary>
+        /// Three horizontal shakes over 400 ms (GDD §11: the boxes shake on a join error). Does
+        /// nothing while <see cref="ReduceMotion"/> is on.
+        /// </summary>
         public void Shake()
         {
             StopShake();
-            if (_shakeTarget == null || !isActiveAndEnabled)
+            if (ReduceMotion || _shakeTarget == null || !isActiveAndEnabled)
             {
                 return;
             }
@@ -129,7 +155,15 @@ namespace Callbreak.Presentation.Widgets
             {
                 if (_focusLooks[i] != null)
                 {
-                    _focusLooks[i].SetActive(_focused && i == active);
+                    _focusLooks[i].SetActive(_focused && !_error && i == active);
+                }
+            }
+
+            for (int i = 0; i < _errorLooks.Length; i++)
+            {
+                if (_errorLooks[i] != null)
+                {
+                    _errorLooks[i].SetActive(_error);
                 }
             }
         }
