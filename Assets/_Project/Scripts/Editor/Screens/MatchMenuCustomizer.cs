@@ -9,7 +9,7 @@ namespace Callbreak.Editor.Screens
     /// <summary>
     /// Screen 13, the match menu: adds the dim between the table and the panel (the whole screen on
     /// every aspect ratio; it also keeps taps off the table), turns the Sound switch into a
-    /// <see cref="ToggleSwitch"/> drawn by the Settings screen's ON and OFF looks, and makes every
+    /// <see cref="ToggleSwitch"/> drawn by the Controls kit's ON and OFF looks, and makes every
     /// control answer to at least 88 px (GDD §16) without drawing it any larger.
     /// </summary>
     public static class MatchMenuCustomizer
@@ -36,21 +36,22 @@ namespace Callbreak.Editor.Screens
         }
 
         /// <summary>
-        /// Resume (79 px high) and the Scorecard button (85) grow upwards: above Resume there is only
-        /// the mode tag, and the Scorecard button then keeps 16 px from Resume's area. Leave (74)
-        /// grows downwards, where there is only the "paused" note. The switch (85 × 48) grows more
-        /// down than up, so that it too keeps 16 px from the Scorecard button. The close × is 87.
+        /// Resume (the crimson box, 90 px high) needs nothing. The Scorecard button (85) grows
+        /// downwards: the box above it is only 14 px away. Leave (74) grows downwards, where there is
+        /// only the "paused" note. The switch (92 × 52) grows more down than up, so that it keeps
+        /// 16 px from the Scorecard button; below it, it faces Leave over an 8 px wide strip only.
+        /// The close × is 87.
         /// </summary>
         private static void GrowTouchAreas(ScreenBuildContext ctx)
         {
             const float min = TableCustomizer.MinTouch;
             TableCustomizer.MinimumTouch(TargetOf(ctx, "CloseButton"), min, min);
             TableCustomizer.MinimumTouch(TargetOf(ctx, "ResumeButton"), 0f, min, 1f);
-            TableCustomizer.MinimumTouch(TargetOf(ctx, "ScorecardButton"), 0f, min, 1f);
+            TableCustomizer.MinimumTouch(TargetOf(ctx, "ScorecardButton"), 0f, min, 0f);
             TableCustomizer.MinimumTouch(TargetOf(ctx, "LeaveButton"), 0f, min, 0f);
             foreach (Image look in ctx.Nodes["SoundToggle"].GetComponentsInChildren<Image>(true))
             {
-                TableCustomizer.MinimumTouch(look, min, min, 0.38f);
+                TableCustomizer.MinimumTouch(look, min, min, 0.29f);
             }
         }
 
@@ -78,8 +79,8 @@ namespace Callbreak.Editor.Screens
                 return;
             }
 
-            // The mockup draws it ON. The OFF look is centred on it and scaled the same way (the two
-            // cuts differ by a pixel or two: the ON look keeps its light rim).
+            // The mockup draws it ON. The kit's OFF look fills the same box as its ON look, so it takes
+            // ON's place, scaled the same way.
             Image faceImage = face.GetComponent<Image>();
             faceImage.raycastTarget = true;
             face.name = "On";

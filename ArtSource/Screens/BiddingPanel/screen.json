@@ -4,8 +4,9 @@
   // capture puts this panel over a Table instance in the state mockup 07 shows (BiddingPanelPreview).
   // All shared kit (ArtSource/Kit/Panels.map.csv): the "Make your call" modal, the ivory chip, the crimson chip
   // of the chosen call (one sprite that the chip row moves onto whichever chip is chosen; the numbers are
-  // labels above it) and the confirm button. Every chip is its own node so the row can be shortened to
-  // RuleSet.MaxCall.
+  // labels above it). Confirm is the inner screens' plain crimson pill (Controls.map.csv), sliced left and
+  // right only, with its own shadow; its rect is the pill's outer edge. Every chip is its own node so the
+  // row can be shortened to RuleSet.MaxCall.
   "name": "BiddingPanel",
   "mockup": "07-bidding.png",
   "background": "none",
@@ -40,8 +41,8 @@
     { "id": "ChipLabel5", "kind": "label", "parent": "Panel", "text": "6", "font": "SerifBold", "rect": [948.53, 481, 30, 37] },
     { "id": "ChipLabel6", "kind": "label", "parent": "Panel", "text": "7", "font": "SerifBold", "rect": [1033.55, 481, 30, 37] },
     { "id": "ChipLabel7", "kind": "label", "parent": "Panel", "text": "8", "font": "SerifBold", "rect": [1118.57, 481, 30, 37] },
-    { "id": "ConfirmButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 37, "rect": [625.1, 554.9, 421.9, 81.9],
-      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "ConfirmButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 39.6, "rect": [624.34, 554.74, 423.45, 82.15],
+      "use": "UI/Controls/UI_Button_Crimson.png", "shadowUse": "UI/Controls/UI_Button_Crimson_Shadow.png", "shadowDrop": 3.5, "shadowOpacity": 0.43 },
     { "id": "ConfirmLabel", "kind": "label", "parent": "ConfirmButton", "text": "Confirm 4", "font": "SerifBold", "ink": "light", "style": "buttonLabel", "rect": [742, 573, 186, 44] }
   ]
 }
