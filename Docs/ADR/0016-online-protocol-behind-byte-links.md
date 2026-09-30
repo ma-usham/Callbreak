@@ -39,3 +39,47 @@ Moving to dedicated servers (Phase 2) means running `RoomHost` in a server proce
 `IRoomTransport`; adopting NetworkBehaviours later means writing a different `IHostLink` and
 `IClientLink`, not touching the rules of the protocol. What is lost: PurrNet's inspector tooling
 for SyncVars and RPCs, which this design does not use.
+
+## Addendum, 30 Sep 2026: after the online review (protocol version 2)
+
+A read-only review of the online code against GDD §22-27 found gaps; these are now closed, each
+with a test written first:
+- **No seed leaves the host early.** The match id is drawn apart from the shuffle seed, and each
+  round is dealt from a seed drawn when that round starts (`RoundSeededRandom`), so no later
+  round's deck exists while a round is played. The bots draw their own seeds. A test scans every
+  payload of a whole match for every seed.
+- **Per-room identity.** The hello carries a SHA-256 of the room code and the player id
+  (`RoomIdentity`), not the permanent player id, so an id seen in one room is worthless in
+  another. A remote hello can never take the host's seat; a removed player stays out.
+- **Limits on what a guest sends.** Every string is read with a byte limit, guest payloads over
+  256 bytes are dropped (also in the transport, before copying), unknown avatars and decks fall
+  back to defaults. Rate limits (10 intents per second, emotes) were already there.
+- **Faults stay contained.** A handler that throws (a presenter, a subscriber) no longer leaves a
+  room half-updated or a player deaf: the room's own state always completes, each handler runs
+  isolated, and the first exception is rethrown after the frame's work.
+- **Presence and clocks.** An unreadable message keeps an Away seat Away; a player back during
+  their own turn gets no fresh clock (the covering bot finishes it); people coming and going
+  cannot hold a bot's move back; the clock clients see starts when the turn does.
+- **Leaving costs the match.** A lost connection records the match as left, like Leave. The
+  rejoin ticket carries the match id: a ticket that runs out, or one replaced by another match,
+  records its match as left; a rejoin the host refuses because the seat hold is over does too.
+  A room whose host left records nothing (GDD §8).
+- **Host gone.** After three "not found" answers the session closes as "host left". A player
+  who returns after the match ended is shown the final results.
+- **Code collisions.** A code that is live on the relay is refused and redrawn (the relay's
+  join endpoint, as PurrNet's `RoomExistsAsync` asks it).
+
+Still open, for the owner:
+- **The relay path is not encrypted.** Everything between a phone and PurrNet's public relay
+  (`purrtransport.purrservers.com`) is plain UDP; a seat's hand, its room identity and the room
+  code can be read by the relay operator or someone on the same network, who could also take that
+  seat in that room. Accept this for Phase 1, or add a key agreement to hello/welcome and encrypt
+  every payload (a wire change).
+- **The join rate limit is the client's own** (six attempts a minute, forgotten on restart). The
+  GDD's per-device limit needs a service in front of the relay.
+- **Wire size.** Each update carries the seat's whole view, so a guest receives about 16-24 KB
+  per round (54-59 messages, measured by a test), against the GDD §25 figure of under 2 KB per
+  client. Either the figure changes, or updates stop repeating the seat profiles and the score
+  sheet.
+- **"Not found" is slow** on the real relay (PurrNet retries for about 10 s per attempt), and an
+  unreachable relay also reads as "not found".
