@@ -9,7 +9,9 @@ using Callbreak.Infrastructure.Platform;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Widgets;
 using NUnit.Framework;
+using UnityEngine;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 using VContainer;
 
 namespace Callbreak.Tests.PlayMode
@@ -97,6 +99,28 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Menu_NoInternet_MutesTheOnlineButtonsAndPointsToPlayOffline()
+        {
+            yield return _game.Boot(extra: builder => builder.RegisterInstance<INetworkStatus>(new Network(online: false)));
+            ScreenRouter router = _game.MenuRouter;
+            UIScreen menu = router.Get<UIScreen>(ScreenId.MainMenu);
+
+            Assert.Less(GroupOf(menu, "PlayOnlineButton").alpha, 1f, "GDD 11 screen 00: the online buttons are muted");
+            Assert.Less(GroupOf(menu, "PlayWithFriendsButton").alpha, 1f);
+            GameFixture.Press(router, "PlayOnlineButton");
+            GameFixture.Press(router, "PlayWithFriendsButton");
+            yield return null;
+
+            Assert.AreEqual(ScreenId.MainMenu, router.Current, "nothing online opens without a connection");
+            ToastView toast = _game.Project.GetComponentInChildren<ToastView>(true);
+            Assert.IsTrue(toast.IsShowing, "a toast says why");
+            Assert.AreEqual(_game.Services.Resolve<ILocalization>().Get("ui.toast.no_internet"), toast.Text);
+
+            GameFixture.Press(router, "PlayOfflineButton");
+            Assert.AreEqual(ScreenId.OfflineSetup, router.Current, "offline play needs no connection");
+        }
+
+        [UnityTest]
         public IEnumerator Menu_EveryScreenOpensAndBackReturns()
         {
             yield return Boot();
@@ -162,7 +186,7 @@ namespace Callbreak.Tests.PlayMode
         {
             yield return _game.Boot(
                 seed: saves => new SettingsService(saves).IncrementCompletedMatches(),
-                extra: builder => builder.RegisterInstance<INetworkStatus>(new Online()));
+                extra: builder => builder.RegisterInstance<INetworkStatus>(new Network(online: true)));
             GameFixture.Press(_game.MenuRouter, "PlayOfflineButton");
             GameFixture.Press(_game.MenuRouter, "StartButton");
             yield return _game.UntilTable();
@@ -180,7 +204,7 @@ namespace Callbreak.Tests.PlayMode
 
         private IEnumerator Boot(bool freshInstall = false)
         {
-            yield return _game.Boot(freshInstall, extra: builder => builder.RegisterInstance<INetworkStatus>(new Online()));
+            yield return _game.Boot(freshInstall, extra: builder => builder.RegisterInstance<INetworkStatus>(new Network(online: true)));
         }
 
         private static IEnumerator OpenAndReturn(ScreenRouter router, string button, ScreenId expected)
@@ -194,15 +218,34 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(from, router.Current);
         }
 
-        private sealed class Online : INetworkStatus
+        private static CanvasGroup GroupOf(UIScreen screen, string buttonName)
         {
+            foreach (Button button in screen.GetComponentsInChildren<Button>(true))
+            {
+                if (button.name == buttonName)
+                {
+                    return button.GetComponent<CanvasGroup>();
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>A connection that never changes, so the tests do not depend on the machine's.</summary>
+        private sealed class Network : INetworkStatus
+        {
+            public Network(bool online)
+            {
+                IsOnline = online;
+            }
+
             public event Action<bool> Changed
             {
                 add { }
                 remove { }
             }
 
-            public bool IsOnline => true;
+            public bool IsOnline { get; }
         }
     }
 }

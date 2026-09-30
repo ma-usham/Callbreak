@@ -18,6 +18,9 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private UnityEngine.UI.Button _playWithFriendsButton;
         [SerializeField] private UnityEngine.UI.Button _playOfflineButton;
         [SerializeField] private TMP_Text _playerNameText;
+        [SerializeField] private CanvasGroup _playOnlineGroup;
+        [SerializeField] private CanvasGroup _playWithFriendsGroup;
+        [SerializeField] private float _mutedAlpha = 0.5f;
 
         public event Action ProfileClicked;
         public event Action SettingsClicked;
@@ -32,6 +35,17 @@ namespace Callbreak.Presentation.Screens
             {
                 _playerNameText.text = playerName;
             }
+        }
+
+        /// <summary>
+        /// With no internet the two online buttons are muted (GDD §11 screen 00). They still take
+        /// the tap, so the presenter can say why and point to Play Offline.
+        /// </summary>
+        public void SetOnlineAvailable(bool available)
+        {
+            float alpha = available ? 1f : _mutedAlpha;
+            _playOnlineGroup.alpha = alpha;
+            _playWithFriendsGroup.alpha = alpha;
         }
 
         private void OnEnable()

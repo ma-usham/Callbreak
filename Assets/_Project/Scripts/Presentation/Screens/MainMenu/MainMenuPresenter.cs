@@ -73,7 +73,9 @@ namespace Callbreak.Presentation.Screens
             _view.PlayOfflineClicked += OnPlayOffline;
             _view.BackRequested += OnBack;
             _profile.Changed += Render;
+            _network.Changed += OnNetworkChanged;
             Render();
+            OnNetworkChanged(_network.IsOnline);
 
             // GDD §8: the next launch offers the unfinished offline match.
             if (_flow.PreviousState == AppState.Boot && _flow.PendingMenuEntry == MenuEntry.MainMenu && _offlineStore.HasSave)
@@ -92,9 +94,12 @@ namespace Callbreak.Presentation.Screens
             _view.PlayOfflineClicked -= OnPlayOffline;
             _view.BackRequested -= OnBack;
             _profile.Changed -= Render;
+            _network.Changed -= OnNetworkChanged;
         }
 
         private void Render() => _view.SetPlayerName(_profile.DisplayName);
+
+        private void OnNetworkChanged(bool online) => _view.SetOnlineAvailable(online);
 
         private void OnProfile() => _router.Push(ScreenId.Profile);
 

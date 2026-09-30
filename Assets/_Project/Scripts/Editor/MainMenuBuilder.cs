@@ -171,6 +171,8 @@ namespace Callbreak.Editor
             serialized.FindProperty("_playWithFriendsButton").objectReferenceValue = playWithFriends;
             serialized.FindProperty("_playOfflineButton").objectReferenceValue = playOffline;
             serialized.FindProperty("_playerNameText").objectReferenceValue = playerName;
+            serialized.FindProperty("_playOnlineGroup").objectReferenceValue = playOnline.gameObject.AddComponent<CanvasGroup>();
+            serialized.FindProperty("_playWithFriendsGroup").objectReferenceValue = playWithFriends.gameObject.AddComponent<CanvasGroup>();
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             return rootObject;

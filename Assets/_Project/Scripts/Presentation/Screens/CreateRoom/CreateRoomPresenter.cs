@@ -32,6 +32,7 @@ namespace Callbreak.Presentation.Screens
 
         private string _roomName = string.Empty;
         private bool _busy;
+        private CancellationTokenSource _attempt;
 
         public CreateRoomPresenter(
             CreateRoomView view,
@@ -81,6 +82,7 @@ namespace Callbreak.Presentation.Screens
             _router.Changed -= OnScreenChanged;
             _profile.Changed -= RenderHeader;
             _localization.LanguageChanged -= RenderFixedValues;
+            _attempt?.Cancel();
         }
 
         private void OnScreenChanged(ScreenId id)
@@ -114,13 +116,26 @@ namespace Callbreak.Presentation.Screens
             _view.SetMatchLengthValue(_localization.Format("ui.create_room.match_length_value", 5));
         }
 
-        private void OnBack() => _router.Pop();
+        /// <summary>Back while the room is being opened gives the attempt up (GDD §27: "Cancel available").</summary>
+        private void OnBack()
+        {
+            _attempt?.Cancel();
+            _router.Pop();
+        }
 
-        private void OnProfile() => _router.Push(ScreenId.Profile);
+        private void OnProfile() => Open(ScreenId.Profile);
 
-        private void OnSettings() => _router.Push(ScreenId.Settings);
+        private void OnSettings() => Open(ScreenId.Settings);
 
-        private void OnShop() => _router.Push(ScreenId.CardCollection);
+        private void OnShop() => Open(ScreenId.CardCollection);
+
+        private void Open(ScreenId screen)
+        {
+            if (!_busy)
+            {
+                _router.Push(screen);
+            }
+        }
 
         private void OnRoomNameChanged(string text)
         {
@@ -142,25 +157,30 @@ namespace Callbreak.Presentation.Screens
 
         private async Task CreateAsync()
         {
+            var attempt = new CancellationTokenSource();
+            _attempt = attempt;
             _busy = true;
             _view.SetBusy(true);
             _view.SetCreateInteractable(false);
             try
             {
                 var settings = new RoomSettings(ProfileService.NormalizeName(_roomName), _settings.TurnSeconds);
-                RoomResult result = await _rooms.CreateRoomAsync(settings, CancellationToken.None);
-                if (result.Succeeded)
+                RoomResult result = await _rooms.CreateRoomAsync(settings, attempt.Token);
+                bool walkedAway = attempt.IsCancellationRequested || _router.Current != ScreenId.CreateRoom;
+                if (result.Succeeded && walkedAway)
+                {
+                    // Nobody is looking at the room that just opened: close it again.
+                    _ = result.Session.LeaveAsync(CancellationToken.None);
+                }
+                else if (result.Succeeded)
                 {
                     _roomName = string.Empty;
-                    if (_router.Current == ScreenId.CreateRoom)
-                    {
-                        _router.Replace(ScreenId.PrivateLobby);
-                    }
-
-                    return;
+                    _router.Replace(ScreenId.PrivateLobby);
                 }
-
-                _toast.Show(_localization.Get(RoomMessages.KeyFor(result.Error)));
+                else if (!walkedAway)
+                {
+                    _toast.Show(_localization.Get(RoomMessages.KeyFor(result.Error)));
+                }
             }
             catch (Exception e)
             {
@@ -169,6 +189,12 @@ namespace Callbreak.Presentation.Screens
             }
             finally
             {
+                if (_attempt == attempt)
+                {
+                    _attempt = null;
+                }
+
+                attempt.Dispose();
                 _busy = false;
                 _view.SetBusy(false);
                 _view.SetCreateInteractable(IsValid(_roomName));

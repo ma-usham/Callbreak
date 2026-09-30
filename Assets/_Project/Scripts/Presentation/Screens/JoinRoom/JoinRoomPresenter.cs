@@ -27,6 +27,7 @@ namespace Callbreak.Presentation.Screens
 
         private string _code = string.Empty;
         private bool _busy;
+        private CancellationTokenSource _attempt;
 
         public JoinRoomPresenter(
             JoinRoomView view,
@@ -69,6 +70,7 @@ namespace Callbreak.Presentation.Screens
             _view.JoinClicked -= OnJoin;
             _router.Changed -= OnScreenChanged;
             _profile.Changed -= RenderHeader;
+            _attempt?.Cancel();
         }
 
         private void OnScreenChanged(ScreenId id)
@@ -93,11 +95,24 @@ namespace Callbreak.Presentation.Screens
 
         private void RenderHeader() => _view.SetPlayerName(_profile.DisplayName);
 
-        private void OnBack() => _router.Pop();
+        /// <summary>Back while joining gives the attempt up (GDD §27: "Cancel available").</summary>
+        private void OnBack()
+        {
+            _attempt?.Cancel();
+            _router.Pop();
+        }
 
-        private void OnProfile() => _router.Push(ScreenId.Profile);
+        private void OnProfile() => Open(ScreenId.Profile);
 
-        private void OnSettings() => _router.Push(ScreenId.Settings);
+        private void OnSettings() => Open(ScreenId.Settings);
+
+        private void Open(ScreenId screen)
+        {
+            if (!_busy)
+            {
+                _router.Push(screen);
+            }
+        }
 
         private void OnCodeChanged(string code)
         {
@@ -131,25 +146,30 @@ namespace Callbreak.Presentation.Screens
 
         private async Task JoinAsync()
         {
+            var attempt = new CancellationTokenSource();
+            _attempt = attempt;
             _busy = true;
             _view.SetBusy(true);
             _view.SetJoinInteractable(false);
             _view.ClearError();
             try
             {
-                RoomResult result = await _rooms.JoinRoomAsync(_code, CancellationToken.None);
-                if (result.Succeeded)
+                RoomResult result = await _rooms.JoinRoomAsync(_code, attempt.Token);
+                bool walkedAway = attempt.IsCancellationRequested || _router.Current != ScreenId.JoinRoom;
+                if (result.Succeeded && walkedAway)
+                {
+                    // Nobody is looking at the seat that was just taken: give it back.
+                    _ = result.Session.LeaveAsync(CancellationToken.None);
+                }
+                else if (result.Succeeded)
                 {
                     _code = string.Empty;
-                    if (_router.Current == ScreenId.JoinRoom)
-                    {
-                        _router.Replace(ScreenId.PrivateLobby);
-                    }
-
-                    return;
+                    _router.Replace(ScreenId.PrivateLobby);
                 }
-
-                _view.ShowError(_localization.Get(RoomMessages.KeyFor(result.Error)));
+                else if (!walkedAway)
+                {
+                    _view.ShowError(_localization.Get(RoomMessages.KeyFor(result.Error)));
+                }
             }
             catch (Exception e)
             {
@@ -158,6 +178,12 @@ namespace Callbreak.Presentation.Screens
             }
             finally
             {
+                if (_attempt == attempt)
+                {
+                    _attempt = null;
+                }
+
+                attempt.Dispose();
                 _busy = false;
                 _view.SetBusy(false);
                 _view.SetJoinInteractable(RoomCode.IsValid(_code));
