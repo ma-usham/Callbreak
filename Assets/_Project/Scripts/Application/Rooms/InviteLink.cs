@@ -5,7 +5,13 @@ namespace Callbreak.Application.Rooms
     /// <summary>The invite link of GDD §11 screen 04: <c>callbreak://join/AB2CDE</c>.</summary>
     public static class InviteLink
     {
-        private const string Prefix = "callbreak://join/";
+        /// <summary>The URL scheme the app registers with the OS.</summary>
+        public const string Scheme = "callbreak";
+
+        /// <summary>The link's host part: what the link asks the app to do.</summary>
+        public const string Host = "join";
+
+        private const string Prefix = Scheme + "://" + Host + "/";
 
         /// <summary>The room code in <paramref name="url"/>, normalised; false when it is not a valid join link.</summary>
         public static bool TryParse(string url, out string roomCode)

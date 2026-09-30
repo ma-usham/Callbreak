@@ -81,6 +81,9 @@ namespace Callbreak.Bootstrap
             builder.RegisterInstance(_avatars);
             builder.RegisterInstance(_cardSprites);
 
+            // Names in any script: the device's fonts stand behind the game's Latin-only ones.
+            builder.RegisterEntryPoint<SystemFontFallbacks>().AsSelf();
+
             // Layers above every scene: dialogs, toasts and the loading curtain (GDD §23).
             builder.RegisterComponent(_dialog);
             builder.Register<DialogService>(Lifetime.Singleton).As<IDialogs>();

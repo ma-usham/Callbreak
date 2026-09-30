@@ -4,9 +4,11 @@
 // Library/ScriptAssemblies. It catches compile errors before the open Editor sees them: one broken
 // file stops every recompile for everyone sharing the Editor.
 //
-// Usage: node Tools/Unity/compile-check.js [--quiet] [--player]
+// Usage: node Tools/Unity/compile-check.js [--quiet] [--player | --android]
 //   default   the Editor's view: UNITY_EDITOR defined and the UnityEditor modules referenced by
 //             every assembly (runtime code may use UnityEditor inside #if UNITY_EDITOR)
+//   --android the same, as an Editor whose build target is Android sees it: UNITY_ANDROID defined
+//             and Editor assemblies referencing the Android build extensions (build post-processors)
 //   --player  an Android player build's view: no UNITY_EDITOR, no editor references, and no
 //             Editor-only or test assemblies - catches editor API leaking into runtime code
 // Exit code 0 = every assembly compiles; 1 = errors (printed as file(line,col): error CSxxxx ...).
@@ -21,8 +23,9 @@ const csc = path.join(unityData, 'DotNetSdkRoslyn', 'csc.dll');
 const scriptAssemblies = path.join(repo, 'Library', 'ScriptAssemblies');
 const quiet = process.argv.includes('--quiet');
 const player = process.argv.includes('--player');
+const android = process.argv.includes('--android');
 // Each run has its own output folder: several agents run this check at the same time.
-const out = path.join(repo, 'Temp', player ? 'compile-check-player' : 'compile-check', String(process.pid));
+const out = path.join(repo, 'Temp', player ? 'compile-check-player' : android ? 'compile-check-android' : 'compile-check', String(process.pid));
 fs.mkdirSync(out, { recursive: true });
 process.on('exit', () => { try { fs.rmSync(out, { recursive: true, force: true }); } catch (e) { /* best effort */ } });
 
@@ -79,6 +82,7 @@ for (const a of order) {
   if (!a.json.noEngineReferences) refs.push(...engineRefs);
   // In the Editor every assembly with engine references also sees the UnityEditor modules.
   if (!player && (!a.json.noEngineReferences || isEditor || constraints.includes('UNITY_INCLUDE_TESTS'))) refs.push(...editorRefs);
+  if (android && isEditor) refs.push(path.join(unityData, 'PlaybackEngines', 'AndroidPlayer', 'UnityEditor.Android.Extensions.dll'));
   for (const r of a.json.references || []) {
     if (byName.has(r)) { refs.push(path.join(out, r + '.dll')); continue; }
     const dll = path.join(scriptAssemblies, r + '.dll');
@@ -96,7 +100,9 @@ for (const a of order) {
     }
   }
   // Unity defines every UNITY_x_OR_NEWER up to the running version.
-  const platformDefines = player ? ['UNITY_ANDROID', 'UNITY_64'] : ['UNITY_EDITOR', 'UNITY_STANDALONE_WIN', 'UNITY_STANDALONE', 'UNITY_64', 'UNITY_INCLUDE_TESTS', 'DEBUG', 'TRACE'];
+  const platformDefines = player ? ['UNITY_ANDROID', 'UNITY_64']
+    : android ? ['UNITY_EDITOR', 'UNITY_ANDROID', 'UNITY_64', 'UNITY_INCLUDE_TESTS', 'DEBUG', 'TRACE']
+    : ['UNITY_EDITOR', 'UNITY_STANDALONE_WIN', 'UNITY_STANDALONE', 'UNITY_64', 'UNITY_INCLUDE_TESTS', 'DEBUG', 'TRACE'];
   const defines = [...platformDefines, 'UNITY_5_3_OR_NEWER', 'UNITY_5_4_OR_NEWER', 'UNITY_5_5_OR_NEWER', 'UNITY_5_6_OR_NEWER', 'UNITY_2017_1_OR_NEWER', 'UNITY_2017_2_OR_NEWER', 'UNITY_2017_3_OR_NEWER', 'UNITY_2017_4_OR_NEWER', 'UNITY_2018_1_OR_NEWER', 'UNITY_2018_2_OR_NEWER', 'UNITY_2018_3_OR_NEWER', 'UNITY_2018_4_OR_NEWER', 'UNITY_2019_1_OR_NEWER', 'UNITY_2019_2_OR_NEWER', 'UNITY_2019_3_OR_NEWER', 'UNITY_2019_4_OR_NEWER', 'UNITY_2020_1_OR_NEWER', 'UNITY_2020_2_OR_NEWER', 'UNITY_2020_3_OR_NEWER', 'UNITY_2021_1_OR_NEWER', 'UNITY_2021_2_OR_NEWER', 'UNITY_2021_3_OR_NEWER', 'UNITY_2022_1_OR_NEWER', 'UNITY_2022_2_OR_NEWER', 'UNITY_2022_3_OR_NEWER', 'UNITY_2023_1_OR_NEWER', 'UNITY_2023_2_OR_NEWER', 'UNITY_6000_0_OR_NEWER', 'UNITY_6000_1_OR_NEWER', 'UNITY_6000_2_OR_NEWER', 'UNITY_6000_3_OR_NEWER'];
   const rsp = path.join(out, a.name + '.rsp');
   const lines = [
