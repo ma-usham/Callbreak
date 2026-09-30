@@ -14,3 +14,5 @@ of them; the GDD is updated once a decision is confirmed.
 | [014](0014-card-faces-cut-from-reference-sheets.md) | Card faces are cut from the reference sheets at their real proportions | Proposed |
 | [015](0015-local-services-before-ugs.md) | Local adapters for identity, saves and analytics until a Unity Cloud project is linked | Proposed |
 | [016](0016-online-protocol-behind-byte-links.md) | The online protocol is transport-free C#; PurrNet's relay transport only carries its bytes | Proposed |
+| [017](0017-system-fonts-behind-the-game-fonts.md) | The device's fonts stand behind the game's Latin-only fonts; suit symbols are sprites | Proposed |
+| [018](0018-first-launch-and-rejoin-flows.md) | What the menu starts by itself and in which order: invite link, rejoin, resume, first-run guide | Proposed |
