@@ -3,36 +3,37 @@
   // Only the overlay: the table under it is the Table screen (08), which stays on screen; the dim between
   // them is added by the customizer (it must cover the whole screen on every aspect ratio), and the capture
   // puts this overlay over a Table instance in mockup 08's state (MatchMenuPreview).
-  // Shared kit: the panel, the primary and secondary buttons, the small card panel (sound row) and the close
-  // and scorecard icons; the speaker and the switch come from the Settings screen's cuts. Cut here: the
-  // leave icon. The mode pill and the divider are vectors.
-  // The mockup's two buttons have squarer corners than the kit's pills; the kit wins (shared art).
+  // Shared kit (ArtSource/Kit/*.map.csv): the "Game Menu" modal with the gold outline (its rect is the
+  // outline's outer edge), the primary button, the boxed secondary button of this menu (rect: its outline's
+  // outer edge), the tag pill, the small card panel (sound row) and the close, scorecard, speaker and leave
+  // icons (placed at the rects the icons map gives). The switch comes from the Settings screen's cuts. The
+  // divider is a drawn hairline.
+  // The mockup's Resume button has squarer corners than the kit's primary pill; the kit wins (shared art).
   "name": "MatchMenu",
   "mockup": "13-match-menu.png",
   "background": "none",
   "nodes": [
-    { "id": "Panel", "shape": "roundrect", "radius": 27.5, "rect": [550.0, 218.2, 567.2, 512.5], "raycast": true,
-      "use": "UI/Common/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
+    { "id": "Panel", "shape": "roundrect", "radius": 27.5, "rect": [549.6, 217.7, 573.0, 517.9], "raycast": true,
+      "use": "UI/Panels/UI_Panel_Modal_Menu.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
     { "id": "Title", "kind": "label", "parent": "Panel", "text": "Game Menu", "font": "SerifBold", "rect": [690, 242, 292, 54], "key": "ui.match_menu.title" },
     { "id": "CloseButton", "kind": "button", "parent": "Panel", "rect": [1041, 220, 76, 76], "hole": false },
-    { "id": "CloseIcon", "parent": "CloseButton", "shape": "ink", "rect": [1061, 241, 37, 35], "use": "UI/Common/Icon_Close.png" },
+    { "id": "CloseIcon", "parent": "CloseButton", "rect": [1064.00, 243.32, 30.46, 30.46], "use": "UI/Icons/Icon_Close.png" },
 
-    { "id": "ModePill", "parent": "Panel", "shape": "pill", "rect": [708.8, 304.3, 254.1, 36.9],
-      "make": { "type": "pill", "fill": "#DFC6AF", "out": "UI_ModePill" } },
+    { "id": "ModePill", "parent": "Panel", "shape": "pill", "rect": [708.8, 304.3, 254.1, 36.9], "use": "UI/Table/UI_Pill_Tag.png" },
     { "id": "ModeLabel", "kind": "label", "parent": "ModePill", "text": "Offline match · Paused", "font": "SansMedium", "rect": [726, 310, 220, 26] },
 
     { "id": "ResumeButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 14, "rect": [612.1, 363.1, 447.9, 68.8],
       "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
     { "id": "ResumeLabel", "kind": "label", "parent": "ResumeButton", "text": "Resume Game", "font": "SerifBold", "ink": "light", "style": "buttonLabel", "rect": [722, 378, 230, 40], "key": "ui.match_menu.resume" },
 
-    { "id": "ScorecardButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 17.5, "rect": [614.3, 450.2, 442.8, 70.6],
-      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png", "shadowDrop": 2, "shadowOpacity": 0.4 },
-    { "id": "ScorecardIcon", "parent": "ScorecardButton", "shape": "ink", "rect": [716, 461, 44, 48], "use": "UI/Common/Icon_Scorecard.png" },
+    { "id": "ScorecardButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 19, "rect": [611.75, 448.65, 447.65, 74.25],
+      "use": "UI/Table/UI_ButtonSecondary_Box_Normal.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "ScorecardIcon", "parent": "ScorecardButton", "rect": [721.67, 460.95, 33.20, 45.34], "use": "UI/Icons/Icon_Scorecard.png" },
     { "id": "ScorecardLabel", "kind": "label", "parent": "ScorecardButton", "text": "Scorecard", "font": "SansMedium", "rect": [774, 470, 140, 34], "key": "ui.match_menu.scorecard" },
 
-    { "id": "SoundRow", "parent": "Panel", "shape": "roundrect", "radius": 14, "rect": [614.0, 539.8, 444.1, 62.3],
-      "use": "UI/Common/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
-    { "id": "SoundIcon", "parent": "SoundRow", "shape": "ink", "rect": [636, 552, 46, 40], "use": "Screens/Settings/Icon_Sound.png" },
+    { "id": "SoundRow", "parent": "Panel", "shape": "roundrect", "radius": 20, "rect": [614.0, 539.8, 444.1, 62.3], "sliceScale": 1.1,
+      "use": "UI/Panels/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "SoundIcon", "parent": "SoundRow", "rect": [638.75, 554.69, 38.37, 34.72], "use": "UI/Icons/Icon_Sound.png" },
     { "id": "SoundLabel", "kind": "label", "parent": "SoundRow", "text": "Sound", "font": "SansMedium", "align": "left", "rect": [700, 557, 80, 28], "key": "ui.match_menu.sound" },
     { "id": "SoundToggle", "kind": "toggle", "parent": "SoundRow", "shape": "pill", "rect": [967.2, 550.2, 73.9, 41.8],
       "use": "Screens/Settings/UI_Toggle_On.png", "on": "Screens/Settings/UI_Toggle_On", "off": "Screens/Settings/UI_Toggle_Off" },
@@ -40,7 +41,7 @@
     { "id": "Divider", "parent": "Panel", "rect": [626, 618.6, 429, 1.8], "make": { "type": "rect", "fill": "#DEC8B6", "out": "Deco_MenuDivider" } },
 
     { "id": "LeaveButton", "kind": "button", "parent": "Panel", "rect": [700, 624, 272, 64], "hole": false },
-    { "id": "LeaveIcon", "parent": "LeaveButton", "shape": "ink", "rect": [733, 635, 41, 41], "scale": 2, "out": "Icon_Leave" },
+    { "id": "LeaveIcon", "parent": "LeaveButton", "rect": [735.76, 637.67, 35.66, 35.66], "use": "UI/Icons/Icon_Leave.png" },
     { "id": "LeaveLabel", "kind": "label", "parent": "LeaveButton", "text": "Leave Match", "font": "SansSemiBold", "rect": [790, 642, 150, 28], "key": "ui.match_menu.leave" },
     { "id": "PausedNote", "kind": "label", "parent": "Panel", "text": "Your match is paused.", "font": "SansRegular", "rect": [738, 691, 196, 26], "key": "ui.match_menu.paused_note" }
   ]

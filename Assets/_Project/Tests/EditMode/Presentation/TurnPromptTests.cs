@@ -152,6 +152,19 @@ namespace Callbreak.Tests.EditMode.Presentation
             Assert.AreEqual("Bot playing", Status(false, SeatConnection.Left, false, 3, false, true, 1));
         }
 
+        [Test]
+        public void StatusPill_IsGoldOnlyWhileItShowsTheMetCall()
+        {
+            // A seat that met its call and then went away shows the chip, not a gold "Away".
+            foreach (SeatConnection connection in new[] { SeatConnection.Away, SeatConnection.Reconnecting, SeatConnection.BotControlled, SeatConnection.Left })
+            {
+                var gone = new SeatStatusInfo(false, connection, false, 3, false, true, 4);
+                Assert.IsFalse(SeatStatus.IsMet(gone), connection.ToString());
+            }
+
+            Assert.IsTrue(SeatStatus.IsMet(new SeatStatusInfo(true, SeatConnection.Connected, false, 3, false, true, 4)));
+        }
+
         // ------------------------------------------------------------------ hand order
 
         private static string Sorted(string hand, HandSortOrder order)

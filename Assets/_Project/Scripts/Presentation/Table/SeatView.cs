@@ -202,7 +202,10 @@ namespace Callbreak.Presentation.Table
         private void HideBubbleNow()
         {
             _bubbleMotion = default;
-            _bubble.gameObject.SetActive(false);
+            if (_bubble != null)
+            {
+                _bubble.gameObject.SetActive(false);
+            }
         }
 
         private void OnEnable()
@@ -222,7 +225,12 @@ namespace Callbreak.Presentation.Table
 
             Cancel(ref _bubbleMotion);
             Cancel(ref _pulseMotion);
-            _statusPill.rectTransform.localScale = Vector3.one;
+
+            // When the scene unloads the pill may already be gone.
+            if (_statusPill != null)
+            {
+                _statusPill.rectTransform.localScale = Vector3.one;
+            }
         }
 
         private void OnAvatarClicked() => AvatarClicked?.Invoke();

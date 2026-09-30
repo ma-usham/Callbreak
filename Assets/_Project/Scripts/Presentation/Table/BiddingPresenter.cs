@@ -55,6 +55,7 @@ namespace Callbreak.Presentation.Table
             Render();
         }
 
+        /// <summary>Runs after the scene's views are destroyed: it only undoes subscriptions, and never throws.</summary>
         public void Dispose()
         {
             if (!_started)
@@ -63,13 +64,20 @@ namespace Callbreak.Presentation.Table
             }
 
             _started = false;
-            _lifetime.Cancel();
-            _lifetime.Dispose();
-            _view.CallChosen -= OnCallChosen;
-            _view.ConfirmClicked -= OnConfirm;
-            _table.Played -= OnPlayed;
-            _table.Rebuilt -= Render;
-            _localization.LanguageChanged -= Render;
+            try
+            {
+                _view.CallChosen -= OnCallChosen;
+                _view.ConfirmClicked -= OnConfirm;
+                _table.Played -= OnPlayed;
+                _table.Rebuilt -= Render;
+                _localization.LanguageChanged -= Render;
+                _lifetime.Cancel();
+                _lifetime.Dispose();
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
         }
 
         private void OnPlayed(MatchEvent e) => Render();

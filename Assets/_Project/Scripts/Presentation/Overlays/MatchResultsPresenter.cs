@@ -95,18 +95,26 @@ namespace Callbreak.Presentation.Overlays
                 return;
             }
 
+            // After the scene's views are destroyed: only subscriptions are undone, and nothing throws.
             _started = false;
-            _view.PlayAgainClicked -= OnPlayAgain;
-            _view.MainMenuClicked -= OnMainMenu;
-            _view.HomeClicked -= OnMainMenu;
-            _view.ScorecardClicked -= OnScorecard;
-            _view.ScoresClicked -= OnScorecard;
-            _view.SettingsClicked -= OnSettings;
-            _view.BackRequested -= OnBack;
-            _table.Played -= OnPlayed;
-            _table.Rebuilt -= OnRebuilt;
-            _session.SeatsChanged -= OnTextChanged;
-            _localization.LanguageChanged -= OnTextChanged;
+            try
+            {
+                _view.PlayAgainClicked -= OnPlayAgain;
+                _view.MainMenuClicked -= OnMainMenu;
+                _view.HomeClicked -= OnMainMenu;
+                _view.ScorecardClicked -= OnScorecard;
+                _view.ScoresClicked -= OnScorecard;
+                _view.SettingsClicked -= OnSettings;
+                _view.BackRequested -= OnBack;
+                _table.Played -= OnPlayed;
+                _table.Rebuilt -= OnRebuilt;
+                _session.SeatsChanged -= OnTextChanged;
+                _localization.LanguageChanged -= OnTextChanged;
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
         }
 
         public void Tick()

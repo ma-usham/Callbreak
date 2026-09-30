@@ -97,10 +97,16 @@ namespace Callbreak.Presentation.Table
             return localization.Format(IsMet(seat) ? BidWonMetKey : BidWonKey, seat.Call, seat.Won);
         }
 
-        /// <summary>The pill turns gold: the seat has won at least what it called (GDD screen 08, callout 3).</summary>
+        /// <summary>
+        /// The pill turns gold: the seat has won at least what it called (GDD screen 08, callout 3).
+        /// Only while the pill shows that line; a connection chip ("Away") is never gold.
+        /// </summary>
         public static bool IsMet(in SeatStatusInfo seat)
         {
-            return seat.HasCalled && seat.IsPlaying && ScoreCalculator.IsMet(seat.Call, seat.Won);
+            return seat.Connection == SeatConnection.Connected
+                && seat.HasCalled
+                && seat.IsPlaying
+                && ScoreCalculator.IsMet(seat.Call, seat.Won);
         }
     }
 }

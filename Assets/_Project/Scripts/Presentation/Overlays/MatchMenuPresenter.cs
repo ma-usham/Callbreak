@@ -77,6 +77,7 @@ namespace Callbreak.Presentation.Overlays
             Render();
         }
 
+        /// <summary>Runs after the scene's views are destroyed: it only undoes subscriptions, and never throws.</summary>
         public void Dispose()
         {
             if (!_started)
@@ -85,15 +86,22 @@ namespace Callbreak.Presentation.Overlays
             }
 
             _started = false;
-            _lifetime.Cancel();
-            _lifetime.Dispose();
-            _view.CloseClicked -= OnResume;
-            _view.ResumeClicked -= OnResume;
-            _view.ScorecardClicked -= OnScorecard;
-            _view.LeaveClicked -= OnLeave;
-            _view.SoundChanged -= OnSoundChanged;
-            _settings.Changed -= Render;
-            _localization.LanguageChanged -= Render;
+            try
+            {
+                _view.CloseClicked -= OnResume;
+                _view.ResumeClicked -= OnResume;
+                _view.ScorecardClicked -= OnScorecard;
+                _view.LeaveClicked -= OnLeave;
+                _view.SoundChanged -= OnSoundChanged;
+                _settings.Changed -= Render;
+                _localization.LanguageChanged -= Render;
+                _lifetime.Cancel();
+                _lifetime.Dispose();
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
         }
 
         private void Render()

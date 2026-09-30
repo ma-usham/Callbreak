@@ -22,7 +22,8 @@ namespace Callbreak.Editor.Screens
     /// </summary>
     public static class TableCustomizer
     {
-        private const string TableArt = UiBuildKit.ArtRoot + "/Screens/Table";
+        // The table's pills, timer ring and badge come from the shared kit (ArtSource/Kit/Panels.map.csv).
+        private const string TableArt = UiBuildKit.ArtRoot + "/UI/Table";
 
         // ---- The local hand. Mockup 08 draws its cards unevenly (88 to 114 px apart, 116 to 136 wide);
         // this is the even fan that fits its thirteen card corners best, with the tops of the middle
@@ -67,10 +68,16 @@ namespace Callbreak.Editor.Screens
                 }
             }
 
+            // One ornament sprite serves both sides of the round line: the right one is its mirror image.
+            if (ctx.Nodes.TryGetValue("RoundOrnamentRight", out RectTransform ornament) && ornament.Find("Face") is RectTransform ornamentFace)
+            {
+                ornamentFace.localScale = new Vector3(-1f, 1f, 1f);
+            }
+
             RectTransform centre = ctx.Groups["Centre"];
             TMP_Text statusStyle = ctx.Nodes["SeatStatus3"].GetComponent<TMP_Text>();
             TMP_Text nameStyle = ctx.Nodes["SeatName3"].GetComponent<TMP_Text>();
-            UiBuildKit.EnsureCharacters(statusStyle.font, "✓");
+            AddToAtlas(statusStyle.font, "✓");
 
             // A tap on the table itself skips a long animation; everything else sits above this.
             RectTransform tap = Stretched("TableTap", ctx.Content);
@@ -138,6 +145,17 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_cardScale").floatValue = TrickCardWidth * UiBuildKit.ScaleX / TableCardBuilder.CardWidth;
             so.ApplyModifiedPropertiesWithoutUndo();
             ctx.Bound["_trick"] = trick;
+
+            // A tap on the trick area peeks at the previous trick (GDD screen 08); cards lie above it.
+            RectTransform tap = Stretched("Tap", area);
+            tap.SetAsFirstSibling();
+            var tapImage = tap.gameObject.AddComponent<Image>();
+            tapImage.color = new Color(1f, 1f, 1f, 0f);
+            var tapButton = tap.gameObject.AddComponent<Button>();
+            tapButton.transition = Selectable.Transition.None;
+            tapButton.targetGraphic = tapImage;
+            NoNavigation(tapButton);
+            ctx.Bound["_trickTap"] = tapButton;
         }
 
         /// <summary>
@@ -263,10 +281,10 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_bubblePadding").floatValue = 40f;
             so.FindProperty("_bubbleMinWidth").floatValue = 64f * UiBuildKit.ScaleX;
 
-            // The ring sprite is the mockup's orange; the last five seconds multiply it to crimson
-            // (#861018, GDD §12); a met call tints the sand pill gold.
+            // The kit's ring sprite is orange (#F6960B); the last five seconds multiply it towards
+            // crimson (#861018, GDD §12); a met call tints the sand pill gold.
             so.FindProperty("_ringColor").colorValue = Color.white;
-            so.FindProperty("_ringWarningColor").colorValue = new Color(0x86 / 249f, 0x10 / 165f, 0x18 / 28f, 1f);
+            so.FindProperty("_ringWarningColor").colorValue = new Color(0x86 / 246f, 0x10 / 150f, 1f, 1f);
             so.FindProperty("_pillColor").colorValue = Color.white;
             so.FindProperty("_pillMetColor").colorValue = new Color(1f, 0.96f, 0.62f, 1f);
 
@@ -348,6 +366,10 @@ namespace Callbreak.Editor.Screens
             Image pillImage = Sliced(pill, LoadTableSprite("UI_StatusPill"));
             TextMeshProUGUI label = Label("Text", pill, style, "Your turn · Lead any card");
             label.richText = true;
+
+            // The prompt names cards and suits ("Beat Q♥"); the fonts have no suit symbols, so they
+            // are drawn from the suit sprites (each sprite answers to its Unicode character).
+            label.spriteAsset = SuitSpriteBuilder.Ensure();
             pillObject.SetActive(false);
 
             var prompt = holder.AddComponent<TablePromptView>();
@@ -406,7 +428,7 @@ namespace Callbreak.Editor.Screens
             shadowRect.offsetMax = new Vector2(14f, 12f);
             UiBuildKit.AddImage(shadowRect, panelShadow, false);
             RectTransform faceRect = Stretched("Face", cardRect);
-            Image face = UiBuildKit.AddImage(faceRect, UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Common/UI_Panel_Card.png", 0f), true);
+            Image face = UiBuildKit.AddImage(faceRect, UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Panels/UI_Panel_Card.png", 0f), true);
             face.raycastTarget = true;      // taps on the panel itself do not close it
 
             Sprite buttonSprite = UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Buttons/UI_ButtonSecondary_Normal.png", 0f);
@@ -537,6 +559,55 @@ namespace Callbreak.Editor.Screens
         }
 
         // ------------------------------------------------------------------ helpers
+
+        /// <summary>
+        /// Adds characters to a static font atlas from the font's own file: the tick of a met call
+        /// ("Bid 3 · Won 3 ✓") is in Inter but not in the Latin set the atlases were baked with. A
+        /// static atlas has let go of its source font, so it is found again through the GUID the
+        /// asset keeps, used for this one addition, and let go again.
+        /// </summary>
+        private static void AddToAtlas(TMP_FontAsset font, string characters)
+        {
+            if (font == null)
+            {
+                return;
+            }
+
+            bool missing = false;
+            foreach (char c in characters)
+            {
+                missing |= !font.HasCharacter(c, false, false);
+            }
+
+            if (!missing)
+            {
+                return;
+            }
+
+            var so = new SerializedObject(font);
+            string guid = so.FindProperty("m_SourceFontFileGUID").stringValue;
+            var source = AssetDatabase.LoadAssetAtPath<Font>(AssetDatabase.GUIDToAssetPath(guid));
+            if (source == null)
+            {
+                Debug.LogWarning($"[TableCustomizer] {font.name}: no source font to add '{characters}' from.");
+                return;
+            }
+
+            so.FindProperty("m_AtlasPopulationMode").intValue = (int)AtlasPopulationMode.Dynamic;
+            so.FindProperty("m_SourceFontFile").objectReferenceValue = source;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            bool added = font.TryAddCharacters(characters, out string notAdded);
+            so.Update();
+            so.FindProperty("m_AtlasPopulationMode").intValue = (int)AtlasPopulationMode.Static;
+            so.FindProperty("m_SourceFontFile").objectReferenceValue = null;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(font);
+            AssetDatabase.SaveAssets();
+            if (!added)
+            {
+                Debug.LogWarning($"[TableCustomizer] {font.name}: could not add '{notAdded}' to the atlas.");
+            }
+        }
 
         private static Sprite LoadTableSprite(string name) => UiBuildKit.LoadSpriteAt($"{TableArt}/{name}.png", 0f);
 

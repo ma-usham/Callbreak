@@ -106,18 +106,26 @@ namespace Callbreak.Presentation.Overlays
                 return;
             }
 
+            // After the scene's views are destroyed: only subscriptions are undone, and nothing throws.
             _started = false;
-            _lifetime.Cancel();
-            _lifetime.Dispose();
-            _view.NextClicked -= OnNext;
-            _view.ScorecardClicked -= OnScorecard;
-            _view.SettingsClicked -= OnSettings;
-            _view.BackClicked -= OnBack;
-            _view.BackRequested -= OnBack;
-            _table.Played -= OnPlayed;
-            _table.Rebuilt -= OnRebuilt;
-            _session.SeatsChanged -= OnSeatsChanged;
-            _localization.LanguageChanged -= OnLanguageChanged;
+            try
+            {
+                _view.NextClicked -= OnNext;
+                _view.ScorecardClicked -= OnScorecard;
+                _view.SettingsClicked -= OnSettings;
+                _view.BackClicked -= OnBack;
+                _view.BackRequested -= OnBack;
+                _table.Played -= OnPlayed;
+                _table.Rebuilt -= OnRebuilt;
+                _session.SeatsChanged -= OnSeatsChanged;
+                _localization.LanguageChanged -= OnLanguageChanged;
+                _lifetime.Cancel();
+                _lifetime.Dispose();
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
         }
 
         public void Tick()
@@ -231,9 +239,9 @@ namespace Callbreak.Presentation.Overlays
 
         private void Fill(bool hidden)
         {
+            // The button first: whatever else this screen shows, the player must be able to go on.
+            RenderNext();
             ResultsText.RoundRowOrder(_session.LocalSeat, _rows);
-            _view.SetRoundTitle(_localization.Format(RoundTitleKey, _result.Round, _session.Rules.Rounds));
-            _view.SetFooter(IsLastRound ? string.Empty : _localization.Format(FooterNextKey, _result.Round + 1));
             _view.SetHighlightRow(0);
             for (int row = 0; row < _rows.Length; row++)
             {
@@ -248,7 +256,8 @@ namespace Callbreak.Presentation.Overlays
                 _view.SetRowVisible(row, !hidden);
             }
 
-            RenderNext();
+            _view.SetRoundTitle(_localization.Format(RoundTitleKey, _result.Round, _session.Rules.Rounds));
+            _view.SetFooter(IsLastRound ? string.Empty : _localization.Format(FooterNextKey, _result.Round + 1));
         }
 
         private void SetRow(int row, int shownDeltaTenths)

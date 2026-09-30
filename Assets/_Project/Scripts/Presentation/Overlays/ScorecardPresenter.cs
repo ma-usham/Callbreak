@@ -80,15 +80,23 @@ namespace Callbreak.Presentation.Overlays
                 return;
             }
 
+            // After the scene's views are destroyed: only subscriptions are undone, and nothing throws.
             _started = false;
-            _view.BackClicked -= Close;
-            _view.PrimaryClicked -= Close;
-            _view.BackRequested -= Close;
-            _view.SettingsClicked -= OnSettings;
-            _table.Played -= OnPlayed;
-            _table.Rebuilt -= Render;
-            _session.SeatsChanged -= Render;
-            _localization.LanguageChanged -= Render;
+            try
+            {
+                _view.BackClicked -= Close;
+                _view.PrimaryClicked -= Close;
+                _view.BackRequested -= Close;
+                _view.SettingsClicked -= OnSettings;
+                _table.Played -= OnPlayed;
+                _table.Rebuilt -= Render;
+                _session.SeatsChanged -= Render;
+                _localization.LanguageChanged -= Render;
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
         }
 
         private void OnPlayed(MatchEvent e)

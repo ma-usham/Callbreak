@@ -6,6 +6,8 @@ namespace Callbreak.Presentation.Table
     /// The middle of the table, where the current trick lies (GDD §11 T rules: "Trick cards sit
     /// toward the player who played them, rotated ±6°"). Four slots by relative seat (0 bottom,
     /// 1 right, 2 top, 3 left), measured on mockup 08; a later card lies over an earlier one.
+    /// It can also show the previous trick in place of the current one for a moment (the peek of
+    /// GDD screen 08: "tap the trick area to peek at the previous trick").
     /// </summary>
     public sealed class TrickAreaView : MonoBehaviour
     {
@@ -17,9 +19,13 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private float _cardScale = 0.82f;
 
         private readonly CardView[] _cards = new CardView[Slots];
+        private readonly CardView[] _peek = new CardView[Slots];
 
         /// <summary>Parent of the trick's cards.</summary>
         public RectTransform Area => _area;
+
+        /// <summary>The previous trick is lying in the slots; the current trick's cards are hidden meanwhile.</summary>
+        public bool IsPeeking { get; private set; }
 
         public int Count
         {
@@ -77,9 +83,57 @@ namespace Callbreak.Presentation.Table
             return card;
         }
 
+        /// <summary>Starts the peek: the current trick's cards step aside for the previous trick's.</summary>
+        public void BeginPeek()
+        {
+            IsPeeking = true;
+            for (int i = 0; i < Slots; i++)
+            {
+                if (_cards[i] != null)
+                {
+                    _cards[i].SetAlpha(0f);
+                }
+            }
+        }
+
+        /// <summary>A card of the previous trick, face up, laid in the slot of the seat that played it.</summary>
+        public void AdoptPeek(int relativeSeat, CardView card)
+        {
+            _peek[relativeSeat] = card;
+            card.Rect.SetParent(_area, false);
+            card.Rect.SetAsLastSibling();
+            card.SetShadow(true);
+            card.Placement = Slot(relativeSeat);
+        }
+
+        /// <summary>Ends the peek: the previous trick's cards go back to the pool and the current trick shows again.</summary>
+        public void EndPeek(CardViewPool pool)
+        {
+            if (!IsPeeking)
+            {
+                return;
+            }
+
+            IsPeeking = false;
+            for (int i = 0; i < Slots; i++)
+            {
+                if (_peek[i] != null)
+                {
+                    pool.Return(_peek[i]);
+                    _peek[i] = null;
+                }
+
+                if (_cards[i] != null)
+                {
+                    _cards[i].SetAlpha(1f);
+                }
+            }
+        }
+
         /// <summary>Returns every trick card to the pool.</summary>
         public void Clear(CardViewPool pool)
         {
+            EndPeek(pool);
             for (int i = 0; i < Slots; i++)
             {
                 if (_cards[i] != null)

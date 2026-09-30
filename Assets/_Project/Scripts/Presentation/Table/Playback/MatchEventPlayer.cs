@@ -124,6 +124,18 @@ namespace Callbreak.Presentation.Table.Playback
             animation?.Finish();
         }
 
+        /// <summary>
+        /// Drops the playing animation and every waiting event without finishing anything: for when
+        /// the table itself is going away (the scene unloads) and the views an animation would
+        /// settle no longer exist. <see cref="Clear"/> is for a table that stays.
+        /// </summary>
+        public void Abandon()
+        {
+            _animation = null;
+            _current = null;
+            _queue.Clear();
+        }
+
         private void Complete()
         {
             MatchEvent e = _current;

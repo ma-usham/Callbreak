@@ -22,6 +22,7 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private UnityEngine.UI.Button _emoteButton;
         [SerializeField] private UnityEngine.UI.Button _sortButton;
         [SerializeField] private UnityEngine.UI.Button _tableTap;
+        [SerializeField] private UnityEngine.UI.Button _trickTap;
         [SerializeField] private TMP_Text _roundLabel;
         [SerializeField] private TMP_Text _trickLabel;
         [SerializeField] private SeatView[] _seat;
@@ -32,6 +33,9 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private EmotePickerView _emotes;
         [SerializeField] private GameObject _reconnecting;
         [SerializeField] private UnityEngine.UI.Button _imBackButton;
+
+        // The GDD asks for a small "Trick 6 / 13" under the round line; mockup 08 does not draw it.
+        [SerializeField] private bool _showTrickCounter;
 
         /// <summary>Home: opens the match menu; it never leaves the table at once (GDD screen 07, callout 2).</summary>
         public event Action HomeClicked;
@@ -46,6 +50,9 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>A tap on the table itself, beside every control: skips a long animation.</summary>
         public event Action TableTapped;
+
+        /// <summary>A tap on the trick area: skips an animation, or peeks at the previous trick (GDD screen 08).</summary>
+        public event Action TrickTapped;
 
         /// <summary>The "I'm back" banner was tapped (GDD §8: an Away player takes the seat back).</summary>
         public event Action ImBackClicked;
@@ -64,6 +71,9 @@ namespace Callbreak.Presentation.Table
         public TablePromptView Prompt => _prompt;
 
         public EmotePickerView Emotes => _emotes;
+
+        /// <summary>Whether the HUD shows "Trick 6 / 13" under the round line (off: mockup 08 has no such line).</summary>
+        public bool ShowTrickCounter => _showTrickCounter;
 
         /// <summary>"ROUND 1 / 5".</summary>
         public void SetRound(string text)
@@ -123,6 +133,7 @@ namespace Callbreak.Presentation.Table
             _emoteButton.onClick.AddListener(OnEmote);
             _sortButton.onClick.AddListener(OnSort);
             _tableTap.onClick.AddListener(OnTableTap);
+            _trickTap.onClick.AddListener(OnTrickTap);
             _imBackButton.onClick.AddListener(OnImBack);
             _hand.Touched += OnTableTap;
         }
@@ -135,6 +146,7 @@ namespace Callbreak.Presentation.Table
             _emoteButton.onClick.RemoveListener(OnEmote);
             _sortButton.onClick.RemoveListener(OnSort);
             _tableTap.onClick.RemoveListener(OnTableTap);
+            _trickTap.onClick.RemoveListener(OnTrickTap);
             _imBackButton.onClick.RemoveListener(OnImBack);
             _hand.Touched -= OnTableTap;
         }
@@ -150,6 +162,8 @@ namespace Callbreak.Presentation.Table
         private void OnSort() => SortClicked?.Invoke();
 
         private void OnTableTap() => TableTapped?.Invoke();
+
+        private void OnTrickTap() => TrickTapped?.Invoke();
 
         private void OnImBack() => ImBackClicked?.Invoke();
 

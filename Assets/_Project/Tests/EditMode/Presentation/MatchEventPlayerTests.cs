@@ -211,6 +211,31 @@ namespace Callbreak.Tests.EditMode.Presentation
         }
 
         [Test]
+        public void Abandon_DropsEverything_WithoutTouchingTheAnimation()
+        {
+            // The scene is unloading: the views the animation would settle are already destroyed.
+            MatchEventPlayer player = NewPlayer(out FakePlayback playback, out List<string> played);
+            playback.CardSeconds = 1f;
+            player.Enqueue(Played("9♥"));
+            player.Enqueue(Played("Q♥"));
+            player.Tick(0.1f);
+            float elapsed = playback.Animations[0].Elapsed;
+
+            player.Abandon();
+            Assert.IsTrue(player.IsIdle);
+            Assert.IsNull(player.Current);
+            Assert.AreEqual(0, player.Backlog);
+            Assert.IsFalse(playback.Animations[0].Finished, "nothing is finished: there is nothing left to finish it on");
+            Assert.AreEqual(elapsed, playback.Animations[0].Elapsed, "and nothing is ticked");
+            CollectionAssert.AreEqual(new[] { "begin card 9♥" }, playback.Log, "no End either");
+            CollectionAssert.IsEmpty(played);
+
+            player.Tick(5f);
+            Assert.AreEqual(1, playback.Animations.Count, "the dropped events never begin");
+            Assert.DoesNotThrow(() => player.Abandon(), "abandoning an idle player is harmless");
+        }
+
+        [Test]
         public void EventsEnqueuedWhilePlaying_JoinTheEndOfTheQueue()
         {
             MatchEventPlayer player = NewPlayer(out FakePlayback playback, out List<string> played);

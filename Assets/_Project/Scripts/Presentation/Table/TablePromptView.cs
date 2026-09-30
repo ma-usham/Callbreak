@@ -94,8 +94,17 @@ namespace Callbreak.Presentation.Table
             }
 
             _motion = default;
-            _pillImage.color = _pillColor;
-            _pill.localScale = Vector3.one;
+
+            // When the scene unloads the pill may already be gone.
+            if (_pillImage != null)
+            {
+                _pillImage.color = _pillColor;
+            }
+
+            if (_pill != null)
+            {
+                _pill.localScale = Vector3.one;
+            }
         }
 
         private void OnDisable()

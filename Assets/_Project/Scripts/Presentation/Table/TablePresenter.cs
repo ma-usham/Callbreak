@@ -15,6 +15,7 @@ using Callbreak.Core.Rules;
 using Callbreak.Core.Views;
 using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
+using Callbreak.Presentation.Screens;
 using Callbreak.Presentation.Table.Playback;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -30,8 +31,8 @@ namespace Callbreak.Presentation.Table
     /// input stays locked until that play's own event has played, the session refuses it, or two
     /// seconds pass, when the card rolls back; an illegal tap shakes the card and flashes the prompt
     /// that says what the rules ask for. It also drives the HUD, the turn prompt, the turn clock,
-    /// emotes, the sort button and the way into the match menu, scorecard and settings, and pauses
-    /// an offline match while one of those covers the table.
+    /// emotes, the sort button, the peek at the previous trick and the way into the match menu,
+    /// scorecard and settings, and pauses an offline match while one of those covers the table.
     /// </summary>
     public sealed class TablePresenter : IStartable, ITickable, IDisposable, IEventPlayback
     {
@@ -45,6 +46,9 @@ namespace Callbreak.Presentation.Table
         private const string HostLeftToastKey = "ui.toast.host_left";
         private const string WelcomeBackToastKey = "ui.toast.welcome_back";
         private const string LeftTableToastKey = "ui.toast.left_table";
+        private const string AutoTagKey = "ui.tag.auto";
+        private const string YourTurnBannerKey = "ui.banner.your_turn";
+        private const string MainMenuLabelKey = "ui.match_results.main_menu";
         private const string CallTitleKey = "ui.bidding.title";
         private const float CallBubbleSeconds = 0.3f;
         private const float BubbleHoldSeconds = 1.4f;
@@ -53,6 +57,10 @@ namespace Callbreak.Presentation.Table
         private const double WarningSeconds = 5.0;
         private const float MaxFrameSeconds = 0.25f;
         private const int DealSoundEvery = 6;
+
+        // A presenter that follows the table (results, scorecard, call panel) and fails must not
+        // stall the table: its error is logged and the others still hear of the event.
+        private static readonly Action<Exception> FollowerFailed = Debug.LogException;
 
         private readonly TableView _view;
         private readonly GameplayScreen _gameplay;
@@ -87,7 +95,6 @@ namespace Callbreak.Presentation.Table
         private int _dealtCards;
         private int _lastTickSecond = -1;
         private bool _warned;
-        private string _turnPrompt = string.Empty;
 
         public TablePresenter(
             TableView view,
@@ -121,7 +128,7 @@ namespace Callbreak.Presentation.Table
             _flow = flow;
             _player = new MatchEventPlayer(this);
             _skin = new TableSkin(cards, avatars);
-            _renderer = new TableRenderer(view, _skin, session, settings, localization);
+            _renderer = new TableRenderer(view, _skin, session, settings, localization) { ShowTrickCounter = view.ShowTrickCounter };
         }
 
         /// <summary>The event queue, for tests and diagnostics.</summary>
@@ -151,6 +158,7 @@ namespace Callbreak.Presentation.Table
             _view.EmoteClicked += OnEmoteButton;
             _view.SortClicked += OnSort;
             _view.TableTapped += OnTableTapped;
+            _view.TrickTapped += OnTrickTapped;
             _view.ImBackClicked += OnImBack;
             _view.AppPaused += OnAppPaused;
             _view.Hand.CardChosen += OnCardChosen;
@@ -178,6 +186,13 @@ namespace Callbreak.Presentation.Table
             RenderAll(false);
         }
 
+        /// <summary>
+        /// The scene's scope disposes this when the scene unloads, which is after Unity has destroyed
+        /// the scene's objects: nothing here may touch a view. The event queue is dropped, not
+        /// finished (its animations would settle cards that no longer exist), and only subscriptions
+        /// are undone. It never throws: an exception here would leave every presenter disposed after
+        /// this one still listening to the app-wide services.
+        /// </summary>
         public void Dispose()
         {
             if (!_started)
@@ -186,33 +201,44 @@ namespace Callbreak.Presentation.Table
             }
 
             _started = false;
-            _lifetime.Cancel();
-            _lifetime.Dispose();
-            _player.Clear();
-            _session.EventReceived -= OnEvent;
-            _session.Resynced -= OnResynced;
-            _session.SeatsChanged -= OnSeatsChanged;
-            _session.StatusChanged -= OnStatusChanged;
-            _session.EmoteReceived -= OnEmoteReceived;
-            _settings.Changed -= OnSettingsChanged;
-            _localization.LanguageChanged -= OnLanguageChanged;
-            _router.Changed -= OnScreenChanged;
-            _gameplay.BackRequested -= OnHome;
-
-            _view.HomeClicked -= OnHome;
-            _view.ScoresClicked -= OnScores;
-            _view.SettingsClicked -= OnSettings;
-            _view.EmoteClicked -= OnEmoteButton;
-            _view.SortClicked -= OnSort;
-            _view.TableTapped -= OnTableTapped;
-            _view.ImBackClicked -= OnImBack;
-            _view.AppPaused -= OnAppPaused;
-            _view.Hand.CardChosen -= OnCardChosen;
-            _view.Emotes.EmoteChosen -= OnEmoteChosen;
-            _view.Emotes.Dismissed -= OnEmotesDismissed;
-            for (int rel = 1; rel < TableView.SeatCount; rel++)
+            try
             {
-                _view.Seat(rel).AvatarClicked -= _avatarHandlers[rel];
+                _player.Abandon();
+                _optimistic = null;
+                _session.EventReceived -= OnEvent;
+                _session.Resynced -= OnResynced;
+                _session.SeatsChanged -= OnSeatsChanged;
+                _session.StatusChanged -= OnStatusChanged;
+                _session.EmoteReceived -= OnEmoteReceived;
+                _settings.Changed -= OnSettingsChanged;
+                _localization.LanguageChanged -= OnLanguageChanged;
+                _router.Changed -= OnScreenChanged;
+                _gameplay.BackRequested -= OnHome;
+
+                _view.HomeClicked -= OnHome;
+                _view.ScoresClicked -= OnScores;
+                _view.SettingsClicked -= OnSettings;
+                _view.EmoteClicked -= OnEmoteButton;
+                _view.SortClicked -= OnSort;
+                _view.TableTapped -= OnTableTapped;
+                _view.TrickTapped -= OnTrickTapped;
+                _view.ImBackClicked -= OnImBack;
+                _view.AppPaused -= OnAppPaused;
+                _view.Hand.CardChosen -= OnCardChosen;
+                _view.Emotes.EmoteChosen -= OnEmoteChosen;
+                _view.Emotes.Dismissed -= OnEmotesDismissed;
+                for (int rel = 1; rel < TableView.SeatCount; rel++)
+                {
+                    _view.Seat(rel).AvatarClicked -= _avatarHandlers[rel];
+                }
+
+                // Last: a cancelled await continues at once, and must find this presenter stopped.
+                _lifetime.Cancel();
+                _lifetime.Dispose();
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
             }
         }
 
@@ -251,10 +277,11 @@ namespace Callbreak.Presentation.Table
             _player.Clear();
             _optimistic = null;
             _playLock.Release();
+            EndPeek();
             State.Reset(view);
             _view.Prompt.Hide();
             RenderAll(false);
-            _table.NotifyRebuilt();
+            _table.NotifyRebuilt(FollowerFailed);
         }
 
         private void OnSeatsChanged()
@@ -334,9 +361,7 @@ namespace Callbreak.Presentation.Table
             _view.SetReconnecting(status == SessionStatus.Reconnecting);
             if (status == SessionStatus.Failed)
             {
-                // The room is gone (the host left, or this player was removed).
-                _toast.Show(_localization.Get(HostLeftToastKey));
-                LeaveToMenu();
+                FailToMenu();
                 return;
             }
 
@@ -386,6 +411,7 @@ namespace Callbreak.Presentation.Table
             {
                 case RoundStarted _:
                     AbandonOptimisticPlay();
+                    EndPeek();
                     State.Apply(e);
                     _emoteLimiter.ResetRound();
                     _view.Prompt.Hide();
@@ -424,6 +450,8 @@ namespace Callbreak.Presentation.Table
                 }
 
                 case CardPlayed played:
+                    // The peek lasts until the next card is played (GDD screen 08).
+                    EndPeek();
                     return BeginCardPlayed(played);
 
                 case TrickCompleted completed:
@@ -473,13 +501,19 @@ namespace Callbreak.Presentation.Table
                     break;
             }
 
-            _table.NotifyPlayed(e);
+            _table.NotifyPlayed(e, FollowerFailed);
         }
 
         private IEventAnimation BeginCardPlayed(CardPlayed played)
         {
             int rel = _renderer.RelativeSeat(played.Seat);
             bool reduce = ReduceMotion;
+            if (played.IsAuto && !played.IsForced)
+            {
+                // The timer played for the seat: the card lands as usual, marked "auto" (GDD §8).
+                _view.Seat(rel).ShowBubble(_localization.Get(AutoTagKey), BubbleHoldSeconds, reduce);
+            }
+
             float seconds = reduce ? CardFlight.ReducedSeconds : CardFlight.Seconds;
             if (rel == 0)
             {
@@ -613,7 +647,7 @@ namespace Callbreak.Presentation.Table
 
             if (state.TryGetObligation(out PlayObligation obligation))
             {
-                ShowPrompt(TurnPrompt.ForObligation(obligation, _localization));
+                ShowPrompt(PromptFor(obligation, state));
             }
             else if (state.HasTurn)
             {
@@ -623,13 +657,35 @@ namespace Callbreak.Presentation.Table
             // Between turns the last line stays (the trick winner, or the lead beat).
         }
 
+        /// <summary>
+        /// What the pill says on the local turn. In a player's first three matches it explains the
+        /// rule behind the turn ("Tip: you must beat the highest heart if you can.") where there is
+        /// one to explain (GDD §15); after that, and when leading, it names the turn.
+        /// </summary>
+        private string PromptFor(in PlayObligation obligation, TableState state)
+        {
+            if (TurnTips.AreOn(_settings.CompletedMatches))
+            {
+                string tip = TurnTips.ForObligation(obligation, state.Trick, _localization);
+                if (tip != null)
+                {
+                    return tip;
+                }
+            }
+
+            return TurnPrompt.ForObligation(obligation, _localization);
+        }
+
         private void ShowPrompt(string text)
         {
-            _turnPrompt = text;
             _view.Prompt.Show(text);
         }
 
-        /// <summary>Online, a turn can start while the scorecard or a menu covers the table: say so (GDD screens 13, 16).</summary>
+        /// <summary>
+        /// Online, a turn can start while the scorecard or a menu covers the table: say so (GDD
+        /// screens 13, 16). The banner is a toast, whose font has no suit symbols, so it says only
+        /// that it is the player's turn; the prompt on the table says what to play.
+        /// </summary>
         private void AnnounceTurnUnderOverlay()
         {
             ScreenId top = _router.Current;
@@ -638,9 +694,9 @@ namespace Callbreak.Presentation.Table
                 return;
             }
 
-            if (State.IsLocalPlayTurn && !string.IsNullOrEmpty(_turnPrompt))
+            if (State.IsLocalPlayTurn)
             {
-                _toast.Show(_turnPrompt);
+                _toast.Show(_localization.Get(YourTurnBannerKey));
             }
             else if (State.IsLocalCallTurn)
             {
@@ -677,6 +733,8 @@ namespace Callbreak.Presentation.Table
             {
                 return;
             }
+
+            EndPeek();
 
             // Optimistic: the card leaves at once, and nothing else can be played until this play
             // is settled.
@@ -785,6 +843,55 @@ namespace Callbreak.Presentation.Table
 
             // A tap skips any animation longer than 0.3 s (GDD §6).
             _player.Skip();
+        }
+
+        /// <summary>
+        /// A tap on the trick area: it skips a running animation like any tap on the table; on a
+        /// quiet table it shows the previous trick in the slots, the winning card glowing, until the
+        /// next card is played or the area is tapped again (GDD screen 08).
+        /// </summary>
+        private void OnTrickTapped()
+        {
+            if (_view.Emotes.IsOpen)
+            {
+                _view.Emotes.Close();
+                return;
+            }
+
+            if (!_player.IsIdle)
+            {
+                _player.Skip();
+                return;
+            }
+
+            if (_view.Trick.IsPeeking)
+            {
+                EndPeek();
+                return;
+            }
+
+            TableState state = State;
+            if (state.Phase != TablePhase.Playing || !state.HasLastTrick || _playLock.IsLocked)
+            {
+                return;
+            }
+
+            CompletedTrick last = state.LastTrick;
+            _view.Trick.BeginPeek();
+            for (int i = 0; i < last.Trick.Count; i++)
+            {
+                Seat seat = last.Trick.SeatAt(i);
+                Card card = last.Trick[i];
+                CardView shown = _view.Cards.Rent(_view.Trick.Area);
+                shown.ShowFace(card, _skin.Face(_renderer.LocalDeck, card));
+                _view.Trick.AdoptPeek(_renderer.RelativeSeat(seat), shown);
+                shown.SetGlow(seat == last.Winner);
+            }
+        }
+
+        private void EndPeek()
+        {
+            _view.Trick.EndPeek(_view.Cards);
         }
 
         // ------------------------------------------------------------------ turn clock
@@ -960,7 +1067,12 @@ namespace Callbreak.Presentation.Table
             }
         }
 
-        private void LeaveToMenu()
+        /// <summary>
+        /// The session failed: the room is gone (the host left, this player was removed, or the
+        /// connection could not be restored). A dialog says why, and its one button leads to the
+        /// main menu (GDD §27). A session that gives no reason gets the short notice instead.
+        /// </summary>
+        private void FailToMenu()
         {
             if (_leaving)
             {
@@ -968,7 +1080,43 @@ namespace Callbreak.Presentation.Table
             }
 
             _leaving = true;
-            _ = GoToMenuAsync();
+            RenderHandOnly(false);
+            if (_session is OnlineMatchSession online)
+            {
+                _ = ExplainFailureAsync(_localization.Get(RoomMessages.KeyFor(online.FailureReason)));
+            }
+            else
+            {
+                _toast.Show(_localization.Get(HostLeftToastKey));
+                _ = GoToMenuAsync();
+            }
+        }
+
+        private async Task ExplainFailureAsync(string reason)
+        {
+            try
+            {
+                var request = new DialogRequest(reason, string.Empty, _localization.Get(MainMenuLabelKey), null);
+                await _dialogs.ConfirmAsync(request, _lifetime.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // The scene went away while the dialog was open.
+                return;
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+
+            if (!_started)
+            {
+                // Disposed while the dialog was open (it then closes unanswered): the scene is
+                // already on its way out, and a second scene change must not follow it.
+                return;
+            }
+
+            await GoToMenuAsync();
         }
 
         private async Task GoToMenuAsync()

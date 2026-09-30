@@ -17,26 +17,26 @@
       "shape": "roundrect",
       "radius": 27.5,
       "rect": [
-        550.0,
-        218.2,
-        567.2,
-        512.5
+        549.6,
+        217.7,
+        573.0,
+        517.9
       ],
       "raycast": true,
-      "use": "UI/Common/UI_Panel_Large.png",
+      "use": "UI/Panels/UI_Panel_Modal_Menu.png",
       "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
       "shadowSpread": 24,
       "shadowDrop": 3,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Modal_Menu.png",
       "spriteRect": [
-        550,
-        218.2,
-        567.2,
-        512.5
+        549.6,
+        217.7,
+        573,
+        517.9
       ],
       "spritePpu": 0,
-      "checkError": 12.52
+      "checkError": 23.07
     },
     {
       "id": "Title",
@@ -74,30 +74,28 @@
         76
       ],
       "hole": false,
-      "checkError": 17.25
+      "checkError": 63.93
     },
     {
       "id": "CloseIcon",
       "parent": "CloseButton",
-      "shape": "ink",
       "rect": [
-        1061,
-        241,
-        37,
-        35
+        1064.00,
+        243.32,
+        30.46,
+        30.46
       ],
-      "use": "UI/Common/Icon_Close.png",
+      "use": "UI/Icons/Icon_Close.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/Icon_Close.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Close.png",
       "spriteRect": [
-        1061,
-        241,
-        37,
-        35
+        1064,
+        243.32,
+        30.46,
+        30.46
       ],
       "spritePpu": 0,
-      "color": "#070809",
-      "checkError": 10.16
+      "checkError": 45.71
     },
     {
       "id": "ModePill",
@@ -109,21 +107,17 @@
         254.1,
         36.9
       ],
-      "make": {
-        "type": "pill",
-        "fill": "#DFC6AF",
-        "out": "UI_ModePill"
-      },
+      "use": "UI/Table/UI_Pill_Tag.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/MatchMenu/UI_ModePill.png",
+      "sprite": "Assets/_Project/Art/UI/Table/UI_Pill_Tag.png",
       "spriteRect": [
         708.8,
         304.3,
         254.1,
         36.9
       ],
-      "spritePpu": 200,
-      "checkError": 2.81
+      "spritePpu": 0,
+      "checkError": 6.26
     },
     {
       "id": "ModeLabel",
@@ -171,7 +165,7 @@
         68.8
       ],
       "spritePpu": 0,
-      "checkError": 29.36
+      "checkError": 28.83
     },
     {
       "id": "ResumeLabel",
@@ -203,49 +197,47 @@
       "kind": "button",
       "parent": "Panel",
       "shape": "roundrect",
-      "radius": 17.5,
+      "radius": 19,
       "rect": [
-        614.3,
-        450.2,
-        442.8,
-        70.6
+        611.75,
+        448.65,
+        447.65,
+        74.25
       ],
-      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png",
-      "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png",
+      "use": "UI/Table/UI_ButtonSecondary_Box_Normal.png",
+      "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
+      "shadowSpread": 12,
       "shadowDrop": 2,
-      "shadowOpacity": 0.4,
-      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "sprite": "Assets/_Project/Art/UI/Table/UI_ButtonSecondary_Box_Normal.png",
       "spriteRect": [
-        614.3,
-        450.2,
-        442.8,
-        70.6
+        611.75,
+        448.65,
+        447.65,
+        74.25
       ],
       "spritePpu": 0,
-      "checkError": 16.1
+      "checkError": 18.29
     },
     {
       "id": "ScorecardIcon",
       "parent": "ScorecardButton",
-      "shape": "ink",
       "rect": [
-        716,
-        461,
-        44,
-        48
+        721.67,
+        460.95,
+        33.20,
+        45.34
       ],
-      "use": "UI/Common/Icon_Scorecard.png",
+      "use": "UI/Icons/Icon_Scorecard.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/Icon_Scorecard.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Scorecard.png",
       "spriteRect": [
-        716,
-        461,
-        44,
-        48
+        721.67,
+        460.95,
+        33.2,
+        45.34
       ],
       "spritePpu": 0,
-      "color": "#1C130F",
-      "checkError": 50.48
+      "checkError": 41.49
     },
     {
       "id": "ScorecardLabel",
@@ -274,19 +266,20 @@
       "id": "SoundRow",
       "parent": "Panel",
       "shape": "roundrect",
-      "radius": 14,
+      "radius": 20,
       "rect": [
         614.0,
         539.8,
         444.1,
         62.3
       ],
-      "use": "UI/Common/UI_Panel_Card.png",
+      "sliceScale": 1.1,
+      "use": "UI/Panels/UI_Panel_Card.png",
       "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
       "shadowSpread": 12,
       "shadowDrop": 2,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Card.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card.png",
       "spriteRect": [
         614,
         539.8,
@@ -294,30 +287,28 @@
         62.3
       ],
       "spritePpu": 0,
-      "checkError": 10.32
+      "checkError": 10.63
     },
     {
       "id": "SoundIcon",
       "parent": "SoundRow",
-      "shape": "ink",
       "rect": [
-        636,
-        552,
-        46,
-        40
+        638.75,
+        554.69,
+        38.37,
+        34.72
       ],
-      "use": "Screens/Settings/Icon_Sound.png",
+      "use": "UI/Icons/Icon_Sound.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Settings/Icon_Sound.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Sound.png",
       "spriteRect": [
-        636,
-        552,
-        46,
-        40
+        638.75,
+        554.69,
+        38.37,
+        34.72
       ],
       "spritePpu": 0,
-      "color": "#0E0E0F",
-      "checkError": 39.78
+      "checkError": 21.74
     },
     {
       "id": "SoundLabel",
@@ -365,7 +356,7 @@
         41.8
       ],
       "spritePpu": 0,
-      "checkError": 32.19
+      "checkError": 33.02
     },
     {
       "id": "Divider",
@@ -390,7 +381,7 @@
         1.8
       ],
       "spritePpu": 200,
-      "checkError": 6.18
+      "checkError": 11.14
     },
     {
       "id": "LeaveButton",
@@ -403,31 +394,28 @@
         64
       ],
       "hole": false,
-      "checkError": 1.99
+      "checkError": 5.23
     },
     {
       "id": "LeaveIcon",
       "parent": "LeaveButton",
-      "shape": "ink",
       "rect": [
-        733,
-        635,
-        41,
-        41
+        735.76,
+        637.67,
+        35.66,
+        35.66
       ],
-      "scale": 2,
-      "out": "Icon_Leave",
+      "use": "UI/Icons/Icon_Leave.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/MatchMenu/Icon_Leave.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Leave.png",
       "spriteRect": [
-        733,
-        635,
-        41,
-        41
+        735.76,
+        637.67,
+        35.66,
+        35.66
       ],
-      "spritePpu": 174.1667,
-      "color": "#A9020D",
-      "checkError": 6.91
+      "spritePpu": 0,
+      "checkError": 14.73
     },
     {
       "id": "LeaveLabel",

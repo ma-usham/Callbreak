@@ -13,7 +13,9 @@ namespace Callbreak.Presentation.Table
     /// arc laid out by <see cref="HandLayout"/>, legal cards lifted with a gold glow, the others
     /// subdued. Input is one touch area over the whole hand, so a finger can slide along it
     /// (tap-and-slide): the card under the finger rises, and releasing on a card, or flicking one
-    /// upwards, chooses it. Which cards may be played is the presenter's decision.
+    /// upwards, chooses it. Which cards may be played is the presenter's decision. While the hand
+    /// takes no plays (calling, or another seat's turn) a touched card still rises and grows a
+    /// little for a closer look, and is never played (GDD screen 07, callout 10).
     /// </summary>
     public sealed class HandView : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
     {
@@ -26,6 +28,7 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private float _minStripMillimetres = 7f;
         [SerializeField] private float _flickDistance = 70f;
         [SerializeField] private float _arrangeSeconds = 0.25f;
+        [SerializeField] private float _inspectScale = 1.12f;
 
         private readonly List<CardView> _views = new List<CardView>(Deck.HandSize);
         private readonly List<CardView> _previous = new List<CardView>(Deck.HandSize);
@@ -42,6 +45,7 @@ namespace Callbreak.Presentation.Table
         private CardView _grabbed;
         private Vector2 _pressPosition;
         private bool _pressed;
+        private bool _inspecting;
         private MotionHandle _arrangeMotion;
         private MotionHandle _shakeMotion;
         private Canvas _canvas;
@@ -228,11 +232,17 @@ namespace Callbreak.Presentation.Table
         {
             if (!Interactable)
             {
+                // Not a play: the card under the finger is only looked at.
                 Touched?.Invoke();
+                _pressed = true;
+                _inspecting = true;
+                _grabbed = null;
+                SetHovered(IndexAt(eventData));
                 return;
             }
 
             _pressed = true;
+            _inspecting = false;
             _pressPosition = eventData.position;
             int index = IndexAt(eventData);
             _grabbed = index >= 0 ? _views[index] : null;
@@ -246,13 +256,13 @@ namespace Callbreak.Presentation.Table
 
         public void OnDrag(PointerEventData eventData)
         {
-            if (!_pressed || !Interactable)
+            if (!_pressed || (!Interactable && !_inspecting))
             {
                 return;
             }
 
             int index = IndexAt(eventData);
-            if (index >= 0)
+            if (index >= 0 && !_inspecting)
             {
                 _grabbed = _views[index];
             }
@@ -268,6 +278,14 @@ namespace Callbreak.Presentation.Table
             }
 
             _pressed = false;
+            if (_inspecting)
+            {
+                _inspecting = false;
+                _grabbed = null;
+                SetHovered(-1);
+                return;
+            }
+
             int index = IndexAt(eventData);
             CardView chosen = index >= 0 ? _views[index] : null;
             if (chosen == null && _grabbed != null && _views.Contains(_grabbed) && Flicked(eventData))
@@ -288,6 +306,7 @@ namespace Callbreak.Presentation.Table
             Cancel(ref _arrangeMotion);
             CancelShake();
             _pressed = false;
+            _inspecting = false;
             _grabbed = null;
         }
 
@@ -372,7 +391,8 @@ namespace Callbreak.Presentation.Table
                 CardView view = _views[i];
                 view.Rect.SetSiblingIndex(i);
                 _from[i] = view.Placement;
-                _to[i] = new CardPlacement(new Vector2(_poses[i].X, _poses[i].Y), _poses[i].Rotation, 1f, 0f);
+                float scale = _inspecting && i == _hovered ? _inspectScale : 1f;
+                _to[i] = new CardPlacement(new Vector2(_poses[i].X, _poses[i].Y), _poses[i].Rotation, scale, 0f);
             }
 
             if (!animate || !isActiveAndEnabled || count == 0)
