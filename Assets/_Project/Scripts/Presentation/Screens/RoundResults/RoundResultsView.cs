@@ -10,7 +10,8 @@ namespace Callbreak.Presentation.Screens
     /// GDD §11 screen 09: how the round went and the running totals. Four rows (avatar, name, bid,
     /// won, round delta, total); the gold band marks the local player's row; negative values are
     /// burgundy with a true minus sign (the presenter formats the text, the view only colours it).
-    /// Rows are numbered 0-3 from the top.
+    /// Rows are numbered 0-3 from the top. Each time the page is shown its panel rises into place
+    /// (GDD §14 "Results"), unless <see cref="ReduceMotion"/> is set.
     /// </summary>
     public sealed class RoundResultsView : UIScreen
     {
@@ -33,6 +34,7 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private TMP_Text[] _rowTotal;
         [SerializeField] private GameObject[] _rowSeparator;
         [SerializeField] private RectTransform _highlightBand;
+        [SerializeField] private RiseIn _panelRise;
         [SerializeField] private Color _valueColor = new Color32(0x1B, 0x1B, 0x17, 0xFF);
         [SerializeField] private Color _negativeColor = new Color32(0x82, 0x12, 0x16, 0xFF);
 
@@ -42,6 +44,9 @@ namespace Callbreak.Presentation.Screens
         /// <summary>Next Round (online: "I'm ready"), or See Final Results after round 5.</summary>
         public event Action NextClicked;
         public event Action ScorecardClicked;
+
+        /// <summary>GDD §14 Reduce motion: the page only fades in; its panel does not rise.</summary>
+        public bool ReduceMotion { get; set; }
 
         /// <summary>"ROUND 1 OF 5".</summary>
         public void SetRoundTitle(string title) => ResultsTableRows.SetText(_roundTitle, title);
@@ -75,6 +80,15 @@ namespace Callbreak.Presentation.Screens
         {
             ResultsTableRows.SetText(_footer, footer);
             _footerFlanks.Refresh();
+        }
+
+        /// <summary>The panel, with everything on it, rises about 30 px into place (400 ms, OutCubic).</summary>
+        public override void OnShown()
+        {
+            if (!ReduceMotion && _panelRise != null)
+            {
+                _panelRise.Play();
+            }
         }
 
         private void OnEnable()

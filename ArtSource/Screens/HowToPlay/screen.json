@@ -3,9 +3,9 @@
   // Everything drawn here is shared kit art: background, header discs and icons, the logo with the
   // flag, panel, title divider (a diamond and one line sprite, mirrored on the left), the four rule
   // icons, the A-over-K card illustration with its shadow, the two ornaments of the "Highest total"
-  // pill, the primary button and its chevron. The rule number disc (one sprite, used four times),
-  // the three rule separators and the pill are drawn shapes in their measured colours. Every word
-  // is a label.
+  // pill, the primary button and its chevron, and from the Controls kit the rule number disc (one
+  // sprite, used four times) and the pill itself (rects from ArtSource/Kit/Controls.map.csv). Only
+  // the three rule separators are drawn shapes in their measured colours. Every word is a label.
   "name": "HowToPlay",
   "mockup": "12-how-to-play.png",
   "background": "shared",
@@ -27,7 +27,7 @@
     { "id": "TitleDividerDiamond", "parent": "Panel", "rect": [829.5, 334.8, 13.0, 13.0], "use": "UI/Decor/Deco_TitleDivider_Diamond.png" },
     { "id": "TitleDividerRight", "parent": "Panel", "rect": [842.3, 339.6, 200.9, 3.5], "use": "UI/Decor/Deco_TitleDivider_Line.png" },
 
-    { "id": "Rule1Disc", "parent": "Panel", "rect": [422.3, 367.0, 60.8, 61.0], "make": { "type": "ellipse", "fill": "#840D15", "fill2": "#7E0C14", "stroke": "#FBF3EA", "strokeWidth": 1.0, "out": "UI_RuleDisc" } },
+    { "id": "Rule1Disc", "parent": "Panel", "rect": [422.05, 366.7, 61.5, 61.5], "use": "UI/Controls/UI_Disc_Number.png" },
     { "id": "Rule1Number", "kind": "label", "parent": "Rule1Disc", "text": "1", "font": "SerifSemiBold", "ink": "light", "rect": [436, 377, 34, 40], "key": "ui.how_to_play.rule1_number" },
     { "id": "Rule1Icon", "parent": "Panel", "rect": [502.68, 362.89, 73.93, 73.06], "use": "UI/Icons/Icon_Rule_Call.png" },
     { "id": "Rule1Title", "kind": "label", "parent": "Panel", "text": "1. Make your call", "font": "SerifBold", "align": "left", "rect": [604, 360, 210, 32], "key": "ui.how_to_play.rule1_title" },
@@ -35,7 +35,7 @@
     { "id": "Rule1Line2", "kind": "label", "parent": "Panel", "text": "tricks you will win.", "font": "SansSemiBold", "align": "left", "rect": [604, 415.5, 175, 23], "key": "ui.how_to_play.rule1_line2" },
     { "id": "Separator1", "parent": "Panel", "rect": [427, 446.02, 584, 1.87], "fade": [33, 44], "make": { "type": "rect", "fill": "#E8D5C2", "out": "Deco_RuleSeparator_1" } },
 
-    { "id": "Rule2Disc", "parent": "Panel", "rect": [422.3, 462.8, 60.8, 61.1], "use": "UI_RuleDisc" },
+    { "id": "Rule2Disc", "parent": "Panel", "rect": [422.1, 462.5, 61.5, 61.5], "use": "UI/Controls/UI_Disc_Number.png" },
     { "id": "Rule2Number", "kind": "label", "parent": "Rule2Disc", "text": "2", "font": "SerifSemiBold", "ink": "light", "rect": [436, 473, 34, 40], "key": "ui.how_to_play.rule2_number" },
     { "id": "Rule2Icon", "parent": "Panel", "rect": [505, 459.5, 78.26, 70.44], "use": "UI/Icons/Icon_Rule_Follow.png" },
     { "id": "Rule2Title", "kind": "label", "parent": "Panel", "text": "2. Follow the suit", "font": "SerifBold", "align": "left", "rect": [604, 457, 214, 29], "key": "ui.how_to_play.rule2_title" },
@@ -43,14 +43,14 @@
     { "id": "Rule2Line2", "kind": "label", "parent": "Panel", "text": "card if you can.", "font": "SansSemiBold", "align": "left", "rect": [604, 513.5, 145, 23], "key": "ui.how_to_play.rule2_line2" },
     { "id": "Separator2", "parent": "Panel", "rect": [425, 543.8, 608, 1.54], "fade": [37, 0], "make": { "type": "rect", "fill": "#E3CDB8", "out": "Deco_RuleSeparator_2" } },
 
-    { "id": "Rule3Disc", "parent": "Panel", "rect": [422.5, 559.0, 60.6, 61.0], "use": "UI_RuleDisc" },
+    { "id": "Rule3Disc", "parent": "Panel", "rect": [422.05, 558.75, 61.5, 61.5], "use": "UI/Controls/UI_Disc_Number.png" },
     { "id": "Rule3Number", "kind": "label", "parent": "Rule3Disc", "text": "3", "font": "SerifSemiBold", "ink": "light", "rect": [436, 570, 34, 40], "key": "ui.how_to_play.rule3_number" },
     { "id": "Rule3Icon", "parent": "Panel", "rect": [513.9, 556.07, 58.53, 67.21], "use": "UI/Icons/Icon_Suit_Spade.png" },
     { "id": "Rule3Title", "kind": "label", "parent": "Panel", "text": "3. Spades are trump", "font": "SerifBold", "align": "left", "rect": [604, 558, 250, 33], "key": "ui.how_to_play.rule3_title" },
     { "id": "Rule3Line1", "kind": "label", "parent": "Panel", "text": "No leading suit? Play a spade if you have one.", "font": "SansSemiBold", "align": "left", "rect": [604, 591, 404, 24], "key": "ui.how_to_play.rule3_line1" },
     { "id": "Separator3", "parent": "Panel", "rect": [426, 634.07, 580, 1.91], "fade": [54, 25], "make": { "type": "rect", "fill": "#E8D3C1", "out": "Deco_RuleSeparator_3" } },
 
-    { "id": "Rule4Disc", "parent": "Panel", "rect": [422.4, 651.0, 60.7, 61.9], "use": "UI_RuleDisc" },
+    { "id": "Rule4Disc", "parent": "Panel", "rect": [422.05, 651.1, 61.5, 61.5], "use": "UI/Controls/UI_Disc_Number.png" },
     { "id": "Rule4Number", "kind": "label", "parent": "Rule4Disc", "text": "4", "font": "SerifSemiBold", "ink": "light", "rect": [436, 662, 34, 40], "key": "ui.how_to_play.rule4_number" },
     { "id": "Rule4Icon", "parent": "Panel", "rect": [515.25, 645.08, 56.53, 70.45], "use": "UI/Icons/Icon_Rule_Score.png" },
     { "id": "Rule4Title", "kind": "label", "parent": "Panel", "text": "4. Count your score", "font": "SerifBold", "align": "left", "rect": [604, 646, 244, 32], "key": "ui.how_to_play.rule4_title" },
@@ -60,14 +60,14 @@
     { "id": "CardsArt", "parent": "Panel", "rect": [1007.0, 390.5, 277.5, 282.3], "use": "UI/Decor/Deco_AceOverKing.png",
       "shadowUse": "UI/Decor/Deco_AceOverKing_Shadow.png", "shadowSpread": 36.4, "shadowDrop": 11, "shadowOpacity": 0.4 },
 
-    { "id": "WinPill", "parent": "Panel", "rect": [590.8, 738.9, 490.1, 45.0], "make": { "type": "pill", "fill": "#F6E6D4", "fill2": "#F5E4D1", "stroke": "#CD9B57", "strokeWidth": 2.1, "out": "UI_Pill_Highlight" } },
+    { "id": "WinPill", "parent": "Panel", "rect": [591.38, 738.85, 489.05, 44.9], "use": "UI/Controls/UI_Pill_Highlight.png" },
     { "id": "WinOrnamentLeft", "parent": "WinPill", "rect": [602.6, 748.3, 26.0, 26.6], "use": "UI/Decor/Deco_PillOrnament.png" },
     { "id": "WinOrnamentRight", "parent": "WinPill", "rect": [1043.4, 748.3, 26.0, 26.6], "use": "UI/Decor/Deco_PillOrnament.png" },
     { "id": "WinLabel", "kind": "label", "parent": "WinPill", "text": "Highest total after 5 rounds wins.", "font": "SerifSemiBold", "rect": [655, 746, 362, 34], "capFit": [753.25, 770.85], "key": "ui.how_to_play.win" },
 
-    { "id": "GotItButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 33, "rect": [611.6, 802.2, 448.4, 77.4],
-      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "GotItButton", "kind": "button", "parent": "Panel", "rect": [611.62, 802.19, 448.43, 77.57],
+      "use": "UI/Controls/UI_Button_Crimson.png", "shadowUse": "UI/Controls/UI_Button_Crimson_Shadow.png", "shadowDrop": 3.5, "shadowOpacity": 0.4 },
     { "id": "GotItLabel", "kind": "label", "parent": "GotItButton", "text": "Got It", "font": "SerifBold", "ink": "light", "style": "buttonLabel", "rect": [778, 822, 90, 38], "key": "ui.how_to_play.got_it" },
-    { "id": "GotItChevron", "parent": "GotItButton", "rect": [890.66, 831.12, 12.28, 21.36], "use": "UI/Common/Icon_Chevron_Light.png" }
+    { "id": "GotItChevron", "parent": "GotItButton", "rect": [890.63, 830.95, 12.4, 21.57], "use": "UI/Icons/Icon_Chevron_Thin.png" }
   ]
 }

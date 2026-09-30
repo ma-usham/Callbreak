@@ -10,7 +10,9 @@ namespace Callbreak.Presentation.Screens
     /// GDD §11 screen 10: the final standings and what comes next. The headline follows the local
     /// player's place ("You Win!", "Shared Victory!", "2nd Place"...); the trophy shows only for a
     /// win; every winner's row carries a crown (ties share first place); the gold band marks the
-    /// local player's row. Rows are numbered 0-3 from the top.
+    /// local player's row. Rows are numbered 0-3 from the top. Each time the page is shown its
+    /// panel rises into place, and the first time the trophy is seen it drops in and sparkles
+    /// (GDD §14 "Results" and "Victory"), unless <see cref="ReduceMotion"/> is set.
     /// </summary>
     public sealed class MatchResultsView : UIScreen
     {
@@ -24,6 +26,8 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private UnityEngine.UI.Button _scorecardButton;
         [SerializeField] private TMP_Text _headline;
         [SerializeField] private GameObject _trophy;
+        [SerializeField] private TrophyEntrance _trophyEntrance;
+        [SerializeField] private RiseIn _panelRise;
         [SerializeField] private TMP_Text _footer;
         [SerializeField] private LabelFlanks _footerFlanks;
         [SerializeField] private RectTransform[] _row;
@@ -37,6 +41,11 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private Color _totalColor = new Color32(0x19, 0x19, 0x14, 0xFF);
         [SerializeField] private Color _negativeColor = new Color32(0x82, 0x12, 0x16, 0xFF);
 
+        // The trophy makes its entrance once: the first time it is seen on the page after being
+        // switched on (the prefab has it on), not again when the player comes back to the page.
+        private bool _trophyEnters = true;
+        private bool _showing;
+
         public event Action HomeClicked;
         public event Action ScoresClicked;
         public event Action SettingsClicked;
@@ -44,11 +53,60 @@ namespace Callbreak.Presentation.Screens
         public event Action MainMenuClicked;
         public event Action ScorecardClicked;
 
+        /// <summary>
+        /// GDD §14 Reduce motion: the page only fades in; the panel does not rise and the trophy is
+        /// simply there.
+        /// </summary>
+        public bool ReduceMotion { get; set; }
+
         /// <summary>"You Win!", "Shared Victory!", "2nd Place"...</summary>
         public void SetHeadline(string headline) => ResultsTableRows.SetText(_headline, headline);
 
-        /// <summary>The trophy with its laurels and sparkles: shown only when the local player won.</summary>
-        public void SetTrophyVisible(bool visible) => _trophy.SetActive(visible);
+        /// <summary>
+        /// The trophy with its laurels and sparkles: shown only when the local player won. Switched
+        /// on while the page is showing it drops in at once; switched on before, it drops in when
+        /// the page is shown.
+        /// </summary>
+        public void SetTrophyVisible(bool visible)
+        {
+            if (_trophy.activeSelf == visible)
+            {
+                return;
+            }
+
+            _trophy.SetActive(visible);
+            _trophyEnters = visible;
+            if (visible && _showing)
+            {
+                EnterTrophy();
+            }
+        }
+
+        /// <summary>The panel rises about 30 px into place (400 ms, OutCubic); a trophy not yet seen drops in.</summary>
+        public override void OnShown()
+        {
+            _showing = true;
+            if (!ReduceMotion && _panelRise != null)
+            {
+                _panelRise.Play();
+            }
+
+            if (_trophyEnters && _trophy.activeSelf)
+            {
+                EnterTrophy();
+            }
+        }
+
+        public override void OnHidden() => _showing = false;
+
+        private void EnterTrophy()
+        {
+            _trophyEnters = false;
+            if (!ReduceMotion && _trophyEntrance != null)
+            {
+                _trophyEntrance.Play();
+            }
+        }
 
         /// <summary>
         /// One standing: rank ("1"; tied players share a rank), name, total points ("21.3") and the

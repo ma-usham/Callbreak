@@ -1,3 +1,4 @@
+using System.IO;
 using System.Linq;
 using Callbreak.Application.Ports;
 using Callbreak.Presentation.Framework;
@@ -9,9 +10,10 @@ using UnityEngine.UI;
 namespace Callbreak.Editor.Screens
 {
     /// <summary>
-    /// Screen 11: turns every "toggle" node into a <see cref="ToggleSwitch"/> drawn by the one ON
-    /// and one OFF look cut from the mockup, and assembles the volume <see cref="Slider"/> from its
-    /// cut track, crimson fill (9-sliced so it can grow) and knob (with its own shadow).
+    /// Screen 11: turns every "toggle" node into a <see cref="ToggleSwitch"/> drawn by the Controls
+    /// kit's ON and OFF looks (both fill the same box), assembles the volume <see cref="Slider"/>
+    /// from the kit's track, fill and knob, and gives the controls that are lower than the GDD's
+    /// 88 px touch target a taller one where the layout has room.
     /// </summary>
     public static class SettingsCustomizer
     {
@@ -29,6 +31,25 @@ namespace Callbreak.Editor.Screens
             // name left of the title.
             ScreenExtras.LimitWidth(ctx, "LanguageValue", 114f);
             ScreenExtras.LimitWidth(ctx, "PlayerName", 330f);
+
+            GrowTouchTargets(ctx);
+        }
+
+        /// <summary>
+        /// GDD: touch targets of at least 88 px, 16 px apart. The switches are drawn 54 px high,
+        /// the dropdown 62 and the slider's track 22; each grows away from its neighbour to 88,
+        /// and no two touch areas come closer than 16 px. The vibration switch sits between the
+        /// dropdown (19 px above it) and the reduce-motion switch (24 px below), so it can only
+        /// take the 3 and 8 px those gaps can spare: 65 px.
+        /// </summary>
+        private static void GrowTouchTargets(ScreenBuildContext ctx)
+        {
+            ScreenExtras.GrowHit(ctx, "MusicToggle", 33.9f, 0f);
+            ScreenExtras.GrowHit(ctx, "SoundEffectsToggle", 0f, 33.9f);
+            ScreenExtras.GrowHit(ctx, "VolumeTrack", 33.2f, 33.2f);
+            ScreenExtras.GrowHit(ctx, "LanguageButton", 25.6f, 0f);
+            ScreenExtras.GrowHit(ctx, "VibrationToggle", 3f, 8f);
+            ScreenExtras.GrowHit(ctx, "ReduceMotionToggle", 0f, 33.9f);
         }
 
         private static void BuildToggle(ScreenBuildContext ctx, LayoutNode node)
@@ -37,21 +58,21 @@ namespace Callbreak.Editor.Screens
             var face = root.Find("Face") as RectTransform;
             if (face == null || string.IsNullOrEmpty(node.on) || string.IsNullOrEmpty(node.off))
             {
-                ctx.Warnings.Add($"{node.id}: toggle needs a face and on/off sprite names");
+                ctx.Warnings.Add($"{node.id}: toggle needs a face and on/off sprites");
                 return;
             }
 
             Image faceImage = face.GetComponent<Image>();
-            bool faceIsOn = faceImage.sprite != null && faceImage.sprite.name == node.on;
-            Sprite other = LoadScreenSprite(ctx, faceIsOn ? node.off : node.on);
+            bool faceIsOn = faceImage.sprite != null && faceImage.sprite.name == Path.GetFileNameWithoutExtension(node.on);
+            Sprite other = LoadLook(ctx, faceIsOn ? node.off : node.on);
             if (other == null)
             {
                 ctx.Warnings.Add($"{node.id}: sprite {(faceIsOn ? node.off : node.on)} missing");
                 return;
             }
 
-            // The other look is centred where the drawn one is, scaled the way the drawn one is (the
-            // two cuts differ slightly in size: the ON look keeps its thin light rim).
+            // The other look is centred where the drawn one is and scaled the way the drawn one is.
+            // The kit's two looks have one size, so they fill the same box.
             Vector2 faceNative = UiBuildKit.NativeSize(faceImage.sprite);
             var factor = new Vector2(face.sizeDelta.x / faceNative.x, face.sizeDelta.y / faceNative.y);
             var otherObject = new GameObject(faceIsOn ? "Off" : "On", typeof(RectTransform));
@@ -94,8 +115,10 @@ namespace Callbreak.Editor.Screens
 
         /// <summary>
         /// VolumeSlider spans the knob's travel: at 0 the knob's centre is on the track's left end,
-        /// and at the mockup's 70% it is exactly where the mockup draws it. The fill runs from the
-        /// track's left end to the knob's centre.
+        /// and at the mockup's 70% it is exactly where the mockup draws it. The fill starts where
+        /// the layout has its left edge (the kit's fill carries a thin rim and starts a little
+        /// left of the track) and always ends the same small distance past the knob's centre,
+        /// under the knob.
         /// </summary>
         private static void BuildSlider(ScreenBuildContext ctx)
         {
@@ -112,7 +135,9 @@ namespace Callbreak.Editor.Screens
             LayoutNode knobNode = ctx.Node("VolumeKnob");
             const float value = 0.7f;
 
-            // Fill Area: the slider's full width, the fill's height; the fill is anchored 0..value.
+            // Fill Area: the knob's travel, the fill's height; the slider anchors the fill 0..value
+            // across it, and the fill keeps its two offsets: how far it starts before the travel
+            // and how far it ends past the knob's centre.
             RectTransform fillArea = UiBuildKit.CreateAt(
                 "Fill Area", root, new Vector2(rootNode.Centre.x, fillNode.Centre.y), rootNode.Centre, UiBuildKit.FromMock(rootNode.rect[2], fillNode.rect[3]));
             fillArea.SetSiblingIndex(fill.GetSiblingIndex());
@@ -120,11 +145,11 @@ namespace Callbreak.Editor.Screens
             fill.anchorMin = Vector2.zero;
             fill.anchorMax = new Vector2(value, 1f);
             fill.pivot = new Vector2(0.5f, 0.5f);
-            fill.offsetMin = Vector2.zero;
-            fill.offsetMax = Vector2.zero;
+            fill.offsetMin = new Vector2((fillNode.rect[0] - rootNode.rect[0]) * UiBuildKit.ScaleX, 0f);
+            fill.offsetMax = new Vector2((fillNode.rect[0] + fillNode.rect[2] - knobNode.Centre.x) * UiBuildKit.ScaleX, 0f);
 
-            // The sliced face follows the fill's rectangle; the sprite's pixel box is a little
-            // larger than the pill it was cut to, so keep that margin.
+            // The sliced face follows the fill's rectangle (a sprite cut to a shape keeps the
+            // margin its pixel box has round that shape; a kit sprite has none).
             var fillFace = fill.Find("Face") as RectTransform;
             if (fillFace != null)
             {
@@ -168,9 +193,15 @@ namespace Callbreak.Editor.Screens
             slider.SetValueWithoutNotify(value);
         }
 
-        private static Sprite LoadScreenSprite(ScreenBuildContext ctx, string name)
+        /// <summary>
+        /// A switch look: a sprite under the art root ("UI/Controls/UI_Toggle_On.png"), or the name
+        /// of one of the screen's own sprites.
+        /// </summary>
+        private static Sprite LoadLook(ScreenBuildContext ctx, string look)
         {
-            return UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/Screens/{ctx.Layout.name}/{name}.png", 0f);
+            string file = look.EndsWith(".png", System.StringComparison.OrdinalIgnoreCase) ? look : look + ".png";
+            string path = look.Contains("/") ? $"{UiBuildKit.ArtRoot}/{file}" : $"{UiBuildKit.ArtRoot}/Screens/{ctx.Layout.name}/{file}";
+            return UiBuildKit.LoadSpriteAt(path, 0f);
         }
     }
 }

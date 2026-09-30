@@ -49,7 +49,12 @@ namespace Callbreak.Editor.Screens
     /// <para>
     /// <see cref="LimitWidth"/> gives a dynamic label (a player name, a headline that changes with
     /// the result) a maximum width, so longer text shrinks and finally ends in an ellipsis instead
-    /// of running into its neighbours.
+    /// of running into its neighbours; <see cref="CentreOnCapitals"/> keeps such a label centred
+    /// on its line while it shrinks.
+    /// </para>
+    /// <para>
+    /// <see cref="GrowHit"/> gives a control a touch target larger than its art (GDD: 88 px), and
+    /// <see cref="Rise"/> gives a results panel its entrance (<see cref="RiseIn"/>).
     /// </para>
     /// </summary>
     public static class ScreenExtras
@@ -450,6 +455,88 @@ namespace Callbreak.Editor.Screens
             List<float> sorted = values.OrderBy(v => v).ToList();
             int mid = sorted.Count / 2;
             return sorted.Count % 2 == 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2f;
+        }
+
+        /// <summary>
+        /// Enlarges (or, with negative values, trims) what a control answers a touch on, without
+        /// changing what it draws: the GDD asks for touch targets of at least 88 px, 16 px apart.
+        /// <paramref name="up"/> and <paramref name="down"/> are canvas pixels beyond the top and
+        /// the bottom edge of what the node draws; they go on every raycast target the node has
+        /// itself (its face, both looks of a switch, a button's own invisible image).
+        /// </summary>
+        public static void GrowHit(ScreenBuildContext ctx, string id, float up, float down)
+        {
+            if (!ctx.Nodes.TryGetValue(id, out RectTransform rect))
+            {
+                ctx.Warnings.Add($"{id}: GrowHit needs a node");
+                return;
+            }
+
+            var targets = new List<Graphic>();
+            if (rect.TryGetComponent(out Graphic own))
+            {
+                targets.Add(own);
+            }
+
+            foreach (Transform child in rect)
+            {
+                if (child.TryGetComponent(out Graphic graphic))
+                {
+                    targets.Add(graphic);
+                }
+            }
+
+            int grown = 0;
+            foreach (Graphic target in targets.Where(t => t.raycastTarget))
+            {
+                // Left, bottom, right, top; a negative padding reaches beyond the rectangle.
+                Vector4 padding = target.raycastPadding;
+                target.raycastPadding = new Vector4(padding.x, -down, padding.z, -up);
+                grown++;
+            }
+
+            if (grown == 0)
+            {
+                ctx.Warnings.Add($"{id}: GrowHit found no raycast target");
+            }
+        }
+
+        /// <summary>
+        /// Adds a <see cref="RiseIn"/> to a node (GDD §14 "Results: panel rises"): the view plays
+        /// it when the screen is shown. The node must sit inside the screen's content, not be it.
+        /// </summary>
+        public static RiseIn Rise(ScreenBuildContext ctx, string id)
+        {
+            if (!ctx.Nodes.TryGetValue(id, out RectTransform rect) || rect == ctx.Content)
+            {
+                ctx.Warnings.Add($"{id}: Rise needs a node inside the content");
+                return null;
+            }
+
+            return rect.gameObject.AddComponent<RiseIn>();
+        }
+
+        /// <summary>
+        /// Makes a one-line label keep the middle of its capitals where it is now, whatever size it
+        /// is drawn at: a headline that <see cref="LimitWidth"/> shrinks then stays centred on the
+        /// line the full-size one is set on instead of sinking to its baseline (where the smaller
+        /// lettering's descenders would still reach what lies under it). The text as built does
+        /// not move. Call before <see cref="LimitWidth"/>.
+        /// </summary>
+        public static void CentreOnCapitals(ScreenBuildContext ctx, string id)
+        {
+            if (!ctx.Nodes.TryGetValue(id, out RectTransform rect) || !rect.TryGetComponent(out TextMeshProUGUI label) ||
+                !UiBuildKit.InkBounds(label, out Rect before, out _))
+            {
+                ctx.Warnings.Add($"{id}: CentreOnCapitals needs a label with text");
+                return;
+            }
+
+            label.verticalAlignment = VerticalAlignmentOptions.Capline;
+            if (UiBuildKit.InkBounds(label, out Rect after, out _))
+            {
+                rect.anchoredPosition += new Vector2(0f, before.center.y - after.center.y);
+            }
         }
 
         /// <summary>

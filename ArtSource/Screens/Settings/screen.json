@@ -1,10 +1,12 @@
 {
   // Screen 11 - Settings (GDD §11). Rects are mockup pixels on 11-settings.png.
   // Shared kit for the background, header discs, avatar, title divider (a diamond and one line sprite,
-  // mirrored on the left), panel, buttons and every icon. Cut here (placeholders until the Controls
-  // kit arrives): the toggles (one ON and one OFF look), the slider knob and the language dropdown.
-  // Thin lines and the slider's track and fill (which must stretch) are drawn shapes in their
-  // measured colours.
+  // mirrored on the left), panel, buttons, every icon and every control (UI/Controls: the toggles' ON
+  // and OFF looks in one box, the slider's track, fill and knob, the language dropdown with its
+  // chevron). Nothing is cut from the mockup; the thin lines are drawn shapes in their measured
+  // colours. Control rects are the Controls kit map's (ArtSource/Kit/Controls.map.csv); the four
+  // toggles share one size (83.3 x 47.2) about their own centres. VolumeSlider is the knob's travel:
+  // from the track's left end, scaled so that 70% puts the knob where the mockup draws it.
   "name": "Settings",
   "mockup": "11-settings.png",
   "background": "shared",
@@ -38,15 +40,15 @@
     { "id": "SoundAccent", "parent": "Panel", "rect": [514.56, 328.51, 19.86, 2.16], "make": { "type": "rect", "fill": "#42210B", "out": "Deco_HeadingAccent" } },
     { "id": "SoundRule", "parent": "Panel", "rect": [531, 335.45, 256.8, 1.43], "fade": [14, 8], "make": { "type": "rect", "fill": "#D2BEAD", "out": "Deco_HeadingRule_Sound" } },
     { "id": "MusicLabel", "kind": "label", "parent": "Panel", "text": "Music", "font": "SansSemiBold", "align": "left", "rect": [424, 368, 82, 38], "key": "ui.settings.music" },
-    { "id": "MusicToggle", "kind": "toggle", "parent": "Panel", "shape": "pill", "rect": [707.2, 364.0, 81.7, 45.9], "scale": 2, "out": "UI_Toggle_On", "on": "UI_Toggle_On", "off": "UI_Toggle_Off" },
+    { "id": "MusicToggle", "kind": "toggle", "parent": "Panel", "rect": [706.6, 363.37, 83.3, 47.2], "use": "UI/Controls/UI_Toggle_On.png", "on": "UI/Controls/UI_Toggle_On.png", "off": "UI/Controls/UI_Toggle_Off.png" },
     { "id": "SoundEffectsLabel", "kind": "label", "parent": "Panel", "text": "Sound effects", "font": "SansSemiBold", "align": "left", "rect": [424, 434, 170, 38], "key": "ui.settings.sound_effects" },
-    { "id": "SoundEffectsToggle", "kind": "toggle", "parent": "Panel", "shape": "pill", "rect": [707.2, 429.8, 81.7, 45.8], "use": "UI_Toggle_On", "on": "UI_Toggle_On", "off": "UI_Toggle_Off" },
+    { "id": "SoundEffectsToggle", "kind": "toggle", "parent": "Panel", "rect": [706.65, 429.06, 83.3, 47.2], "use": "UI/Controls/UI_Toggle_On.png", "on": "UI/Controls/UI_Toggle_On.png", "off": "UI/Controls/UI_Toggle_Off.png" },
     { "id": "VolumeLabel", "kind": "label", "parent": "Panel", "text": "Volume", "font": "SansSemiBold", "align": "left", "rect": [424, 500, 100, 40], "key": "ui.settings.volume" },
     { "id": "VolumeValue", "kind": "label", "parent": "Panel", "text": "70%", "font": "SansSemiBold", "align": "right", "rect": [730, 501, 64, 38] },
-    { "id": "VolumeSlider", "kind": "slider", "parent": "Panel", "rect": [429.3, 546.3, 361.9, 32.6], "hole": false },
-    { "id": "VolumeTrack", "parent": "VolumeSlider", "rect": [429.3, 553.5, 358.6, 18.9], "raycast": true, "make": { "type": "pill", "fill": "#D9C9BA", "out": "UI_SliderTrack" } },
-    { "id": "VolumeFill", "parent": "VolumeSlider", "rect": [429.3, 553.45, 253.35, 18.9], "slice": [10, 0, 10, 0], "make": { "type": "pill", "fill": "#890D25", "fill2": "#710314", "out": "UI_SliderFill" } },
-    { "id": "VolumeKnob", "parent": "VolumeSlider", "shape": "ellipse", "rect": [666.4, 546.3, 32.5, 32.6], "scale": 2, "raycast": true, "out": "UI_SliderKnob",
+    { "id": "VolumeSlider", "kind": "slider", "parent": "Panel", "rect": [429.58, 546.6, 361.54, 32.1], "hole": false },
+    { "id": "VolumeTrack", "parent": "VolumeSlider", "rect": [429.58, 553.38, 358.25, 18.85], "raycast": true, "use": "UI/Controls/UI_Slider_Track.png" },
+    { "id": "VolumeFill", "parent": "VolumeSlider", "rect": [427.8, 551.88, 256.2, 21.65], "use": "UI/Controls/UI_Slider_Fill.png" },
+    { "id": "VolumeKnob", "parent": "VolumeSlider", "rect": [666.6, 546.6, 32.1, 32.1], "raycast": true, "use": "UI/Controls/UI_Slider_Knob.png",
       "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowSpread": 5, "shadowDrop": 2, "shadowOpacity": 0.28 },
 
     { "id": "PrefsIcon", "parent": "Panel", "rect": [892.19, 276.23, 49.17, 49.50], "use": "UI/Icons/Icon_Settings.png" },
@@ -54,12 +56,12 @@
     { "id": "PrefsAccent", "parent": "Panel", "rect": [966.1, 328.52, 17.7, 2.14], "use": "Deco_HeadingAccent" },
     { "id": "PrefsRule", "parent": "Panel", "rect": [982, 335.43, 261.2, 1.47], "fade": [13, 0], "make": { "type": "rect", "fill": "#D1BCAA", "out": "Deco_HeadingRule_Prefs" } },
     { "id": "LanguageLabel", "kind": "label", "parent": "Panel", "text": "Language", "font": "SansSemiBold", "align": "left", "rect": [880, 368, 124, 40], "key": "ui.settings.language" },
-    { "id": "LanguageButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 10, "rect": [1066.9, 362.2, 177.7, 55.1], "scale": 2, "out": "UI_Dropdown" },
+    { "id": "LanguageButton", "kind": "button", "parent": "Panel", "rect": [1067.61, 362.73, 176.8, 54.4], "use": "UI/Controls/UI_Dropdown.png" },
     { "id": "LanguageValue", "kind": "label", "parent": "LanguageButton", "text": "English", "font": "SansSemiBold", "align": "left", "rect": [1082, 370, 94, 40] },
     { "id": "VibrationLabel", "kind": "label", "parent": "Panel", "text": "Vibration", "font": "SansSemiBold", "align": "left", "rect": [880, 438, 118, 38], "key": "ui.settings.vibration" },
-    { "id": "VibrationToggle", "kind": "toggle", "parent": "Panel", "shape": "pill", "rect": [1162.9, 434.6, 81.7, 45.9], "use": "UI_Toggle_On", "on": "UI_Toggle_On", "off": "UI_Toggle_Off" },
+    { "id": "VibrationToggle", "kind": "toggle", "parent": "Panel", "rect": [1162.2, 433.96, 83.3, 47.2], "use": "UI/Controls/UI_Toggle_On.png", "on": "UI/Controls/UI_Toggle_On.png", "off": "UI/Controls/UI_Toggle_Off.png" },
     { "id": "ReduceMotionLabel", "kind": "label", "parent": "Panel", "text": "Reduce motion", "font": "SansSemiBold", "align": "left", "rect": [880, 506, 184, 40], "key": "ui.settings.reduce_motion" },
-    { "id": "ReduceMotionToggle", "kind": "toggle", "parent": "Panel", "shape": "pill", "rect": [1163.7, 503.8, 80.1, 44.0], "scale": 2, "out": "UI_Toggle_Off", "on": "UI_Toggle_On", "off": "UI_Toggle_Off" },
+    { "id": "ReduceMotionToggle", "kind": "toggle", "parent": "Panel", "rect": [1161.93, 502.46, 83.3, 47.2], "use": "UI/Controls/UI_Toggle_Off.png", "on": "UI/Controls/UI_Toggle_On.png", "off": "UI/Controls/UI_Toggle_Off.png" },
 
     { "id": "HowToPlayButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 31, "rect": [474.8, 634.8, 352.8, 84.8],
       "use": "UI/Buttons/UI_ButtonSecondary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png", "shadowDrop": 2, "shadowOpacity": 0.4 },
@@ -72,8 +74,8 @@
     { "id": "AboutLabel", "kind": "label", "parent": "AboutButton", "text": "About", "font": "SansBold", "rect": [977, 658, 84, 40], "key": "ui.settings.about" },
     { "id": "AboutChevron", "parent": "AboutButton", "rect": [1157.98, 666.89, 12.56, 20.78], "use": "UI/Icons/Icon_Chevron.png" },
 
-    { "id": "DoneButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 36, "rect": [587.1, 746.6, 498.5, 90.0],
-      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "DoneButton", "kind": "button", "parent": "Panel", "rect": [587.05, 747.15, 498.62, 89.3],
+      "use": "UI/Controls/UI_Button_Crimson.png", "shadowUse": "UI/Controls/UI_Button_Crimson_Shadow.png", "shadowDrop": 6.5, "shadowOpacity": 0.22 },
     { "id": "DoneLabel", "kind": "label", "parent": "DoneButton", "text": "Done", "font": "SerifBold", "ink": "light", "style": "buttonLabel", "rect": [782, 766, 110, 48], "key": "ui.settings.done" }
   ]
 }

@@ -339,7 +339,7 @@
         630.7
       ],
       "spritePpu": 0,
-      "checkError": 5.85
+      "checkError": 5.95
     },
     {
       "id": "ColumnDivider",
@@ -522,26 +522,24 @@
       "id": "MusicToggle",
       "kind": "toggle",
       "parent": "Panel",
-      "shape": "pill",
       "rect": [
-        707.2,
-        364.0,
-        81.7,
-        45.9
+        706.6,
+        363.37,
+        83.3,
+        47.2
       ],
-      "scale": 2,
-      "out": "UI_Toggle_On",
-      "on": "UI_Toggle_On",
-      "off": "UI_Toggle_Off",
-      "sprite": "Assets/_Project/Art/Screens/Settings/UI_Toggle_On.png",
+      "use": "UI/Controls/UI_Toggle_On.png",
+      "on": "UI/Controls/UI_Toggle_On.png",
+      "off": "UI/Controls/UI_Toggle_Off.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Toggle_On.png",
       "spriteRect": [
-        707,
-        364,
-        82,
-        46
+        706.6,
+        363.37,
+        83.3,
+        47.2
       ],
-      "spritePpu": 174.1667,
-      "checkError": 0.5
+      "spritePpu": 0,
+      "checkError": 7.7
     },
     {
       "id": "SoundEffectsLabel",
@@ -571,25 +569,24 @@
       "id": "SoundEffectsToggle",
       "kind": "toggle",
       "parent": "Panel",
-      "shape": "pill",
       "rect": [
-        707.2,
-        429.8,
-        81.7,
-        45.8
+        706.65,
+        429.06,
+        83.3,
+        47.2
       ],
-      "use": "UI_Toggle_On",
-      "on": "UI_Toggle_On",
-      "off": "UI_Toggle_Off",
-      "sprite": "Assets/_Project/Art/Screens/Settings/UI_Toggle_On.png",
+      "use": "UI/Controls/UI_Toggle_On.png",
+      "on": "UI/Controls/UI_Toggle_On.png",
+      "off": "UI/Controls/UI_Toggle_Off.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Toggle_On.png",
       "spriteRect": [
-        707.2,
-        429.8,
-        81.7,
-        45.8
+        706.65,
+        429.06,
+        83.3,
+        47.2
       ],
       "spritePpu": 0,
-      "checkError": 6.21
+      "checkError": 5.68
     },
     {
       "id": "VolumeLabel",
@@ -643,99 +640,82 @@
       "kind": "slider",
       "parent": "Panel",
       "rect": [
-        429.3,
-        546.3,
-        361.9,
-        32.6
+        429.58,
+        546.6,
+        361.54,
+        32.1
       ],
       "hole": false,
-      "checkError": 6.91
+      "checkError": 16.07
     },
     {
       "id": "VolumeTrack",
       "parent": "VolumeSlider",
       "rect": [
-        429.3,
-        553.5,
-        358.6,
-        18.9
+        429.58,
+        553.38,
+        358.25,
+        18.85
       ],
       "raycast": true,
-      "make": {
-        "type": "pill",
-        "fill": "#D9C9BA",
-        "out": "UI_SliderTrack"
-      },
+      "use": "UI/Controls/UI_Slider_Track.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Settings/UI_SliderTrack.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Slider_Track.png",
       "spriteRect": [
-        429.3,
-        553.5,
-        358.6,
-        18.9
+        429.58,
+        553.38,
+        358.25,
+        18.85
       ],
-      "spritePpu": 200,
-      "checkError": 9.21
+      "spritePpu": 0,
+      "checkError": 23.4
     },
     {
       "id": "VolumeFill",
       "parent": "VolumeSlider",
       "rect": [
-        429.3,
-        553.45,
-        253.35,
-        18.9
+        427.8,
+        551.88,
+        256.2,
+        21.65
       ],
-      "slice": [
-        10,
-        0,
-        10,
-        0
-      ],
-      "make": {
-        "type": "pill",
-        "fill": "#890D25",
-        "fill2": "#710314",
-        "out": "UI_SliderFill"
-      },
+      "use": "UI/Controls/UI_Slider_Fill.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Settings/UI_SliderFill.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Slider_Fill.png",
       "spriteRect": [
-        429.3,
-        553.45,
-        253.35,
-        18.9
+        427.8,
+        551.88,
+        256.2,
+        21.65
       ],
-      "spritePpu": 200,
-      "checkError": 11.76
+      "spritePpu": 0,
+      "checkError": 25.98
     },
     {
       "id": "VolumeKnob",
       "parent": "VolumeSlider",
-      "shape": "ellipse",
       "rect": [
-        666.4,
-        546.3,
-        32.5,
-        32.6
+        666.6,
+        546.6,
+        32.1,
+        32.1
       ],
-      "scale": 2,
       "raycast": true,
-      "out": "UI_SliderKnob",
+      "use": "UI/Controls/UI_Slider_Knob.png",
       "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
       "shadowSpread": 5,
       "shadowDrop": 2,
       "shadowOpacity": 0.28,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Settings/UI_SliderKnob.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Slider_Knob.png",
       "spriteRect": [
-        666,
-        546,
-        33,
-        33
+        666.6,
+        546.6,
+        32.1,
+        32.1
       ],
-      "spritePpu": 174.1667,
-      "checkError": 5.91
+      "spritePpu": 0,
+      "checkError": 12.86
     },
     {
       "id": "PrefsIcon",
@@ -864,25 +844,22 @@
       "id": "LanguageButton",
       "kind": "button",
       "parent": "Panel",
-      "shape": "roundrect",
-      "radius": 10,
       "rect": [
-        1066.9,
-        362.2,
-        177.7,
-        55.1
+        1067.61,
+        362.73,
+        176.8,
+        54.4
       ],
-      "scale": 2,
-      "out": "UI_Dropdown",
-      "sprite": "Assets/_Project/Art/Screens/Settings/UI_Dropdown.png",
+      "use": "UI/Controls/UI_Dropdown.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Dropdown.png",
       "spriteRect": [
-        1066,
-        362,
-        179,
-        56
+        1067.61,
+        362.73,
+        176.8,
+        54.4
       ],
-      "spritePpu": 174.1667,
-      "checkError": 0.83
+      "spritePpu": 0,
+      "checkError": 5.31
     },
     {
       "id": "LanguageValue",
@@ -935,25 +912,24 @@
       "id": "VibrationToggle",
       "kind": "toggle",
       "parent": "Panel",
-      "shape": "pill",
       "rect": [
-        1162.9,
-        434.6,
-        81.7,
-        45.9
+        1162.2,
+        433.96,
+        83.3,
+        47.2
       ],
-      "use": "UI_Toggle_On",
-      "on": "UI_Toggle_On",
-      "off": "UI_Toggle_Off",
-      "sprite": "Assets/_Project/Art/Screens/Settings/UI_Toggle_On.png",
+      "use": "UI/Controls/UI_Toggle_On.png",
+      "on": "UI/Controls/UI_Toggle_On.png",
+      "off": "UI/Controls/UI_Toggle_Off.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Toggle_On.png",
       "spriteRect": [
-        1162.9,
-        434.6,
-        81.7,
-        45.9
+        1162.2,
+        433.96,
+        83.3,
+        47.2
       ],
       "spritePpu": 0,
-      "checkError": 9.34
+      "checkError": 7.83
     },
     {
       "id": "ReduceMotionLabel",
@@ -983,26 +959,24 @@
       "id": "ReduceMotionToggle",
       "kind": "toggle",
       "parent": "Panel",
-      "shape": "pill",
       "rect": [
-        1163.7,
-        503.8,
-        80.1,
-        44.0
+        1161.93,
+        502.46,
+        83.3,
+        47.2
       ],
-      "scale": 2,
-      "out": "UI_Toggle_Off",
-      "on": "UI_Toggle_On",
-      "off": "UI_Toggle_Off",
-      "sprite": "Assets/_Project/Art/Screens/Settings/UI_Toggle_Off.png",
+      "use": "UI/Controls/UI_Toggle_Off.png",
+      "on": "UI/Controls/UI_Toggle_On.png",
+      "off": "UI/Controls/UI_Toggle_Off.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Toggle_Off.png",
       "spriteRect": [
-        1163,
-        503,
-        81,
-        45
+        1161.93,
+        502.46,
+        83.3,
+        47.2
       ],
-      "spritePpu": 174.1667,
-      "checkError": 1.46
+      "spritePpu": 0,
+      "checkError": 5.47
     },
     {
       "id": "HowToPlayButton",
@@ -1190,27 +1164,25 @@
       "id": "DoneButton",
       "kind": "button",
       "parent": "Panel",
-      "shape": "roundrect",
-      "radius": 36,
       "rect": [
-        587.1,
-        746.6,
-        498.5,
-        90.0
+        587.05,
+        747.15,
+        498.62,
+        89.3
       ],
-      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png",
-      "shadowUse": "UI/Buttons/UI_Shadow_Primary.png",
-      "shadowDrop": 6,
-      "shadowOpacity": 0.45,
-      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "use": "UI/Controls/UI_Button_Crimson.png",
+      "shadowUse": "UI/Controls/UI_Button_Crimson_Shadow.png",
+      "shadowDrop": 6.5,
+      "shadowOpacity": 0.22,
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Button_Crimson.png",
       "spriteRect": [
-        587.1,
-        746.6,
-        498.5,
-        90
+        587.05,
+        747.15,
+        498.62,
+        89.3
       ],
       "spritePpu": 0,
-      "checkError": 22.17
+      "checkError": 19.01
     },
     {
       "id": "DoneLabel",
