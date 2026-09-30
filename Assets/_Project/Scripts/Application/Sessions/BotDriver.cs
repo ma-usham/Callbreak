@@ -50,7 +50,20 @@ namespace Callbreak.Application.Sessions
         public bool IsBot(Seat seat) => _bots.ContainsKey(seat);
 
         /// <summary>A seat's person has gone (left, or away for good): a bot plays it from now on.</summary>
-        public void TakeOver(Seat seat, IBotStrategy strategy) => _bots[seat] = strategy ?? _standIn;
+        public void TakeOver(Seat seat, IBotStrategy strategy)
+        {
+            _bots[seat] = strategy ?? _standIn;
+            _scheduledTurn = TurnId.None;
+        }
+
+        /// <summary>The seat's person is back (reconnected, or tapped "I'm back"): bots stop playing it.</summary>
+        public void Release(Seat seat)
+        {
+            if (_bots.Remove(seat))
+            {
+                _scheduledTurn = TurnId.None;
+            }
+        }
 
         /// <summary>Holds every bot until <paramref name="until"/> (a trick on display, the deal animation).</summary>
         public void Hold(double until)

@@ -18,6 +18,7 @@
     <Compile Include="$(UnityTests)\Bots\**\*.cs" />
     <Compile Include="$(UnityTests)\Application\**\*.cs" />
     <Compile Include="$(UnityTests)\Support\**\*.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Staging\Tests\**\*.cs" Condition="'$(UseStaging)' == 'true'" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />

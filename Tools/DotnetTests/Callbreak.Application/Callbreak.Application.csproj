@@ -8,6 +8,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(UnityScripts)\Application\**\*.cs" Exclude="$(UnityScripts)\Application\Config\**\*.cs;$(UnityScripts)\Application\**\Unity\**\*.cs" />
+    <!-- Work in progress that must not reach the shared Editor until it compiles (see README). -->
+    <Compile Include="$(MSBuildThisFileDirectory)..\Staging\Application\**\*.cs" Condition="'$(UseStaging)' == 'true'" />
     <ProjectReference Include="..\Callbreak.Core\Callbreak.Core.csproj" />
     <ProjectReference Include="..\Callbreak.Bots\Callbreak.Bots.csproj" />
   </ItemGroup>

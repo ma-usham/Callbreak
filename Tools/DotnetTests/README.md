@@ -21,3 +21,11 @@ use NUnit 3.14 here and NUnit 3.5 inside Unity, so keep to what 3.5 has: `Assert
 `Assert.Multiple`, no `async` tests.
 
 A green run here does not replace the Editor's Test Runner before a merge; it is the fast loop.
+
+## Staging
+
+`Tools/DotnetTests/Staging/Application/**` and `Staging/Tests/**` are compiled into the harness
+like the real folders but live outside `Assets/`, so the shared Unity Editor never sees them.
+Write a larger engine-free piece there, get it compiling and green, then move the files into
+`Assets/_Project/Scripts/Application` and `Assets/_Project/Tests/EditMode`. The folder is
+git-ignored and should be empty between tasks.

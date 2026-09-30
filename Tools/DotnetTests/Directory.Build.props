@@ -10,7 +10,9 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <UnityScripts>$(MSBuildThisFileDirectory)..\..\Assets\_Project\Scripts</UnityScripts>
     <UnityTests>$(MSBuildThisFileDirectory)..\..\Assets\_Project\Tests\EditMode</UnityTests>
-    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
-    <BaseOutputPath>$(MSBuildThisFileDirectory)bin\$(MSBuildProjectName)\</BaseOutputPath>
+    <!-- Staging builds (-p:UseStaging=true) keep their own output, so they never fight a normal test run. -->
+    <HarnessFlavor Condition="'$(UseStaging)' == 'true'">\staging</HarnessFlavor>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)obj$(HarnessFlavor)\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)bin$(HarnessFlavor)\$(MSBuildProjectName)\</BaseOutputPath>
   </PropertyGroup>
 </Project>

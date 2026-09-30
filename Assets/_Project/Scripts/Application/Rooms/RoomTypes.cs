@@ -66,6 +66,15 @@ namespace Callbreak.Application.Rooms
         RateLimited,
         HostLeft,
         Unknown,
+
+        /// <summary>The host removed this player from the room.</summary>
+        Kicked,
+
+        /// <summary>The same player connected again from elsewhere and took the seat over.</summary>
+        Replaced,
+
+        /// <summary>The connection to the host was lost and could not be restored.</summary>
+        ConnectionLost,
     }
 
     public readonly struct RoomResult

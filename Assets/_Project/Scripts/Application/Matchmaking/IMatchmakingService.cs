@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Callbreak.Application.Rooms;
+using Callbreak.Application.Sessions;
 
 namespace Callbreak.Application.Matchmaking
 {
@@ -18,6 +19,9 @@ namespace Callbreak.Application.Matchmaking
         /// button). Progress reports seats as they fill.
         /// </summary>
         Task<MatchmakingResult> FindMatchAsync(IProgress<MatchmakingProgress> progress, CancellationToken ct);
+
+        /// <summary>The match the last successful search found, the session the table plays through; otherwise null.</summary>
+        IMatchSession Match { get; }
     }
 
     public sealed class MatchmakingProgress

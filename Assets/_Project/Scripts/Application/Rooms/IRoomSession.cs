@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Callbreak.Application.Sessions;
 
 namespace Callbreak.Application.Rooms
 {
@@ -30,6 +31,12 @@ namespace Callbreak.Application.Rooms
         bool IsHost { get; }
 
         int LocalSeatIndex { get; }
+
+        /// <summary>
+        /// The room's running or last match, the session the table plays through; null in the
+        /// lobby before the first start. It is set when <see cref="MatchStarting"/> is raised.
+        /// </summary>
+        IMatchSession Match { get; }
 
         Task SetReadyAsync(bool ready, CancellationToken ct);
 
