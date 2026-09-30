@@ -27,6 +27,9 @@ namespace Callbreak.Application.Online
         private const double TicketRefreshSeconds = 60.0;
         private const int CodeAttempts = 3;
 
+        /// <summary>Reconnect attempts in a row that find no room before a guest is told the host has left.</summary>
+        private const int NotFoundBeforeHostLeft = 3;
+
         private static readonly double[] RetryPauses = { 1, 2, 4, 8 };
 
         private readonly IRoomTransport _transport;
@@ -45,6 +48,7 @@ namespace Callbreak.Application.Online
         private readonly IAnalytics _analytics;
         private readonly List<double> _joinAttempts = new List<double>();
         private readonly List<Closing> _closing = new List<Closing>();
+        private readonly HandlerFaults _faults = new HandlerFaults();
         private readonly string _fallbackPlayerId;
 
         private RoomHost _host;
@@ -58,13 +62,14 @@ namespace Callbreak.Application.Online
         private double _reconnectUntil;
         private double _nextRetryAt;
         private int _retries;
+        private int _notFound;
         private Task<ClientLinkResult> _retry;
         private Task<RoomError> _rejoin;
         private CancellationTokenSource _retryCancel;
         private bool _ticketHeld;
         private double _nextTicketAt;
 
-        /// <param name="seedSource">Draws shuffle seeds and the room code's randomness (a CSPRNG in production).</param>
+        /// <param name="seedSource">Draws shuffle seeds, match ids and room codes (a CSPRNG in production).</param>
         /// <param name="tickets">Where a guest's running match is remembered for "Rejoin match"; null keeps none.</param>
         /// <param name="analytics">Receives room_created and room_joined (GDD §15); null reports nothing.</param>
         public RoomService(
@@ -141,22 +146,25 @@ namespace Callbreak.Application.Online
             {
                 LeaveCurrent();
                 // A code someone else is hosting right now comes back as AlreadyStarted: draw another.
-                string code = RoomCode.Generate(_rng.NextInt);
+                string code = DrawCode();
                 HostLinkResult hosted = await _transport.HostAsync(code, ct);
                 for (int attempt = 0; attempt < CodeAttempts && hosted.Error == RoomError.AlreadyStarted; attempt++)
                 {
-                    code = RoomCode.Generate(_rng.NextInt);
+                    code = DrawCode();
                     hosted = await _transport.HostAsync(code, ct);
                 }
 
                 if (!hosted.Succeeded)
                 {
-                    return new RoomResult(null, hosted.Error == RoomError.None ? RoomError.Unknown : hosted.Error);
+                    // Every code drawn taken means a relay that answers wrongly: to a host that is
+                    // "couldn't connect", not "the match has started".
+                    bool unexplained = hosted.Error == RoomError.None || hosted.Error == RoomError.AlreadyStarted;
+                    return new RoomResult(null, unexplained ? RoomError.Unknown : hosted.Error);
                 }
 
                 var host = new RoomHost(code, settings, hosted.Link, _bots, _names, _rng, _cosmetics.DeckIds, _seedSource, _timing);
                 host.Tick(_now);
-                var client = new RoomClient(host.Local, Identity(), host, MatchMode.PrivateRoom, _stats, _settings);
+                var client = new RoomClient(host.Local, Identity(code), host, MatchMode.PrivateRoom, _stats, _settings);
                 client.Tick(_now);
                 RoomError joined = await client.JoinAsync(ct);
                 if (joined != RoomError.None)
@@ -207,7 +215,7 @@ namespace Callbreak.Application.Online
                     return new RoomResult(null, linked.Error == RoomError.None ? RoomError.Unknown : linked.Error);
                 }
 
-                var client = new RoomClient(linked.Link, Identity(), null, MatchMode.PrivateRoom, _stats, _settings);
+                var client = new RoomClient(linked.Link, Identity(normalized), null, MatchMode.PrivateRoom, _stats, _settings);
                 client.Tick(_now);
                 _joining = client;
                 RoomError joined;
@@ -237,39 +245,89 @@ namespace Callbreak.Application.Online
             }
         }
 
-        /// <summary>Drives the hosted room, the member and any reconnect. Call every frame.</summary>
+        /// <summary>
+        /// Drives the hosted room, the member and any reconnect. Call every frame. Every part runs
+        /// whatever a screen's handler threw in the part before it; the first exception is thrown
+        /// last, for the ticker to log.
+        /// </summary>
         public void Tick(double now)
         {
             _now = now;
             if (_host != null)
             {
-                _host.Tick(now);
+                try
+                {
+                    _host.Tick(now);
+                }
+                catch (Exception e)
+                {
+                    _faults.Keep(e);
+                }
             }
 
             if (_joining != null)
             {
-                _joining.Tick(now);
+                try
+                {
+                    _joining.Tick(now);
+                }
+                catch (Exception e)
+                {
+                    _faults.Keep(e);
+                }
             }
 
             if (_client != null)
             {
-                _client.Tick(now);
+                try
+                {
+                    _client.Tick(now);
+                }
+                catch (Exception e)
+                {
+                    _faults.Keep(e);
+                }
             }
 
             if (_reconnecting)
             {
-                Reconnect(now);
+                try
+                {
+                    Reconnect(now);
+                }
+                catch (Exception e)
+                {
+                    _faults.Keep(e);
+                }
             }
 
-            TrackRejoinTicket(now);
+            try
+            {
+                TrackRejoinTicket(now);
+            }
+            catch (Exception e)
+            {
+                _faults.Keep(e);
+            }
+
             for (int i = _closing.Count - 1; i >= 0; i--)
             {
                 if (now >= _closing[i].At)
                 {
-                    _closing[i].Dispose();
+                    Closing closing = _closing[i];
                     _closing.RemoveAt(i);
+                    try
+                    {
+                        closing.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        _faults.Keep(e);
+                    }
                 }
             }
+
+            _faults.Rethrow();
         }
 
         public void Dispose()
@@ -277,17 +335,37 @@ namespace Callbreak.Application.Online
             LeaveCurrent();
             foreach (Closing closing in _closing)
             {
-                closing.Dispose();
+                try
+                {
+                    closing.Dispose();
+                }
+                catch (Exception e)
+                {
+                    _faults.Keep(e);
+                }
             }
 
             _closing.Clear();
+            _faults.Rethrow();
         }
 
-        private HelloMessage Identity()
+        /// <summary>
+        /// This player's hello to the room <paramref name="code"/>. It names the player by its
+        /// identity in that room alone (GDD §27): the permanent id stays on this device, so no host
+        /// can use what it was sent to take this player's seat in any other room.
+        /// </summary>
+        private HelloMessage Identity(string code)
         {
             string playerId = _auth != null && !string.IsNullOrEmpty(_auth.PlayerId) ? _auth.PlayerId : _fallbackPlayerId;
-            return new HelloMessage(Protocol.Version, playerId, _profile.DisplayName, _profile.AvatarId, _cosmetics.SelectedDeckId);
+            return new HelloMessage(Protocol.Version, RoomIdentity.For(playerId, code), _profile.DisplayName, _profile.AvatarId, _cosmetics.SelectedDeckId);
         }
+
+        /// <summary>
+        /// A room code is an invitation (GDD Appendix A), so it comes straight from the secure seed
+        /// source: never from the generator that draws the bots' names, avatars and decks, which
+        /// every guest sees and could work back from.
+        /// </summary>
+        private string DrawCode() => RoomCode.Generate(new Pcg32Random(_seedSource()).NextInt);
 
         private bool AllowJoinAttempt()
         {
@@ -313,7 +391,15 @@ namespace Callbreak.Application.Online
         {
             if (_client != null && !_client.IsClosed)
             {
-                _client.LeaveAsync(CancellationToken.None);
+                try
+                {
+                    _client.LeaveAsync(CancellationToken.None);
+                }
+                catch (Exception e)
+                {
+                    // A screen failed on the way out; the room is left all the same.
+                    _faults.Keep(e);
+                }
             }
 
             Release();
@@ -333,7 +419,7 @@ namespace Callbreak.Application.Online
             }
 
             RoomClient client = _client;
-            if (client == null || client.IsClosed || client.IsHost || !client.InMatch)
+            if (client == null || client.IsClosed || client.IsHost || !client.InMatch || client.Match == null)
             {
                 DropRejoinTicket();
                 return;
@@ -341,7 +427,8 @@ namespace Callbreak.Application.Online
 
             if (!_ticketHeld || now >= _nextTicketAt)
             {
-                _tickets.Remember(client.Code);
+                // The match id comes along, so a match never gone back to can be settled as left.
+                _tickets.Remember(client.Code, client.Match.View.MatchId);
                 _ticketHeld = true;
                 _nextTicketAt = now + TicketRefreshSeconds;
             }
@@ -400,6 +487,7 @@ namespace Callbreak.Application.Online
 
             _reconnecting = true;
             _retries = 0;
+            _notFound = 0;
             _reconnectUntil = _now + Protocol.SeatHoldSeconds;
             _nextRetryAt = _now + RetryPauses[0];
             _retry = null;
@@ -437,6 +525,14 @@ namespace Callbreak.Application.Online
                     client.Close(RoomError.ConnectionLost);
                     return;
                 }
+
+                if (result == RoomError.Kicked)
+                {
+                    // Removed while the connection was down: there is nothing to go back to.
+                    StopReconnecting();
+                    client.Close(RoomError.Kicked);
+                    return;
+                }
             }
 
             if (_retry != null)
@@ -447,10 +543,12 @@ namespace Callbreak.Application.Online
                 }
 
                 bool linked = _retry.Status == TaskStatus.RanToCompletion && _retry.Result.Succeeded;
+                bool notFound = _retry.Status == TaskStatus.RanToCompletion && _retry.Result.Error == RoomError.NotFound;
                 IClientLink link = linked ? _retry.Result.Link : null;
                 _retry = null;
                 if (linked)
                 {
+                    _notFound = 0;
                     if (_clientLink != null)
                     {
                         _clientLink.Dispose();
@@ -458,6 +556,16 @@ namespace Callbreak.Application.Online
 
                     _clientLink = link;
                     _rejoin = client.RejoinAsync(link, _retryCancel.Token);
+                    return;
+                }
+
+                // GDD §27 failure modes: the relay no longer knows the room, again and again, so the
+                // host has left and the match has ended; nobody is kept waiting out the seat hold.
+                _notFound = notFound ? _notFound + 1 : 0;
+                if (_notFound >= NotFoundBeforeHostLeft)
+                {
+                    StopReconnecting();
+                    client.Close(RoomError.HostLeft);
                     return;
                 }
             }
@@ -515,26 +623,32 @@ namespace Callbreak.Application.Online
 
             public double At { get; }
 
+            /// <summary>The links are let go of whatever the room's last handlers threw, so the relay room never outlives it.</summary>
             public void Dispose()
             {
-                if (_client != null)
+                try
                 {
-                    _client.Dispose();
-                }
+                    if (_client != null)
+                    {
+                        _client.Dispose();
+                    }
 
-                if (_host != null)
-                {
-                    _host.Dispose();
+                    if (_host != null)
+                    {
+                        _host.Dispose();
+                    }
                 }
-
-                if (_clientLink != null)
+                finally
                 {
-                    _clientLink.Dispose();
-                }
+                    if (_clientLink != null)
+                    {
+                        _clientLink.Dispose();
+                    }
 
-                if (_hostLink != null)
-                {
-                    _hostLink.Dispose();
+                    if (_hostLink != null)
+                    {
+                        _hostLink.Dispose();
+                    }
                 }
             }
         }

@@ -34,6 +34,7 @@ namespace Callbreak.Application.Online
         private readonly NameFilter _names;
         private readonly Func<ulong> _seedSource;
         private readonly BotTiming _timing;
+        private readonly HandlerFaults _faults = new HandlerFaults();
 
         private RoomHost _host;
         private RoomClient _client;
@@ -83,7 +84,8 @@ namespace Callbreak.Application.Online
 
             Close();
             string playerId = _auth != null && !string.IsNullOrEmpty(_auth.PlayerId) ? _auth.PlayerId : "guest";
-            var identity = new HelloMessage(Protocol.Version, playerId, _profile.DisplayName, _profile.AvatarId, _cosmetics.SelectedDeckId);
+            var identity = new HelloMessage(
+                Protocol.Version, RoomIdentity.For(playerId, string.Empty), _profile.DisplayName, _profile.AvatarId, _cosmetics.SelectedDeckId);
             // The room is never shown; its one turn time stands for the card timer. The table
             // itself runs on the Quick Match clocks: 20 s to call, 15 s to play a card (GDD §6).
             var settings = new RoomSettings("Quick Match", _config.Clocks.PlaySeconds);
@@ -116,26 +118,49 @@ namespace Callbreak.Application.Online
             return search.Completion.Task;
         }
 
-        /// <summary>Drives the search and then the hosted table. Call every frame.</summary>
+        /// <summary>
+        /// Drives the search and then the hosted table. Call every frame. Every part runs whatever a
+        /// screen's handler threw in the part before it; the first exception is thrown last.
+        /// </summary>
         public void Tick(double now)
         {
             _now = now;
             if (_host != null)
             {
-                _host.Tick(now);
+                try
+                {
+                    _host.Tick(now);
+                }
+                catch (Exception e)
+                {
+                    _faults.Keep(e);
+                }
             }
 
             if (_client != null)
             {
-                _client.Tick(now);
+                try
+                {
+                    _client.Tick(now);
+                }
+                catch (Exception e)
+                {
+                    _faults.Keep(e);
+                }
             }
 
             Search search = _search;
-            if (search == null)
+            if (search != null)
             {
-                return;
+                Advance(search, now);
             }
 
+            _faults.Rethrow();
+        }
+
+        /// <summary>The search's own time: bots fill the table at the delay, then the seats are revealed one by one.</summary>
+        private void Advance(Search search, double now)
+        {
             double elapsed = now - search.StartedAt;
             if (!search.Filled)
             {
@@ -184,6 +209,7 @@ namespace Callbreak.Application.Online
             }
 
             Close();
+            _faults.Rethrow();
         }
 
         private void Finish(MatchmakingError result)
@@ -207,16 +233,26 @@ namespace Callbreak.Application.Online
 
         private void Close()
         {
-            if (_client != null)
+            RoomClient client = _client;
+            RoomHost host = _host;
+            _client = null;
+            _host = null;
+            if (client != null)
             {
-                _client.Dispose();
-                _client = null;
+                client.Dispose();
             }
 
-            if (_host != null)
+            if (host != null)
             {
-                _host.Dispose();
-                _host = null;
+                try
+                {
+                    host.Dispose();
+                }
+                catch (Exception e)
+                {
+                    // A screen's handler failed while the table closed; it is closed all the same.
+                    _faults.Keep(e);
+                }
             }
         }
 

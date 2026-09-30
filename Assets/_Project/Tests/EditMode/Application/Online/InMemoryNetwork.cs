@@ -21,6 +21,9 @@ namespace Callbreak.Tests.EditMode.Application.Online
         /// <summary>Set to make <see cref="HostAsync"/> fail, as when the relay is unreachable.</summary>
         public RoomError HostError { get; set; } = RoomError.None;
 
+        /// <summary>Set to give the next connection this id, as a relay that hands out a freed id again would.</summary>
+        public ulong? NextPeerId { get; set; }
+
         public int Delivered { get; private set; }
 
         /// <summary>How often a device asked the relay to host a room, whatever the answer was.</summary>
@@ -29,12 +32,30 @@ namespace Callbreak.Tests.EditMode.Application.Online
         /// <summary>Every payload a host sent to a guest, in order: all that leaves the host's device.</summary>
         public List<byte[]> HostPayloads { get; } = new List<byte[]>();
 
+        /// <summary>Every payload a guest sent, in order, with the code of the room it went to: all a host is handed.</summary>
+        public List<(string Code, byte[] Payload)> ClientPayloads { get; } = new List<(string Code, byte[] Payload)>();
+
+        /// <summary>
+        /// When set, an exception thrown by whatever handles a delivery is recorded in
+        /// <see cref="Faults"/> and the next delivery goes ahead, as the real transport logs it and
+        /// carries on. When not set it leaves <see cref="Pump"/>, so no test misses one.
+        /// </summary>
+        public bool CollectFaults { get; set; }
+
+        public List<Exception> Faults { get; } = new List<Exception>();
+
         public Task<HostLinkResult> HostAsync(string roomCode, CancellationToken ct)
         {
             HostAttempts++;
             if (HostError != RoomError.None)
             {
                 return Task.FromResult(new HostLinkResult(null, HostError));
+            }
+
+            if (_hosts.TryGetValue(roomCode, out HostLink live) && !live.IsDisposed)
+            {
+                // Someone is hosting this code right now: a second host never takes it over.
+                return Task.FromResult(new HostLinkResult(null, RoomError.AlreadyStarted));
             }
 
             var link = new HostLink(this, roomCode);
@@ -49,7 +70,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 return Task.FromResult(new ClientLinkResult(null, RoomError.NotFound));
             }
 
-            var peer = new PeerId(_nextPeer++);
+            var peer = new PeerId(NextPeerId ?? _nextPeer++);
+            NextPeerId = null;
             var client = new ClientLink(this, host, peer);
             host.Add(peer, client);
             _queue.Enqueue(() => host.RaiseConnected(peer));
@@ -67,8 +89,22 @@ namespace Callbreak.Tests.EditMode.Application.Online
                     throw new InvalidOperationException("The network never settles.");
                 }
 
-                _queue.Dequeue()();
+                Action delivery = _queue.Dequeue();
                 Delivered++;
+                if (!CollectFaults)
+                {
+                    delivery();
+                    continue;
+                }
+
+                try
+                {
+                    delivery();
+                }
+                catch (Exception e)
+                {
+                    Faults.Add(e);
+                }
             }
         }
 
@@ -79,6 +115,9 @@ namespace Callbreak.Tests.EditMode.Application.Online
             client.Host.Remove(client.Peer, notifyHost: true);
             client.Close();
         }
+
+        /// <summary>The id the host knows the connection of <paramref name="link"/> by.</summary>
+        public PeerId PeerOf(IClientLink link) => ((ClientLink)link).Peer;
 
         /// <summary>The next <paramref name="count"/> messages to this client never arrive.</summary>
         public void LoseNext(IClientLink link, int count = 1)
@@ -194,6 +233,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
             {
                 if (IsConnected)
                 {
+                    _network.ClientPayloads.Add((Host.Code, payload));
                     _network.Enqueue(() => Host.Deliver(Peer, payload));
                 }
             }

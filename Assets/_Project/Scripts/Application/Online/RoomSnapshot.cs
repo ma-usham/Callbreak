@@ -59,8 +59,8 @@ namespace Callbreak.Application.Online
 
         public static RoomSnapshot Read(WireReader r)
         {
-            string code = r.String();
-            string name = r.String();
+            string code = r.String(Protocol.MaxIdBytes);
+            string name = r.String(Protocol.MaxNameBytes);
             int turnSeconds = r.Byte();
             int rounds = r.Byte();
             bool inMatch = r.Bool();
@@ -68,9 +68,9 @@ namespace Callbreak.Application.Online
             for (int i = 0; i < SeatCount; i++)
             {
                 bool occupied = r.Bool();
-                string memberName = r.String();
+                string memberName = r.String(Protocol.MaxNameBytes);
                 int avatar = r.Byte();
-                string deck = r.String();
+                string deck = r.String(Protocol.MaxIdBytes);
                 bool isHost = r.Bool();
                 bool isReady = r.Bool();
                 bool isBot = r.Bool();

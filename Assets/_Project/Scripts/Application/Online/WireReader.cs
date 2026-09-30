@@ -74,12 +74,21 @@ namespace Callbreak.Application.Online
             return low | (high << 32);
         }
 
-        public string String()
+        /// <summary>
+        /// Text of at most <paramref name="maxBytes"/> UTF-8 bytes; longer is a
+        /// <see cref="WireFormatException"/>, so no field on the wire is bigger than its purpose.
+        /// </summary>
+        public string String(int maxBytes)
         {
             int bytes = UInt16();
             if (bytes == 0)
             {
                 return string.Empty;
+            }
+
+            if (bytes > maxBytes)
+            {
+                throw new WireFormatException("Text of " + bytes + " bytes exceeds the limit of " + maxBytes + ".");
             }
 
             Require(bytes);

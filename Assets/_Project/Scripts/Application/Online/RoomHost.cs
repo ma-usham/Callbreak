@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Callbreak.Application.Cosmetics;
 using Callbreak.Application.Profile;
 using Callbreak.Application.Rooms;
 using Callbreak.Application.Sessions;
@@ -38,9 +39,12 @@ namespace Callbreak.Application.Online
         private readonly Member[] _members = new Member[Seats];
         private readonly Dictionary<PeerId, int> _seatOfPeer = new Dictionary<PeerId, int>();
         private readonly Dictionary<PeerId, Guest> _guests = new Dictionary<PeerId, Guest>();
+        private readonly HashSet<string> _removed = new HashSet<string>();
+        private readonly Dictionary<string, FinishedSeat> _finished = new Dictionary<string, FinishedSeat>();
         private readonly Queue<Inbound> _inbound = new Queue<Inbound>();
         private readonly Queue<byte[]> _localOutbound = new Queue<byte[]>();
         private readonly List<PeerId> _scratch = new List<PeerId>();
+        private readonly HandlerFaults _faults = new HandlerFaults();
 
         private TableHost _table;
         private double _now;
@@ -99,26 +103,30 @@ namespace Callbreak.Application.Online
         /// <summary>The running or last match, for tests and diagnostics.</summary>
         public TableHost Table => _table;
 
+        /// <summary>
+        /// Drives the table's time and hands out what is queued. Throws, after all of that, the first
+        /// exception a handler of the host's own player (or the transport) threw since the last tick.
+        /// </summary>
         public void Tick(double now)
         {
             _now = now;
-            if (_closed)
+            if (!_closed)
             {
-                return;
-            }
-
-            DropSilentGuests(now);
-            if (_table != null)
-            {
-                if (!_table.IsStarted && (EveryTableReady() || now >= _tableStartDeadline))
+                DropSilentGuests(now);
+                if (_table != null)
                 {
-                    _table.Start(now);
+                    if (!_table.IsStarted && (EveryTableReady() || now >= _tableStartDeadline))
+                    {
+                        _table.Start(now);
+                    }
+
+                    _table.Tick(now);
                 }
 
-                _table.Tick(now);
+                Pump();
             }
 
-            Pump();
+            _faults.Rethrow();
         }
 
         /// <summary>
@@ -187,13 +195,12 @@ namespace Callbreak.Application.Online
                 profiles[i] = new SeatProfile(name, _rng.NextInt(SeatRoster.AvatarCount).ToString(), deck, true);
             }
 
-            // The match id goes to every player in every view, and the shuffle seed never leaves the
-            // host (GDD §22: whoever has it can deal all five rounds in advance). So the id is a
-            // draw of its own, never the seed spelled out.
-            ulong seed = _seedSource();
+            // The match id goes to every player in every view, and no shuffle seed ever leaves the
+            // host (GDD §22: whoever has one can deal its round in advance). So the id is a draw of
+            // its own, and the table draws a fresh seed for each round as it deals it.
             string matchId = "room-" + _code + "-" + _seedSource().ToString("x16");
             TableClocks clocks = _clocks ?? TableClocks.PrivateRoom(_settings.TurnSeconds);
-            var setup = new TableHostSetup(RuleSet.NepaliStandard, matchId, profiles, humans, clocks, seed, _fillLevel, _timing);
+            var setup = new TableHostSetup(RuleSet.NepaliStandard, matchId, profiles, humans, clocks, _seedSource, _fillLevel, _timing);
             if (_table != null)
             {
                 _table.Outbound -= OnTableOutbound;
@@ -228,9 +235,19 @@ namespace Callbreak.Application.Online
             }
 
             Member m = _members[seatIndex];
-            Send(m.Peer, HostMessages.RoomClosed(RoomError.Kicked));
+            if (!string.IsNullOrEmpty(m.Identity))
+            {
+                _removed.Add(m.Identity);
+            }
+
+            if (m.Connected)
+            {
+                // A dropped member's old connection id may belong to someone else by now.
+                Send(m.Peer, HostMessages.RoomClosed(RoomError.Kicked));
+                ScheduleDrop(m.Peer);
+            }
+
             RemoveMember(seatIndex, leftOnPurpose: true);
-            ScheduleDrop(m.Peer);
             Broadcast();
             Pump();
         }
@@ -255,6 +272,7 @@ namespace Callbreak.Application.Online
             _closed = true;
         }
 
+        /// <summary>Closes the room and lets go of the link; throws last a fault no tick has passed on yet.</summary>
         public void Dispose()
         {
             Close();
@@ -271,7 +289,16 @@ namespace Callbreak.Application.Online
                 _table.Ended -= OnTableEnded;
             }
 
-            _local.Close();
+            try
+            {
+                _local.Close();
+            }
+            catch (Exception e)
+            {
+                _faults.Keep(e);
+            }
+
+            _faults.Rethrow();
         }
 
         private void OnPeerConnected(PeerId peer)
@@ -325,9 +352,15 @@ namespace Callbreak.Application.Online
             {
                 if (guest.Drops > DropsBeforeKick)
                 {
-                    _remote.Disconnect(peer);
+                    DropPeer(peer);
                 }
 
+                return;
+            }
+
+            if (payload.Length > Protocol.MaxClientPayloadBytes)
+            {
+                // No member ever sends this much; it is never read (GDD §25 "messages are tiny").
                 return;
             }
 
@@ -348,7 +381,11 @@ namespace Callbreak.Application.Online
 
         /// <summary>
         /// Handles queued messages one at a time and only then hands the host's own player its
-        /// replies, so nothing re-enters the room while it is in the middle of a change.
+        /// replies, so nothing re-enters the room while it is in the middle of a change. The host
+        /// player's screens run inside those deliveries: one that throws never stops the room from
+        /// finishing everything queued (the table has already flushed to every seat and set its
+        /// clock). The first exception is kept and thrown from the next <see cref="Tick"/>, once
+        /// that frame's work is done, so the app's ticker logs it.
         /// </summary>
         private void Pump()
         {
@@ -365,12 +402,26 @@ namespace Callbreak.Application.Online
                     while (_inbound.Count > 0)
                     {
                         Inbound message = _inbound.Dequeue();
-                        Process(message.Peer, message.Payload);
+                        try
+                        {
+                            Process(message.Peer, message.Payload);
+                        }
+                        catch (Exception e)
+                        {
+                            _faults.Keep(e);
+                        }
                     }
 
                     while (_localOutbound.Count > 0)
                     {
-                        _local.Deliver(_localOutbound.Dequeue());
+                        try
+                        {
+                            _local.Deliver(_localOutbound.Dequeue());
+                        }
+                        catch (Exception e)
+                        {
+                            _faults.Keep(e);
+                        }
                     }
                 }
             }
@@ -388,7 +439,7 @@ namespace Callbreak.Application.Online
                 var kind = (ClientMessageKind)reader.Byte();
                 if (kind == ClientMessageKind.Hello)
                 {
-                    OnHello(peer, HelloMessage.Read(reader));
+                    ReadHello(peer, reader);
                     return;
                 }
 
@@ -451,26 +502,76 @@ namespace Callbreak.Application.Online
             }
         }
 
-        private void OnHello(PeerId peer, HelloMessage hello)
+        private void ReadHello(PeerId peer, WireReader reader)
         {
-            if (_guests.TryGetValue(peer, out Guest guest))
+            _guests.TryGetValue(peer, out Guest guest);
+            if (guest != null && guest.IsLeaving)
             {
-                guest.SaidHello = true;
+                // Removed, replaced, refused or gone on purpose: nothing it says counts any more.
+                return;
             }
 
-            if (hello.ProtocolVersion != Protocol.Version)
+            // GDD §25 versioning: the version comes first, and another build's hello may be laid
+            // out differently, so it is answered before anything after the version is read.
+            ushort version = reader.UInt16();
+            if (version != Protocol.Version)
             {
+                if (guest != null)
+                {
+                    guest.SaidHello = true;
+                }
+
                 Refuse(peer, RoomError.UpdateRequired);
                 return;
             }
 
+            HelloMessage hello = HelloMessage.ReadAfterVersion(reader, version);
+            if (guest != null)
+            {
+                guest.SaidHello = true;
+            }
+
+            OnHello(peer, hello);
+        }
+
+        private void OnHello(PeerId peer, HelloMessage hello)
+        {
             if (_seatOfPeer.ContainsKey(peer))
             {
                 return;
             }
 
+            if (_removed.Contains(hello.Identity))
+            {
+                // GDD §11 screen 04: the host removed this player; that holds for as long as the room.
+                Refuse(peer, RoomError.Kicked);
+                return;
+            }
+
+            if (_finished.TryGetValue(hello.Identity, out FinishedSeat finished))
+            {
+                // Back after the match ended but within the seat hold: its end first, then the room
+                // as it is now (seated in the lobby, or refused if the next match is on).
+                if (_now <= finished.Until)
+                {
+                    Send(peer, finished.End);
+                }
+                else
+                {
+                    _finished.Remove(hello.Identity);
+                }
+            }
+
             // GDD §27 idempotent rejoin: the same player connecting again takes its seat back.
-            int known = FindByPlayerId(hello.PlayerId);
+            int known = FindByIdentity(hello.Identity);
+            if (known == 0 && !peer.IsLocal)
+            {
+                // Seat 0 is the host device's own player, connected in process: whoever presents
+                // its identity over the network is someone else, and never takes it over.
+                Refuse(peer, RoomError.Unknown);
+                return;
+            }
+
             if (known >= 0 && InMatch && !_table.IsHuman((Seat)known))
             {
                 // GDD §8: not back within the hold, the seat is a bot for the rest of the match.
@@ -483,11 +584,14 @@ namespace Callbreak.Application.Online
                 Member m = _members[known];
                 if (m.Connected && m.Peer != peer)
                 {
+                    // GDD §27: a second connection of the same player replaces the first.
                     Send(m.Peer, HostMessages.RoomClosed(RoomError.Replaced));
                     ScheduleDrop(m.Peer);
+                    ForgetPeer(m.Peer, known);
                 }
 
-                _seatOfPeer.Remove(m.Peer);
+                // A member that dropped has no connection of its own any more: the relay may already
+                // have given its old id to someone else, whose mapping stays as it is.
                 m.Peer = peer;
                 m.Connected = true;
                 m.TableReady = false;
@@ -539,7 +643,7 @@ namespace Callbreak.Application.Online
                 return;
             }
 
-            _members[free] = new Member(peer, hello.PlayerId, CleanName(hello.Name, free), hello.AvatarId, hello.DeckThemeId);
+            _members[free] = new Member(peer, hello.Identity, CleanName(hello.Name, free), CleanAvatar(hello.AvatarId), CleanDeck(hello.DeckThemeId));
             _seatOfPeer[peer] = free;
             Send(peer, HostMessages.Welcome(free, Snapshot()));
             Broadcast();
@@ -558,6 +662,23 @@ namespace Callbreak.Application.Online
             return name;
         }
 
+        /// <summary>One of the avatar presets (GDD §11 screen 14); anything else is the default silhouette.</summary>
+        private static int CleanAvatar(int avatar) => avatar >= 0 && avatar < SeatRoster.AvatarCount ? avatar : 0;
+
+        /// <summary>One of the decks this build has (GDD §13); anything else is the default deck.</summary>
+        private string CleanDeck(string deck)
+        {
+            for (int i = 0; i < _deckIds.Count; i++)
+            {
+                if (_deckIds[i] == deck)
+                {
+                    return deck;
+                }
+            }
+
+            return CosmeticsService.DefaultDeckId;
+        }
+
         private void RemoveMember(int seat, bool leftOnPurpose)
         {
             Member m = _members[seat];
@@ -566,11 +687,24 @@ namespace Callbreak.Application.Online
                 return;
             }
 
-            _seatOfPeer.Remove(m.Peer);
+            if (m.Connected)
+            {
+                ForgetPeer(m.Peer, seat);
+            }
+
             _members[seat] = null;
             if (leftOnPurpose && _table != null && !_table.IsOver)
             {
                 _table.Leave((Seat)seat, _now);
+            }
+        }
+
+        /// <summary>Unmaps <paramref name="peer"/> only while it still stands for <paramref name="seat"/>.</summary>
+        private void ForgetPeer(PeerId peer, int seat)
+        {
+            if (_seatOfPeer.TryGetValue(peer, out int mapped) && mapped == seat)
+            {
+                _seatOfPeer.Remove(peer);
             }
         }
 
@@ -618,7 +752,7 @@ namespace Callbreak.Application.Online
             foreach (PeerId peer in _scratch)
             {
                 _guests.Remove(peer);
-                _remote.Disconnect(peer);
+                DropPeer(peer);
             }
         }
 
@@ -636,16 +770,16 @@ namespace Callbreak.Application.Online
             return true;
         }
 
-        private int FindByPlayerId(string playerId)
+        private int FindByIdentity(string identity)
         {
-            if (string.IsNullOrEmpty(playerId))
+            if (string.IsNullOrEmpty(identity))
             {
                 return -1;
             }
 
             for (int i = 0; i < Seats; i++)
             {
-                if (_members[i] != null && _members[i].PlayerId == playerId)
+                if (_members[i] != null && _members[i].Identity == identity)
                 {
                     return i;
                 }
@@ -663,9 +797,15 @@ namespace Callbreak.Application.Online
             }
         }
 
-        /// <summary>GDD §11 screen 10: after the match the room is a lobby again, with the ready flags reset.</summary>
+        /// <summary>
+        /// GDD §11 screen 10: after the match the room is a lobby again, with the ready flags reset.
+        /// A player who is reconnecting leaves the lobby, but the seat hold still counts for them
+        /// (GDD §8 "back within 90 s: full state restored"): when they are back in time they get the
+        /// end of their match, recorded like everyone else's, and then the room as it is by then.
+        /// </summary>
         private void OnTableEnded()
         {
+            TableStatus status = _table.StatusAt(_now);
             for (int i = 0; i < Seats; i++)
             {
                 Member m = _members[i];
@@ -676,6 +816,12 @@ namespace Callbreak.Application.Online
 
                 if (!m.Connected)
                 {
+                    if (_table.IsHuman((Seat)i) && !string.IsNullOrEmpty(m.Identity))
+                    {
+                        byte[] end = HostMessages.SyncState(new TableUpdate(0, null, _table.ViewFor((Seat)i), PresentAt(status, (Seat)i)));
+                        _finished[m.Identity] = new FinishedSeat(end, _now + Protocol.SeatHoldSeconds);
+                    }
+
                     _members[i] = null;
                     continue;
                 }
@@ -685,6 +831,18 @@ namespace Callbreak.Application.Online
             }
 
             Broadcast();
+        }
+
+        /// <summary><paramref name="status"/> with <paramref name="seat"/> shown present: the player it goes to is back.</summary>
+        private static TableStatus PresentAt(TableStatus status, Seat seat)
+        {
+            var connections = new SeatConnection[Seats];
+            for (int s = 0; s < Seats; s++)
+            {
+                connections[s] = s == (int)seat ? SeatConnection.Connected : status.ConnectionOf((Seat)s);
+            }
+
+            return new TableStatus(status.TimerSeat, TableStatus.NoClock, 0, TableStatus.NoClock, connections);
         }
 
         private RoomSnapshot Snapshot()
@@ -713,15 +871,39 @@ namespace Callbreak.Application.Online
             }
         }
 
+        /// <summary>A transport that fails for one peer never stops the others' updates (the exception is passed on after the pump).</summary>
         private void Send(PeerId peer, byte[] payload)
         {
             if (peer.IsLocal)
             {
                 _localOutbound.Enqueue(payload);
+                return;
             }
-            else if (_remote != null)
+
+            if (_remote == null)
+            {
+                return;
+            }
+
+            try
             {
                 _remote.Send(peer, payload);
+            }
+            catch (Exception e)
+            {
+                _faults.Keep(e);
+            }
+        }
+
+        private void DropPeer(PeerId peer)
+        {
+            try
+            {
+                _remote.Disconnect(peer);
+            }
+            catch (Exception e)
+            {
+                _faults.Keep(e);
             }
         }
 
@@ -740,10 +922,10 @@ namespace Callbreak.Application.Online
 
         private sealed class Member
         {
-            public Member(PeerId peer, string playerId, string name, int avatarId, string deckThemeId)
+            public Member(PeerId peer, string identity, string name, int avatarId, string deckThemeId)
             {
                 Peer = peer;
-                PlayerId = playerId;
+                Identity = identity;
                 Name = name;
                 AvatarId = avatarId;
                 DeckThemeId = deckThemeId;
@@ -752,7 +934,8 @@ namespace Callbreak.Application.Online
 
             public PeerId Peer { get; set; }
 
-            public string PlayerId { get; }
+            /// <summary>The member's <see cref="RoomIdentity"/>: how a rejoin finds this seat again.</summary>
+            public string Identity { get; }
 
             public string Name { get; }
 
@@ -765,6 +948,21 @@ namespace Callbreak.Application.Online
             public bool Ready { get; set; }
 
             public bool TableReady { get; set; }
+        }
+
+        /// <summary>The end of a match, kept for a player who was reconnecting when it came, until their seat hold is over.</summary>
+        private sealed class FinishedSeat
+        {
+            public FinishedSeat(byte[] end, double until)
+            {
+                End = end;
+                Until = until;
+            }
+
+            /// <summary>The SyncState of the finished table for that player's seat.</summary>
+            public byte[] End { get; }
+
+            public double Until { get; }
         }
 
         /// <summary>A remote connection: its flood allowance, and whether it has introduced itself.</summary>
@@ -784,6 +982,9 @@ namespace Callbreak.Application.Online
             public bool SaidHello { get; set; }
 
             public double DropAt { get; set; } = double.PositiveInfinity;
+
+            /// <summary>The connection is to be closed: it was refused, removed, replaced or left.</summary>
+            public bool IsLeaving => !double.IsPositiveInfinity(DropAt);
 
             public int Drops { get; private set; }
 

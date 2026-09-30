@@ -60,6 +60,19 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
         public double Now { get; private set; }
 
+        /// <summary>
+        /// Handlers may throw, as a broken presenter would: every exception out of a tick or a
+        /// delivery is recorded in <see cref="Faults"/> and time goes on, as the app's ticker and
+        /// the relay transport log it and carry on.
+        /// </summary>
+        public bool CatchFaults
+        {
+            get => Network.CollectFaults;
+            set => Network.CollectFaults = value;
+        }
+
+        public List<Exception> Faults => Network.Faults;
+
         /// <summary>A guest joins and the network settles. Returns the member, seated or not.</summary>
         public Member Join(string playerId, string name, out RoomError error, ushort version = Protocol.Version)
         {
@@ -119,13 +132,32 @@ namespace Callbreak.Tests.EditMode.Application.Online
         public void Step(double seconds = 0.25)
         {
             Now += seconds;
-            Host.Tick(Now);
+            Run(() => Host.Tick(Now));
             foreach (Member m in _members)
             {
-                m.Client.Tick(Now);
+                Run(() => m.Client.Tick(Now));
             }
 
             Network.Pump();
+        }
+
+        /// <summary>Runs <paramref name="action"/>; with <see cref="CatchFaults"/> set, what it throws is recorded instead.</summary>
+        public void Run(Action action)
+        {
+            if (!CatchFaults)
+            {
+                action();
+                return;
+            }
+
+            try
+            {
+                action();
+            }
+            catch (Exception e)
+            {
+                Faults.Add(e);
+            }
         }
 
         /// <summary>Every present person plays like the test bots until the match is over.</summary>
@@ -185,16 +217,17 @@ namespace Callbreak.Tests.EditMode.Application.Online
             var settings = new SettingsService(saves);
             var hello = new HelloMessage(version, playerId, name, _members.Count, "classic-crimson");
             var client = new RoomClient(link, hello, host, MatchMode.PrivateRoom, stats, settings);
-            var member = new Member(name, link, client, stats, settings);
+            var member = new Member(name, playerId, link, client, stats, settings);
             _members.Add(member);
             return member;
         }
 
         internal sealed class Member
         {
-            public Member(string name, IClientLink link, RoomClient client, StatsService stats, SettingsService settings)
+            public Member(string name, string identity, IClientLink link, RoomClient client, StatsService stats, SettingsService settings)
             {
                 Name = name;
+                Identity = identity;
                 Link = link;
                 Client = client;
                 Stats = stats;
@@ -202,6 +235,9 @@ namespace Callbreak.Tests.EditMode.Application.Online
             }
 
             public string Name { get; }
+
+            /// <summary>What the member says it is in its hello (in the app, <see cref="RoomIdentity"/>).</summary>
+            public string Identity { get; }
 
             public IClientLink Link { get; set; }
 

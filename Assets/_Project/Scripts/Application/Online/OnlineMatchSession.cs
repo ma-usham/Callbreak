@@ -21,7 +21,9 @@ namespace Callbreak.Application.Online
     /// <see cref="IMatchSession"/> as offline, but every move is an intent the host decides, and
     /// everything shown comes from the host's numbered updates. A gap in the numbers asks for the
     /// whole state again, and the table rebuilds from it. It holds no hidden information: only
-    /// this seat's view ever arrives.
+    /// this seat's view ever arrives. A table handler that throws never stops the session from
+    /// following the host: the update is applied whole, the table is rebuilt from the view, and
+    /// the exception is passed on afterwards.
     /// </summary>
     public sealed class OnlineMatchSession : IMatchSession
     {
@@ -33,6 +35,7 @@ namespace Callbreak.Application.Online
         private readonly ISettingsService _settings;
         private readonly SessionSeat[] _seats = new SessionSeat[SeatExtensions.Count];
         private readonly List<PendingIntent> _pending = new List<PendingIntent>();
+        private readonly HandlerFaults _faults = new HandlerFaults();
 
         private SessionStatus _status = SessionStatus.Starting;
         private TurnTimerState _timer;
@@ -41,6 +44,7 @@ namespace Callbreak.Application.Online
         private bool _started;
         private bool _awaitingSync;
         private bool _finished;
+        private bool _timerShown;
         private double _now;
         private double _resyncAskedAt;
 
@@ -88,8 +92,13 @@ namespace Callbreak.Application.Online
 
         public SessionStatus Status => _status;
 
-        /// <summary>The turn clock while a turn is open; in the round summary, the countdown to the next round.</summary>
-        public TurnTimerState Timer => _timer;
+        /// <summary>
+        /// The turn clock while a turn is open; in the round summary, the countdown to the next
+        /// round. A clock the host starts later (the time left is longer than the clock: the table
+        /// is still showing a deal or a finished trick) is shown from the moment it starts, so it
+        /// never shows more than its length and runs out when the host's does.
+        /// </summary>
+        public TurnTimerState Timer => HasStarted(_timer) ? _timer : TurnTimerState.None;
 
         public bool CanPause => false;
 
@@ -117,6 +126,15 @@ namespace Callbreak.Application.Online
             if (_started && _awaitingSync && !IsOver && _status != SessionStatus.Reconnecting && now - _resyncAskedAt >= ResyncRetrySeconds)
             {
                 RequestResync();
+            }
+
+            bool shown = Timer.IsRunning;
+            if (shown != _timerShown)
+            {
+                // A clock the host started after a hold becomes visible now.
+                _timerShown = shown;
+                _faults.Raise(TimerChanged);
+                _faults.Rethrow();
             }
         }
 
@@ -192,16 +210,25 @@ namespace Callbreak.Application.Online
             }
 
             // GDD §8: leaving on purpose costs the match.
-            if (_started && !_finished && View.Phase != Phase.Lobby && _stats != null)
+            if (_started && !_finished && View.Phase != Phase.Lobby)
             {
-                _stats.RecordMatch(View.MatchId, SeatExtensions.Count, View.Scores.TotalOf(LocalSeat), abandoned: true);
+                RecordAbandoned();
             }
 
             _finished = true;
             _send(ClientMessages.LeaveTable());
             FailPending(RejectReason.WrongPhase);
             SetStatus(SessionStatus.Ended);
-            _left?.Invoke();
+            try
+            {
+                _left?.Invoke();
+            }
+            catch (Exception e)
+            {
+                _faults.Keep(e);
+            }
+
+            _faults.Rethrow();
             return Task.CompletedTask;
         }
 
@@ -213,7 +240,7 @@ namespace Callbreak.Application.Online
         /// <summary>The next numbered update from the host.</summary>
         public void OnBatch(TableUpdate update)
         {
-            if (!_started || _awaitingSync || update.Seq < _expected)
+            if (!_started || _awaitingSync || update.Seq < _expected || !IsThisTable(update.View))
             {
                 return;
             }
@@ -243,14 +270,26 @@ namespace Callbreak.Application.Online
                     SetStatus(SessionStatus.Ended);
                 }
 
-                EventReceived?.Invoke(e);
+                _faults.Raise(EventReceived, e);
             }
+
+            if (_faults.Any)
+            {
+                // A table handler failed on the way: whatever it missed is in the view, so the table
+                // is rebuilt from it, as after a resync (GDD §17 principle 9: a resync, not a stop).
+                _faults.Raise(Resynced, View);
+            }
+
+            _faults.Rethrow();
         }
 
-        /// <summary>The whole state (join, reconnect, resync): the table is rebuilt from it at once.</summary>
+        /// <summary>
+        /// The whole state (join, reconnect, resync): the table is rebuilt from it at once. It may
+        /// be the finished table, for a player who was reconnecting when the match ended.
+        /// </summary>
         public void OnSync(TableUpdate update)
         {
-            if (!_started)
+            if (!_started || !IsThisTable(update.View))
             {
                 return;
             }
@@ -274,7 +313,8 @@ namespace Callbreak.Application.Online
                 }
             }
 
-            Resynced?.Invoke(View);
+            _faults.Raise(Resynced, View);
+            _faults.Rethrow();
         }
 
         public void OnIntentRejected(TurnId turn, RejectReason reason)
@@ -290,7 +330,11 @@ namespace Callbreak.Application.Online
             }
         }
 
-        public void OnEmote(Seat seat, int emoteId) => EmoteReceived?.Invoke(seat, emoteId);
+        public void OnEmote(Seat seat, int emoteId)
+        {
+            _faults.Raise(EmoteReceived, seat, emoteId);
+            _faults.Rethrow();
+        }
 
         /// <summary>The connection dropped; the seat is held while the app reconnects (GDD §8).</summary>
         public void OnLinkLost()
@@ -299,6 +343,8 @@ namespace Callbreak.Application.Online
             {
                 SetStatus(SessionStatus.Reconnecting);
             }
+
+            _faults.Rethrow();
         }
 
         /// <summary>The connection is back: ask for the whole state.</summary>
@@ -317,7 +363,12 @@ namespace Callbreak.Application.Online
         /// <summary>Why the session failed (the table says so before it returns to the menu); None otherwise.</summary>
         public RoomError FailureReason { get; private set; }
 
-        /// <summary>The room is gone (the host left, this player was removed, or reconnecting failed).</summary>
+        /// <summary>
+        /// The room is gone (the host left, this player was removed, or reconnecting failed). Not
+        /// back within the seat hold (<see cref="RoomError.ConnectionLost"/>), the player is recorded
+        /// as having left, a loss, exactly as Leave is (GDD §8 L660-668, L689-690: dropping out
+        /// gains nothing). When the host leaves, the match is not recorded (GDD §27 failure modes).
+        /// </summary>
         public void OnRoomClosed(RoomError reason)
         {
             if (IsOver)
@@ -325,12 +376,25 @@ namespace Callbreak.Application.Online
                 return;
             }
 
+            if (reason == RoomError.ConnectionLost && !_finished && View.Phase != Phase.Lobby)
+            {
+                _finished = true;
+                RecordAbandoned();
+            }
+
             FailureReason = reason == RoomError.None ? RoomError.Unknown : reason;
             FailPending(RejectReason.WrongPhase);
             SetStatus(SessionStatus.Failed);
+            _faults.Rethrow();
         }
 
         private bool IsOver => _status == SessionStatus.Ended || _status == SessionStatus.Failed;
+
+        /// <summary>Only this match, seen from this seat, ever replaces the view.</summary>
+        private bool IsThisTable(PlayerView view) => view.MatchId == View.MatchId && view.Viewer == View.Viewer;
+
+        /// <summary>A running clock has started once no more of it is left than its length (a millisecond of rounding allowed).</summary>
+        private bool HasStarted(TurnTimerState timer) => timer.IsRunning && timer.Deadline - _now <= timer.Duration + 0.001;
 
         private bool CanAct() => _started && !_awaitingSync && _status == SessionStatus.Running;
 
@@ -401,18 +465,44 @@ namespace Callbreak.Application.Online
             }
 
             _finished = true;
-            for (int i = 0; i < standings.Count; i++)
+            try
             {
-                Standing standing = standings[i];
-                if (standing.Seat == LocalSeat && _stats != null)
+                for (int i = 0; i < standings.Count; i++)
                 {
-                    _stats.RecordFinished(View.MatchId, standing, View.Scores);
+                    Standing standing = standings[i];
+                    if (standing.Seat == LocalSeat && _stats != null)
+                    {
+                        _stats.RecordFinished(View.MatchId, standing, View.Scores);
+                    }
+                }
+
+                if (_settings != null)
+                {
+                    _settings.IncrementCompletedMatches();
                 }
             }
-
-            if (_settings != null)
+            catch (Exception e)
             {
-                _settings.IncrementCompletedMatches();
+                // A save that fails never keeps the session from reaching its end.
+                _faults.Keep(e);
+            }
+        }
+
+        /// <summary>GDD §8: a match left, on purpose or by not coming back in time, counts as played and lost.</summary>
+        private void RecordAbandoned()
+        {
+            if (_stats == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _stats.RecordMatch(View.MatchId, SeatExtensions.Count, View.Scores.TotalOf(LocalSeat), abandoned: true);
+            }
+            catch (Exception e)
+            {
+                _faults.Keep(e);
             }
         }
 
@@ -458,6 +548,7 @@ namespace Callbreak.Application.Online
             bool timerChanged = timer.IsRunning != _timer.IsRunning || timer.Seat != _timer.Seat
                 || Math.Abs(timer.Deadline - _timer.Deadline) > 0.05 || Math.Abs(timer.Duration - _timer.Duration) > 0.0001;
             _timer = timer;
+            _timerShown = Timer.IsRunning;
             if (!raise)
             {
                 return;
@@ -465,12 +556,12 @@ namespace Callbreak.Application.Online
 
             if (seatsChanged)
             {
-                SeatsChanged?.Invoke();
+                _faults.Raise(SeatsChanged);
             }
 
             if (timerChanged)
             {
-                TimerChanged?.Invoke();
+                _faults.Raise(TimerChanged);
             }
         }
 
@@ -482,7 +573,7 @@ namespace Callbreak.Application.Online
             }
 
             _status = status;
-            StatusChanged?.Invoke();
+            _faults.Raise(StatusChanged);
         }
 
         private readonly struct PendingIntent

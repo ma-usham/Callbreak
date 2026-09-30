@@ -16,7 +16,7 @@ using NUnit.Framework;
 
 namespace Callbreak.Tests.EditMode.Application.Online
 {
-    public sealed class RoomServiceTests
+    public sealed partial class RoomServiceTests
     {
         private static readonly DateTime Epoch = new DateTime(2026, 9, 30, 12, 0, 0, DateTimeKind.Utc);
 
@@ -556,11 +556,11 @@ namespace Callbreak.Tests.EditMode.Application.Online
             public Device(InMemoryNetwork network, string name, ulong seed, InMemorySaveStore saves, Func<DateTime> utcNow)
             {
                 Saves = saves;
-                Tickets = new RejoinStore(saves, utcNow);
+                Stats = new StatsService(saves);
+                Tickets = new RejoinStore(saves, utcNow, Stats);
                 Settings = new SettingsService(saves);
                 Profile = new ProfileService(saves, new NameFilter());
                 Profile.TrySetDisplayName(name);
-                Stats = new StatsService(saves);
                 Cosmetics = new CosmeticsService(saves);
                 Network = new FakeNetworkStatus();
                 Auth = new FakeAuth("player-" + name.ToLowerInvariant());

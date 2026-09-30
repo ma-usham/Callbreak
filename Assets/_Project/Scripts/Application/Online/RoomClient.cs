@@ -17,6 +17,8 @@ namespace Callbreak.Application.Online
     /// lobby the host publishes, and, when the host starts, owns the
     /// <see cref="OnlineMatchSession"/> the table plays through. The host's own player uses the
     /// same class over an in-process link, with the extra right to start and to remove players.
+    /// A screen whose handler throws never stops a message from being applied whole: the join
+    /// still completes and a closed room still says so, and the exception is passed on afterwards.
     /// </summary>
     public sealed class RoomClient : IRoomSession
     {
@@ -28,6 +30,7 @@ namespace Callbreak.Application.Online
         private readonly IStatsService _stats;
         private readonly ISettingsService _settings;
         private readonly RoomSeat[] _seats = new RoomSeat[RoomSnapshot.SeatCount];
+        private readonly HandlerFaults _faults = new HandlerFaults();
 
         private IClientLink _link;
         private OnlineMatchSession _match;
@@ -165,7 +168,14 @@ namespace Callbreak.Application.Online
 
             if (_match != null)
             {
-                _match.LeaveAsync(ct);
+                try
+                {
+                    _match.LeaveAsync(ct);
+                }
+                catch (Exception e)
+                {
+                    _faults.Keep(e);
+                }
             }
 
             if (!_closed)
@@ -173,6 +183,7 @@ namespace Callbreak.Application.Online
                 LeaveRoom();
             }
 
+            _faults.Rethrow();
             return Task.CompletedTask;
         }
 
@@ -198,10 +209,18 @@ namespace Callbreak.Application.Online
             FinishJoin(reason);
             if (_match != null)
             {
-                _match.OnRoomClosed(reason);
+                try
+                {
+                    _match.OnRoomClosed(reason);
+                }
+                catch (Exception e)
+                {
+                    _faults.Keep(e);
+                }
             }
 
-            Closed?.Invoke(reason);
+            _faults.Raise(Closed, reason);
+            _faults.Rethrow();
         }
 
         /// <summary>Leaving the match on purpose also leaves the room.</summary>
@@ -211,6 +230,8 @@ namespace Callbreak.Application.Online
             {
                 LeaveRoom();
             }
+
+            _faults.Rethrow();
         }
 
         private void LeaveRoom()
@@ -219,14 +240,21 @@ namespace Callbreak.Application.Online
             if (_host != null)
             {
                 // GDD §8, Phase 1: when the host leaves, the room is over for everyone.
-                _host.Close();
+                try
+                {
+                    _host.Close();
+                }
+                catch (Exception e)
+                {
+                    _faults.Keep(e);
+                }
             }
             else
             {
                 Send(ClientMessages.LeaveRoom());
             }
 
-            Closed?.Invoke(RoomError.None);
+            _faults.Raise(Closed, RoomError.None);
         }
 
         private void Attach(IClientLink link)
@@ -271,10 +299,18 @@ namespace Callbreak.Application.Online
 
             if (_match != null)
             {
-                _match.OnLinkLost();
+                try
+                {
+                    _match.OnLinkLost();
+                }
+                catch (Exception e)
+                {
+                    _faults.Keep(e);
+                }
             }
 
-            LinkLost?.Invoke();
+            _faults.Raise(LinkLost);
+            _faults.Rethrow();
         }
 
         private void OnReceived(byte[] payload)
@@ -291,10 +327,21 @@ namespace Callbreak.Application.Online
                 switch (kind)
                 {
                     case HostMessageKind.Welcome:
+                    {
                         _localSeat = reader.Byte();
-                        Apply(RoomSnapshot.Read(reader));
+                        RoomSnapshot room = RoomSnapshot.Read(reader);
+                        Apply(room);
                         FinishJoin(RoomError.None);
+                        if (!room.InMatch && _match != null && _match.Status != SessionStatus.Ended && _match.Status != SessionStatus.Failed)
+                        {
+                            // Back in the room after its match ended, without that match's end: the
+                            // seat hold ran out first, so the match cannot go on and counts as not
+                            // having come back in time. Nothing is left waiting on "Reconnecting".
+                            Close(RoomError.ConnectionLost);
+                        }
+
                         break;
+                    }
 
                     case HostMessageKind.Rejected:
                         FinishJoin(ReadError(reader));
@@ -358,6 +405,13 @@ namespace Callbreak.Application.Online
                 // A message this build cannot read is skipped; a missed table update shows up as a
                 // gap in the sequence and is repaired by a resync.
             }
+            catch (Exception e)
+            {
+                // A handler of the match threw after the match had applied the message.
+                _faults.Keep(e);
+            }
+
+            _faults.Rethrow();
         }
 
         private void OnMatchStarting(PlayerView view, TableStatus status)
@@ -378,7 +432,7 @@ namespace Callbreak.Application.Online
 
             _match = new OnlineMatchSession(_mode, view, status, Send, _stats, _settings, OnMatchLeft);
             _match.Tick(_now);
-            MatchStarting?.Invoke();
+            _faults.Raise(MatchStarting);
         }
 
         private void Apply(RoomSnapshot snapshot)
@@ -392,7 +446,7 @@ namespace Callbreak.Application.Online
                 _seats[i] = new RoomSeat(i, m.Occupied, m.Name, m.AvatarId, m.DeckThemeId, m.IsHost, m.IsReady, m.IsBot, i == _localSeat);
             }
 
-            Changed?.Invoke();
+            _faults.Raise(Changed);
         }
 
         private void FinishJoin(RoomError result)

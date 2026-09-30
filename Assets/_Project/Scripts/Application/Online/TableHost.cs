@@ -23,9 +23,19 @@ namespace Callbreak.Application.Online
         /// <summary>The six quick phrases of GDD §8.</summary>
         public const int EmoteCount = 6;
 
+        /// <summary>
+        /// How long a table takes to show the end of a round before its results open, so that the
+        /// round results' countdown (GDD §6: 10 s in Quick Match, 15 s in a private room) starts only
+        /// then and players see all of it: the last card's flight 0.26 s, the finished trick 0.9 s and
+        /// its sweep 0.35 s, then the forced last trick, four cards of a 0.35 s beat and a 0.26 s
+        /// flight each, and 1.25 s for that trick: 0.26 + 0.9 + 0.35 + 4 × (0.35 + 0.26) + 1.25 = 5.2 s.
+        /// </summary>
+        public const double RoundEndPlaybackSeconds = 5.2;
+
         private const int MaxBotMovesPerTick = 8;
 
         private readonly MatchEngine _engine;
+        private readonly RoundSeededRandom _shuffle;
         private readonly BotDriver _bots;
         private readonly BotTiming _timing;
         private readonly TableClocks _clocks;
@@ -58,8 +68,10 @@ namespace Callbreak.Application.Online
 
             _timing = setup.Timing;
             _clocks = setup.Clocks;
-            Seed = setup.Seed;
-            _engine = new MatchEngine(setup.Rules, new Pcg32Random(setup.Seed), new MatchSetup(setup.MatchId, setup.Seats));
+
+            // GDD §22: each round is dealt from a seed of its own, drawn when that round begins.
+            _shuffle = new RoundSeededRandom(setup.Seeds, () => _engine.Round);
+            _engine = new MatchEngine(setup.Rules, _shuffle, new MatchSetup(setup.MatchId, setup.Seats));
 
             var botSeats = new Dictionary<Seat, IBotStrategy>();
             for (int s = 0; s < _seats.Length; s++)
@@ -71,7 +83,9 @@ namespace Callbreak.Application.Online
                 }
             }
 
-            _bots = new BotDriver(botSeats, botFactory.Create(BotLevel.Normal), new Pcg32Random(setup.Seed, 11), new Pcg32Random(setup.Seed, 13), _timing);
+            // The bots' choices and think times are seen by everyone, so their generators owe
+            // nothing to any shuffle: timing a bot tells nobody anything about a deal.
+            _bots = new BotDriver(botSeats, botFactory.Create(BotLevel.Normal), new Pcg32Random(setup.Seeds()), new Pcg32Random(setup.Seeds()), _timing);
         }
 
         /// <summary>A payload for the member in a seat. The room routes it to that member's connection.</summary>
@@ -82,8 +96,8 @@ namespace Callbreak.Application.Online
 
         public string MatchId => _engine.MatchId;
 
-        /// <summary>The shuffle seed, for tests that prove it stays here: it never leaves the host (GDD §22).</summary>
-        internal ulong Seed { get; }
+        /// <summary>Every shuffle seed drawn so far, for tests that prove they stay here: none ever leaves the host (GDD §22).</summary>
+        internal IReadOnlyList<ulong> ShuffleSeeds => _shuffle.Seeds;
 
         public bool IsStarted => _started;
 
@@ -166,6 +180,40 @@ namespace Callbreak.Application.Online
                 return;
             }
 
+            // The whole message is read before anything changes: one that cannot be read throws here,
+            // the room drops it, and the seat is as it was (an Away seat stays Away, its bot playing).
+            int call = 0;
+            int emote = 0;
+            Card card = default;
+            TurnId turn = TurnId.None;
+            switch (kind)
+            {
+                case ClientMessageKind.PlaceCall:
+                    call = reader.Byte();
+                    turn = WireCodec.ReadTurnId(reader);
+                    break;
+
+                case ClientMessageKind.PlayCard:
+                    card = WireCodec.ReadCard(reader);
+                    turn = WireCodec.ReadTurnId(reader);
+                    break;
+
+                case ClientMessageKind.Emote:
+                    emote = reader.Byte();
+                    break;
+
+                case ClientMessageKind.ReadyNext:
+                case ClientMessageKind.TableReady:
+                case ClientMessageKind.RequestResync:
+                case ClientMessageKind.Presence:
+                case ClientMessageKind.LeaveTable:
+                    break;
+
+                default:
+                    // Not a table intent of this protocol, so not an intent at all.
+                    return;
+            }
+
             // GDD §8: any intent from the owner ends Away.
             bool statusChanged = false;
             if (state.Presence == SeatConnection.Away)
@@ -179,20 +227,12 @@ namespace Callbreak.Application.Online
             switch (kind)
             {
                 case ClientMessageKind.PlaceCall:
-                {
-                    int call = reader.Byte();
-                    TurnId turn = WireCodec.ReadTurnId(reader);
                     Submit(seat, turn, _engine.Execute(new PlaceCall(seat, call, turn)), now, statusChanged);
                     return;
-                }
 
                 case ClientMessageKind.PlayCard:
-                {
-                    Card card = WireCodec.ReadCard(reader);
-                    TurnId turn = WireCodec.ReadTurnId(reader);
                     Submit(seat, turn, _engine.Execute(new PlayCard(seat, card, turn)), now, statusChanged);
                     return;
-                }
 
                 case ClientMessageKind.ReadyNext:
                     if (_engine.Execute(new ReadyNext(seat)).IsAccepted || statusChanged)
@@ -203,7 +243,7 @@ namespace Callbreak.Application.Online
                     return;
 
                 case ClientMessageKind.Emote:
-                    ShowEmote(seat, reader.Byte(), now);
+                    ShowEmote(seat, emote, now);
                     break;
 
                 case ClientMessageKind.TableReady:
@@ -246,7 +286,10 @@ namespace Callbreak.Application.Online
 
                 state.Presence = SeatConnection.Reconnecting;
                 state.DisconnectedAt = now;
-                _bots.TakeOver(seat, null);
+                if (!_bots.IsBot(seat))
+                {
+                    _bots.TakeOver(seat, null);
+                }
             }
             else
             {
@@ -257,7 +300,18 @@ namespace Callbreak.Application.Online
 
                 state.Presence = SeatConnection.Connected;
                 state.ConsecutiveTimeouts = 0;
-                _bots.Release(seat);
+                if (HoldsOpenTurn(seat))
+                {
+                    // GDD §8: a returning player takes control from the next turn. The bot covering
+                    // this one finishes it on the think time it already has, and no clock starts, so
+                    // dropping and coming back never buys time (the person's own move still counts
+                    // if it arrives first).
+                    state.BotFinishes = _engine.CurrentTurn;
+                }
+                else
+                {
+                    _bots.Release(seat);
+                }
             }
 
             Flush(now);
@@ -286,7 +340,12 @@ namespace Callbreak.Application.Online
             Outbound?.Invoke(seat, HostMessages.SyncState(update));
         }
 
-        /// <summary>The table's clocks and presences as of <paramref name="now"/>.</summary>
+        /// <summary>
+        /// The table's clocks and presences as of <paramref name="now"/>. The time left is the true
+        /// time left: a turn that opened while a deal or a finished trick is still shown reports more
+        /// than its length, because its clock only starts when that hold ends (GDD §8: clients only
+        /// display the server's clock, so theirs runs out when this one does).
+        /// </summary>
         public TableStatus StatusAt(double now)
         {
             int remaining = TableStatus.NoClock;
@@ -294,7 +353,7 @@ namespace Callbreak.Application.Online
             Seat timerSeat = _engine.CurrentSeat;
             if (_clockRunning)
             {
-                double left = Math.Max(0.0, Math.Min(_clockDeadline - now, _clockSeconds));
+                double left = Math.Max(0.0, _clockDeadline - now);
                 remaining = (int)Math.Round(left * 1000.0);
                 duration = _clockSeconds * 1000;
                 timerSeat = _clockSeat;
@@ -402,8 +461,10 @@ namespace Callbreak.Application.Online
 
                             break;
                         case RoundScored _:
+                            // The countdown runs once every table has shown the round's end; the
+                            // people still to say ready are readied when it runs out (Tick).
                             _summaryOpen = true;
-                            _summaryDeadline = now + _clocks.SummarySeconds;
+                            _summaryDeadline = now + (_clocks.SummarySeconds > 0.0 ? RoundEndPlaybackSeconds + _clocks.SummarySeconds : 0.0);
                             break;
                         case MatchEnded _:
                             ended = true;
@@ -413,6 +474,7 @@ namespace Callbreak.Application.Online
             }
             while (ReadyAbsentSeats());
 
+            ReleaseReturnedSeats();
             RefreshClock(now);
             TableStatus status = StatusAt(now);
             for (int s = 0; s < _seats.Length; s++)
@@ -471,9 +533,33 @@ namespace Callbreak.Application.Online
             return any;
         }
 
+        /// <summary>A player who came back during their own turn gets the seat back once the bot has finished that turn.</summary>
+        private void ReleaseReturnedSeats()
+        {
+            for (int s = 0; s < _seats.Length; s++)
+            {
+                SeatState state = _seats[s];
+                if (state.BotFinishes.IsNone || state.BotFinishes == _engine.CurrentTurn)
+                {
+                    continue;
+                }
+
+                state.BotFinishes = TurnId.None;
+                if (!state.Gone && state.Presence == SeatConnection.Connected)
+                {
+                    _bots.Release((Seat)s);
+                }
+            }
+        }
+
+        private bool HoldsOpenTurn(Seat seat) =>
+            !_engine.CurrentTurn.IsNone && _engine.CurrentSeat == seat
+            && (_engine.Phase == Phase.Calling || _engine.Phase == Phase.Playing);
+
         /// <summary>
-        /// Runs the turn clock while a present person holds the turn; bots pace themselves. A call
-        /// turn and a play turn each have their own length (GDD §6: 20 s and 15 s in Quick Match).
+        /// Runs the turn clock while a present person holds the turn; bots pace themselves, and so
+        /// does a bot finishing the turn of someone who came back during it. A call turn and a play
+        /// turn each have their own length (GDD §6: 20 s and 15 s in Quick Match).
         /// </summary>
         private void RefreshClock(double now)
         {
@@ -489,7 +575,7 @@ namespace Callbreak.Application.Online
 
             Seat seat = _engine.CurrentSeat;
             SeatState state = _seats[(int)seat];
-            if (!state.Human || state.Presence != SeatConnection.Connected)
+            if (!state.Human || state.Presence != SeatConnection.Connected || _bots.IsBot(seat))
             {
                 _clockRunning = false;
                 _clockTurn = TurnId.None;
@@ -521,6 +607,9 @@ namespace Callbreak.Application.Online
             public bool Gone { get; set; }
 
             public SeatConnection Presence { get; set; } = SeatConnection.Connected;
+
+            /// <summary>The open turn a bot finishes although the person came back during it; None otherwise.</summary>
+            public TurnId BotFinishes { get; set; } = TurnId.None;
 
             public int ConsecutiveTimeouts { get; set; }
 

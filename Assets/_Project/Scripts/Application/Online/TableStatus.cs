@@ -29,7 +29,11 @@ namespace Callbreak.Application.Online
 
         public Seat TimerSeat { get; }
 
-        /// <summary>Milliseconds left on the turn clock, or <see cref="NoClock"/> when none is running.</summary>
+        /// <summary>
+        /// Milliseconds left on the turn clock, or <see cref="NoClock"/> when none is running. More
+        /// than <see cref="TimerDurationMs"/> while the table still shows a deal or a finished trick:
+        /// the clock starts when that hold ends, and a client shows it from then on.
+        /// </summary>
         public int TimerRemainingMs { get; }
 
         /// <summary>
@@ -39,7 +43,10 @@ namespace Callbreak.Application.Online
         /// </summary>
         public int TimerDurationMs { get; }
 
-        /// <summary>Milliseconds until the next round starts by itself, or <see cref="NoClock"/>.</summary>
+        /// <summary>
+        /// Milliseconds until the next round starts by itself, or <see cref="NoClock"/>. Longer than
+        /// the countdown until the end of the round has been played back on the table.
+        /// </summary>
         public int SummaryRemainingMs { get; }
 
         public bool HasTimer => TimerRemainingMs >= 0;

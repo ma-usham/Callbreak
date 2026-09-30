@@ -32,7 +32,7 @@ namespace Callbreak.Tests.EditMode.Application
         [Test]
         public void Remember_ThenTryGet_GivesTheCode()
         {
-            _store.Remember("AB2CDE");
+            _store.Remember("AB2CDE", "room-AB2CDE-1");
             _utc = Start.AddMinutes(9);
 
             Assert.IsTrue(_store.TryGet(out string code));
@@ -42,9 +42,9 @@ namespace Callbreak.Tests.EditMode.Application
         [Test]
         public void Remember_Again_StartsTheTenMinutesAfresh()
         {
-            _store.Remember("AB2CDE");
+            _store.Remember("AB2CDE", "room-AB2CDE-1");
             _utc = Start.AddMinutes(8);
-            _store.Remember("AB2CDE");
+            _store.Remember("AB2CDE", "room-AB2CDE-1");
             _utc = Start.AddMinutes(17);
 
             Assert.IsTrue(_store.TryGet(out _));
@@ -53,7 +53,7 @@ namespace Callbreak.Tests.EditMode.Application
         [Test]
         public void TryGet_AfterTenMinutes_IsFalseAndTheTicketIsDeleted()
         {
-            _store.Remember("AB2CDE");
+            _store.Remember("AB2CDE", "room-AB2CDE-1");
             _utc = Start.AddSeconds(RejoinStore.LifetimeSeconds + 1);
 
             Assert.IsFalse(_store.TryGet(out string code));
@@ -64,7 +64,7 @@ namespace Callbreak.Tests.EditMode.Application
         [Test]
         public void TryGet_SurvivesANewStoreOverTheSameFiles()
         {
-            _store.Remember("AB2CDE");
+            _store.Remember("AB2CDE", "room-AB2CDE-1");
             _utc = Start.AddMinutes(1);
             var afterRestart = new RejoinStore(_saves, () => _utc);
 
@@ -93,7 +93,7 @@ namespace Callbreak.Tests.EditMode.Application
         [Test]
         public void Clear_RemovesTheTicket()
         {
-            _store.Remember("AB2CDE");
+            _store.Remember("AB2CDE", "room-AB2CDE-1");
 
             _store.Clear();
 
@@ -104,7 +104,7 @@ namespace Callbreak.Tests.EditMode.Application
         [Test]
         public void Remember_InvalidCode_Throws()
         {
-            Assert.Throws<ArgumentException>(() => _store.Remember("AB1"));
+            Assert.Throws<ArgumentException>(() => _store.Remember("AB1", "room-AB1-1"));
         }
     }
 }

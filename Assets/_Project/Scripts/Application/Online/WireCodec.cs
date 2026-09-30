@@ -101,9 +101,9 @@ namespace Callbreak.Application.Online
 
         public static SeatProfile ReadSeatProfile(WireReader r)
         {
-            string name = r.String();
-            string avatar = r.String();
-            string deck = r.String();
+            string name = r.String(Protocol.MaxNameBytes);
+            string avatar = r.String(Protocol.MaxIdBytes);
+            string deck = r.String(Protocol.MaxIdBytes);
             bool isBot = r.Bool();
             return Guard(() => new SeatProfile(name, avatar, deck, isBot));
         }
@@ -274,8 +274,8 @@ namespace Callbreak.Application.Online
         public static PlayerView ReadPlayerView(WireReader r)
         {
             Seat viewer = ReadSeat(r);
-            RuleSet rules = RuleSetOf(r.String());
-            string matchId = r.String();
+            RuleSet rules = RuleSetOf(r.String(Protocol.MaxIdBytes));
+            string matchId = r.String(Protocol.MaxIdBytes);
             var seats = new SeatProfile[SeatExtensions.Count];
             for (int s = 0; s < seats.Length; s++)
             {
@@ -421,8 +421,8 @@ namespace Callbreak.Application.Online
             {
                 case EventKind.MatchStarted:
                 {
-                    string matchId = r.String();
-                    string ruleSetId = r.String();
+                    string matchId = r.String(Protocol.MaxIdBytes);
+                    string ruleSetId = r.String(Protocol.MaxIdBytes);
                     Seat firstDealer = ReadSeat(r);
                     var seats = new SeatProfile[SeatExtensions.Count];
                     for (int s = 0; s < seats.Length; s++)

@@ -7,17 +7,17 @@ using NUnit.Framework;
 namespace Callbreak.Tests.EditMode.Application.Online
 {
     /// <summary>
-    /// GDD §22: the shuffle seed never leaves the host. Whoever holds it can deal all five rounds
-    /// in advance and knows every hand before the first call.
+    /// GDD §22: no shuffle seed ever leaves the host. Whoever holds one can deal its round in
+    /// advance and knows every hand before the first call.
     /// </summary>
     public sealed class HiddenInformationTests
     {
-        // Every byte differs, so the seed cannot be mistaken for anything else in a payload.
+        // Every byte differs, so a seed cannot be mistaken for anything else in a payload.
         private const ulong FirstDraw = 0x1122334455667788UL;
         private const ulong DrawStep = 0x0101010101010101UL;
 
         [Test]
-        public void WholeMatch_NoPayloadToAGuestCarriesTheShuffleSeed()
+        public void WholeMatch_NoPayloadToAGuestCarriesAnyShuffleSeed()
         {
             ulong next = FirstDraw;
             var room = new RoomFixture(seeds: () =>
@@ -28,23 +28,27 @@ namespace Callbreak.Tests.EditMode.Application.Online
             });
             RoomFixture.Member guest = room.Join("player-asha", "Asha");
             room.StartMatch();
-            ulong seed = room.Host.Table.Seed;
 
             room.PlayToEnd();
 
+            IReadOnlyList<ulong> seeds = room.Host.Table.ShuffleSeeds;
             Assert.IsTrue(room.Host.Table.IsOver);
+            Assert.GreaterOrEqual(seeds.Count, 1 + guest.Session.View.Rules.Rounds, "the first dealer's seed and one per round");
             Assert.Greater(room.Network.HostPayloads.Count, 50, "the match went over the network");
-            foreach (string spelling in Spellings(seed))
+            foreach (ulong seed in seeds)
             {
-                StringAssert.DoesNotContain(spelling, guest.Session.View.MatchId, "the match id every player is sent");
-            }
-
-            for (int i = 0; i < room.Network.HostPayloads.Count; i++)
-            {
-                byte[] payload = room.Network.HostPayloads[i];
-                foreach (byte[] form in Forms(seed))
+                foreach (string spelling in Spellings(seed))
                 {
-                    Assert.Less(IndexOf(payload, form), 0, "payload " + i + " carries the shuffle seed");
+                    StringAssert.DoesNotContain(spelling, guest.Session.View.MatchId, "the match id every player is sent");
+                }
+
+                for (int i = 0; i < room.Network.HostPayloads.Count; i++)
+                {
+                    byte[] payload = room.Network.HostPayloads[i];
+                    foreach (byte[] form in Forms(seed))
+                    {
+                        Assert.Less(IndexOf(payload, form), 0, "payload " + i + " carries a shuffle seed");
+                    }
                 }
             }
         }

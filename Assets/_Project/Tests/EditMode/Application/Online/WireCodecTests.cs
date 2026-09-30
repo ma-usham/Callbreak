@@ -205,9 +205,21 @@ namespace Callbreak.Tests.EditMode.Application.Online
             Assert.AreEqual(-123456789, r.Int32());
             Assert.AreEqual(4000000000, r.UInt32());
             Assert.AreEqual(0xFEDCBA9876543210UL, r.UInt64());
-            Assert.AreEqual("नमस्ते Asha", r.String());
-            Assert.AreEqual(string.Empty, r.String());
+            Assert.AreEqual("नमस्ते Asha", r.String(Protocol.MaxNameBytes));
+            Assert.AreEqual(string.Empty, r.String(Protocol.MaxNameBytes));
             Assert.IsTrue(r.AtEnd);
+        }
+
+        [Test]
+        public void Reader_TextLongerThanItsField_IsAFormatErrorAndTextUpToItIsRead()
+        {
+            var w = new WireWriter();
+            w.String(new string('a', Protocol.MaxIdBytes));
+            w.String(new string('a', Protocol.MaxIdBytes + 1));
+            var r = new WireReader(w.ToArray());
+
+            Assert.AreEqual(Protocol.MaxIdBytes, r.String(Protocol.MaxIdBytes).Length, "exactly the limit is fine");
+            Assert.Throws<WireFormatException>(() => r.String(Protocol.MaxIdBytes), "one byte more is not");
         }
 
         [Test]

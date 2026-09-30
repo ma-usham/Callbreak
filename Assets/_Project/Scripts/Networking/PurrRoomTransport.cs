@@ -6,6 +6,7 @@ using Callbreak.Application.Online;
 using Callbreak.Application.Rooms;
 using PurrNet;
 using PurrNet.Transports;
+using UnityEngine.Networking;
 
 namespace Callbreak.Networking
 {
@@ -15,6 +16,12 @@ namespace Callbreak.Networking
     /// it, guests connect to it, and no phone needs an open port. The room and table logic never
     /// sees PurrNet; this class only carries its bytes, reliably and in order, and reports who
     /// connected and who dropped. It pumps the transport itself, so no NetworkManager is needed.
+    /// <para>
+    /// The transport's callbacks only note what happened. The room logic hears of it from
+    /// <see cref="Tick"/>, in the order it happened, each event in its own try/catch: an exception
+    /// in a handler is logged and the next event goes ahead, instead of escaping into the
+    /// transport's receive loop, which swallows it and delivers nothing more on that connection.
+    /// </para>
     /// </summary>
     public sealed class PurrRoomTransport : IRoomTransport, IDisposable
     {
@@ -24,11 +31,18 @@ namespace Callbreak.Networking
         /// <summary>A host that lost the relay asks for its room again this often.</summary>
         private const double RelistenSeconds = 3.0;
 
+        /// <summary>How long the relay may take to say whether a room name is live.</summary>
+        private const int RoomCheckTimeoutSeconds = 5;
+
+        /// <summary>A handler that keeps causing events never holds a frame for longer than this many.</summary>
+        private const int MaxNoticesPerDrain = 10000;
+
         /// <summary>Keeps this game's rooms apart from any other game on the shared relay.</summary>
         private const string RoomPrefix = "callbreak-";
 
         private readonly GenericTransport _component;
         private readonly ITransport _transport;
+        private readonly Queue<Notice> _notices = new Queue<Notice>();
 
         private HostLink _host;
         private ClientLink _client;
@@ -36,6 +50,7 @@ namespace Callbreak.Networking
         private TaskCompletionSource<ClientLinkResult> _joining;
         private CancellationTokenRegistration _hostingCancel;
         private CancellationTokenRegistration _joiningCancel;
+        private UnityWebRequest _roomCheck;
         private string _hostCode;
         private double _now;
         private double _hostingDeadline;
@@ -55,6 +70,15 @@ namespace Callbreak.Networking
             _transport.onConnected += OnConnected;
             _transport.onDisconnected += OnDisconnected;
             _transport.onDataReceived += OnDataReceived;
+        }
+
+        private enum NoticeKind : byte
+        {
+            PeerConnected,
+            PeerDisconnected,
+            HostReceived,
+            ClientReceived,
+            ClientClosed,
         }
 
         public Task<HostLinkResult> HostAsync(string roomCode, CancellationToken ct)
@@ -86,8 +110,7 @@ namespace Callbreak.Networking
                 });
             }
 
-            SetRoom(roomCode);
-            _transport.Listen(0);
+            ListenUnlessTaken(roomCode, hosting);
             return hosting.Task;
         }
 
@@ -125,7 +148,8 @@ namespace Callbreak.Networking
         }
 
         /// <summary>
-        /// Moves the transport's traffic and checks the timeouts. Call once per frame with unscaled time.
+        /// Moves the transport's traffic, tells the room logic what arrived, and checks the timeouts.
+        /// Call once per frame with unscaled time.
         /// </summary>
         public void Tick(float deltaTime, double now)
         {
@@ -136,6 +160,7 @@ namespace Callbreak.Networking
             }
 
             _transport.ReceiveMessages(deltaTime);
+            RaiseNotices();
             _transport.SendMessages(deltaTime);
 
             // The clocks of an attempt start on the first tick after it was asked for, so a caller
@@ -171,6 +196,9 @@ namespace Callbreak.Networking
                 SetRoom(_hostCode);
                 _transport.Listen(0);
             }
+
+            // Whatever the timeouts and the relisten caused is heard in the same frame.
+            RaiseNotices();
         }
 
         public void Dispose()
@@ -181,6 +209,12 @@ namespace Callbreak.Networking
             }
 
             _disposed = true;
+            _notices.Clear();
+            if (_roomCheck != null)
+            {
+                _roomCheck.Abort();
+            }
+
             FinishHosting(new HostLinkResult(null, RoomError.Unknown));
             FinishJoining(new ClientLinkResult(null, RoomError.Unknown));
             _transport.onConnectionState -= OnConnectionState;
@@ -203,6 +237,75 @@ namespace Callbreak.Networking
             if (_component is PurrTransport relay)
             {
                 relay.roomName = RoomPrefix + roomCode;
+            }
+        }
+
+        /// <summary>
+        /// GDD Appendix A: codes are drawn at random, so two hosts can draw the same one. The relay
+        /// says whether a room name is live through the endpoint guests join by (PurrNet's own
+        /// RoomExistsAsync asks it the same way); a live one is answered AlreadyStarted, and the
+        /// caller draws another code. Any other answer, or none, goes on to listen, which fails by
+        /// itself when the relay cannot be reached.
+        /// </summary>
+        private void ListenUnlessTaken(string roomCode, TaskCompletionSource<HostLinkResult> hosting)
+        {
+            string master = _component is PurrTransport relay ? relay.masterServer : null;
+            if (string.IsNullOrEmpty(master))
+            {
+                SetRoom(roomCode);
+                _transport.Listen(0);
+                return;
+            }
+
+            UnityWebRequest request = UnityWebRequest.Get(master.EndsWith("/") ? master + "join" : master + "/join");
+            request.SetRequestHeader("name", RoomPrefix + roomCode);
+            request.SetRequestHeader("Cache-Control", "no-cache");
+            request.useHttpContinue = false;
+            request.timeout = RoomCheckTimeoutSeconds;
+            _roomCheck = request;
+            request.SendWebRequest().completed += _ => OnRoomChecked(request, roomCode, hosting);
+        }
+
+        private void OnRoomChecked(UnityWebRequest request, string roomCode, TaskCompletionSource<HostLinkResult> hosting)
+        {
+            bool taken = request.result == UnityWebRequest.Result.Success && NamesAHost(request.downloadHandler.text);
+            if (_roomCheck == request)
+            {
+                _roomCheck = null;
+            }
+
+            request.Dispose();
+            if (_disposed || _hosting != hosting)
+            {
+                // Cancelled, timed out, or replaced by a newer attempt meanwhile.
+                return;
+            }
+
+            if (taken)
+            {
+                FinishHosting(new HostLinkResult(null, RoomError.AlreadyStarted));
+                return;
+            }
+
+            SetRoom(roomCode);
+            _transport.Listen(0);
+        }
+
+        /// <summary>Only a real join ticket (it names the relay host to connect to) means the room is live.</summary>
+        private static bool NamesAHost(string json)
+        {
+            if (string.IsNullOrEmpty(json))
+            {
+                return false;
+            }
+
+            try
+            {
+                return !string.IsNullOrEmpty(UnityEngine.JsonUtility.FromJson<ClientJoinInfo>(json).host);
+            }
+            catch (ArgumentException)
+            {
+                return false;
             }
         }
 
@@ -251,7 +354,7 @@ namespace Callbreak.Networking
                 }
                 else if (_client != null)
                 {
-                    _client.Close();
+                    _client.MarkClosed();
                 }
             }
         }
@@ -260,7 +363,7 @@ namespace Callbreak.Networking
         {
             if (asServer && _host != null && !_host.IsDisposed)
             {
-                _host.RaiseConnected(PeerOf(conn));
+                _host.MarkConnected(PeerOf(conn));
             }
         }
 
@@ -268,25 +371,51 @@ namespace Callbreak.Networking
         {
             if (asServer && _host != null && !_host.IsDisposed)
             {
-                _host.RaiseDisconnected(PeerOf(conn));
+                _host.MarkDisconnected(PeerOf(conn));
             }
         }
 
         private void OnDataReceived(Connection conn, ByteData data, bool asServer)
         {
-            // The transport reuses its buffer; the room logic keeps what it is given.
-            var payload = new byte[data.length];
-            Buffer.BlockCopy(data.data, data.offset, payload, 0, data.length);
             if (asServer)
             {
-                if (_host != null && !_host.IsDisposed)
+                // No member ever sends more than this (GDD §25 "messages are tiny"): anything larger is
+                // dropped before it costs a copy.
+                if (_host == null || _host.IsDisposed || data.length > Protocol.MaxClientPayloadBytes)
                 {
-                    _host.RaiseReceived(PeerOf(conn), payload);
+                    return;
                 }
+
+                _host.MarkReceived(PeerOf(conn), Copy(data));
             }
             else if (_client != null && _client.IsConnected)
             {
-                _client.RaiseReceived(payload);
+                _notices.Enqueue(new Notice(NoticeKind.ClientReceived, null, _client, default, Copy(data)));
+            }
+        }
+
+        /// <summary>The transport reuses its buffer; the room logic keeps what it is given.</summary>
+        private static byte[] Copy(ByteData data)
+        {
+            var payload = new byte[data.length];
+            Buffer.BlockCopy(data.data, data.offset, payload, 0, data.length);
+            return payload;
+        }
+
+        /// <summary>Tells the room logic, in order, everything the transport reported since the last time.</summary>
+        private void RaiseNotices()
+        {
+            for (int raised = 0; raised < MaxNoticesPerDrain && _notices.Count > 0 && !_disposed; raised++)
+            {
+                Notice notice = _notices.Dequeue();
+                try
+                {
+                    notice.Raise();
+                }
+                catch (Exception e)
+                {
+                    UnityEngine.Debug.LogException(e);
+                }
             }
         }
 
@@ -320,6 +449,47 @@ namespace Callbreak.Networking
 
         private static PeerId PeerOf(Connection conn) => new PeerId((ulong)(uint)conn.connectionId);
 
+        /// <summary>One thing the transport reported, to be told to the room logic from <see cref="Tick"/>.</summary>
+        private readonly struct Notice
+        {
+            private readonly NoticeKind _kind;
+            private readonly HostLink _host;
+            private readonly ClientLink _client;
+            private readonly PeerId _peer;
+            private readonly byte[] _payload;
+
+            public Notice(NoticeKind kind, HostLink host, ClientLink client, PeerId peer, byte[] payload)
+            {
+                _kind = kind;
+                _host = host;
+                _client = client;
+                _peer = peer;
+                _payload = payload;
+            }
+
+            public void Raise()
+            {
+                switch (_kind)
+                {
+                    case NoticeKind.PeerConnected:
+                        _host.RaiseConnected(_peer);
+                        break;
+                    case NoticeKind.PeerDisconnected:
+                        _host.RaiseDisconnected(_peer);
+                        break;
+                    case NoticeKind.HostReceived:
+                        _host.RaiseReceived(_peer, _payload);
+                        break;
+                    case NoticeKind.ClientReceived:
+                        _client.RaiseReceived(_payload);
+                        break;
+                    case NoticeKind.ClientClosed:
+                        _client.RaiseClosed();
+                        break;
+                }
+            }
+        }
+
         private sealed class HostLink : IHostLink
         {
             private readonly PurrRoomTransport _owner;
@@ -338,9 +508,31 @@ namespace Callbreak.Networking
 
             public bool IsDisposed { get; private set; }
 
-            public void RaiseConnected(PeerId peer)
+            public void MarkConnected(PeerId peer)
             {
                 if (_peers.Add(peer))
+                {
+                    _owner._notices.Enqueue(new Notice(NoticeKind.PeerConnected, this, null, peer, null));
+                }
+            }
+
+            public void MarkDisconnected(PeerId peer)
+            {
+                if (_peers.Remove(peer))
+                {
+                    _owner._notices.Enqueue(new Notice(NoticeKind.PeerDisconnected, this, null, peer, null));
+                }
+            }
+
+            public void MarkReceived(PeerId peer, byte[] payload)
+            {
+                MarkConnected(peer);
+                _owner._notices.Enqueue(new Notice(NoticeKind.HostReceived, this, null, peer, payload));
+            }
+
+            public void RaiseConnected(PeerId peer)
+            {
+                if (!IsDisposed)
                 {
                     PeerConnected?.Invoke(peer);
                 }
@@ -348,7 +540,7 @@ namespace Callbreak.Networking
 
             public void RaiseDisconnected(PeerId peer)
             {
-                if (_peers.Remove(peer))
+                if (!IsDisposed)
                 {
                     PeerDisconnected?.Invoke(peer);
                 }
@@ -356,12 +548,10 @@ namespace Callbreak.Networking
 
             public void RaiseReceived(PeerId peer, byte[] payload)
             {
-                if (_peers.Add(peer))
+                if (!IsDisposed)
                 {
-                    PeerConnected?.Invoke(peer);
+                    Received?.Invoke(peer, payload);
                 }
-
-                Received?.Invoke(peer, payload);
             }
 
             /// <summary>The relay connection is gone: every guest with it.</summary>
@@ -376,7 +566,7 @@ namespace Callbreak.Networking
                 _peers.Clear();
                 foreach (PeerId peer in gone)
                 {
-                    PeerDisconnected?.Invoke(peer);
+                    _owner._notices.Enqueue(new Notice(NoticeKind.PeerDisconnected, this, null, peer, null));
                 }
             }
 
@@ -421,6 +611,7 @@ namespace Callbreak.Networking
         private sealed class ClientLink : IClientLink
         {
             private readonly PurrRoomTransport _owner;
+            private bool _disposed;
 
             public ClientLink(PurrRoomTransport owner)
             {
@@ -433,7 +624,22 @@ namespace Callbreak.Networking
 
             public bool IsConnected { get; private set; } = true;
 
-            public void RaiseReceived(byte[] payload) => Received?.Invoke(payload);
+            /// <summary>What arrived before the connection was lost is still handed over, in order; nothing after a Dispose.</summary>
+            public void RaiseReceived(byte[] payload)
+            {
+                if (!_disposed)
+                {
+                    Received?.Invoke(payload);
+                }
+            }
+
+            public void RaiseClosed()
+            {
+                if (!_disposed)
+                {
+                    Closed?.Invoke();
+                }
+            }
 
             public void Send(byte[] payload)
             {
@@ -445,8 +651,8 @@ namespace Callbreak.Networking
                 _owner._transport.SendToServer(new ByteData(payload, 0, payload.Length), Channel.ReliableOrdered);
             }
 
-            /// <summary>The connection was lost, or the host dropped it.</summary>
-            public void Close()
+            /// <summary>The connection was lost, or the host dropped it: <see cref="Closed"/> follows everything that arrived before.</summary>
+            public void MarkClosed()
             {
                 if (!IsConnected)
                 {
@@ -459,11 +665,12 @@ namespace Callbreak.Networking
                     _owner._client = null;
                 }
 
-                Closed?.Invoke();
+                _owner._notices.Enqueue(new Notice(NoticeKind.ClientClosed, null, this, default, null));
             }
 
             public void Dispose()
             {
+                _disposed = true;
                 if (!IsConnected)
                 {
                     return;

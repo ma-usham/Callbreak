@@ -22,7 +22,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
     /// private room the host's choice for both; hosted bots think 0.8-1.6 s; the round results
     /// count down 10 s in Quick Match and 15 s in a private room.
     /// </summary>
-    public sealed class TableClockTests
+    public sealed partial class TableClockTests
     {
         private const double StepSeconds = 0.25;
 
@@ -199,8 +199,11 @@ namespace Callbreak.Tests.EditMode.Application.Online
             RoomFixture.Member guest = room.Join("player-asha", "Asha");
             room.StartMatch();
 
-            // Both people play their turns but never say they are ready for the next round.
+            // Both people play their turns but never say they are ready for the next round. The
+            // countdown starts once the end of the round has been played back on the table
+            // (TableHost.RoundEndPlaybackSeconds).
             PlayUntil(room, () => guest.Session.View.Phase == Phase.RoundSummary);
+            WaitFor(room, () => guest.Session.Timer.IsRunning);
             TurnTimerState countdown = guest.Session.Timer;
 
             Assert.IsTrue(countdown.IsRunning, "the round results count down");
