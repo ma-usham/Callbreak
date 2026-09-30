@@ -113,5 +113,89 @@ namespace Callbreak.Tests.EditMode.Presentation
                 Assert.AreEqual(1f, width, Tolerance, $"flat at {time} s");
             }
         }
+
+        // A tap on the deck that is already peeking (the chosen deck tapped again): the peek carries
+        // on from TimeAfterTapAgain, with the face up for a whole hold again and no jump.
+
+        [TestCase(0.03f)]
+        [TestCase(0.119f)]
+        [TestCase(0.12f)]
+        [TestCase(0.2f)]
+        public void TappedAgainWhileItTurnsToItsFace_TheCardCarriesOn(float time)
+        {
+            Assert.AreEqual(time, DeckPeek.TimeAfterTapAgain(time, false), Tolerance);
+        }
+
+        [TestCase(0f)]
+        [TestCase(0.5f)]
+        [TestCase(0.999f)]
+        public void TappedAgainWhileTheFaceIsHeld_TheHoldStartsAgain(float shareOfTheHold)
+        {
+            Assert.AreEqual(FaceUp, DeckPeek.TimeAfterTapAgain(FaceUp + shareOfTheHold * Hold, false), Tolerance);
+        }
+
+        [Test]
+        public void TappedAgainWhileTheFaceNarrows_ItOpensAgainFromTheSameWidth()
+        {
+            float time = TurnsBack + Leg / 2f;   // the face, a quarter wide
+            float from = DeckPeek.TimeAfterTapAgain(time, false);
+            DeckPeek.Pose(from, false, out bool showsFace, out float width);
+
+            Assert.Greater(from, Leg, "in the half-turn that opens on the face");
+            Assert.Less(from, FaceUp);
+            Assert.IsTrue(showsFace);
+            Assert.AreEqual(0.25f, width, Tolerance);
+        }
+
+        [Test]
+        public void TappedAgainWhileTheBackOpens_ItNarrowsAgainFromTheSameWidth()
+        {
+            float time = TurnsBack + Leg + Leg / 2f;   // the back, three quarters wide
+            float from = DeckPeek.TimeAfterTapAgain(time, false);
+            DeckPeek.Pose(from, false, out bool showsFace, out float width);
+
+            Assert.Less(from, Leg, "in the half-turn that closes on the back");
+            Assert.IsFalse(showsFace);
+            Assert.AreEqual(0.75f, width, Tolerance);
+        }
+
+        [Test]
+        public void TappedAgainAtAnyMoment_NothingJumps_AndTheWholeHoldIsStillToCome()
+        {
+            float total = DeckPeek.Seconds(false);
+            for (float time = 0f; time < total; time += 0.004f)
+            {
+                float from = DeckPeek.TimeAfterTapAgain(time, false);
+                DeckPeek.Pose(time, false, out bool faceBefore, out float widthBefore);
+                DeckPeek.Pose(from, false, out bool faceAfter, out float widthAfter);
+
+                Assert.AreEqual(widthBefore, widthAfter, 0.002f, $"width at {time} s");
+                if (widthBefore > 0.01f)
+                {
+                    // Edge-on, a card has no visible side.
+                    Assert.AreEqual(faceBefore, faceAfter, $"side at {time} s");
+                }
+
+                Assert.GreaterOrEqual(from, 0f, $"at {time} s");
+                Assert.LessOrEqual(from, FaceUp + Tolerance, $"the hold has not begun at {time} s");
+            }
+        }
+
+        [TestCase(0f)]
+        [TestCase(0.6f)]
+        [TestCase(1.19f)]
+        public void WithReduceMotion_ATapAgainStartsTheHoldAgain(float time)
+        {
+            Assert.AreEqual(0f, DeckPeek.TimeAfterTapAgain(time, true), Tolerance);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ATapAfterThePeekHasEnded_StartsFromTheBeginning(bool reduceMotion)
+        {
+            float afterTheEnd = DeckPeek.Seconds(reduceMotion) + 0.5f;
+
+            Assert.AreEqual(0f, DeckPeek.TimeAfterTapAgain(afterTheEnd, reduceMotion), Tolerance);
+        }
     }
 }

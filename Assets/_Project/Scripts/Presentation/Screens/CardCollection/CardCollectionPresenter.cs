@@ -12,10 +12,10 @@ namespace Callbreak.Presentation.Screens
 {
     /// <summary>
     /// GDD §11 screen 15: choose the deck you play with. Every deck is shown by its back, also
-    /// when the screen opens; selecting one turns its picture over to its ace of spades for a
-    /// moment and back, so the faces can be seen before choosing (with Reduce motion the picture
-    /// changes side without turning). "Use Selected Deck" equips it from the next match; all
-    /// three decks are owned, nothing costs money.
+    /// when the screen opens; tapping one (another deck, or the chosen one again) turns its picture
+    /// over to its ace of spades for a moment and back, so the faces can be seen before choosing
+    /// (with Reduce motion the picture changes side without turning). "Use Selected Deck" equips it
+    /// from the next match; all three decks are owned, nothing costs money.
     /// </summary>
     public sealed class CardCollectionPresenter : IStartable, IDisposable
     {

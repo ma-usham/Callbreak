@@ -3,9 +3,9 @@
   // Shared menu background and UI kit; the panel, the difficulty cards, the title divider and the
   // icons (back, monitor, the three difficulty icons) are the generated kit (ArtSource/Kit/*.map.csv;
   // the card's own corner radius is 21.5, as here; an icon's "opacity" is the one at which the kit's
-  // black ink reads as this mockup's ink). Still cut here (no generated replacement yet): the
-  // selected outline and check badge (cut on the Normal card, reused on the others).
-  // Hairlines are "make" shapes.
+  // black ink reads as this mockup's ink), and so are the selected outline and the check badge
+  // (UI/Controls), the Start button (the plain crimson pill) and its thin chevron. Nothing is cut
+  // from this mockup any more. Hairlines are "make" shapes.
   "name": "OfflineSetup",
   "mockup": "06-offline-setup.png",
   "background": "shared",
@@ -39,14 +39,15 @@
     { "id": "Intro", "kind": "label", "parent": "Panel", "text": "Play against three computer players.", "font": "SansSemiBold", "rect": [585, 445, 500, 38], "key": "ui.offline_setup.intro" },
 
     // The three difficulty cards (SelectableGroup "Difficulty"). Each card's selected look (outline +
-    // check badge) is a group the group shows only on the chosen card; the Normal card's is cut here.
+    // check badge) is a group the group shows only on the chosen card. The outline's outer edge is the
+    // Normal card's own box on the mockup; on Easy and Hard it sits 3.35 px above and below the card.
     { "id": "Difficulty", "kind": "group", "parent": "Panel", "rect": [438, 498, 796, 222] },
 
     { "id": "CardEasy", "kind": "button", "parent": "Difficulty", "shape": "roundrect", "radius": 21, "rect": [440.9, 504.0, 252.6, 211.0],
       "use": "UI/Panels/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
-    { "id": "Selected0", "kind": "group", "parent": "CardEasy", "rect": [438.9, 501.7, 256.35, 215.3], "hidden": true },
-    { "id": "SelectedOutline0", "parent": "Selected0", "rect": [438.9, 501.7, 256.35, 215.3], "use": "UI_SelectedOutline" },
-    { "id": "CheckBadge0", "parent": "Selected0", "rect": [634.25, 515.7, 45, 43], "use": "UI_CheckBadge" },
+    { "id": "Selected0", "kind": "group", "parent": "CardEasy", "rect": [440.9, 500.65, 252.6, 217.7], "hidden": true },
+    { "id": "SelectedOutline0", "parent": "Selected0", "rect": [440.9, 500.65, 252.6, 217.7], "use": "UI/Controls/UI_Outline_Selected.png" },
+    { "id": "CheckBadge0", "parent": "Selected0", "rect": [636.0, 512.46, 41.99, 41.99], "use": "UI/Controls/UI_Check_Badge.png" },
     { "id": "IconEasy", "parent": "CardEasy", "rect": [536.44, 530.76, 55.72, 62.68], "use": "UI/Icons/Icon_DifficultyEasy.png", "opacity": 0.976 },
     { "id": "NameEasy", "kind": "label", "parent": "CardEasy", "text": "Easy", "font": "SansBold", "rect": [525, 600, 85, 40], "key": "ui.offline_setup.easy" },
     { "id": "EasyLine1", "kind": "label", "parent": "CardEasy", "text": "A relaxed game", "font": "SansSemiBold", "rect": [478, 645, 175, 30], "key": "ui.offline_setup.easy_line1" },
@@ -54,11 +55,9 @@
 
     { "id": "CardNormal", "kind": "button", "parent": "Difficulty", "shape": "roundrect", "radius": 21, "rect": [710.0, 500.3, 252.25, 217.7],
       "use": "UI/Panels/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
-    { "id": "Selected1", "kind": "group", "parent": "CardNormal", "rect": [708, 498, 256, 222] },
-    { "id": "SelectedOutline1", "parent": "Selected1", "shape": "ink", "ink": "#8C0709", "rect": [706, 496, 260, 226], "scale": 2, "out": "UI_SelectedOutline",
-      "clip": [ { "shape": "roundrect", "rect": [714.4, 504.5, 243.4, 209.3], "radius": 23, "outside": true },
-                { "shape": "roundrect", "rect": [708.5, 498.8, 255.25, 220.7], "radius": 24 } ] },
-    { "id": "CheckBadge1", "parent": "Selected1", "shape": "diff", "lo": 0.04, "hi": 0.0401, "solid": true, "rect": [903, 510, 46, 46], "scale": 2, "out": "UI_CheckBadge" },
+    { "id": "Selected1", "kind": "group", "parent": "CardNormal", "rect": [710.18, 500.35, 251.95, 217.7] },
+    { "id": "SelectedOutline1", "parent": "Selected1", "rect": [710.18, 500.35, 251.95, 217.7], "use": "UI/Controls/UI_Outline_Selected.png" },
+    { "id": "CheckBadge1", "parent": "Selected1", "rect": [904.76, 512.11, 41.99, 41.99], "use": "UI/Controls/UI_Check_Badge.png" },
     { "id": "IconNormal", "parent": "CardNormal", "rect": [790.7, 527.91, 92.23, 65.26], "use": "UI/Icons/Icon_DifficultyNormal.png", "opacity": 0.979 },
     { "id": "NameNormal", "kind": "label", "parent": "CardNormal", "text": "Normal", "font": "SansBold", "rect": [778, 600, 115, 40], "key": "ui.offline_setup.normal" },
     { "id": "NormalLine1", "kind": "label", "parent": "CardNormal", "text": "A balanced", "font": "SansSemiBold", "rect": [770, 645, 130, 30], "key": "ui.offline_setup.normal_line1" },
@@ -66,9 +65,9 @@
 
     { "id": "CardHard", "kind": "button", "parent": "Difficulty", "shape": "roundrect", "radius": 21, "rect": [979.1, 504.0, 252.9, 211.2],
       "use": "UI/Panels/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
-    { "id": "Selected2", "kind": "group", "parent": "CardHard", "rect": [977.1, 501.7, 256.65, 215.5], "hidden": true },
-    { "id": "SelectedOutline2", "parent": "Selected2", "rect": [977.1, 501.7, 256.65, 215.5], "use": "UI_SelectedOutline" },
-    { "id": "CheckBadge2", "parent": "Selected2", "rect": [1172.75, 515.7, 45, 43], "use": "UI_CheckBadge" },
+    { "id": "Selected2", "kind": "group", "parent": "CardHard", "rect": [979.1, 500.65, 252.9, 217.9], "hidden": true },
+    { "id": "SelectedOutline2", "parent": "Selected2", "rect": [979.1, 500.65, 252.9, 217.9], "use": "UI/Controls/UI_Outline_Selected.png" },
+    { "id": "CheckBadge2", "parent": "Selected2", "rect": [1174.5, 512.46, 41.99, 41.99], "use": "UI/Controls/UI_Check_Badge.png" },
     { "id": "IconHard", "parent": "CardHard", "rect": [1058.76, 525.22, 99.99, 67.82], "use": "UI/Icons/Icon_DifficultyHard.png", "opacity": 0.979 },
     { "id": "NameHard", "kind": "label", "parent": "CardHard", "text": "Hard", "font": "SansBold", "rect": [1063, 600, 85, 40], "key": "ui.offline_setup.hard" },
     { "id": "HardLine1", "kind": "label", "parent": "CardHard", "text": "For experienced", "font": "SansSemiBold", "rect": [1015, 645, 182, 30], "key": "ui.offline_setup.hard_line1" },
@@ -78,9 +77,9 @@
     { "id": "Footer", "kind": "label", "parent": "Panel", "text": "4 players · 5 rounds · No connection needed", "font": "SansSemiBold", "rect": [600, 735, 470, 32], "key": "ui.offline_setup.footer" },
     { "id": "FooterLineRight", "parent": "Panel", "rect": [1084.7, 749.7, 65.8, 1.9], "make": { "type": "rect", "fill": "#A07F64", "out": "Deco_FooterLineRight" } },
 
-    { "id": "StartButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 36.5, "rect": [440.0, 782.9, 792.8, 93.4],
-      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "StartButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 36.5, "rect": [439.95, 782.82, 792.8, 93.64],
+      "use": "UI/Controls/UI_Button_Crimson.png", "shadowUse": "UI/Controls/UI_Button_Crimson_Shadow.png", "shadowDrop": 4.5, "shadowOpacity": 0.27 },
     { "id": "StartLabel", "kind": "label", "parent": "StartButton", "text": "Start Game", "font": "SerifBold", "ink": "light", "style": "buttonLabel", "rect": [710, 800, 250, 60], "key": "ui.offline_setup.start" },
-    { "id": "StartChevron", "parent": "StartButton", "rect": [995.03, 818.41, 15.28, 25.17], "use": "UI/Common/Icon_Chevron_Light.png" }
+    { "id": "StartChevron", "parent": "StartButton", "rect": [994.92, 817.83, 15.41, 26.25], "use": "UI/Icons/Icon_Chevron_Thin.png" }
   ]
 }

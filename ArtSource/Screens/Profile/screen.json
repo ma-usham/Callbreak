@@ -1,10 +1,10 @@
 {
   // Screen 14 - Player Profile (GDD §11). Rects are mockup pixels on 14-profile.png.
-  // Shared menu background and UI kit (primary button, back disc, avatar); the panel, the stat tiles,
+  // Shared menu background and UI kit (back disc, avatar); the panel, the stat tiles,
   // the title divider, the two dividers inside the panel and the icons (back, pencil, the four stat
   // icons) are the generated kit (ArtSource/Kit/*.map.csv; an icon's "opacity" is the one at which
-  // the kit's black ink reads as this mockup's ink). Still cut here (no generated replacement yet):
-  // the name field.
+  // the kit's black ink reads as this mockup's ink), and so are the name field and the Save button
+  // (the plain crimson pill; UI/Controls). Nothing is cut from this mockup any more.
   "name": "Profile",
   "mockup": "14-profile.png",
   "background": "shared",
@@ -66,12 +66,13 @@
     { "id": "NameDivider", "parent": "Panel", "rect": [451.8, 586.6, 767.9, 16.1], "use": "UI/Decor/Deco_ProfileDivider.png" },
 
     { "id": "DisplayNameCaption", "kind": "label", "parent": "Panel", "text": "Display name", "font": "SansSemiBold", "align": "left", "rect": [510, 615, 150, 30], "key": "ui.profile.display_name" },
-    // The name field art; the customizer builds a TMP_InputField over it with FieldText as its text.
-    { "id": "NameField", "kind": "input", "parent": "Panel", "shape": "roundrect", "radius": 12, "rect": [508.2, 647.2, 655.4, 60.3], "scale": 2, "out": "UI_NameField" },
+    // The name field (the kit's light text field); the customizer builds a TMP_InputField over it with
+    // FieldText as its text.
+    { "id": "NameField", "kind": "input", "parent": "Panel", "shape": "roundrect", "radius": 13.5, "rect": [508.63, 647.55, 654.35, 59.6], "use": "UI/Controls/UI_Field_Light.png" },
     { "id": "FieldText", "kind": "label", "parent": "NameField", "text": "Player", "font": "SansBold", "align": "left", "rect": [525, 660, 90, 34] },
 
-    { "id": "SaveButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 27.5, "rect": [508.1, 733.4, 655.8, 78.9],
-      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "SaveButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 27.5, "rect": [508.13, 733.7, 655.74, 78.74],
+      "use": "UI/Controls/UI_Button_Crimson.png", "shadowUse": "UI/Controls/UI_Button_Crimson_Shadow.png", "shadowDrop": 6, "shadowOpacity": 0.15 },
     { "id": "SaveLabel", "kind": "label", "parent": "SaveButton", "text": "Save Changes", "font": "SerifSemiBold", "ink": "light", "style": "buttonLabel", "rect": [725, 752, 220, 42], "key": "ui.profile.save" },
     { "id": "NameMessage", "kind": "label", "parent": "Panel", "text": "Your name is visible at the table.", "font": "SansMedium", "rect": [680, 822, 315, 30], "key": "ui.profile.name_note" }
   ]

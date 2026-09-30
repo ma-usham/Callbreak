@@ -10,10 +10,10 @@ namespace Callbreak.Presentation.Screens
     /// <summary>
     /// GDD §11 screen 15: choose the deck you play with. Each option shows the deck's back, its
     /// name and its status ("Equipped" / "Owned"); the chosen option shows the crimson outline and
-    /// filled radio. Selecting a deck turns its picture over to the deck's ace of spades for a
-    /// moment and back (<see cref="PeekFace"/>, timed by <see cref="DeckPeek"/>), so the faces can
-    /// be seen before choosing. A Use button that is not interactable shows its disabled look with
-    /// its label dimmed.
+    /// filled radio. Tapping a deck (another one, or the chosen one again) turns its picture over
+    /// to the deck's ace of spades for a moment and back (<see cref="PeekFace"/>, timed by
+    /// <see cref="DeckPeek"/>), so the faces can be seen before choosing. A Use button that is not
+    /// interactable shows its disabled look with its label dimmed.
     /// </summary>
     public sealed class CardCollectionView : UIScreen
     {
@@ -37,11 +37,12 @@ namespace Callbreak.Presentation.Screens
         private Sprite _peekFace;
         private Sprite _peekBack;
         private bool _peekWithoutFlip;
+        private float _peekTime;
 
         public event Action BackClicked;
         public event Action CollectionClicked;
 
-        /// <summary>Raised when the player taps another deck option.</summary>
+        /// <summary>Raised when the player taps a deck option: another deck, or the chosen one again.</summary>
         public event Action<int> DeckSelected;
 
         public event Action UseClicked;
@@ -89,25 +90,43 @@ namespace Callbreak.Presentation.Screens
         /// Lets the player see a deck's faces: the option's picture turns over to
         /// <paramref name="face"/> (it narrows to its edge, changes side and opens again), stays
         /// for <see cref="DeckPeek.FaceHoldSeconds"/> and turns back to <paramref name="back"/>.
-        /// A deck that was still showing its face is put back on its back at once. With
-        /// <paramref name="reduceMotion"/> the picture changes side without turning.
+        /// Another deck that was still showing its face is put back on its back at once; the same
+        /// deck, asked again while it peeks, keeps its face up for another hold without a jump
+        /// (<see cref="DeckPeek.TimeAfterTapAgain"/>). With <paramref name="reduceMotion"/> the
+        /// picture changes side without turning.
         /// </summary>
         public void PeekFace(int index, Sprite face, Sprite back, bool reduceMotion)
         {
-            EndPeek();
             if (index < 0 || index >= _deckPreview.Length || face == null)
             {
+                EndPeek();
                 return;
             }
 
-            _peeking = index;
+            bool again = index == _peeking && reduceMotion == _peekWithoutFlip;
+            float from = again ? DeckPeek.TimeAfterTapAgain(_peekTime, reduceMotion) : 0f;
+            if (again)
+            {
+                StopPeekMotion();
+            }
+            else
+            {
+                EndPeek();
+                _peeking = index;
+                _peekWithoutFlip = reduceMotion;
+                _peekBack = _deckPreview[index].sprite;
+            }
+
             _peekFace = face;
-            _peekBack = back != null ? back : _deckPreview[index].sprite;
-            _peekWithoutFlip = reduceMotion;
-            ApplyPeek(0f);
+            if (back != null)
+            {
+                _peekBack = back;
+            }
+
+            ApplyPeek(from);
 
             float seconds = DeckPeek.Seconds(reduceMotion);
-            _peekMotion = LMotion.Create(0f, seconds, seconds)
+            _peekMotion = LMotion.Create(from, seconds, seconds - from)
                 .WithOnComplete(OnPeekComplete)
                 .Bind(this, (time, view) => view.ApplyPeek(time));
         }
@@ -123,7 +142,7 @@ namespace Callbreak.Presentation.Screens
             _backButton.onClick.AddListener(OnBack);
             _collectionButton.onClick.AddListener(OnCollection);
             _useButton.onClick.AddListener(OnUse);
-            _decks.Changed += OnDeckSelected;
+            _decks.Tapped += OnDeckSelected;
         }
 
         private void OnDisable()
@@ -131,7 +150,7 @@ namespace Callbreak.Presentation.Screens
             _backButton.onClick.RemoveListener(OnBack);
             _collectionButton.onClick.RemoveListener(OnCollection);
             _useButton.onClick.RemoveListener(OnUse);
-            _decks.Changed -= OnDeckSelected;
+            _decks.Tapped -= OnDeckSelected;
 
             // A screen that opens again shows every deck by its back.
             EndPeek();
@@ -159,6 +178,7 @@ namespace Callbreak.Presentation.Screens
                 return;
             }
 
+            _peekTime = time;
             DeckPeek.Pose(time, _peekWithoutFlip, out bool showsFace, out float width);
             Sprite side = showsFace ? _peekFace : _peekBack;
             UnityEngine.UI.Image picture = _deckPreview[_peeking];
@@ -180,13 +200,18 @@ namespace Callbreak.Presentation.Screens
         /// <summary>Stops a peek where it is and puts that deck back on its back.</summary>
         private void EndPeek()
         {
+            StopPeekMotion();
+            RestOnBack();
+        }
+
+        private void StopPeekMotion()
+        {
             if (_peekMotion.IsActive())
             {
                 _peekMotion.Cancel();
             }
 
             _peekMotion = default;
-            RestOnBack();
         }
 
         private void RestOnBack()

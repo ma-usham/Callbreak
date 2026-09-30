@@ -35,7 +35,7 @@
         91.6
       ],
       "spritePpu": 0,
-      "checkError": 3.98
+      "checkError": 3.99
     },
     {
       "id": "BackIcon",
@@ -170,7 +170,7 @@
         12.7
       ],
       "spritePpu": 0,
-      "checkError": 4.92
+      "checkError": 4.88
     },
     {
       "id": "Panel",
@@ -195,7 +195,7 @@
         558.5
       ],
       "spritePpu": 0,
-      "checkError": 8.11
+      "checkError": 22.97
     },
     {
       "id": "Decks",
@@ -232,7 +232,7 @@
         451.9
       ],
       "spritePpu": 0,
-      "checkError": 8.6
+      "checkError": 32.09
     },
     {
       "id": "DeckPreview0",
@@ -265,7 +265,7 @@
         310
       ],
       "shadowPpu": 87.0833,
-      "checkError": 11.03
+      "checkError": 17.32
     },
     {
       "id": "DeckName0",
@@ -294,92 +294,63 @@
       "kind": "group",
       "parent": "DeckOption0",
       "rect": [
-        390,
-        218,
-        293,
-        459
+        391.25,
+        219.4,
+        290.1,
+        456.3
       ]
     },
     {
       "id": "SelectedOutline0",
       "parent": "Selected0",
-      "shape": "ink",
-      "ink": "#820A0A",
       "rect": [
-        389,
-        218,
-        294,
-        460
+        391.25,
+        219.4,
+        290.1,
+        456.3
       ],
-      "scale": 2,
-      "out": "UI_DeckSelectedOutline",
-      "clip": [
-        {
-          "shape": "roundrect",
-          "rect": [
-            394.9,
-            223.1,
-            282.7,
-            448.8
-          ],
-          "radius": 23,
-          "outside": true
-        },
-        {
-          "shape": "roundrect",
-          "rect": [
-            390.0,
-            218.2,
-            292.6,
-            458.9
-          ],
-          "radius": 25
-        }
-      ],
+      "use": "UI/Controls/UI_Outline_Thin_Selected.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/CardCollection/UI_DeckSelectedOutline.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Outline_Thin_Selected.png",
       "spriteRect": [
-        390,
-        218,
-        293,
-        459
+        391.25,
+        219.4,
+        290.1,
+        456.3
       ],
-      "spritePpu": 174.1667,
-      "color": "#820A0A",
-      "checkError": 8.52
+      "spritePpu": 0,
+      "checkError": 31.52
     },
     {
       "id": "RadioOn0",
       "parent": "Selected0",
-      "shape": "ellipse",
       "rect": [
-        456.43,
-        602.49,
-        39.82,
-        39.82
+        455.19,
+        601.2,
+        42.4,
+        42.4
       ],
-      "scale": 2,
-      "out": "UI_RadioOn",
+      "use": "UI/Controls/UI_Radio_On.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/CardCollection/UI_RadioOn.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Radio_On.png",
       "spriteRect": [
-        456,
-        602,
-        41,
-        41
+        455.19,
+        601.2,
+        42.4,
+        42.4
       ],
-      "spritePpu": 174.1667,
-      "checkError": 54.39
+      "spritePpu": 0,
+      "checkError": 64.04
     },
     {
       "id": "Unselected0",
       "kind": "group",
       "parent": "DeckOption0",
       "rect": [
-        456.4,
-        602.5,
-        39.8,
-        39.8
+        455.19,
+        601.2,
+        42.4,
+        42.4
       ],
       "hidden": true
     },
@@ -387,22 +358,22 @@
       "id": "RadioOff0",
       "parent": "Unselected0",
       "rect": [
-        456.31,
-        602.01,
-        40,
-        41
+        455.19,
+        601.2,
+        42.4,
+        42.4
       ],
-      "use": "UI_RadioOff",
+      "use": "UI/Controls/UI_Radio_Off.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/CardCollection/UI_RadioOff.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Radio_Off.png",
       "spriteRect": [
-        456.31,
-        602.01,
-        40,
-        41
+        455.19,
+        601.2,
+        42.4,
+        42.4
       ],
       "spritePpu": 0,
-      "checkError": 53.28
+      "checkError": 64.04
     },
     {
       "id": "DeckStatus0",
@@ -451,7 +422,7 @@
         451.9
       ],
       "spritePpu": 0,
-      "checkError": 10.18
+      "checkError": 29.03
     },
     {
       "id": "DeckPreview1",
@@ -484,7 +455,7 @@
         310
       ],
       "shadowPpu": 87.0833,
-      "checkError": 9.41
+      "checkError": 16.5
     },
     {
       "id": "DeckName1",
@@ -513,10 +484,10 @@
       "kind": "group",
       "parent": "DeckOption1",
       "rect": [
-        691.6,
-        218,
-        293,
-        459
+        692.85,
+        219.4,
+        290.1,
+        456.3
       ],
       "hidden": true
     },
@@ -524,77 +495,75 @@
       "id": "SelectedOutline1",
       "parent": "Selected1",
       "rect": [
-        691.6,
-        218,
-        293,
-        459
+        692.85,
+        219.4,
+        290.1,
+        456.3
       ],
-      "use": "UI_DeckSelectedOutline",
+      "use": "UI/Controls/UI_Outline_Thin_Selected.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/CardCollection/UI_DeckSelectedOutline.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Outline_Thin_Selected.png",
       "spriteRect": [
-        691.6,
-        218,
-        293,
-        459
+        692.85,
+        219.4,
+        290.1,
+        456.3
       ],
       "spritePpu": 0,
-      "checkError": 10.57
+      "checkError": 28.49
     },
     {
       "id": "RadioOn1",
       "parent": "Selected1",
       "rect": [
-        767.69,
-        601.99,
-        41,
-        41
+        766.8,
+        601.2,
+        42.4,
+        42.4
       ],
-      "use": "UI_RadioOn",
+      "use": "UI/Controls/UI_Radio_On.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/CardCollection/UI_RadioOn.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Radio_On.png",
       "spriteRect": [
-        767.69,
-        601.99,
-        41,
-        41
+        766.8,
+        601.2,
+        42.4,
+        42.4
       ],
       "spritePpu": 0,
-      "checkError": 2.32
+      "checkError": 11.26
     },
     {
       "id": "Unselected1",
       "kind": "group",
       "parent": "DeckOption1",
       "rect": [
-        768.1,
-        602.5,
-        39.8,
-        39.8
+        766.8,
+        601.2,
+        42.4,
+        42.4
       ]
     },
     {
       "id": "RadioOff1",
       "parent": "Unselected1",
-      "shape": "ellipse",
       "rect": [
-        768.08,
-        602.45,
-        39.89,
-        39.89
+        766.8,
+        601.2,
+        42.4,
+        42.4
       ],
-      "scale": 2,
-      "out": "UI_RadioOff",
+      "use": "UI/Controls/UI_Radio_Off.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/CardCollection/UI_RadioOff.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Radio_Off.png",
       "spriteRect": [
-        768,
-        602,
-        40,
-        41
+        766.8,
+        601.2,
+        42.4,
+        42.4
       ],
-      "spritePpu": 174.1667,
-      "checkError": 2.22
+      "spritePpu": 0,
+      "checkError": 11.26
     },
     {
       "id": "DeckStatus1",
@@ -643,7 +612,7 @@
         451.9
       ],
       "spritePpu": 0,
-      "checkError": 9.26
+      "checkError": 27.24
     },
     {
       "id": "DeckPreview2",
@@ -676,7 +645,7 @@
         309
       ],
       "shadowPpu": 87.0833,
-      "checkError": 6.38
+      "checkError": 12.04
     },
     {
       "id": "DeckName2",
@@ -705,10 +674,10 @@
       "kind": "group",
       "parent": "DeckOption2",
       "rect": [
-        992.5,
-        218,
-        292.9,
-        459
+        993.75,
+        219.4,
+        290.0,
+        456.3
       ],
       "hidden": true
     },
@@ -716,75 +685,75 @@
       "id": "SelectedOutline2",
       "parent": "Selected2",
       "rect": [
-        992.5,
-        218,
-        292.9,
-        459
+        993.75,
+        219.4,
+        290.0,
+        456.3
       ],
-      "use": "UI_DeckSelectedOutline",
+      "use": "UI/Controls/UI_Outline_Thin_Selected.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/CardCollection/UI_DeckSelectedOutline.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Outline_Thin_Selected.png",
       "spriteRect": [
-        992.5,
-        218,
-        292.9,
-        459
+        993.75,
+        219.4,
+        290,
+        456.3
       ],
       "spritePpu": 0,
-      "checkError": 9.44
+      "checkError": 26.77
     },
     {
       "id": "RadioOn2",
       "parent": "Selected2",
       "rect": [
-        1067.49,
-        602.01,
-        41,
-        41
+        1066.55,
+        601.2,
+        42.4,
+        42.4
       ],
-      "use": "UI_RadioOn",
+      "use": "UI/Controls/UI_Radio_On.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/CardCollection/UI_RadioOn.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Radio_On.png",
       "spriteRect": [
-        1067.49,
-        602.01,
-        41,
-        41
+        1066.55,
+        601.2,
+        42.4,
+        42.4
       ],
       "spritePpu": 0,
-      "checkError": 6.96
+      "checkError": 12.24
     },
     {
       "id": "Unselected2",
       "kind": "group",
       "parent": "DeckOption2",
       "rect": [
-        1067.9,
-        602.5,
-        39.8,
-        39.8
+        1066.55,
+        601.2,
+        42.4,
+        42.4
       ]
     },
     {
       "id": "RadioOff2",
       "parent": "Unselected2",
       "rect": [
-        1067.8,
-        602.02,
-        40,
-        41
+        1066.55,
+        601.2,
+        42.4,
+        42.4
       ],
-      "use": "UI_RadioOff",
+      "use": "UI/Controls/UI_Radio_Off.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/CardCollection/UI_RadioOff.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Radio_Off.png",
       "spriteRect": [
-        1067.8,
-        602.02,
-        40,
-        41
+        1066.55,
+        601.2,
+        42.4,
+        42.4
       ],
       "spritePpu": 0,
-      "checkError": 7.03
+      "checkError": 12.24
     },
     {
       "id": "DeckStatus2",
@@ -838,24 +807,24 @@
       "shape": "roundrect",
       "radius": 34.5,
       "rect": [
-        563.9,
-        772.1,
-        545.2,
-        93.2
+        563.89,
+        772.09,
+        545.42,
+        93.7
       ],
-      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png",
-      "shadowUse": "UI/Buttons/UI_Shadow_Primary.png",
+      "use": "UI/Controls/UI_Button_Crimson.png",
+      "shadowUse": "UI/Controls/UI_Button_Crimson_Shadow.png",
       "shadowDrop": 6,
-      "shadowOpacity": 0.45,
-      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "shadowOpacity": 0.25,
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Button_Crimson.png",
       "spriteRect": [
-        563.9,
-        772.1,
-        545.2,
-        93.2
+        563.89,
+        772.09,
+        545.42,
+        93.7
       ],
       "spritePpu": 0,
-      "checkError": 22.16
+      "checkError": 18.24
     },
     {
       "id": "UseLabel",

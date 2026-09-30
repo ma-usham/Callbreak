@@ -22,7 +22,14 @@ namespace Callbreak.Presentation.Widgets
 
         private UnityEngine.Events.UnityAction[] _handlers;
 
+        /// <summary>Raised when the player chooses another option.</summary>
         public event Action<int> Changed;
+
+        /// <summary>
+        /// Raised on every tap of an option, the chosen one included, after the selection (and
+        /// <see cref="Changed"/>) has followed it. For options that do something when tapped again.
+        /// </summary>
+        public event Action<int> Tapped;
 
         public int SelectedIndex => _selectedIndex;
 
@@ -57,14 +64,14 @@ namespace Callbreak.Presentation.Widgets
 
         private void Select(int index)
         {
-            if (index == _selectedIndex)
+            if (index != _selectedIndex)
             {
-                return;
+                _selectedIndex = index;
+                Render();
+                Changed?.Invoke(index);
             }
 
-            _selectedIndex = index;
-            Render();
-            Changed?.Invoke(index);
+            Tapped?.Invoke(index);
         }
 
         private void Render()

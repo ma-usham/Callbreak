@@ -7,7 +7,8 @@
   // which the kit's black ink reads as this mockup's ink); the hairline between the header buttons
   // is a drawn shape ("make"). The faint mountains above each card's button are the kit's overlay
   // (UI/Decor/Deco_MountainFooter.png, rects from Decor.map.csv): the generated panel's own
-  // mountains sit in its bottom corners, which these short cards hide behind their buttons.
+  // mountains sit in its bottom corners, which these short cards hide behind their buttons. The two
+  // buttons are the kit's plain crimson pill with the thin chevron (Controls.map.csv), as drawn here.
   "name": "PlayWithFriends",
   "mockup": "01-play-with-friends.png",
   "background": "shared",
@@ -40,10 +41,10 @@
     { "id": "CreateTitle", "kind": "label", "parent": "CreatePanel", "text": "Create Room", "font": "SerifBold", "rect": [428, 482, 338, 60], "key": "ui.friends.create_title" },
     { "id": "CreateLine1", "kind": "label", "parent": "CreatePanel", "text": "Make a room and", "font": "SansRegular", "rect": [470, 562, 255, 36], "key": "ui.friends.create_line1" },
     { "id": "CreateLine2", "kind": "label", "parent": "CreatePanel", "text": "invite your friends", "font": "SansRegular", "rect": [468, 599, 258, 41], "key": "ui.friends.create_line2" },
-    { "id": "CreateButton", "kind": "button", "parent": "CreatePanel", "shape": "roundrect", "radius": 34, "rect": [396.3, 696.0, 401.4, 90.8],
-      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "CreateButton", "kind": "button", "parent": "CreatePanel", "shape": "roundrect", "radius": 34, "rect": [396.31, 696.07, 401.23, 90.76],
+      "use": "UI/Controls/UI_Button_Crimson.png", "shadowUse": "UI/Controls/UI_Button_Crimson_Shadow.png", "shadowDrop": 4.5, "shadowOpacity": 0.3 },
     { "id": "CreateButtonLabel", "kind": "label", "parent": "CreateButton", "text": "Create Room", "font": "SansMedium", "ink": "light", "rect": [498, 718, 195, 44], "key": "ui.friends.create_cta" },
-    { "id": "CreateChevron", "parent": "CreateButton", "shape": "ink", "ink": "light", "rect": [748, 724, 28, 36], "use": "UI/Common/Icon_Chevron_Light.png" },
+    { "id": "CreateChevron", "parent": "CreateButton", "rect": [754.05, 728.96, 14.73, 25.59], "use": "UI/Icons/Icon_Chevron_Thin.png" },
 
     { "id": "JoinPanel", "kind": "button", "shape": "roundrect", "radius": 24.5, "rect": [846.7, 236.1, 460.1, 581.4],
       "use": "UI/Panels/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
@@ -52,9 +53,9 @@
     { "id": "JoinTitle", "kind": "label", "parent": "JoinPanel", "text": "Join Room", "font": "SerifBold", "rect": [938, 482, 282, 66], "key": "ui.friends.join_title" },
     { "id": "JoinLine1", "kind": "label", "parent": "JoinPanel", "text": "Enter a room code", "font": "SansRegular", "rect": [948, 563, 264, 35], "key": "ui.friends.join_line1" },
     { "id": "JoinLine2", "kind": "label", "parent": "JoinPanel", "text": "to join your friends", "font": "SansRegular", "rect": [948, 599, 264, 41], "key": "ui.friends.join_line2" },
-    { "id": "JoinButton", "kind": "button", "parent": "JoinPanel", "shape": "roundrect", "radius": 33.5, "rect": [875.5, 696.0, 401.5, 90.8],
-      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "JoinButton", "kind": "button", "parent": "JoinPanel", "shape": "roundrect", "radius": 33.5, "rect": [875.52, 695.94, 401.45, 90.9],
+      "use": "UI/Controls/UI_Button_Crimson.png", "shadowUse": "UI/Controls/UI_Button_Crimson_Shadow.png", "shadowDrop": 4.5, "shadowOpacity": 0.3 },
     { "id": "JoinButtonLabel", "kind": "label", "parent": "JoinButton", "text": "Join Room", "font": "SansMedium", "ink": "light", "rect": [995, 718, 162, 44], "key": "ui.friends.join_cta" },
-    { "id": "JoinChevron", "parent": "JoinButton", "shape": "ink", "ink": "light", "rect": [1228, 724, 28, 36], "use": "UI/Common/Icon_Chevron_Light.png" }
+    { "id": "JoinChevron", "parent": "JoinButton", "rect": [1233.67, 728.81, 14.45, 25.9], "use": "UI/Icons/Icon_Chevron_Thin.png" }
   ]
 }

@@ -1,12 +1,13 @@
 {
   // Screen 15 - Card Collection (GDD §11). Rects are mockup pixels on 15-card-styles.png.
-  // Shared menu background and UI kit (primary button, header discs); the panel, the deck option
+  // Shared menu background and UI kit (header discs); the panel, the deck option
   // panels, the title divider and the icons (back, card stack) are the generated kit
   // (ArtSource/Kit/*.map.csv; an icon's "opacity" is the one at which the kit's black ink reads as
   // this mockup's ink). The deck pictures are the real card backs (Art/Cards), shown with their own
   // proportions inside the mockup's card boxes; the presenter flips them to each deck's ace of
-  // spades. Still cut here (no generated replacement yet): the selected outline, the two radio
-  // looks, and the soft shadows under the deck pictures.
+  // spades. The selected outline, the two radio looks and the Use button (the plain crimson pill)
+  // are the kit's (UI/Controls). Still solved
+  // from this mockup: the soft shadows under the deck pictures.
   // Footer and button copy: the GDD's copy update wins ("text" below is the GDD's wording, so the
   // string table gets it). The mockup says "Choose a card back for your next match." and "Use
   // Selected Style"; CardCollectionCustomizer fits the two labels on that wording, so they keep the
@@ -30,7 +31,7 @@
       "use": "UI/Panels/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
 
     // Three deck options (SelectableGroup "Decks"): selected look = outline + filled radio,
-    // unselected look = empty radio. Deck 0's selected look and deck 1's radio are cut; the rest reuse them.
+    // unselected look = empty radio (kit sprites at the rects of Controls.map.csv).
     // A DeckPreview node is bound twice: its picture is the view's _deckPreview, and the node itself
     // (picture + shadow, "bind": DeckCard) is what turns when the deck shows its ace (_deckCard).
     { "id": "Decks", "kind": "group", "parent": "Panel", "rect": [389, 218, 894, 460] },
@@ -39,41 +40,39 @@
       "use": "UI/Panels/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
     { "id": "DeckPreview0", "parent": "DeckOption0", "shape": "roundrect", "radius": 11, "rect": [443.5, 245.8, 184.0, 281.0], "shadow": 12, "use": "Cards/ClassicCrimson/Back_ClassicCrimson.png", "bind": "DeckCard0" },
     { "id": "DeckName0", "kind": "label", "parent": "DeckOption0", "text": "Classic Crimson", "font": "SerifBold", "rect": [420, 548, 235, 40] },
-    { "id": "Selected0", "kind": "group", "parent": "DeckOption0", "rect": [390, 218, 293, 459] },
-    { "id": "SelectedOutline0", "parent": "Selected0", "shape": "ink", "ink": "#820A0A", "rect": [389, 218, 294, 460], "scale": 2, "out": "UI_DeckSelectedOutline",
-      "clip": [ { "shape": "roundrect", "rect": [394.9, 223.1, 282.7, 448.8], "radius": 23, "outside": true },
-                { "shape": "roundrect", "rect": [390.0, 218.2, 292.6, 458.9], "radius": 25 } ] },
-    { "id": "RadioOn0", "parent": "Selected0", "shape": "ellipse", "rect": [456.43, 602.49, 39.82, 39.82], "scale": 2, "out": "UI_RadioOn" },
-    { "id": "Unselected0", "kind": "group", "parent": "DeckOption0", "rect": [456.4, 602.5, 39.8, 39.8], "hidden": true },
-    { "id": "RadioOff0", "parent": "Unselected0", "rect": [456.31, 602.01, 40, 41], "use": "UI_RadioOff" },
+    { "id": "Selected0", "kind": "group", "parent": "DeckOption0", "rect": [391.25, 219.4, 290.1, 456.3] },
+    { "id": "SelectedOutline0", "parent": "Selected0", "rect": [391.25, 219.4, 290.1, 456.3], "use": "UI/Controls/UI_Outline_Thin_Selected.png" },
+    { "id": "RadioOn0", "parent": "Selected0", "rect": [455.19, 601.2, 42.4, 42.4], "use": "UI/Controls/UI_Radio_On.png" },
+    { "id": "Unselected0", "kind": "group", "parent": "DeckOption0", "rect": [455.19, 601.2, 42.4, 42.4], "hidden": true },
+    { "id": "RadioOff0", "parent": "Unselected0", "rect": [455.19, 601.2, 42.4, 42.4], "use": "UI/Controls/UI_Radio_Off.png" },
     { "id": "DeckStatus0", "kind": "label", "parent": "DeckOption0", "text": "Equipped", "font": "SansSemiBold", "align": "left", "rect": [508, 605, 118, 36] },
 
     { "id": "DeckOption1", "kind": "button", "parent": "Decks", "shape": "roundrect", "radius": 23, "rect": [695.1, 221.8, 284.9, 451.9],
       "use": "UI/Panels/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
     { "id": "DeckPreview1", "parent": "DeckOption1", "shape": "roundrect", "radius": 11, "rect": [743.5, 245.8, 186.5, 281.0], "shadow": 12, "use": "Cards/HimalayanIvory/Back_HimalayanIvory.png", "bind": "DeckCard1" },
     { "id": "DeckName1", "kind": "label", "parent": "DeckOption1", "text": "Himalayan Ivory", "font": "SerifBold", "rect": [720, 548, 235, 40] },
-    { "id": "Selected1", "kind": "group", "parent": "DeckOption1", "rect": [691.6, 218, 293, 459], "hidden": true },
-    { "id": "SelectedOutline1", "parent": "Selected1", "rect": [691.6, 218, 293, 459], "use": "UI_DeckSelectedOutline" },
-    { "id": "RadioOn1", "parent": "Selected1", "rect": [767.69, 601.99, 41, 41], "use": "UI_RadioOn" },
-    { "id": "Unselected1", "kind": "group", "parent": "DeckOption1", "rect": [768.1, 602.5, 39.8, 39.8] },
-    { "id": "RadioOff1", "parent": "Unselected1", "shape": "ellipse", "rect": [768.08, 602.45, 39.89, 39.89], "scale": 2, "out": "UI_RadioOff" },
+    { "id": "Selected1", "kind": "group", "parent": "DeckOption1", "rect": [692.85, 219.4, 290.1, 456.3], "hidden": true },
+    { "id": "SelectedOutline1", "parent": "Selected1", "rect": [692.85, 219.4, 290.1, 456.3], "use": "UI/Controls/UI_Outline_Thin_Selected.png" },
+    { "id": "RadioOn1", "parent": "Selected1", "rect": [766.8, 601.2, 42.4, 42.4], "use": "UI/Controls/UI_Radio_On.png" },
+    { "id": "Unselected1", "kind": "group", "parent": "DeckOption1", "rect": [766.8, 601.2, 42.4, 42.4] },
+    { "id": "RadioOff1", "parent": "Unselected1", "rect": [766.8, 601.2, 42.4, 42.4], "use": "UI/Controls/UI_Radio_Off.png" },
     { "id": "DeckStatus1", "kind": "label", "parent": "DeckOption1", "text": "Owned", "font": "SansSemiBold", "align": "left", "rect": [818, 605, 95, 36] },
 
     { "id": "DeckOption2", "kind": "button", "parent": "Decks", "shape": "roundrect", "radius": 23, "rect": [996.0, 221.8, 284.8, 451.9],
       "use": "UI/Panels/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
     { "id": "DeckPreview2", "parent": "DeckOption2", "shape": "roundrect", "radius": 11, "rect": [1045.8, 246.6, 185.0, 280.0], "shadow": 12, "use": "Cards/KathmanduGold/Back_KathmanduGold.png", "bind": "DeckCard2" },
     { "id": "DeckName2", "kind": "label", "parent": "DeckOption2", "text": "Kathmandu Gold", "font": "SerifBold", "rect": [1015, 548, 245, 40] },
-    { "id": "Selected2", "kind": "group", "parent": "DeckOption2", "rect": [992.5, 218, 292.9, 459], "hidden": true },
-    { "id": "SelectedOutline2", "parent": "Selected2", "rect": [992.5, 218, 292.9, 459], "use": "UI_DeckSelectedOutline" },
-    { "id": "RadioOn2", "parent": "Selected2", "rect": [1067.49, 602.01, 41, 41], "use": "UI_RadioOn" },
-    { "id": "Unselected2", "kind": "group", "parent": "DeckOption2", "rect": [1067.9, 602.5, 39.8, 39.8] },
-    { "id": "RadioOff2", "parent": "Unselected2", "rect": [1067.8, 602.02, 40, 41], "use": "UI_RadioOff" },
+    { "id": "Selected2", "kind": "group", "parent": "DeckOption2", "rect": [993.75, 219.4, 290.0, 456.3], "hidden": true },
+    { "id": "SelectedOutline2", "parent": "Selected2", "rect": [993.75, 219.4, 290.0, 456.3], "use": "UI/Controls/UI_Outline_Thin_Selected.png" },
+    { "id": "RadioOn2", "parent": "Selected2", "rect": [1066.55, 601.2, 42.4, 42.4], "use": "UI/Controls/UI_Radio_On.png" },
+    { "id": "Unselected2", "kind": "group", "parent": "DeckOption2", "rect": [1066.55, 601.2, 42.4, 42.4] },
+    { "id": "RadioOff2", "parent": "Unselected2", "rect": [1066.55, 601.2, 42.4, 42.4], "use": "UI/Controls/UI_Radio_Off.png" },
     { "id": "DeckStatus2", "kind": "label", "parent": "DeckOption2", "text": "Owned", "font": "SansSemiBold", "align": "left", "rect": [1118, 605, 95, 36] },
 
     { "id": "Footer", "kind": "label", "parent": "Panel", "text": "Choose a deck for your next match.", "font": "SansMedium", "rect": [572, 697, 528, 36], "key": "ui.card_collection.footer" },
 
-    { "id": "UseButton", "kind": "button", "shape": "roundrect", "radius": 34.5, "rect": [563.9, 772.1, 545.2, 93.2],
-      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "UseButton", "kind": "button", "shape": "roundrect", "radius": 34.5, "rect": [563.89, 772.09, 545.42, 93.7],
+      "use": "UI/Controls/UI_Button_Crimson.png", "shadowUse": "UI/Controls/UI_Button_Crimson_Shadow.png", "shadowDrop": 6, "shadowOpacity": 0.25 },
     { "id": "UseLabel", "kind": "label", "parent": "UseButton", "text": "Use Selected Deck", "font": "SerifSemiBold", "ink": "light", "style": "buttonLabel", "rect": [675, 795, 320, 50], "key": "ui.card_collection.use" }
   ]
 }
