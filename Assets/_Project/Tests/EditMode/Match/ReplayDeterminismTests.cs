@@ -45,7 +45,7 @@ namespace Callbreak.Tests.EditMode.Match
         }
 
         [TestCaseSource(nameof(Batches))]
-        public void SeededMatches_InvariantsHoldAndReplayReproducesEvents(string name, RuleSet rules, int matches)
+        public void SeededMatches_EachBatch_InvariantsHoldAndReplayReproducesEvents(string name, RuleSet rules, int matches)
         {
             int injected = 0;
             for (int m = 0; m < matches; m++)

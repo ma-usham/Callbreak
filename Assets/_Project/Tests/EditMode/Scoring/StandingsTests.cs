@@ -119,7 +119,7 @@ namespace Callbreak.Tests.EditMode.Scoring
         }
 
         [Test]
-        public void Compare_OrdersByTheThreeTieBreaksInTurn()
+        public void Compare_TiedTotals_OrdersByTheThreeTieBreaksInTurn()
         {
             var high = new Standing(Seat.South, 1, false, 100, 4, 30);
             var moreMet = new Standing(Seat.East, 1, false, 100, 5, 10);

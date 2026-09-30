@@ -68,13 +68,15 @@ namespace Callbreak.Tests.EditMode.Match
         }
 
         [Test]
-        public void PlaceCall_MaxCall13Variant_AcceptsThirteen()
+        public void PlaceCall_CustomCallRange_UsesMinAndMaxCall()
         {
-            var engine = new MatchEngine(RuleSet.NepaliStandard.With(maxCall: 13), new Callbreak.Core.Randomness.Pcg32Random(2UL), TestSetups.Humans(Seat.West));
+            var engine = new MatchEngine(RuleSet.NepaliStandard.With(minCall: 2, maxCall: 13), new Callbreak.Core.Randomness.Pcg32Random(2UL), TestSetups.Humans(Seat.West));
             engine.Start();
 
+            Assert.AreEqual(RejectReason.InvalidCall, engine.Execute(new PlaceCall(Seat.South, 1, engine.CurrentTurn)).Reason);
             Assert.AreEqual(RejectReason.InvalidCall, engine.Execute(new PlaceCall(Seat.South, 14, engine.CurrentTurn)).Reason);
             Assert.IsTrue(engine.Execute(new PlaceCall(Seat.South, 13, engine.CurrentTurn)).IsAccepted);
+            Assert.IsTrue(engine.Execute(new PlaceCall(Seat.East, 2, engine.CurrentTurn)).IsAccepted);
         }
 
         [Test]
@@ -123,7 +125,7 @@ namespace Callbreak.Tests.EditMode.Match
         }
 
         [Test]
-        public void ValidationOrder_PhaseBeforeSeatBeforeTurnBeforePayload()
+        public void Execute_SeveralFaults_ReportsPhaseThenSeatThenTurnThenPayload()
         {
             // Wrong phase and wrong seat and stale turn: phase is checked first.
             AssertRejectedWithoutChange(RejectReason.WrongPhase, e => e.Execute(new PlayCard(Seat.East, C("2♣"), new TurnId(77))));

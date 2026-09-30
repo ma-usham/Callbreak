@@ -40,7 +40,7 @@ namespace Callbreak.Tests.EditMode.Rules
         }
 
         [Test]
-        public void NotCalled_IsNeverAValidCall()
+        public void IsValid_NotCalledSentinel_False()
         {
             Assert.IsFalse(CallRules.IsValid(CallRules.NotCalled, RuleSet.NepaliStandard.With(minCall: 1, maxCall: 13)));
         }

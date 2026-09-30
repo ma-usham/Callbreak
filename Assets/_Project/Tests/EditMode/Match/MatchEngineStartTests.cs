@@ -226,7 +226,7 @@ namespace Callbreak.Tests.EditMode.Match
 
         [TestCase(Direction.Anticlockwise, new[] { Seat.West, Seat.South, Seat.East, Seat.North, Seat.West })]
         [TestCase(Direction.Clockwise, new[] { Seat.West, Seat.North, Seat.East, Seat.South, Seat.West })]
-        public void Rounds_DealerPassesInPlayDirectionAndDealersNextCallsFirst(Direction direction, Seat[] dealers)
+        public void Rounds_FullMatch_DealerPassesInPlayDirectionAndDealersNextCallsFirst(Direction direction, Seat[] dealers)
         {
             RuleSet rules = RuleSet.NepaliStandard.With(direction: direction);
             var driver = new MatchDriver(new MatchEngine(rules, new Pcg32Random(21UL), TestSetups.AllBots(Seat.West)), randomPolicy: false);

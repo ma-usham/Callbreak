@@ -78,7 +78,7 @@ namespace Callbreak.Tests.EditMode.Match
         }
 
         [Test]
-        public void LegalCardsAndObligation_OnlyOnTheViewersPlayTurn()
+        public void LegalCardsAndObligation_AfterTheLead_OnlyForTheSeatToPlay()
         {
             MatchEngine engine = StartOrdinary();
             CallAll(engine, 3);
@@ -193,7 +193,7 @@ namespace Callbreak.Tests.EditMode.Match
         }
 
         [Test]
-        public void Seats_ProfilesFromTheSetup()
+        public void Seats_AnyView_ProfilesFromTheSetup()
         {
             PlayerView view = StartOrdinary().ViewFor(Seat.South);
 

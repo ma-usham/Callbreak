@@ -11,7 +11,7 @@ namespace Callbreak.Tests.EditMode.Cards
     public sealed class CardSetTests
     {
         [Test]
-        public void Empty_HasNoCards()
+        public void Empty_Created_HasNoCards()
         {
             Assert.IsTrue(CardSet.Empty.IsEmpty);
             Assert.AreEqual(0, CardSet.Empty.Count);
@@ -20,7 +20,7 @@ namespace Callbreak.Tests.EditMode.Cards
         }
 
         [Test]
-        public void FullDeck_HasAll52Cards()
+        public void FullDeck_Created_HasAll52Cards()
         {
             Assert.AreEqual(52, CardSet.FullDeck.Count);
             Assert.AreEqual((1UL << 52) - 1UL, CardSet.FullDeck.Bits);

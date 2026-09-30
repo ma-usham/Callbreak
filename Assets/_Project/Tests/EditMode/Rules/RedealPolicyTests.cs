@@ -37,7 +37,7 @@ namespace Callbreak.Tests.EditMode.Rules
         };
 
         [Test]
-        public void Fixtures_AreFullDealsOf13Each()
+        public void Fixtures_Built_AreFullDealsOf13Each()
         {
             AssertFullDeal(SpadelessDeal);
             AssertFullDeal(HonourlessDeal);
