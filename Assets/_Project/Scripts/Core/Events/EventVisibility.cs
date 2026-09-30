@@ -10,19 +10,20 @@ namespace Callbreak.Core.Events
     /// </summary>
     public readonly struct EventVisibility : IEquatable<EventVisibility>
     {
-        // 0 = public; otherwise the private seat's number + 1.
-        private readonly byte _code;
+        private readonly bool _isPrivate;
+        private readonly Seat _seat;
 
-        private EventVisibility(byte code)
+        private EventVisibility(Seat seat)
         {
-            _code = code;
+            _isPrivate = true;
+            _seat = seat;
         }
 
         /// <summary>Everyone at the table may receive the event.</summary>
         public static EventVisibility Public => default;
 
         /// <summary>True for <see cref="Public"/>.</summary>
-        public bool IsPublic => _code == 0;
+        public bool IsPublic => !_isPrivate;
 
         /// <summary>The only seat allowed to receive a private event.</summary>
         /// <exception cref="InvalidOperationException">The event is public.</exception>
@@ -30,12 +31,12 @@ namespace Callbreak.Core.Events
         {
             get
             {
-                if (_code == 0)
+                if (!_isPrivate)
                 {
                     throw new InvalidOperationException("A public event has no private seat.");
                 }
 
-                return (Seat)(_code - 1);
+                return _seat;
             }
         }
 
@@ -50,7 +51,7 @@ namespace Callbreak.Core.Events
                 throw new ArgumentOutOfRangeException(nameof(seat), seat, "Seat must be 0-3.");
             }
 
-            return new EventVisibility((byte)((int)seat + 1));
+            return new EventVisibility(seat);
         }
 
         /// <summary>Whether a player sitting at <paramref name="viewer"/> may receive the event.</summary>
@@ -58,13 +59,13 @@ namespace Callbreak.Core.Events
         /// <returns>True for public events and for the private seat itself.</returns>
         public bool IsVisibleTo(Seat viewer)
         {
-            return _code == 0 || _code == (int)viewer + 1;
+            return !_isPrivate || _seat == viewer;
         }
 
         /// <inheritdoc />
         public bool Equals(EventVisibility other)
         {
-            return _code == other._code;
+            return _isPrivate == other._isPrivate && _seat == other._seat;
         }
 
         /// <inheritdoc />
@@ -76,14 +77,14 @@ namespace Callbreak.Core.Events
         /// <inheritdoc />
         public override int GetHashCode()
         {
-            return _code;
+            return _isPrivate ? 8 | (int)_seat : 0;
         }
 
         /// <summary>"public" or e.g. "private(South)".</summary>
         /// <returns>The visibility's text.</returns>
         public override string ToString()
         {
-            return _code == 0 ? "public" : "private(" + Seat + ")";
+            return _isPrivate ? "private(" + _seat + ")" : "public";
         }
     }
 }
