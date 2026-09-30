@@ -154,7 +154,22 @@ namespace Callbreak.Tests.PlayMode
 
         public IEnumerator TearDown()
         {
-            // An empty scene first, so the game's scenes can unload; then the services that outlive scenes.
+            // As in the game, a scene's scope goes before its scene, while its views still exist.
+            TableLifetimeScope table = Table;
+            if (table != null)
+            {
+                table.Dispose();
+            }
+
+            MenuLifetimeScope menu = Menu;
+            if (menu != null)
+            {
+                menu.Dispose();
+            }
+
+            yield return null;
+
+            // An empty scene, so the game's scenes can unload; then the services that outlive scenes.
             SceneManager.CreateScene("PlayModeTestEmpty-" + Guid.NewGuid().ToString("N"));
             for (int i = SceneManager.sceneCount - 1; i >= 0; i--)
             {

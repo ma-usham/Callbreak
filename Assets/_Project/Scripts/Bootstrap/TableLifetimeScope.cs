@@ -45,6 +45,11 @@ namespace Callbreak.Bootstrap
             }
 
             base.Awake();
+            if (Container != null)
+            {
+                // Disposed before the scene unloads, while the views its presenters hold still exist.
+                Container.Resolve<ISceneLoader>().BeforeNextLoad(Dispose);
+            }
         }
 
         protected override void Configure(IContainerBuilder builder)

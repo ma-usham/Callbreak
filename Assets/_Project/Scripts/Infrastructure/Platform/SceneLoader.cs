@@ -17,6 +17,7 @@ namespace Callbreak.Infrastructure.Platform
         private static readonly string[] SceneNames = { "Boot", "Menu", "Table" };
 
         private readonly ILoadingCurtain _curtain;
+        private Action _teardown;
         private bool _loading;
 
         public SceneLoader(ILoadingCurtain curtain)
@@ -26,6 +27,11 @@ namespace Callbreak.Infrastructure.Platform
         }
 
         public GameScene Current { get; private set; }
+
+        public void BeforeNextLoad(Action teardown)
+        {
+            _teardown = teardown;
+        }
 
         public async Task LoadAsync(GameScene scene, CancellationToken ct)
         {
@@ -39,6 +45,7 @@ namespace Callbreak.Infrastructure.Platform
             try
             {
                 await _curtain.CoverAsync(ct);
+                TearDownCurrentScene();
                 AsyncOperation load = SceneManager.LoadSceneAsync(SceneNames[(int)scene], LoadSceneMode.Single);
                 while (!load.isDone)
                 {
@@ -52,6 +59,26 @@ namespace Callbreak.Infrastructure.Platform
             finally
             {
                 _loading = false;
+            }
+        }
+
+        /// <summary>A scene that fails to tidy up must not leave the player behind the curtain.</summary>
+        private void TearDownCurrentScene()
+        {
+            Action teardown = _teardown;
+            _teardown = null;
+            if (teardown == null)
+            {
+                return;
+            }
+
+            try
+            {
+                teardown();
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
             }
         }
 

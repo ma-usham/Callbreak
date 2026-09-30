@@ -1,3 +1,4 @@
+using Callbreak.Application.Ports;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Screens;
 using UnityEngine;
@@ -15,6 +16,16 @@ namespace Callbreak.Bootstrap
     public sealed class MenuLifetimeScope : LifetimeScope
     {
         [SerializeField] private UIScreen[] _screens;
+
+        protected override void Awake()
+        {
+            base.Awake();
+            if (Container != null)
+            {
+                // Disposed before the scene unloads, while the views its presenters hold still exist.
+                Container.Resolve<ISceneLoader>().BeforeNextLoad(Dispose);
+            }
+        }
 
         protected override void Configure(IContainerBuilder builder)
         {
