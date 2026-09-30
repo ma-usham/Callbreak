@@ -228,6 +228,33 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
         }
 
         [Test]
+        public void Difficulty_IsTheLaunchRequests_AndAResumedMatchKeepsTheOneItWasStartedWith()
+        {
+            var first = new OfflineMatchSession(
+                new MatchLaunchRequest(MatchMode.Offline, BotDifficulty.Easy),
+                _store, new LowestCardBots(), _profile, _cosmetics, _settings, _stats, BotTiming.Instant);
+            first.Start();
+            Assert.AreEqual(BotDifficulty.Easy, first.Difficulty);
+            double now = 0;
+            for (int step = 0; step < 2000 && !_store.HasSave; step++)
+            {
+                first.Tick(now += 0.25);
+                ActAsPlayer(first);
+            }
+
+            Assert.IsTrue(_store.HasSave, "a snapshot is saved after every trick");
+            first.Pause();
+
+            // The menu resumes with whatever the offline setup screen remembers, here Hard.
+            var second = new OfflineMatchSession(
+                new MatchLaunchRequest(MatchMode.Offline, BotDifficulty.Hard, resumeSaved: true),
+                _store, new LowestCardBots(), _profile, _cosmetics, _settings, _stats, BotTiming.Instant);
+
+            Assert.IsTrue(second.IsResumed);
+            Assert.AreEqual(BotDifficulty.Easy, second.Difficulty, "GDD 11 screen 10: Play Again is a new match at the same difficulty");
+        }
+
+        [Test]
         public void Leave_MidMatch_KeepsTheMatchForLater()
         {
             OfflineMatchSession session = NewSession(BotTiming.Instant);

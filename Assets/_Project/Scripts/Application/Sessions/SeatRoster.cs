@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Callbreak.Application.Profile;
 using Callbreak.Core.Match;
 using Callbreak.Core.Randomness;
 
@@ -20,7 +21,8 @@ namespace Callbreak.Application.Sessions
             "Dipesh", "Manisha", "Prakash", "Sunita", "Bibek", "Rojina",
         };
 
-        public const int AvatarCount = 5;
+        /// <summary>Bots draw their avatar from the presets the player picks from.</summary>
+        public const int AvatarCount = ProfileService.AvatarPresetCount;
 
         /// <summary>
         /// Seats for an offline match: the player at South; three bots. The first ever match uses the

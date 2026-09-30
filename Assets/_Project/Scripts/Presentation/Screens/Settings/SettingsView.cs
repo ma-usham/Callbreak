@@ -16,6 +16,7 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private UnityEngine.UI.Button _profileButton;
         [SerializeField] private UnityEngine.UI.Button _settingsButton;
         [SerializeField] private TMP_Text _playerName;
+        [SerializeField] private UnityEngine.UI.Image _avatar;
         [SerializeField] private ToggleSwitch _musicToggle;
         [SerializeField] private ToggleSwitch _soundEffectsToggle;
         [SerializeField] private UnityEngine.UI.Slider _volumeSlider;
@@ -43,7 +44,19 @@ namespace Callbreak.Presentation.Screens
         public event Action AboutClicked;
         public event Action DoneClicked;
 
+        /// <summary>The app is going to the background: anything not yet written should be written now.</summary>
+        public event Action Suspended;
+
         public void SetPlayerName(string playerName) => SetText(_playerName, playerName);
+
+        /// <summary>The picked avatar preset. A missing sprite keeps the current picture.</summary>
+        public void SetAvatar(Sprite avatar)
+        {
+            if (avatar != null && _avatar.sprite != avatar)
+            {
+                _avatar.sprite = avatar;
+            }
+        }
 
         public void SetMusic(bool on) => _musicToggle.SetIsOnWithoutNotify(on);
 
@@ -100,6 +113,14 @@ namespace Callbreak.Presentation.Screens
             _howToPlayButton.onClick.RemoveListener(OnHowToPlay);
             _aboutButton.onClick.RemoveListener(OnAbout);
             _doneButton.onClick.RemoveListener(OnDone);
+        }
+
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused)
+            {
+                Suspended?.Invoke();
+            }
         }
 
         private void OnBack() => BackClicked?.Invoke();

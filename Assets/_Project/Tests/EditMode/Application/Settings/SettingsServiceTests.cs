@@ -134,6 +134,74 @@ namespace Callbreak.Tests.EditMode.Application
             Assert.AreEqual(0, _store.SaveCount);
         }
 
+        [Test]
+        public void PreviewVolume_AppliesAtOnceAndRaisesChanged_WithoutSaving()
+        {
+            var settings = new SettingsService(_store);
+            int changed = 0;
+            settings.Changed += () => changed++;
+
+            settings.PreviewVolume(0.4f);
+            settings.PreviewVolume(0.45f);
+
+            Assert.AreEqual(0.45f, settings.Volume);
+            Assert.AreEqual(2, changed);
+            Assert.AreEqual(0, _store.SaveCount);
+        }
+
+        [Test]
+        public void PreviewVolume_WithTheCurrentValue_DoesNothing()
+        {
+            var settings = new SettingsService(_store);
+            int changed = 0;
+            settings.Changed += () => changed++;
+
+            settings.PreviewVolume(0.7f);
+
+            Assert.AreEqual(0, changed);
+            Assert.AreEqual(0, _store.SaveCount);
+        }
+
+        [Test]
+        public void SetVolume_AfterAPreviewOfTheSameValue_StillSavesIt()
+        {
+            var settings = new SettingsService(_store);
+            settings.PreviewVolume(0.25f);
+
+            settings.SetVolume(0.25f);
+
+            Assert.AreEqual(1, _store.SavesOf(SettingsService.SaveKey));
+            Assert.AreEqual(0.25f, _store.Peek<SettingsData>(SettingsService.SaveKey).volume);
+            Assert.AreEqual(0.25f, new SettingsService(_store).Volume);
+        }
+
+        [Test]
+        public void AnotherSetterAfterAPreview_SavesThePreviewedVolume_AndSetVolumeThenHasNothingLeftToSave()
+        {
+            var settings = new SettingsService(_store);
+            settings.PreviewVolume(0.25f);
+
+            settings.SetMusic(false);
+
+            Assert.AreEqual(0.25f, _store.Peek<SettingsData>(SettingsService.SaveKey).volume);
+            settings.SetVolume(0.25f);
+            Assert.AreEqual(1, _store.SavesOf(SettingsService.SaveKey));
+        }
+
+        [TestCase(-0.01f)]
+        [TestCase(1.01f)]
+        [TestCase(float.NaN)]
+        public void PreviewVolume_OutsideZeroToOne_Throws_AndChangesNothing(float volume)
+        {
+            var settings = new SettingsService(_store);
+            int changed = 0;
+            settings.Changed += () => changed++;
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => settings.PreviewVolume(volume));
+            Assert.AreEqual(0.7f, settings.Volume);
+            Assert.AreEqual(0, changed);
+        }
+
         [TestCase(15)]
         [TestCase(30)]
         public void SetTurnSeconds_FifteenOrThirty_IsKept(int seconds)

@@ -147,6 +147,13 @@ namespace Callbreak.Application.Sessions
         /// <summary>True when this session continued a saved match instead of dealing a new one.</summary>
         public bool IsResumed => _resumed;
 
+        /// <summary>
+        /// How strong the bots of this match are: the launch request's choice, or for a resumed
+        /// match the one it was started with. "Play Again" starts the next match with it (GDD §11
+        /// screen 10), whatever Settings remembers from the offline setup screen.
+        /// </summary>
+        public BotDifficulty Difficulty => _difficulty;
+
         public string MatchId => _engine.MatchId;
 
         public void Start()

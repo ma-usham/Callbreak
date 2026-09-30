@@ -26,6 +26,9 @@ namespace Callbreak.Application.Settings
         private readonly SettingsData _data;
         private readonly bool _readOnly;
 
+        // A previewed volume is in memory but not yet in the file.
+        private bool _volumePreviewed;
+
         public SettingsService(ISaveStore store)
         {
             _store = store ?? throw new ArgumentNullException(nameof(store));
@@ -89,18 +92,27 @@ namespace Callbreak.Application.Settings
 
         public void SetVolume(float volume)
         {
-            if (float.IsNaN(volume) || volume < 0f || volume > 1f)
-            {
-                throw new ArgumentOutOfRangeException(nameof(volume), volume, "Volume must be between 0 and 1.");
-            }
-
-            if (_data.volume == volume)
+            RequireVolume(volume);
+            if (_data.volume == volume && !_volumePreviewed)
             {
                 return;
             }
 
             _data.volume = volume;
             Commit();
+        }
+
+        public void PreviewVolume(float volume)
+        {
+            RequireVolume(volume);
+            if (_data.volume == volume)
+            {
+                return;
+            }
+
+            _data.volume = volume;
+            _volumePreviewed = true;
+            Changed?.Invoke();
         }
 
         public void SetLanguage(string language)
@@ -274,6 +286,14 @@ namespace Callbreak.Application.Settings
             return code;
         }
 
+        private static void RequireVolume(float volume)
+        {
+            if (float.IsNaN(volume) || volume < 0f || volume > 1f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(volume), volume, "Volume must be between 0 and 1.");
+            }
+        }
+
         private void Commit()
         {
             if (!_readOnly)
@@ -281,6 +301,8 @@ namespace Callbreak.Application.Settings
                 _store.Save(SaveKey, _data);
             }
 
+            // The file now holds whatever volume was being previewed.
+            _volumePreviewed = false;
             Changed?.Invoke();
         }
 

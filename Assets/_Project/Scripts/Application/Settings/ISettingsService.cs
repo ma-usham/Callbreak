@@ -51,6 +51,13 @@ namespace Callbreak.Application.Settings
 
         void SetVolume(float volume);
 
+        /// <summary>
+        /// Applies a volume at once and raises <see cref="Changed"/> without writing the file: a
+        /// slider being dragged calls this on every movement and <see cref="SetVolume"/> once it
+        /// settles. Any later save writes the previewed value too.
+        /// </summary>
+        void PreviewVolume(float volume);
+
         void SetLanguage(string language);
 
         void SetVibration(bool on);

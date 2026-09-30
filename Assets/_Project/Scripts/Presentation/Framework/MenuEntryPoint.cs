@@ -53,9 +53,10 @@ namespace Callbreak.Presentation.Framework
         public void Tick()
         {
             Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame && !_dialogs.HandleBack())
+            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame && !_dialogs.HandleBack() && _router.Back())
             {
-                _router.Back();
+                // The back button on screen has its own cue; the device's back key gets the same one.
+                _audio.Play(SoundCue.UiBack);
             }
         }
 

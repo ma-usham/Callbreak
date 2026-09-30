@@ -107,11 +107,12 @@ namespace Callbreak.Editor
             body.color = UiBuildKit.Hex("#7A593F");
             body.lineSpacing = 8f;
 
-            Button confirm = KitButton("ConfirmButton", panel, "UI/Buttons/UI_ButtonPrimary_Normal.png", "UI/Buttons/UI_Shadow_Primary.png", 6.9f, 0.45f);
+            var buttonSize = new Vector2(ButtonWidth, ButtonHeight);
+            Button confirm = KitButton("ConfirmButton", panel, buttonSize, "UI/Buttons/UI_ButtonPrimary_Normal.png", "UI/Buttons/UI_Shadow_Primary.png", 6.9f, 0.45f);
             TextMeshProUGUI confirmLabel = ButtonLabel(confirm.transform, serif, ConfirmLabelSize, "Leave Match", UiBuildKit.Hex("#FEFCFC"));
             confirmLabel.fontSharedMaterial = UiBuildKit.LoadShadowPreset(serif, "ButtonLabel", new Color(0.29f, 0.03f, 0.04f, 0.9f), new Vector2(0.25f, -0.35f), 0.2f);
 
-            Button cancel = KitButton("CancelButton", panel, "UI/Buttons/UI_ButtonSecondary_Normal.png", "UI/Buttons/UI_Shadow_Secondary.png", 2.3f, 0.4f);
+            Button cancel = KitButton("CancelButton", panel, buttonSize, "UI/Buttons/UI_ButtonSecondary_Normal.png", "UI/Buttons/UI_Shadow_Secondary.png", 2.3f, 0.4f);
             TextMeshProUGUI cancelLabel = ButtonLabel(cancel.transform, UiBuildKit.LoadFontRole("SansSemiBold"), CancelLabelSize, "Cancel", UiBuildKit.Hex("#222424"));
 
             var view = root.AddComponent<DialogView>();
@@ -153,20 +154,20 @@ namespace Callbreak.Editor
         }
 
         /// <summary>
-        /// A kit pill button at the dialog's button size. The sprite is sliced only horizontally, so
-        /// it is scaled as a whole to the height (its woven caps keep their proportions) and its
-        /// shadow keeps the same spread relative to it.
+        /// A kit pill button of any size, hung from the top centre of its parent. The sprite is
+        /// sliced only horizontally, so it is scaled as a whole to the height (its woven caps keep
+        /// their proportions) and its shadow keeps the same spread relative to it.
         /// </summary>
-        private static Button KitButton(string name, Transform parent, string facePath, string shadowPath, float shadowDrop, float shadowOpacity)
+        public static Button KitButton(string name, Transform parent, Vector2 size, string facePath, string shadowPath, float shadowDrop, float shadowOpacity)
         {
             RectTransform root = Child(name, parent);
             root.anchorMin = root.anchorMax = root.pivot = new Vector2(0.5f, 1f);
-            root.sizeDelta = new Vector2(ButtonWidth, ButtonHeight);
+            root.sizeDelta = size;
 
             Sprite face = UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/{facePath}", 0f);
             Sprite shadow = UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/{shadowPath}", 0f);
             Vector2 faceSize = UiBuildKit.NativeSize(face);
-            float scale = ButtonHeight / faceSize.y;
+            float scale = size.y / faceSize.y;
             Vector2 spread = (UiBuildKit.NativeSize(shadow) - faceSize) / 2f * scale;
 
             RectTransform shadowRect = Child("Shadow", root);

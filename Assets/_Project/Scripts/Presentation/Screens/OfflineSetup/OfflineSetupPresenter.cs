@@ -5,6 +5,7 @@ using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
 using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
+using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
 using UnityEngine;
 using VContainer.Unity;
@@ -26,6 +27,7 @@ namespace Callbreak.Presentation.Screens
         private readonly IDialogs _dialogs;
         private readonly ILocalization _localization;
         private readonly MatchLauncher _launcher;
+        private readonly AvatarLibrary _avatars;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private bool _asking;
@@ -39,7 +41,8 @@ namespace Callbreak.Presentation.Screens
             IOfflineMatchStore store,
             IDialogs dialogs,
             ILocalization localization,
-            MatchLauncher launcher)
+            MatchLauncher launcher,
+            AvatarLibrary avatars)
         {
             _view = view;
             _router = router;
@@ -49,6 +52,7 @@ namespace Callbreak.Presentation.Screens
             _dialogs = dialogs;
             _localization = localization;
             _launcher = launcher;
+            _avatars = avatars;
         }
 
         public void Start()
@@ -80,6 +84,7 @@ namespace Callbreak.Presentation.Screens
         private void Render()
         {
             _view.SetPlayerName(_profile.DisplayName);
+            _view.SetAvatar(_avatars.Get(_profile.AvatarId));
             _view.SetDifficulty((int)_settings.Difficulty);
         }
 

@@ -1,5 +1,6 @@
 using System;
 using Callbreak.Application.Profile;
+using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
 using VContainer.Unity;
 
@@ -11,12 +12,14 @@ namespace Callbreak.Presentation.Screens
         private readonly PlayWithFriendsView _view;
         private readonly ScreenRouter _router;
         private readonly IProfileService _profile;
+        private readonly AvatarLibrary _avatars;
 
-        public PlayWithFriendsPresenter(PlayWithFriendsView view, ScreenRouter router, IProfileService profile)
+        public PlayWithFriendsPresenter(PlayWithFriendsView view, ScreenRouter router, IProfileService profile, AvatarLibrary avatars)
         {
             _view = view;
             _router = router;
             _profile = profile;
+            _avatars = avatars;
         }
 
         public void Start()
@@ -42,7 +45,11 @@ namespace Callbreak.Presentation.Screens
             _profile.Changed -= Render;
         }
 
-        private void Render() => _view.SetPlayerName(_profile.DisplayName);
+        private void Render()
+        {
+            _view.SetPlayerName(_profile.DisplayName);
+            _view.SetAvatar(_avatars.Get(_profile.AvatarId));
+        }
 
         private void OnBack() => _router.Pop();
 

@@ -29,18 +29,41 @@ namespace Callbreak.Application.Ports
         public string CancelLabel { get; }
     }
 
-    /// <summary>
-    /// Shows one dialog at a time. The task completes with true for the primary button and false
-    /// for the secondary one, a tap outside the panel, Android back, or when a newer dialog
-    /// replaces it.
-    /// </summary>
+    /// <summary>How a dialog was answered.</summary>
+    public enum DialogChoice
+    {
+        /// <summary>
+        /// Closed without an answer: a tap outside the panel, Android back, a newer dialog taking
+        /// its place, or the asker going away.
+        /// </summary>
+        Dismissed,
+
+        /// <summary>The primary button.</summary>
+        Confirm,
+
+        /// <summary>The secondary button.</summary>
+        Cancel,
+    }
+
+    /// <summary>Shows one dialog at a time: asking again closes the open one as dismissed.</summary>
     public interface IDialogs
     {
         bool IsOpen { get; }
 
+        /// <summary>
+        /// For a yes-or-no question: true for the primary button; false for the secondary one and
+        /// for a dialog that was dismissed.
+        /// </summary>
         Task<bool> ConfirmAsync(DialogRequest request, CancellationToken ct);
 
-        /// <summary>Android back: closes the open dialog as "cancel". True when one was open.</summary>
+        /// <summary>
+        /// For a dialog whose two buttons are two different actions ("Retry / Play Offline"): says
+        /// which one was pressed, or that the dialog was dismissed. Cancelling
+        /// <paramref name="ct"/> dismisses it.
+        /// </summary>
+        Task<DialogChoice> AskAsync(DialogRequest request, CancellationToken ct);
+
+        /// <summary>Android back: dismisses the open dialog. True when one was open.</summary>
         bool HandleBack();
     }
 }

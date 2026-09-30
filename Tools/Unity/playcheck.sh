@@ -48,11 +48,18 @@ run clear_console >/dev/null
 r=$(run editor_play)
 case "$r" in *timed\ out*) powershell -NoProfile -ExecutionPolicy Bypass -File "$here/focus-editor.ps1" >/dev/null 2>&1; r=$(run editor_play) ;; esac
 playing=0
-for i in $(seq 1 90); do
+deadline=$(( $(date +%s) + 90 ))
+while [ $(date +%s) -lt $deadline ]; do
   if [ "$(mode)" = "playing" ]; then playing=1; break; fi
   sleep 1
 done
-if [ $playing -ne 1 ]; then echo "the Editor did not enter Play mode: $r" | cut -c1-600; exit 3; fi
+if [ $playing -ne 1 ]; then
+  echo "the Editor did not enter Play mode: $r" | cut -c1-600
+  # The usual reason: a script that does not compile (the Editor refuses to play until it does).
+  run recompile_status | tr -d '\r\n' | cut -c1-1200
+  echo
+  exit 3
+fi
 # Without this the game stands still on frame 1 whenever the Editor is not the foreground window.
 background=$(run eval --timeout 30 --code 'bool was = UnityEngine.Application.runInBackground; UnityEngine.Application.runInBackground = true; return was ? "1" : "0";' | grep -o '"result": "[01]"' | grep -o '[01]')
 

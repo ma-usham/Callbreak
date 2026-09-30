@@ -8,7 +8,7 @@ namespace Callbreak.Presentation.Framework
 {
     /// <summary>
     /// <see cref="IDialogs"/> over the one <see cref="DialogView"/> (GDD §23 popup layer). One
-    /// dialog at a time: asking again answers the open one with "cancel" first.
+    /// dialog at a time: asking again dismisses the open one first.
     /// </summary>
     public sealed class DialogService : IDialogs, IDisposable
     {
@@ -16,7 +16,7 @@ namespace Callbreak.Presentation.Framework
         private readonly ISettingsService _settings;
         private readonly IAudioService _audio;
 
-        private TaskCompletionSource<bool> _pending;
+        private TaskCompletionSource<DialogChoice> _pending;
         private CancellationTokenRegistration _cancellation;
 
         public DialogService(DialogView view, ISettingsService settings, IAudioService audio)
@@ -26,19 +26,25 @@ namespace Callbreak.Presentation.Framework
             _audio = audio;
             _view.Confirmed += OnConfirmed;
             _view.Cancelled += OnCancelled;
+            _view.Dismissed += OnDismissed;
         }
 
         public bool IsOpen => _pending != null;
 
-        public Task<bool> ConfirmAsync(DialogRequest request, CancellationToken ct)
+        public async Task<bool> ConfirmAsync(DialogRequest request, CancellationToken ct)
+        {
+            return await AskAsync(request, ct) == DialogChoice.Confirm;
+        }
+
+        public Task<DialogChoice> AskAsync(DialogRequest request, CancellationToken ct)
         {
             if (request == null)
             {
                 throw new ArgumentNullException(nameof(request));
             }
 
-            Complete(false);
-            var pending = new TaskCompletionSource<bool>();
+            Complete(DialogChoice.Dismissed);
+            var pending = new TaskCompletionSource<DialogChoice>();
             _pending = pending;
             if (ct.CanBeCanceled)
             {
@@ -46,9 +52,15 @@ namespace Callbreak.Presentation.Framework
                 {
                     if (_pending == pending)
                     {
-                        Complete(false);
+                        Complete(DialogChoice.Dismissed);
                     }
                 });
+            }
+
+            // A token cancelled before the dialog could open: nothing to show.
+            if (_pending != pending)
+            {
+                return pending.Task;
             }
 
             _view.ReduceMotion = _settings.ReduceMotion;
@@ -64,7 +76,7 @@ namespace Callbreak.Presentation.Framework
             }
 
             _audio.Play(SoundCue.UiBack);
-            Complete(false);
+            Complete(DialogChoice.Dismissed);
             return true;
         }
 
@@ -72,24 +84,31 @@ namespace Callbreak.Presentation.Framework
         {
             _view.Confirmed -= OnConfirmed;
             _view.Cancelled -= OnCancelled;
-            Complete(false);
+            _view.Dismissed -= OnDismissed;
+            Complete(DialogChoice.Dismissed);
         }
 
         private void OnConfirmed()
         {
             _audio.Play(SoundCue.UiTap);
-            Complete(true);
+            Complete(DialogChoice.Confirm);
         }
 
         private void OnCancelled()
         {
             _audio.Play(SoundCue.UiBack);
-            Complete(false);
+            Complete(DialogChoice.Cancel);
         }
 
-        private void Complete(bool result)
+        private void OnDismissed()
         {
-            TaskCompletionSource<bool> pending = _pending;
+            _audio.Play(SoundCue.UiBack);
+            Complete(DialogChoice.Dismissed);
+        }
+
+        private void Complete(DialogChoice choice)
+        {
+            TaskCompletionSource<DialogChoice> pending = _pending;
             if (pending == null)
             {
                 return;
@@ -103,7 +122,7 @@ namespace Callbreak.Presentation.Framework
                 _view.Hide();
             }
 
-            pending.TrySetResult(result);
+            pending.TrySetResult(choice);
         }
     }
 }

@@ -9,7 +9,9 @@ namespace Callbreak.Presentation.Framework
     /// <summary>
     /// GDD §12/§14 button press: scale to 0.97 in 90 ms (OutQuad) and back. The 8% darkening is the
     /// Button's colour tint. Lives on the button root, so the face, label and shadow scale together.
-    /// A tap also plays the button's sound cue once the audio service has been injected.
+    /// A tap also plays the button's sound cue once the audio service has been injected. It sits
+    /// after the Button on its object, so a presenter that answers the press with a cue of its own
+    /// is heard instead (the audio service plays one UI cue per frame, the first).
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ButtonFeedback : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler, IPointerClickHandler
@@ -23,6 +25,7 @@ namespace Callbreak.Presentation.Framework
         private IAudioService _audio;
         private MotionHandle _motion;
         private bool _pressed;
+        private bool _armed;
 
         [Inject]
         public void Construct(IAudioService audio)
@@ -32,15 +35,20 @@ namespace Callbreak.Presentation.Framework
 
         public void OnPointerClick(PointerEventData eventData)
         {
-            if (_audio != null && (_selectable == null || _selectable.IsInteractable()))
+            // Whether the press counts was settled when the pointer went down: by now the button's
+            // own click may have closed its screen, and a closing screen takes no more input.
+            if (_armed && _audio != null)
             {
                 _audio.Play(_cue);
             }
+
+            _armed = false;
         }
 
         public void OnPointerDown(PointerEventData eventData)
         {
-            if (_selectable != null && !_selectable.IsInteractable())
+            _armed = _selectable == null || _selectable.IsInteractable();
+            if (!_armed)
             {
                 return;
             }
@@ -85,6 +93,7 @@ namespace Callbreak.Presentation.Framework
             }
 
             _pressed = false;
+            _armed = false;
             transform.localScale = Vector3.one;
         }
     }

@@ -1,4 +1,5 @@
 using System.Linq;
+using Callbreak.Application.Ports;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Widgets;
 using UnityEditor;
@@ -74,6 +75,7 @@ namespace Callbreak.Editor.Screens
             var feedback = root.gameObject.AddComponent<ButtonFeedback>();
             var feedbackSo = new SerializedObject(feedback);
             feedbackSo.FindProperty("_selectable").objectReferenceValue = button;
+            feedbackSo.FindProperty("_cue").intValue = (int)SoundCue.Toggle;
             feedbackSo.ApplyModifiedPropertiesWithoutUndo();
 
             // Added while the node is inactive, so the switch is wired before it is first enabled

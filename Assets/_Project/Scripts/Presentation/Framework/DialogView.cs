@@ -40,6 +40,9 @@ namespace Callbreak.Presentation.Framework
 
         public event Action Cancelled;
 
+        /// <summary>A tap outside the panel: the dialog is closed without an answer.</summary>
+        public event Action Dismissed;
+
         public bool IsShowing { get; private set; }
 
         /// <summary>With Reduce motion the dialog only fades (GDD §14).</summary>
@@ -57,14 +60,14 @@ namespace Callbreak.Presentation.Framework
 
         private void OnEnable()
         {
-            _backdrop.onClick.AddListener(OnCancel);
+            _backdrop.onClick.AddListener(OnDismiss);
             _confirmButton.onClick.AddListener(OnConfirm);
             _cancelButton.onClick.AddListener(OnCancel);
         }
 
         private void OnDisable()
         {
-            _backdrop.onClick.RemoveListener(OnCancel);
+            _backdrop.onClick.RemoveListener(OnDismiss);
             _confirmButton.onClick.RemoveListener(OnConfirm);
             _cancelButton.onClick.RemoveListener(OnCancel);
         }
@@ -171,6 +174,14 @@ namespace Callbreak.Presentation.Framework
             if (IsShowing)
             {
                 Cancelled?.Invoke();
+            }
+        }
+
+        private void OnDismiss()
+        {
+            if (IsShowing)
+            {
+                Dismissed?.Invoke();
             }
         }
 

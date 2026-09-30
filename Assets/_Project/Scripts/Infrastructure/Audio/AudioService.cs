@@ -10,7 +10,9 @@ namespace Callbreak.Infrastructure.Audio
     /// <summary>
     /// <see cref="IAudioService"/> (GDD §14). Sound effects play on a small pool of 2D AudioSources;
     /// card sounds vary their pitch by up to ±3% so a deal doesn't sound mechanical, and a cue with
-    /// several clips never repeats the same clip twice in a row. Music uses two looping sources that
+    /// several clips never repeats the same clip twice in a row. Only one UI cue sounds per frame,
+    /// the first one asked for: a presenter that answers a press with its own cue (back, toggle)
+    /// is heard instead of the button's tap, not on top of it. Music uses two looping sources that
     /// crossfade (equal power) over 1.5 s; the table loop sits 6 dB under the SFX level, and
     /// <see cref="Duck"/> lowers music by 3 dB. Music, Sound effects and Volume follow
     /// <see cref="ISettingsService"/> live. Clips come from the <see cref="AudioCueLibrary"/>; a
@@ -45,6 +47,7 @@ namespace Callbreak.Infrastructure.Audio
         private MusicTrack _track = MusicTrack.None;
         private int _current;
         private int _nextVoice;
+        private int _uiCueFrame = -1;
         private float _duck = 1f;
         private float _duckTarget = 1f;
         private bool _musicMuted;
@@ -88,6 +91,12 @@ namespace Callbreak.Infrastructure.Audio
         /// <summary>The track last asked for (it may be silent if it has no clip or music is off).</summary>
         public MusicTrack CurrentTrack => _track;
 
+        /// <summary>How many cues were given to a voice so far, for tests and diagnostics.</summary>
+        public int CuesPlayed { get; private set; }
+
+        /// <summary>The cue last given to a voice.</summary>
+        public SoundCue LastCue { get; private set; }
+
         public void Play(SoundCue cue)
         {
             if (_disposed || _library == null || !_settings.SoundEffects)
@@ -108,6 +117,12 @@ namespace Callbreak.Infrastructure.Audio
                     return;
                 }
 
+                bool ui = IsUiCue(cue);
+                if (ui && Time.frameCount == _uiCueFrame)
+                {
+                    return;
+                }
+
                 int index = NextVoice();
                 AudioSource voice = _voices[index];
                 if (voice == null)
@@ -115,13 +130,20 @@ namespace Callbreak.Infrastructure.Audio
                     return;
                 }
 
+                if (ui)
+                {
+                    _uiCueFrame = Time.frameCount;
+                }
+
                 voice.Stop();
                 voice.clip = clip;
                 voice.pitch = IsCardCue(cue) ? 1f + ((float)_random.NextDouble() * 2f - 1f) * CardPitchVariation : 1f;
-                voice.outputAudioMixerGroup = IsUiCue(cue) ? _library.UiGroup : _library.SfxGroup;
+                voice.outputAudioMixerGroup = ui ? _library.UiGroup : _library.SfxGroup;
                 _voiceGain[index] = entry.Volume;
                 voice.volume = entry.Volume * _settings.Volume;
                 voice.Play();
+                CuesPlayed++;
+                LastCue = cue;
             }
             catch (Exception e)
             {

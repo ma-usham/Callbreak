@@ -172,9 +172,15 @@ namespace Callbreak.Editor
                 return;
             }
 
+            // A touch before the hand takes input only looks at a card.
             HandView hand = Object.FindFirstObjectByType<HandView>();
+            if (hand == null || !hand.Interactable)
+            {
+                return;
+            }
+
             Card card = obligation.Legal.Lowest();
-            CardView view = hand != null ? hand.ViewOf(card) : null;
+            CardView view = hand.ViewOf(card);
             if (view == null)
             {
                 _lastProblem = "no card view for " + card;

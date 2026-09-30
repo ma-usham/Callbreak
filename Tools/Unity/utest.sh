@@ -60,7 +60,12 @@ if [ "$mode" = "PlayMode" ]; then
   # The Test Framework replaces the open scenes with its own and first asks, in a dialog nobody
   # can answer from here, whether to save a modified one. So: refuse to start over unsaved work,
   # and clear away a test scene that an interrupted run left open.
-  pre=$(run eval --timeout 60 --code 'bool leftover = false; for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++) { var s = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i); if (s.name.StartsWith("InitTestScene")) { leftover = true; } else if (s.isDirty) { return "unsaved changes in the open scene " + (string.IsNullOrEmpty(s.path) ? "(untitled)" : s.path); } } if (leftover) { UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Single); } return "ok";')
+  precheck='bool leftover = false; for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++) { var s = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i); if (s.name.StartsWith("InitTestScene")) { leftover = true; } else if (s.isDirty) { return "unsaved changes in the open scene " + (string.IsNullOrEmpty(s.path) ? "(untitled)" : s.path); } } if (leftover) { UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Single); } return "ok";'
+  # The Editor's main thread may still be importing what the recompile changed: ask again.
+  for attempt in 1 2 3 4 5; do
+    pre=$(run eval --timeout 60 --code "$precheck")
+    case "$pre" in *timed\ out*) poke; sleep 5 ;; *) break ;; esac
+  done
   case "$pre" in
     *'"result": "ok"'*) ;;
     *) echo "not starting the PlayMode tests: $(echo "$pre" | grep -oE '"result": "[^"]*"|"message": "[^"]*"' | head -2 | tr '\n' ' ')"; exit 6 ;;

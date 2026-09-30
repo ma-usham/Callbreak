@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Sessions;
 using Callbreak.Core.Cards;
@@ -51,10 +52,13 @@ namespace Callbreak.Tests.PlayMode
             GameFixture.PressIn(panel, "Chip2");
             GameFixture.PressIn(panel, "ConfirmButton");
 
+            // A touch on the hand before it takes input only looks at a card: wait until the turn's
+            // own playback has ended and the hand is live.
             PlayedTable shown = _game.Table.Container.Resolve<PlayedTable>();
-            yield return GameFixture.Until(() => shown.State.TryGetObligation(out _), "the table to show my first turn to play", TurnTimeout);
+            HandView hand = UnityEngine.Object.FindFirstObjectByType<HandView>();
+            yield return GameFixture.Until(() => shown.State.TryGetObligation(out _) && hand.Interactable, "the table to show my first turn to play", TurnTimeout);
             Card card = session.View.LegalCards().Lowest();
-            Tap(UnityEngine.Object.FindFirstObjectByType<HandView>(), card);
+            Tap(hand, card);
 
             yield return GameFixture.Until(() => session.View.CompletedTricks.Count >= 1, "the first trick to finish", TurnTimeout);
             Assert.IsFalse(session.View.Hand.Contains(card), "the tapped card left the hand");
@@ -122,6 +126,55 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(ScreenId.Gameplay, router.Current);
             Assert.AreEqual(1, router.Depth);
             Assert.IsFalse(session.IsPaused);
+        }
+
+        [UnityTest]
+        public IEnumerator Overlay_OverTheTable_TakesEveryTouch_NothingUnderItCanBeTapped()
+        {
+            yield return StartOfflineMatch();
+            ScreenRouter router = _game.TableRouter;
+            TableView table = UnityEngine.Object.FindFirstObjectByType<TableView>();
+            HandView hand = UnityEngine.Object.FindFirstObjectByType<HandView>();
+            yield return GameFixture.Until(() => hand.Count == 13, "the hand to be laid out", TurnTimeout);
+            Vector2 onTheHand = CentreOf((RectTransform)hand.transform);
+            GameObject before = TopHit(onTheHand);
+            Assert.IsNotNull(before, "the hand takes touches");
+            Assert.IsTrue(before.transform.IsChildOf(table.transform), "with nothing over it, a touch there reaches the table (" + before.name + ")");
+
+            // Online a match runs on under these pages: a touch between their buttons must not
+            // play a card or press anything on the table (GDD 11 screens 09-11, 16).
+            foreach ((string button, ScreenId screen) in new[] { ("ScoresButton", ScreenId.Scorecard), ("SettingsButton", ScreenId.Settings) })
+            {
+                GameFixture.PressIn(table, button);
+                yield return null;
+                Assert.AreEqual(screen, router.Current);
+
+                GameObject hit = TopHit(onTheHand);
+                Assert.IsNotNull(hit, "the " + screen + " page takes the touch");
+                Assert.IsTrue(
+                    hit.transform.IsChildOf(router.Get<UIScreen>(screen).transform),
+                    "a touch over the hand lands on the " + screen + " page, not on " + hit.name + " under it");
+
+                Assert.IsTrue(router.Back());
+                yield return null;
+                Assert.AreEqual(ScreenId.Gameplay, router.Current);
+            }
+        }
+
+        private static Vector2 CentreOf(RectTransform rect)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            return (corners[0] + corners[2]) * 0.5f;
+        }
+
+        /// <summary>The object a touch at that screen point would reach, as the event system decides it.</summary>
+        private static GameObject TopHit(Vector2 screenPoint)
+        {
+            var pointer = new PointerEventData(EventSystem.current) { position = screenPoint };
+            var hits = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(pointer, hits);
+            return hits.Count > 0 ? hits[0].gameObject : null;
         }
 
         private IEnumerator StartOfflineMatch()

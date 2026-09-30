@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
+using Callbreak.Application.Online;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
 using Callbreak.Application.Settings;
+using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
 using UnityEngine;
 using VContainer.Unity;
@@ -13,8 +15,9 @@ namespace Callbreak.Presentation.Screens
 {
     /// <summary>
     /// GDD §11 screen 11: sound, language and comfort options. Every change applies at once and is
-    /// saved at once (the volume while it is dragged, its file write when the drag settles); Done
-    /// simply closes. The language button steps through the languages that have strings.
+    /// saved at once. The volume follows the slider while it is dragged; its file write waits until
+    /// the drag settles, the screen closes or the app goes to the background. Done simply closes.
+    /// The language button steps through the languages that have strings.
     /// </summary>
     public sealed class SettingsPresenter : IStartable, ITickable, IDisposable
     {
@@ -35,6 +38,7 @@ namespace Callbreak.Presentation.Screens
         private readonly IDialogs _dialogs;
         private readonly IClock _clock;
         private readonly IHaptics _haptics;
+        private readonly AvatarLibrary _avatars;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private bool _volumeDirty;
@@ -49,7 +53,8 @@ namespace Callbreak.Presentation.Screens
             ILocalization localization,
             IDialogs dialogs,
             IClock clock,
-            IHaptics haptics)
+            IHaptics haptics,
+            AvatarLibrary avatars)
         {
             _view = view;
             _router = router;
@@ -59,6 +64,7 @@ namespace Callbreak.Presentation.Screens
             _dialogs = dialogs;
             _clock = clock;
             _haptics = haptics;
+            _avatars = avatars;
         }
 
         public void Start()
@@ -70,6 +76,7 @@ namespace Callbreak.Presentation.Screens
             _view.MusicChanged += _settings.SetMusic;
             _view.SoundEffectsChanged += _settings.SetSoundEffects;
             _view.VolumeChanged += OnVolume;
+            _view.Suspended += FlushVolume;
             _view.LanguageClicked += OnLanguage;
             _view.VibrationChanged += OnVibration;
             _view.ReduceMotionChanged += _settings.SetReduceMotion;
@@ -99,6 +106,7 @@ namespace Callbreak.Presentation.Screens
             _view.MusicChanged -= _settings.SetMusic;
             _view.SoundEffectsChanged -= _settings.SetSoundEffects;
             _view.VolumeChanged -= OnVolume;
+            _view.Suspended -= FlushVolume;
             _view.LanguageClicked -= OnLanguage;
             _view.VibrationChanged -= OnVibration;
             _view.ReduceMotionChanged -= _settings.SetReduceMotion;
@@ -114,6 +122,7 @@ namespace Callbreak.Presentation.Screens
         private void Render()
         {
             _view.SetPlayerName(_profile.DisplayName);
+            _view.SetAvatar(_avatars.Get(_profile.AvatarId));
             _view.SetMusic(_settings.Music);
             _view.SetSoundEffects(_settings.SoundEffects);
             float volume = _volumeDirty ? _pendingVolume : _settings.Volume;
@@ -143,12 +152,13 @@ namespace Callbreak.Presentation.Screens
             }
         }
 
+        /// <summary>The slider moved: the level follows at once, the file once the slider rests.</summary>
         private void OnVolume(float volume)
         {
             _pendingVolume = Mathf.Clamp01(volume);
             _volumeDirty = true;
             _volumeSaveAt = _clock.Now + VolumeSaveDelaySeconds;
-            _view.SetVolumeText(PercentText(_pendingVolume));
+            _settings.PreviewVolume(_pendingVolume);
         }
 
         private void FlushVolume()
@@ -195,10 +205,18 @@ namespace Callbreak.Presentation.Screens
 
         private void OnAbout()
         {
-            string body = _localization.Format("ui.about.body", UnityEngine.Application.version);
+            string body = _localization.Format("ui.about.body", UnityEngine.Application.version, BuildId(), Protocol.Version);
             _ = _dialogs.ConfirmAsync(
                 new DialogRequest(_localization.Get("ui.settings.about"), body, _localization.Get("ui.settings.done"), null),
                 _lifetime.Token);
+        }
+
+        /// <summary>The build's own id, shortened; a run in the Editor has none.</summary>
+        private static string BuildId()
+        {
+            // The Editor answers with nothing or with all zeros.
+            string id = UnityEngine.Application.buildGUID;
+            return string.IsNullOrEmpty(id) || id.Trim('0').Length == 0 ? "dev" : id.Substring(0, Math.Min(8, id.Length));
         }
 
         private static string PercentText(float volume) =>

@@ -153,6 +153,12 @@ namespace Callbreak.Editor
                 return Task.FromResult(Answer);
             }
 
+            public Task<DialogChoice> AskAsync(DialogRequest request, CancellationToken ct)
+            {
+                Requests.Add(request);
+                return Task.FromResult(Answer ? DialogChoice.Confirm : DialogChoice.Cancel);
+            }
+
             public bool HandleBack() => false;
         }
 

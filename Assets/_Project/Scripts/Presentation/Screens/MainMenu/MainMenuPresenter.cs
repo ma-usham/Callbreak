@@ -1,11 +1,14 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Callbreak.Application.Cosmetics;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
 using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
+using Callbreak.Core.Cards;
+using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
 using UnityEngine;
 using VContainer.Unity;
@@ -13,10 +16,10 @@ using VContainer.Unity;
 namespace Callbreak.Presentation.Screens
 {
     /// <summary>
-    /// GDD §11 screen 00: one tap to every mode. Online entry points need a connection; without one
-    /// a toast points to Play Offline. An unfinished offline match is offered back ("Resume your
-    /// match?") once when the app opens and whenever Play Offline is tapped. Android back asks
-    /// "Exit Callbreak?".
+    /// GDD §11 screen 00: one tap to every mode. The card fan shows the four aces of the player's
+    /// deck. Online entry points need a connection; without one a toast points to Play Offline. While an unfinished offline match exists a banner offers
+    /// "Resume match"; the match is also offered back ("Resume your match?") once when the app
+    /// opens and whenever Play Offline is tapped. Android back asks "Exit Callbreak?".
     /// </summary>
     public sealed class MainMenuPresenter : IStartable, IDisposable
     {
@@ -32,6 +35,9 @@ namespace Callbreak.Presentation.Screens
         private readonly IAppFlow _flow;
         private readonly MatchLauncher _launcher;
         private readonly IAppExit _exit;
+        private readonly AvatarLibrary _avatars;
+        private readonly ICosmeticsService _cosmetics;
+        private readonly CardSpriteProvider _cards;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private bool _asking;
@@ -49,7 +55,10 @@ namespace Callbreak.Presentation.Screens
             IOfflineMatchStore offlineStore,
             IAppFlow flow,
             MatchLauncher launcher,
-            IAppExit exit)
+            IAppExit exit,
+            AvatarLibrary avatars,
+            ICosmeticsService cosmetics,
+            CardSpriteProvider cards)
         {
             _view = view;
             _router = router;
@@ -63,6 +72,9 @@ namespace Callbreak.Presentation.Screens
             _flow = flow;
             _launcher = launcher;
             _exit = exit;
+            _avatars = avatars;
+            _cosmetics = cosmetics;
+            _cards = cards;
         }
 
         public void Start()
@@ -73,10 +85,17 @@ namespace Callbreak.Presentation.Screens
             _view.PlayOnlineClicked += OnPlayOnline;
             _view.PlayWithFriendsClicked += OnPlayWithFriends;
             _view.PlayOfflineClicked += OnPlayOffline;
+            _view.ResumeClicked += OnResume;
             _view.BackRequested += OnBack;
             _profile.Changed += Render;
+            _settings.Changed += RenderMotion;
+            _cosmetics.Changed += RenderFan;
             _network.Changed += OnNetworkChanged;
+            _router.Changed += OnScreenChanged;
             Render();
+            RenderFan();
+            RenderMotion();
+            RenderResume();
             OnNetworkChanged(_network.IsOnline);
 
             // GDD §8: the next launch offers the unfinished offline match.
@@ -94,9 +113,13 @@ namespace Callbreak.Presentation.Screens
             _view.PlayOnlineClicked -= OnPlayOnline;
             _view.PlayWithFriendsClicked -= OnPlayWithFriends;
             _view.PlayOfflineClicked -= OnPlayOffline;
+            _view.ResumeClicked -= OnResume;
             _view.BackRequested -= OnBack;
             _profile.Changed -= Render;
+            _settings.Changed -= RenderMotion;
+            _cosmetics.Changed -= RenderFan;
             _network.Changed -= OnNetworkChanged;
+            _router.Changed -= OnScreenChanged;
 
             // A question still open is answered "no" and closes with the screen.
             _disposed = true;
@@ -104,7 +127,54 @@ namespace Callbreak.Presentation.Screens
             _lifetime.Dispose();
         }
 
-        private void Render() => _view.SetPlayerName(_profile.DisplayName);
+        private void Render()
+        {
+            _view.SetPlayerName(_profile.DisplayName);
+            _view.SetAvatar(_avatars.Get(_profile.AvatarId));
+        }
+
+        private void RenderMotion() => _view.SetReduceMotion(_settings.ReduceMotion);
+
+        /// <summary>GDD §13: "the main-menu fan shows that deck's four aces".</summary>
+        private void RenderFan()
+        {
+            string deck = _cosmetics.SelectedDeckId;
+            for (int suit = 0; suit < 4; suit++)
+            {
+                _view.SetFanFace((Suit)suit, _cards.Face(deck, new Card((Suit)suit, Rank.Ace)));
+            }
+        }
+
+        private void RenderResume() => _view.SetResumeAvailable(_offlineStore.HasSave);
+
+        private void OnScreenChanged(ScreenId id)
+        {
+            if (id == ScreenId.MainMenu)
+            {
+                RenderResume();
+            }
+        }
+
+        private void OnResume()
+        {
+            if (_asking)
+            {
+                return;
+            }
+
+            if (!_offlineStore.HasSave)
+            {
+                RenderResume();
+                return;
+            }
+
+            ResumeSaved();
+        }
+
+        private void ResumeSaved()
+        {
+            _launcher.Launch(new MatchLaunchRequest(MatchMode.Offline, _settings.Difficulty, resumeSaved: true));
+        }
 
         private void OnNetworkChanged(bool online) => _view.SetOnlineAvailable(online);
 
@@ -200,7 +270,7 @@ namespace Callbreak.Presentation.Screens
             _asking = true;
             try
             {
-                bool resume = await _dialogs.ConfirmAsync(
+                DialogChoice choice = await _dialogs.AskAsync(
                     new DialogRequest(
                         _localization.Get("ui.dialog.resume_match.title"),
                         string.Empty,
@@ -212,11 +282,12 @@ namespace Callbreak.Presentation.Screens
                     return;
                 }
 
-                if (resume)
+                // A dialog that was only closed (a tap outside, back) is neither answer.
+                if (choice == DialogChoice.Confirm)
                 {
-                    _launcher.Launch(new MatchLaunchRequest(MatchMode.Offline, _settings.Difficulty, resumeSaved: true));
+                    ResumeSaved();
                 }
-                else if (openSetupOnDecline && _router.Current == ScreenId.MainMenu)
+                else if (choice == DialogChoice.Cancel && openSetupOnDecline && _router.Current == ScreenId.MainMenu)
                 {
                     _launcher.Enter(ScreenId.OfflineSetup);
                 }

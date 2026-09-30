@@ -275,34 +275,85 @@ namespace Callbreak.Editor
             return font;
         }
 
-        /// <summary>Adds any missing characters to a static font atlas (e.g. the true minus sign).</summary>
-        public static void EnsureCharacters(TMP_FontAsset font, string characters)
+        /// <summary>
+        /// Adds any missing characters to a static font atlas (e.g. the true minus sign of a
+        /// negative score). A static atlas has let go of its source font, so the font file is found
+        /// again through the GUID the asset keeps, used for this addition, and let go again.
+        /// Returns the characters the font file itself has no glyph for.
+        /// </summary>
+        public static string EnsureCharacters(TMP_FontAsset font, string characters)
         {
-            if (font == null)
+            if (font == null || string.IsNullOrEmpty(characters))
             {
-                return;
+                return string.Empty;
             }
 
-            bool missing = false;
+            var missing = new System.Text.StringBuilder();
             foreach (char c in characters)
             {
-                if (!font.HasCharacter(c, false, false))
+                if (!font.HasCharacter(c, false, false) && missing.ToString().IndexOf(c) < 0)
                 {
-                    missing = true;
-                    break;
+                    missing.Append(c);
                 }
             }
 
-            if (!missing || font.sourceFontFile == null)
+            if (missing.Length == 0)
             {
-                return;
+                return string.Empty;
             }
 
-            font.atlasPopulationMode = AtlasPopulationMode.Dynamic;
-            font.TryAddCharacters(characters, out string _);
-            font.atlasPopulationMode = AtlasPopulationMode.Static;
+            var so = new SerializedObject(font);
+            Font source = font.sourceFontFile;
+            if (source == null)
+            {
+                string guid = so.FindProperty("m_SourceFontFileGUID").stringValue;
+                source = AssetDatabase.LoadAssetAtPath<Font>(AssetDatabase.GUIDToAssetPath(guid));
+            }
+
+            if (source == null)
+            {
+                Debug.LogWarning($"[UiBuildKit] {font.name}: no source font to add '{missing}' from.");
+                return missing.ToString();
+            }
+
+            so.FindProperty("m_AtlasPopulationMode").intValue = (int)AtlasPopulationMode.Dynamic;
+            so.FindProperty("m_SourceFontFile").objectReferenceValue = source;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            font.TryAddCharacters(missing.ToString(), out string notAdded);
+            so.Update();
+            so.FindProperty("m_AtlasPopulationMode").intValue = (int)AtlasPopulationMode.Static;
+            so.FindProperty("m_SourceFontFile").objectReferenceValue = null;
+            so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(font);
             AssetDatabase.SaveAssets();
+            return notAdded ?? string.Empty;
+        }
+
+        [MenuItem("Callbreak/Build/Font Coverage")]
+        public static void EnsureFontCoverageMenu() => EnsureFontCoverage();
+
+        /// <summary>
+        /// Makes sure each of the game's six font atlases holds the whole Latin set the English UI
+        /// uses, and reports what a font file has no glyph for (menu Callbreak/Build/Font Coverage).
+        /// </summary>
+        public static string EnsureFontCoverage()
+        {
+            var report = new System.Text.StringBuilder();
+            foreach (string file in new[] { "SourceSerif4-Bold", "SourceSerif4-SemiBold", "Inter-Regular", "Inter-Medium", "Inter-SemiBold", "Inter-Bold" })
+            {
+                TMP_FontAsset font = LoadFont(file);
+                if (font == null)
+                {
+                    report.Append(file).Append(": missing; ");
+                    continue;
+                }
+
+                string notInFont = EnsureCharacters(font, LatinCharacters);
+                report.Append(file).Append(notInFont.Length == 0 ? ": complete; " : ": the font has no glyph for '" + notInFont + "'; ");
+            }
+
+            Debug.Log("[UiBuildKit] Font coverage: " + report);
+            return report.ToString();
         }
 
         /// <summary>

@@ -9,6 +9,7 @@ using Callbreak.Application.Profile;
 using Callbreak.Application.Rooms;
 using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
+using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
 using UnityEngine;
 using VContainer.Unity;
@@ -18,7 +19,8 @@ namespace Callbreak.Presentation.Screens
     /// <summary>
     /// GDD §11 screen 05: find a Quick Match table. The search starts when the screen opens, the
     /// seats fill in as they are found, the elapsed time is the real one, Cancel withdraws at once,
-    /// and a found table goes straight to the table after its "Table found" beat.
+    /// and a found table goes straight to the table after its "Table found" beat. A search that
+    /// fails asks "Couldn't join the table · Retry / Play Offline".
     /// </summary>
     public sealed class MatchmakingPresenter : IStartable, IDisposable
     {
@@ -28,10 +30,14 @@ namespace Callbreak.Presentation.Screens
         private readonly IProfileService _profile;
         private readonly ISettingsService _settings;
         private readonly ILocalization _localization;
-        private readonly IToast _toast;
+        private readonly IDialogs _dialogs;
         private readonly MatchLauncher _launcher;
+        private readonly AvatarLibrary _avatars;
+        private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private CancellationTokenSource _search;
+        private bool _asking;
+        private bool _disposed;
 
         public MatchmakingPresenter(
             MatchmakingView view,
@@ -40,8 +46,9 @@ namespace Callbreak.Presentation.Screens
             IProfileService profile,
             ISettingsService settings,
             ILocalization localization,
-            IToast toast,
-            MatchLauncher launcher)
+            IDialogs dialogs,
+            MatchLauncher launcher,
+            AvatarLibrary avatars)
         {
             _view = view;
             _router = router;
@@ -49,8 +56,9 @@ namespace Callbreak.Presentation.Screens
             _profile = profile;
             _settings = settings;
             _localization = localization;
-            _toast = toast;
+            _dialogs = dialogs;
             _launcher = launcher;
+            _avatars = avatars;
         }
 
         public void Start()
@@ -81,17 +89,24 @@ namespace Callbreak.Presentation.Screens
             _router.Changed -= OnScreenChanged;
             _profile.Changed -= RenderHeader;
             StopSearch();
+            _disposed = true;
+            _lifetime.Cancel();
+            _lifetime.Dispose();
         }
 
         private void OnScreenChanged(ScreenId id)
         {
-            if (id == ScreenId.Matchmaking && _search == null)
+            if (id == ScreenId.Matchmaking && _search == null && !_asking)
             {
                 _ = SearchAsync();
             }
         }
 
-        private void RenderHeader() => _view.SetPlayerName(_profile.DisplayName);
+        private void RenderHeader()
+        {
+            _view.SetPlayerName(_profile.DisplayName);
+            _view.SetAvatar(_avatars.Get(_profile.AvatarId));
+        }
 
         private void OnProfile() => _router.Push(ScreenId.Profile);
 
@@ -144,16 +159,74 @@ namespace Callbreak.Presentation.Screens
 
                 if (result.Error != MatchmakingError.Cancelled)
                 {
-                    _toast.Show(_localization.Get(result.Error == MatchmakingError.Offline ? "ui.toast.no_internet" : "ui.error.join_table_failed"));
-                    if (_router.Current == ScreenId.Matchmaking)
-                    {
-                        _router.Pop();
-                    }
+                    await OfferRetryAsync(result.Error);
                 }
             }
             catch (Exception e)
             {
                 Debug.LogException(e);
+                if (_search == search)
+                {
+                    _search = null;
+                    search.Dispose();
+                    await OfferRetryAsync(MatchmakingError.Unavailable);
+                }
+            }
+        }
+
+        /// <summary>
+        /// GDD screen 05: "Couldn't join the table · Retry / Play Offline". Retry searches again,
+        /// Play Offline opens the offline setup in this screen's place, and a dialog that is simply
+        /// closed goes back to where the player came from.
+        /// </summary>
+        private async Task OfferRetryAsync(MatchmakingError error)
+        {
+            if (_disposed || _asking)
+            {
+                return;
+            }
+
+            _asking = true;
+            _view.SetCancelInteractable(false);
+            DialogChoice choice = DialogChoice.Dismissed;
+            try
+            {
+                string reason = error == MatchmakingError.Offline ? _localization.Get("ui.toast.no_internet")
+                    : error == MatchmakingError.UpdateRequired ? _localization.Get("ui.error.update_required")
+                    : string.Empty;
+                choice = await _dialogs.AskAsync(
+                    new DialogRequest(
+                        _localization.Get("ui.error.join_table_failed"),
+                        reason,
+                        _localization.Get("ui.common.retry"),
+                        _localization.Get("ui.main_menu.play_offline")),
+                    _lifetime.Token);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+            finally
+            {
+                _asking = false;
+            }
+
+            if (_disposed || _search != null || _router.Current != ScreenId.Matchmaking)
+            {
+                return;
+            }
+
+            switch (choice)
+            {
+                case DialogChoice.Confirm:
+                    _ = SearchAsync();
+                    break;
+                case DialogChoice.Cancel when _router.Has(ScreenId.OfflineSetup):
+                    _router.Replace(ScreenId.OfflineSetup);
+                    break;
+                default:
+                    _router.Pop();
+                    break;
             }
         }
 

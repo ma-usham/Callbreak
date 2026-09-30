@@ -1,6 +1,10 @@
 using System.IO;
+using Callbreak.Application.Ports;
+using Callbreak.Core.Cards;
+using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Screens;
+using Callbreak.Presentation.Widgets;
 using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -14,7 +18,8 @@ namespace Callbreak.Editor
     /// is a centre measured on 00-main-menu.png in mockup pixels; the parts were fitted to the
     /// mockup by re-composing it from the exported sprites (ArtSource/Prompts/MainMenu_Batch.md).
     /// Re-running overwrites the prefab, so layout changes belong here until the screen is signed
-    /// off.
+    /// off. Like the screens built from layouts, its buttons carry press feedback, its fixed
+    /// labels carry string-table keys, and its corner groups follow the device's safe area.
     /// </summary>
     public static class MainMenuBuilder
     {
@@ -36,6 +41,37 @@ namespace Callbreak.Editor
         private static readonly LabelSpec TaglineText = new LabelSpec(21.6f, 829.6f, 883.5f, 1f, 26.2f);
         private static readonly LabelSpec GreetingText = new LabelSpec(27f, 206.6f, 82.1f, 1f, 0f);
         private static readonly LabelSpec PlayerNameText = new LabelSpec(39.6f, 205.4f, 117.5f, 0.966f, 0f);
+
+        // The "Resume match" banner is on no mockup: it is the ivory secondary button, smaller,
+        // standing where the footer line is (the two never show together).
+        private static readonly Vector2 ResumeBannerCentre = new Vector2(835.75f, 877f);
+        private static readonly Vector2 ResumeBannerSize = new Vector2(336f, 64f);
+        private const float ResumeLabelSize = 27f;
+
+        // The fan: the four aces of the player's deck (GDD §13), laid as mockup 00 draws its four
+        // cards. For each, the middle of its top edge and its tilt (mockup pixels; degrees,
+        // anticlockwise positive), measured on the mockup's card edges: the two left cards by their
+        // top-left corners, the two right ones by their top-right corners. The cards hang from
+        // those edges; their feet are behind the Play Online button. The mockup paints its side
+        // cards narrower than the middle one; real cards are all one size, the width of the one the
+        // mockup shows whole, and they are stacked so that every ace shows its index: back to
+        // front hearts, diamonds, spades, clubs.
+        private static readonly FanCard[] FanCards =
+        {
+            new FanCard(Suit.Hearts, 633.1f, 383.5f, 22.94f),
+            new FanCard(Suit.Diamonds, 940.5f, 366.3f, -15.6f),
+            new FanCard(Suit.Spades, 772f, 340.9f, 7.7f),
+            new FanCard(Suit.Clubs, 1062.9f, 419.5f, -27.6f),
+        };
+
+        private const float FanCardWidth = 171.6f;
+        private const float FanCardAspect = 1.57f;
+        private static readonly Vector2 FanFoot = new Vector2(848f, 628.25f);
+        private const string CardShadowPath = "Assets/_Project/Art/UI/Common/UI_Panel_Card_Shadow.png";
+        private const float CardShadowSpread = 9f;
+        private const float CardShadowDrop = 3f;
+        private const float CardShadowOpacity = 0.4f;
+        private const float CardShadowSliceScale = 2.6f;
 
         [MenuItem("Callbreak/Build/Main Menu")]
         public static void Build()
@@ -89,16 +125,27 @@ namespace Callbreak.Editor
 
             BuildBackground(root);
 
-            RectTransform centre = UiBuildKit.CreateDesignGroup("Centre", root, UiBuildKit.Attach.Centre);
-            RectTransform headerLeft = UiBuildKit.CreateDesignGroup("HeaderLeft", root, UiBuildKit.Attach.TopLeft);
-            RectTransform headerRight = UiBuildKit.CreateDesignGroup("HeaderRight", root, UiBuildKit.Attach.TopRight);
+            // Everything but the background sits under Content, which is what a screen change
+            // slides; the corner groups follow the device's safe area (GDD §12).
+            RectTransform content = StretchedChild("Content", root);
+            RectTransform centre = UiBuildKit.CreateDesignGroup("Centre", content, UiBuildKit.Attach.Centre);
+            RectTransform safeArea = StretchedChild("SafeArea", content);
+            safeArea.gameObject.AddComponent<SafeAreaFitter>();
+            RectTransform headerLeft = UiBuildKit.CreateDesignGroup("HeaderLeft", safeArea, UiBuildKit.Attach.TopLeft);
+            RectTransform headerRight = UiBuildKit.CreateDesignGroup("HeaderRight", safeArea, UiBuildKit.Attach.TopRight);
 
             // Centre column, back to front
             Place("Logo", centre, new Vector2(834.75f, 180.25f), Screen, Ui("Ornaments/Logo_Callbreak.png"));
 
+            // The fan and its shadow rock together about the fan's foot, which the Play Online
+            // button covers (GDD screen 00: the fan "idles with a gentle sway"). Their own canvas
+            // keeps the rest of the screen from being batched again every frame.
             var fanCentre = new Vector2(848f, 479.25f);
-            PlaceShadow("CardFanShadow", centre, fanCentre, Screen, Ui("Ornaments/UI_Shadow_MenuFan.png"), 6f, 0.3f);
-            Place("CardFan", centre, fanCentre, Screen, Ui("Ornaments/Deco_MenuFan.png"));
+            RectTransform fan = UiBuildKit.CreateAt("CardFanGroup", centre, FanFoot, Screen, Vector2.zero);
+            fan.gameObject.AddComponent<Canvas>();
+            var fanSway = fan.gameObject.AddComponent<IdleSway>();
+            PlaceShadow("CardFanShadow", fan, fanCentre, FanFoot, Ui("Ornaments/UI_Shadow_MenuFan.png"), 6f, 0.3f);
+            UnityEngine.UI.Image[] fanFaces = BuildFanCards(fan);
 
             var playOnlineCentre = new Vector2(835.75f, 636.25f);
             Sprite primary = Ui("Buttons/UI_ButtonPrimary_Normal.png", 202f);
@@ -108,6 +155,7 @@ namespace Callbreak.Editor
             Place("Icon", playOnline.transform, new Vector2(641.25f, 634.75f), playOnlineCentre, Ui("Icons/Icon_Spade_Gold.png"));
             TextMeshProUGUI playOnlineLabel = Label(
                 "Label", playOnline.transform, playOnlineCentre, "PLAY ONLINE", serifBold, Color.white, PlayOnlineText, false);
+            Localize(playOnlineLabel, "ui.main_menu.play_online");
             playOnlineLabel.enableVertexGradient = true;
             Color labelFoot = UiBuildKit.Hex("#E8D4B8");
             playOnlineLabel.colorGradient = new VertexGradient(Color.white, Color.white, labelFoot, labelFoot);
@@ -123,7 +171,9 @@ namespace Callbreak.Editor
             UnityEngine.UI.Button playWithFriends = CreateButton(
                 "PlayWithFriendsButton", centre, friendsCentre, secondarySize, secondary, secondaryShadow, 1f, 0f, 2f, 0.4f);
             Place("Icon", playWithFriends.transform, new Vector2(544f, 781.25f), friendsCentre, Ui("Icons/Icon_Friends.png"));
-            Label("Label", playWithFriends.transform, friendsCentre, "Play with Friends", sansBold, ink, PlayWithFriendsText, false);
+            Localize(
+                Label("Label", playWithFriends.transform, friendsCentre, "Play with Friends", sansBold, ink, PlayWithFriendsText, false),
+                "ui.main_menu.play_with_friends");
             Place("Chevron", playWithFriends.transform, new Vector2(796f, 783.5f), friendsCentre, chevron);
 
             var offlineCentre = new Vector2(1015.5f, 783.25f);
@@ -131,18 +181,23 @@ namespace Callbreak.Editor
             UnityEngine.UI.Button playOffline = CreateButton(
                 "PlayOfflineButton", centre, offlineCentre, secondarySize - new Vector2(narrower, 0f), secondary, secondaryShadow, 1f, -narrower, 2f, 0.4f);
             Place("Icon", playOffline.transform, new Vector2(924.5f, 782f), offlineCentre, Ui("Icons/Icon_Offline.png"));
-            Label("Label", playOffline.transform, offlineCentre, "Play Offline", sansBold, ink, PlayOfflineText, false);
+            Localize(
+                Label("Label", playOffline.transform, offlineCentre, "Play Offline", sansBold, ink, PlayOfflineText, false),
+                "ui.main_menu.play_offline");
             Place("Chevron", playOffline.transform, new Vector2(1140.75f, 783.75f), offlineCentre, chevron);
 
-            BuildFooter(centre, sansSemiBold);
+            RectTransform footer = BuildFooter(centre, sansSemiBold);
+            UnityEngine.UI.Button resume = BuildResumeBanner(centre, sansBold, ink, chevron);
 
             // Header, left: who you are. The mockup's ring is plain white, not the ivory button.
             var profileCentre = new Vector2(127.5f, 98f);
             Sprite ring = Ui("Avatars/UI_AvatarRing.png");
             UnityEngine.UI.Button profile = CreateButton(
                 "ProfileButton", headerLeft, profileCentre, UiBuildKit.NativeSize(ring), ring, circleShadow, 104f / 92f, 0f, 6f, 0.15f);
-            Place("Avatar", profile.transform, new Vector2(127.25f, 98f), profileCentre, Ui("Avatars/Avatar_Default.png"));
-            Label("Greeting", headerLeft, Screen, "Namaste,", sansSemiBold, UiBuildKit.Hex("#9F7558"), GreetingText, false);
+            UnityEngine.UI.Image avatar = Place("Avatar", profile.transform, new Vector2(127.25f, 98f), profileCentre, Ui("Avatars/Avatar_Default.png"));
+            Localize(
+                Label("Greeting", headerLeft, Screen, "Namaste,", sansSemiBold, UiBuildKit.Hex("#9F7558"), GreetingText, false),
+                "ui.main_menu.greeting");
             TextMeshProUGUI playerName = Label(
                 "PlayerName", headerLeft, Screen, "Player", sansBold, UiBuildKit.Hex("#151617"), PlayerNameText, false);
 
@@ -164,6 +219,18 @@ namespace Callbreak.Editor
             var view = rootObject.AddComponent<MainMenuView>();
             var serialized = new SerializedObject(view);
             serialized.FindProperty("_screenId").intValue = (int)ScreenId.MainMenu;
+            serialized.FindProperty("_content").objectReferenceValue = content;
+            serialized.FindProperty("_resumeButton").objectReferenceValue = resume;
+            serialized.FindProperty("_footer").objectReferenceValue = footer.gameObject;
+            serialized.FindProperty("_avatar").objectReferenceValue = avatar;
+            serialized.FindProperty("_fanSway").objectReferenceValue = fanSway;
+            SerializedProperty faces = serialized.FindProperty("_fanFaces");
+            faces.arraySize = fanFaces.Length;
+            for (int i = 0; i < fanFaces.Length; i++)
+            {
+                faces.GetArrayElementAtIndex(i).objectReferenceValue = fanFaces[i];
+            }
+
             serialized.FindProperty("_profileButton").objectReferenceValue = profile;
             serialized.FindProperty("_settingsButton").objectReferenceValue = settings;
             serialized.FindProperty("_shopButton").objectReferenceValue = shop;
@@ -192,7 +259,7 @@ namespace Callbreak.Editor
             fitter.aspectRatio = UiBuildKit.CanvasWidth / UiBuildKit.CanvasHeight;
         }
 
-        private static void BuildFooter(RectTransform centre, TMP_FontAsset font)
+        private static RectTransform BuildFooter(RectTransform centre, TMP_FontAsset font)
         {
             Color line = UiBuildKit.Hex("#A4856A");
             RectTransform footer = UiBuildKit.CreateAt("Footer", centre, Screen, Screen, Vector2.zero);
@@ -200,10 +267,129 @@ namespace Callbreak.Editor
             RectTransform left = UiBuildKit.CreateAt("LineLeft", footer, new Vector2(553.25f, 876f), Screen, UiBuildKit.FromMock(58.5f, 1.9f));
             UiBuildKit.AddImage(left, null, false).color = line;
 
-            Label("Tagline", footer, Screen, "A GAME THAT BRINGS US CLOSER", font, UiBuildKit.Hex("#9D795D"), TaglineText, true);
+            Localize(
+                Label("Tagline", footer, Screen, "A GAME THAT BRINGS US CLOSER", font, UiBuildKit.Hex("#9D795D"), TaglineText, true),
+                "ui.main_menu.tagline");
 
             RectTransform right = UiBuildKit.CreateAt("LineRight", footer, new Vector2(1112.5f, 876f), Screen, UiBuildKit.FromMock(63f, 1.9f));
             UiBuildKit.AddImage(right, null, false).color = line;
+            return footer;
+        }
+
+        /// <summary>
+        /// GDD screen 00: "If an unfinished offline match exists, a banner offers 'Resume match'."
+        /// Hidden in the prefab; the presenter shows it in the footer line's place.
+        /// </summary>
+        private static UnityEngine.UI.Button BuildResumeBanner(RectTransform centre, TMP_FontAsset font, Color ink, Sprite chevron)
+        {
+            UnityEngine.UI.Button banner = DialogBuilder.KitButton(
+                "ResumeBanner", centre, ResumeBannerSize, "UI/Buttons/UI_ButtonSecondary_Normal.png", "UI/Buttons/UI_Shadow_Secondary.png", 2f, 0.4f);
+            var rect = (RectTransform)banner.transform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(
+                (ResumeBannerCentre.x - Screen.x) * UiBuildKit.ScaleX, -(ResumeBannerCentre.y - Screen.y) * UiBuildKit.ScaleY);
+
+            // The label is centred in the room the chevron leaves.
+            Vector2 chevronSize = UiBuildKit.NativeSize(chevron) * 0.8f;
+            float chevronInset = 34f;
+            var labelObject = new GameObject("Label", typeof(RectTransform));
+            var labelRect = (RectTransform)labelObject.transform;
+            labelRect.SetParent(rect, false);
+            Stretch(labelRect);
+            labelRect.offsetMin = new Vector2(chevronInset, 0f);
+            labelRect.offsetMax = new Vector2(-(chevronInset + chevronSize.x), 0f);
+            var label = labelObject.AddComponent<TextMeshProUGUI>();
+            label.font = font;
+            label.fontSize = ResumeLabelSize;
+            label.color = ink;
+            label.alignment = TextAlignmentOptions.Center;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.overflowMode = TextOverflowModes.Overflow;
+            label.raycastTarget = false;
+            label.text = "Resume match";
+            label.characterHorizontalScale = PlayOfflineText.HorizontalScale;
+            label.characterSpacing = PlayOfflineText.Spacing;
+            Localize(label, "ui.main_menu.resume_match");
+
+            var chevronObject = new GameObject("Chevron", typeof(RectTransform));
+            var chevronRect = (RectTransform)chevronObject.transform;
+            chevronRect.SetParent(rect, false);
+            chevronRect.anchorMin = chevronRect.anchorMax = chevronRect.pivot = new Vector2(1f, 0.5f);
+            chevronRect.sizeDelta = chevronSize;
+            chevronRect.anchoredPosition = new Vector2(-chevronInset, 0f);
+            UiBuildKit.AddImage(chevronRect, chevron, false);
+
+            banner.gameObject.SetActive(false);
+            return banner;
+        }
+
+        /// <summary>
+        /// The four aces, each a card with its own soft shadow. The prefab shows the default deck's;
+        /// the presenter puts in the equipped deck's. Returns the face images indexed by suit.
+        /// </summary>
+        private static UnityEngine.UI.Image[] BuildFanCards(RectTransform fan)
+        {
+            CardSpriteProvider cards = TableCardBuilder.EnsureLibrary();
+            Sprite shadow = UiBuildKit.LoadSpriteAt(CardShadowPath, 0f);
+            var faces = new UnityEngine.UI.Image[4];
+            foreach (FanCard card in FanCards)
+            {
+                Sprite face = cards.Face(cards.DefaultDeckId, new Card(card.Suit, Rank.Ace));
+                float height = FanCardWidth * (face != null ? face.rect.height / face.rect.width : FanCardAspect);
+                Vector2 size = UiBuildKit.FromMock(FanCardWidth, height);
+
+                // The card hangs from its top edge: its centre is half a card down its own axis.
+                float tilt = card.Tilt * Mathf.Deg2Rad;
+                var cardCentre = new Vector2(card.X + height / 2f * Mathf.Sin(tilt), card.Y + height / 2f * Mathf.Cos(tilt));
+                RectTransform rect = UiBuildKit.CreateAt("Ace" + card.Suit, fan, cardCentre, FanFoot, size);
+                rect.localRotation = Quaternion.Euler(0f, 0f, card.Tilt);
+
+                RectTransform shadowRect = StretchedChild("Shadow", rect);
+                shadowRect.offsetMin = new Vector2(-CardShadowSpread, -CardShadowSpread - CardShadowDrop);
+                shadowRect.offsetMax = new Vector2(CardShadowSpread, CardShadowSpread - CardShadowDrop);
+                UnityEngine.UI.Image shadowImage = UiBuildKit.AddImage(shadowRect, shadow, false);
+                shadowImage.color = new Color(1f, 1f, 1f, CardShadowOpacity);
+                shadowImage.pixelsPerUnitMultiplier = CardShadowSliceScale;
+
+                RectTransform faceRect = StretchedChild("Face", rect);
+                faces[(int)card.Suit] = UiBuildKit.AddImage(faceRect, face, false);
+            }
+
+            return faces;
+        }
+
+        private readonly struct FanCard
+        {
+            public readonly Suit Suit;
+            public readonly float X;
+            public readonly float Y;
+            public readonly float Tilt;
+
+            public FanCard(Suit suit, float x, float y, float tilt)
+            {
+                Suit = suit;
+                X = x;
+                Y = y;
+                Tilt = tilt;
+            }
+        }
+
+        /// <summary>Binds a fixed label to its string-table key; the prefab keeps the English it was fitted with.</summary>
+        private static void Localize(TMP_Text label, string key)
+        {
+            var localized = label.gameObject.AddComponent<LocalizedText>();
+            var so = new SerializedObject(localized);
+            so.FindProperty("_key").stringValue = key;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static RectTransform StretchedChild(string name, Transform parent)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            var rect = (RectTransform)go.transform;
+            rect.SetParent(parent, false);
+            Stretch(rect);
+            return rect;
         }
 
         /// <summary>
@@ -246,14 +432,21 @@ namespace Callbreak.Editor
             colors.disabledColor = new Color(0.8f, 0.8f, 0.8f, 0.5f);
             colors.fadeDuration = 0.08f;
             button.colors = colors;
+
+            // After the Button, so a presenter that answers the press with its own cue is heard first.
+            var feedback = root.gameObject.AddComponent<ButtonFeedback>();
+            var so = new SerializedObject(feedback);
+            so.FindProperty("_selectable").objectReferenceValue = button;
+            so.FindProperty("_cue").intValue = (int)SoundCue.UiTap;
+            so.ApplyModifiedPropertiesWithoutUndo();
             return button;
         }
 
         /// <summary>Places a sprite pixel for pixel, centred on a mockup point.</summary>
-        private static void Place(string name, Transform parent, Vector2 centre, Vector2 parentCentre, Sprite sprite)
+        private static UnityEngine.UI.Image Place(string name, Transform parent, Vector2 centre, Vector2 parentCentre, Sprite sprite)
         {
             RectTransform rect = UiBuildKit.CreateAt(name, parent, centre, parentCentre, UiBuildKit.NativeSize(sprite));
-            UiBuildKit.AddImage(rect, sprite, false);
+            return UiBuildKit.AddImage(rect, sprite, false);
         }
 
         private static void PlaceShadow(string name, Transform parent, Vector2 ownerCentre, Vector2 parentCentre, Sprite sprite, float drop, float opacity)

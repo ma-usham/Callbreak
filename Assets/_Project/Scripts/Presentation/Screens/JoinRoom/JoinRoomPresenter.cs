@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
 using Callbreak.Application.Rooms;
+using Callbreak.Application.Settings;
+using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
 using UnityEngine;
 using VContainer.Unity;
@@ -12,8 +14,9 @@ namespace Callbreak.Presentation.Screens
 {
     /// <summary>
     /// GDD §11 screen 03: join a friend's table with its 6-character code. Join is enabled only
-    /// for a complete valid code, Paste takes the clipboard (spaces, dashes and case do not
-    /// matter), and every error shows its own message while the boxes shake.
+    /// for a complete valid code, Paste finds the code in whatever the clipboard holds (the bare
+    /// code in any case, with spaces or dashes, or the whole invite message), and every error
+    /// shows its own message while the boxes shake.
     /// </summary>
     public sealed class JoinRoomPresenter : IStartable, IDisposable
     {
@@ -24,6 +27,8 @@ namespace Callbreak.Presentation.Screens
         private readonly IClipboard _clipboard;
         private readonly ILocalization _localization;
         private readonly IDeepLinks _deepLinks;
+        private readonly ISettingsService _settings;
+        private readonly AvatarLibrary _avatars;
 
         private string _code = string.Empty;
         private bool _busy;
@@ -36,7 +41,9 @@ namespace Callbreak.Presentation.Screens
             IProfileService profile,
             IClipboard clipboard,
             ILocalization localization,
-            IDeepLinks deepLinks)
+            IDeepLinks deepLinks,
+            ISettingsService settings,
+            AvatarLibrary avatars)
         {
             _view = view;
             _router = router;
@@ -45,11 +52,14 @@ namespace Callbreak.Presentation.Screens
             _clipboard = clipboard;
             _localization = localization;
             _deepLinks = deepLinks;
+            _settings = settings;
+            _avatars = avatars;
         }
 
         public void Start()
         {
             _view.BackClicked += OnBack;
+            _view.BackRequested += OnBack;
             _view.ProfileClicked += OnProfile;
             _view.SettingsClicked += OnSettings;
             _view.CodeChanged += OnCodeChanged;
@@ -57,12 +67,15 @@ namespace Callbreak.Presentation.Screens
             _view.JoinClicked += OnJoin;
             _router.Changed += OnScreenChanged;
             _profile.Changed += RenderHeader;
+            _settings.Changed += RenderMotion;
             RenderHeader();
+            RenderMotion();
         }
 
         public void Dispose()
         {
             _view.BackClicked -= OnBack;
+            _view.BackRequested -= OnBack;
             _view.ProfileClicked -= OnProfile;
             _view.SettingsClicked -= OnSettings;
             _view.CodeChanged -= OnCodeChanged;
@@ -70,6 +83,7 @@ namespace Callbreak.Presentation.Screens
             _view.JoinClicked -= OnJoin;
             _router.Changed -= OnScreenChanged;
             _profile.Changed -= RenderHeader;
+            _settings.Changed -= RenderMotion;
             _attempt?.Cancel();
         }
 
@@ -93,7 +107,13 @@ namespace Callbreak.Presentation.Screens
             _view.SetJoinInteractable(RoomCode.IsValid(_code));
         }
 
-        private void RenderHeader() => _view.SetPlayerName(_profile.DisplayName);
+        private void RenderHeader()
+        {
+            _view.SetPlayerName(_profile.DisplayName);
+            _view.SetAvatar(_avatars.Get(_profile.AvatarId));
+        }
+
+        private void RenderMotion() => _view.SetReduceMotion(_settings.ReduceMotion);
 
         /// <summary>Back while joining gives the attempt up (GDD §27: "Cancel available").</summary>
         private void OnBack()
@@ -128,7 +148,14 @@ namespace Callbreak.Presentation.Screens
                 return;
             }
 
-            _code = RoomCode.Normalize(_clipboard.GetText());
+            // A clipboard with no code in it leaves what the player typed alone.
+            string pasted = InviteLink.FromPastedText(_clipboard.GetText());
+            if (pasted.Length == 0)
+            {
+                return;
+            }
+
+            _code = pasted;
             _view.SetCode(_code);
             _view.ClearError();
             _view.SetJoinInteractable(RoomCode.IsValid(_code));

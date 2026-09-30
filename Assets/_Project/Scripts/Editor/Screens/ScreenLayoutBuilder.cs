@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Callbreak.Application.Ports;
 using Callbreak.Presentation.Framework;
 using TMPro;
 using UnityEditor;
@@ -75,6 +76,10 @@ namespace Callbreak.Editor.Screens
             Stretch(ctx.Root);
 
             BuildBackground(ctx);
+            if (Enum.TryParse(ctx.Layout.name, out ScreenId _))
+            {
+                AddTouchBlocker(ctx.Root);
+            }
 
             // Everything else sits under Content, which is what screen transitions slide.
             var content = new GameObject("Content", typeof(RectTransform));
@@ -101,6 +106,24 @@ namespace Callbreak.Editor.Screens
             {
                 BuildNode(ctx, node);
             }
+        }
+
+        /// <summary>
+        /// A page the router shows takes every touch on it. Over a running match the results, the
+        /// scorecard and the settings cover the table, and a tap between their buttons must not
+        /// reach the hand, the call chips or the HUD underneath (the table and the call panel are
+        /// not router pages and get no blocker). The image is fully transparent, so it is culled
+        /// from drawing and only answers raycasts.
+        /// </summary>
+        private static void AddTouchBlocker(RectTransform root)
+        {
+            var blocker = new GameObject("TouchBlocker", typeof(RectTransform));
+            var rect = (RectTransform)blocker.transform;
+            rect.SetParent(root, false);
+            Stretch(rect);
+            var image = blocker.AddComponent<Image>();
+            image.color = new Color(1f, 1f, 1f, 0f);
+            image.raycastTarget = true;
         }
 
         private static string GroupOf(LayoutNode n) => string.IsNullOrEmpty(n.group) ? "Centre" : n.group;
@@ -213,6 +236,7 @@ namespace Callbreak.Editor.Screens
                 var feedback = root.gameObject.AddComponent<ButtonFeedback>();
                 var so = new SerializedObject(feedback);
                 so.FindProperty("_selectable").objectReferenceValue = button;
+                so.FindProperty("_cue").intValue = (int)CueFor(node.id);
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
 
@@ -220,6 +244,12 @@ namespace Callbreak.Editor.Screens
             {
                 root.gameObject.SetActive(false);
             }
+        }
+
+        /// <summary>GDD §14: a button that leads back (back, close, cancel) has its own cue; every other button taps.</summary>
+        public static SoundCue CueFor(string buttonId)
+        {
+            return buttonId == "BackButton" || buttonId == "CloseButton" || buttonId == "CancelButton" ? SoundCue.UiBack : SoundCue.UiTap;
         }
 
         /// <summary>
