@@ -8,12 +8,25 @@
 // icontool - the Icons kit pipeline (family "Icons", see ArtSource/Prompts/Icons_Kit.md).
 // A single-file program: run it with   Tools/ArtPipeline/Kit/Icons/icons.sh <command> [options]
 //
-//   measure  [--only A,B]                         ink box, ink and ground colours of every icon on its mockup
-//   sheet    --sheet S1 [--review]                contact sheet of enlarged crops for ChatGPT (attach/)
-//   split    --sheet S1 --in chatgpt/S1_a1.png --attempt a1      cut ChatGPT's redrawn sheet into cells
-//   make     --name Icon_Back --src cell.png [...]             fit a cell to the mockup and export the sprite
-//   place    [--only A,B]                         where each final sprite lands on every screen that uses it
-//   review   --out file.png --names A,B,...       review sheet of finished sprites against their crops
+// Files beside it: icons.json (every icon and where it is drawn), sheets/S<n>.json (the contact
+// sheets), accepted.json (the attempt each sprite is made from), uses.js -> uses.json (every place an
+// icon is shown on a built screen), dl.sh (the shared download lock).
+//
+//   measure  [--only A,B]                          ink box, ink and ground colours of every icon on its mockup
+//   sheet    --sheet S1 [--review]                 contact sheet of enlarged crops for ChatGPT (-> attach/)
+//   strip    --images a.png,b.png [--captions ..] [--scale 2] --out f.png    sprites in a row on white
+//   split    --sheet S1 --in chatgpt/S1_a1.png --attempt a1[,a1,a2,..]       cut ChatGPT's sheet into cells
+//   make     --name Icon_Back --src cell.png [--attempt a1] [--grow px] [--max-grow px] [--hole-grow px]
+//            [--scale f] [--ink-height px] [--uniform] [--symmetric]
+//                                                  fit one cell to its mockup crop -> fitted/, check/
+//   build    [--only A,B]                          make every icon of accepted.json again
+//   export                                         copy the fitted sprites to Assets/_Project/Art/UI/Icons and
+//                                                  ArtSource/Exports/Icons, write ArtSource/Kit/Icons.json
+//   place    [--only A,B]                          the rectangle of each sprite on every screen that shows it
+//   map                                            write ArtSource/Kit/Icons.map.csv (run uses.js first)
+//   handoff                                        the family's rows for ArtSource/handoff.csv (-> handoff_rows.csv)
+//   review   [--names A,B] [--out f.png]           mockup crop beside the sprite on the same ground, enlarged
+//   audit                                          the exported files: size, margins, specks, fringe, copies
 //
 // All rectangles are mockup pixels (1672 x 941, top-left origin). Alpha and blending are solved in
 // linear light, because the project renders in the Linear colour space and uGUI blends there.
@@ -57,14 +70,10 @@ internal sealed class Img
 
     public static Img Load(string path)
     {
+        // Read the file's own pixels: drawing it onto another bitmap would pass through premultiplied alpha
+        // and lose the colour of nearly transparent pixels.
         using var src = new Bitmap(path);
-        using var bmp = new Bitmap(src.Width, src.Height, PixelFormat.Format32bppArgb);
-        using (Graphics g = Graphics.FromImage(bmp))
-        {
-            g.CompositingMode = CompositingMode.SourceCopy;
-            g.DrawImage(src, new Rectangle(0, 0, src.Width, src.Height), 0, 0, src.Width, src.Height, GraphicsUnit.Pixel);
-        }
-        return FromBitmap(bmp);
+        return FromBitmap(src);
     }
 
     public static Img FromBitmap(Bitmap bmp)
@@ -125,6 +134,13 @@ internal sealed class Img
                 c.R[t] = R[s]; c.G[t] = G[s]; c.B[t] = B[s]; c.A[t] = A[s];
             }
         }
+        return c;
+    }
+
+    public Img Clone2()
+    {
+        var c = new Img(W, H, 0f);
+        Array.Copy(R, c.R, R.Length); Array.Copy(G, c.G, G.Length); Array.Copy(B, c.B, B.Length); Array.Copy(A, c.A, A.Length);
         return c;
     }
 
@@ -202,6 +218,9 @@ internal sealed class IconDef
     public double[] Disc;            // the round button it sits on (x, y, w, h), when the loose rect leaves it
     public bool Symmetric;           // mirror-symmetric about its vertical axis
     public double? Angle;            // the mockup draws it tilted by about this many degrees (clockwise); the sprite is upright
+    public bool KeepWhite;           // multi-coloured: white enclosed by the icon is part of it (a white mark on a badge)
+    public string[] Palette;         // multi-coloured, flat: the colours it is drawn in (measured on the mockup)
+    public string Tone;              // multi-coloured, shaded: "mock" moves the drawn colours onto the mockup's
     public string Note;
     public List<(string screen, double[] rect, string old)> Uses = new List<(string, double[], string)>();
 }
@@ -237,6 +256,9 @@ internal static class Spec
                 Disc = n["disc"]?.AsArray().Select(v => (double)v).ToArray(),
                 Symmetric = n["symmetric"] != null && (bool)n["symmetric"],
                 Angle = n["angle"] != null ? (double)n["angle"] : (double?)null,
+                KeepWhite = n["keepWhite"] != null && (bool)n["keepWhite"],
+                Palette = n["palette"]?.AsArray().Select(v => (string)v).ToArray(),
+                Tone = (string)n["tone"],
                 Note = (string)n["note"],
             };
             if (n["uses"] != null)
@@ -275,7 +297,29 @@ internal sealed class MockIcon
 
     public bool[] Inside;     // false where the loose rect leaves the round button the icon sits on
 
-    public static MockIcon Read(IconDef d) => Read(d.Screen, d.Rect, d.Mode == "color", d.Disc);
+    public static MockIcon Read(IconDef d)
+    {
+        MockIcon m = Read(d.Screen, d.Rect, d.Mode == "color", d.Disc);
+        if (d.Mode == "color" && d.KeepWhite && m.Box != null) m.FillEnclosed();
+        return m;
+    }
+
+    /// <summary>Whatever the silhouette encloses counts as the icon (a white mark that matches the ground).</summary>
+    public void FillEnclosed()
+    {
+        int w = Region.W, h = Region.H;
+        var outside = new bool[Region.Count];
+        var stack = new Stack<int>();
+        void Push(int x, int y) { int i = y * w + x; if (outside[i] || Cover[i] >= 0.5f) return; outside[i] = true; stack.Push(i); }
+        for (int x = 0; x < w; x++) { Push(x, 0); Push(x, h - 1); }
+        for (int y = 0; y < h; y++) { Push(0, y); Push(w - 1, y); }
+        while (stack.Count > 0)
+        {
+            int i = stack.Pop(); int x = i % w, y = i / w;
+            if (x > 0) Push(x - 1, y); if (x < w - 1) Push(x + 1, y); if (y > 0) Push(x, y - 1); if (y < h - 1) Push(x, y + 1);
+        }
+        for (int i = 0; i < Cover.Length; i++) if (!outside[i] && Inside[i]) Cover[i] = 1f;
+    }
 
     public static MockIcon Read(string screen, double[] rect, bool colour, double[] disc = null)
     {
@@ -356,12 +400,57 @@ internal sealed class MockIcon
         if (colour)
         {
             // Silhouette of a multi-coloured icon: distance from the ground, anything enclosed is solid.
+            // How far each pixel has moved from the ground, relative to the nearest pixel that is fully the
+            // icon (a pixel well off the ground whose neighbours are as far off as it is).
             Cover = new float[n];
+            var dist = new float[n];
             for (int i = 0; i < n; i++)
             {
                 float dr = r.R[i] - Ground.R[i], dg = r.G[i] - Ground.G[i], db = r.B[i] - Ground.B[i];
-                float d = MathF.Sqrt(dr * dr + dg * dg + db * db);
-                Cover[i] = Math.Clamp((d - 0.03f) / 0.22f, 0f, 1f);
+                dist[i] = MathF.Sqrt(dr * dr + dg * dg + db * db);
+                // The mockups draw a light fringe around dark strokes; what is lighter than the ground is not the icon
+                // (a white mark enclosed by the icon is added back by FillEnclosed).
+                if (r.Lum(i) >= Ground.Lum(i) - 0.01f) dist[i] = 0f;
+            }
+            var nearest = new int[n];
+            var queue = new Queue<int>();
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    int i = y * w + x;
+                    nearest[i] = -1;
+                    if (dist[i] < 0.12f || !Inside[i]) continue;
+                    bool core = true;
+                    for (int dy = -1; dy <= 1 && core; dy++)
+                        for (int dx = -1; dx <= 1 && core; dx++)
+                        {
+                            int xx = x + dx, yy = y + dy;
+                            if (xx < 0 || yy < 0 || xx >= w || yy >= h || dist[yy * w + xx] < 0.8f * dist[i]) core = false;
+                        }
+                    if (core) { nearest[i] = i; queue.Enqueue(i); }
+                }
+            int[] ox = { 1, -1, 0, 0, 1, 1, -1, -1 }, oy = { 0, 0, 1, -1, 1, -1, 1, -1 };
+            while (queue.Count > 0)
+            {
+                int i = queue.Dequeue(); int x = i % w, y = i / w;
+                for (int k = 0; k < 8; k++)
+                {
+                    int xx = x + ox[k], yy = y + oy[k];
+                    if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+                    int j = yy * w + xx;
+                    if (nearest[j] >= 0) continue;
+                    nearest[j] = nearest[i]; queue.Enqueue(j);
+                }
+            }
+            for (int i = 0; i < n; i++)
+            {
+                if (nearest[i] < 0) continue;
+                int c = nearest[i];
+                float vr = r.R[c] - Ground.R[i], vg = r.G[c] - Ground.G[i], vb = r.B[c] - Ground.B[i];
+                float den = vr * vr + vg * vg + vb * vb;
+                float num = (r.R[i] - Ground.R[i]) * vr + (r.G[i] - Ground.G[i]) * vg + (r.B[i] - Ground.B[i]) * vb;
+                float a = den < 1e-5f ? 0f : Math.Clamp(num / den, 0f, 1f);
+                Cover[i] = a < 0.04f ? 0f : a;
             }
             Ink = (0f, 0f, 0f);
         }
@@ -393,6 +482,44 @@ internal sealed class MockIcon
         }
         for (int i = 0; i < n; i++) if (!Inside[i]) Cover[i] = 0f;
         Box = Bounds.HalfBox(Cover, w, h, X0, Y0);
+    }
+
+    /// <summary>
+    /// The single-ink icon enlarged to w2 x h2 px with its edges tightened: the coverage is enlarged smoothly,
+    /// then its transition is steepened around one half, so the outline to trace is unambiguous.
+    /// </summary>
+    public Img TileCrisp(double x, double y, double w, double h, int w2, int h2, double gain)
+    {
+        int tx0 = (int)Math.Floor(x), ty0 = (int)Math.Floor(y), tw = (int)Math.Ceiling(x + w) - tx0, th = (int)Math.Ceiling(y + h) - ty0;
+        // Coverage as plain grey (no gamma), so the enlargement interpolates the coverage itself.
+        using var grey = new Bitmap(tw, th, PixelFormat.Format32bppArgb);
+        for (int yy = 0; yy < th; yy++)
+            for (int xx = 0; xx < tw; xx++)
+            {
+                int rx = tx0 + xx - X0, ry = ty0 + yy - Y0;
+                float c = rx >= 0 && ry >= 0 && rx < Region.W && ry < Region.H ? Cover[ry * Region.W + rx] : 0f;
+                int v = 255 - (int)MathF.Round(Math.Clamp(c, 0f, 1f) * 255f);
+                grey.SetPixel(xx, yy, Color.FromArgb(255, v, v, v));
+            }
+        using var big = new Bitmap(w2, h2, PixelFormat.Format32bppArgb);
+        using (Graphics g = Graphics.FromImage(big))
+        using (var attrs = new ImageAttributes())
+        {
+            attrs.SetWrapMode(WrapMode.TileFlipXY);
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            g.DrawImage(grey, new Rectangle(0, 0, w2, h2), 0, 0, tw, th, GraphicsUnit.Pixel, attrs);
+        }
+        var t = new Img(w2, h2);
+        for (int yy = 0; yy < h2; yy++)
+            for (int xx = 0; xx < w2; xx++)
+            {
+                float c = 1f - big.GetPixel(xx, yy).R / 255f;
+                c = (float)Math.Clamp((c - 0.5) * gain + 0.5, 0.0, 1.0);
+                int i = yy * w2 + xx;
+                t.R[i] = 1f + (Ink.r - 1f) * c; t.G[i] = 1f + (Ink.g - 1f) * c; t.B[i] = 1f + (Ink.b - 1f) * c;
+            }
+        return t;
     }
 
     /// <summary>The icon as flat ink on white (single-ink icons) or its own pixels on its ground (multi-coloured),
@@ -552,7 +679,7 @@ internal static class Tool
 {
     public static int Run(string[] args)
     {
-        if (args.Length == 0) { Console.WriteLine("icontool measure|sheet|split|make|place|review  (see the header of icontool.cs)"); return 0; }
+        if (args.Length == 0) { Console.WriteLine("icontool measure | sheet | strip | split | make | build | export | place | map | handoff | review | audit   (see the header of icontool.cs)"); return 0; }
         try
         {
             Spec.Load();
@@ -570,6 +697,13 @@ internal static class Tool
                 case "sheet": return Sheets.Build(Get("sheet"), opt.ContainsKey("review"));
                 case "split": return Splitter.Run(Get("sheet"), Get("in"), Get("attempt", "a1"));
                 case "make": return Maker.Run(Get("name"), Get("src"), opt);
+                case "build": return Build.Make(Get("only"));
+                case "export": return Build.Export();
+                case "place": Place.Run(Get("only")); return 0;
+                case "map": return Place.Map();
+                case "handoff": return Handoff.Run();
+                case "audit": return Audit.Run();
+                case "review": return Review.Run(Get("names"), Get("out", "ArtSource/Working/Kit/Icons/review/review.png"), int.Parse(Get("zoom", "0")), Get("attempt"));
                 case "strip": return Sheets.Strip(Get("images").Split(','), Get("captions")?.Split(','), double.Parse(Get("scale", "2")), Get("out"));
                 default:
                     Console.Error.WriteLine($"unknown command '{args[0]}'");
@@ -616,8 +750,10 @@ internal static class Sheets
         public double Pad = 0.16;         // ground kept around the ink box, as a fraction of its larger side
         public double Fill = 0.62;        // share of the cell the tile may take
         public double MaxScale = 8;
+        public double Crisp;              // > 0: single-ink tiles are drawn with their edges tightened by this gain (a clear outline to trace)
         public List<string> Cells = new List<string>();
         public List<string> Captions = new List<string>();
+        public List<double?> CellCrisp = new List<double?>();   // per-cell override of Crisp
     }
 
     public static Sheet Load(string name)
@@ -632,10 +768,11 @@ internal static class Sheets
         if (n["pad"] != null) s.Pad = (double)n["pad"];
         if (n["fill"] != null) s.Fill = (double)n["fill"];
         if (n["maxScale"] != null) s.MaxScale = (double)n["maxScale"];
+        if (n["crisp"] != null) s.Crisp = (double)n["crisp"];
         foreach (JsonNode c in n["cells"].AsArray())
         {
-            if (c is JsonObject o) { s.Cells.Add((string)o["icon"]); s.Captions.Add((string)o["caption"]); }
-            else { s.Cells.Add((string)c); s.Captions.Add(null); }
+            if (c is JsonObject o) { s.Cells.Add((string)o["icon"]); s.Captions.Add((string)o["caption"]); s.CellCrisp.Add(o["crisp"] != null ? (double)o["crisp"] : (double?)null); }
+            else { s.Cells.Add((string)c); s.Captions.Add(null); s.CellCrisp.Add(null); }
         }
         return s;
     }
@@ -688,7 +825,14 @@ internal static class Sheets
             using (var attrs = new ImageAttributes())
             {
                 attrs.SetWrapMode(WrapMode.TileFlipXY);
-                g.DrawImage(tile, new Rectangle((int)Math.Round(px), (int)Math.Round(py), (int)Math.Round(tw), (int)Math.Round(th)), 0, 0, tile.Width, tile.Height, GraphicsUnit.Pixel, attrs);
+                var dest = new Rectangle((int)Math.Round(px), (int)Math.Round(py), (int)Math.Round(tw), (int)Math.Round(th));
+                double crispGain = s.CellCrisp[i] ?? s.Crisp;
+                if (crispGain > 0 && !colour)
+                {
+                    using Bitmap crisp = m.TileCrisp(tx0, ty0, tx1 - tx0, ty1 - ty0, dest.Width, dest.Height, crispGain).ToBitmap();
+                    g.DrawImageUnscaled(crisp, dest.X, dest.Y);
+                }
+                else g.DrawImage(tile, dest, 0, 0, tile.Width, tile.Height, GraphicsUnit.Pixel, attrs);
             }
             string caption = s.Captions[i] ?? d.Name.Replace("Icon_", "").ToLowerInvariant();
             float inkBottom = py + (float)((m.Box[3] - ty0) * k);
@@ -750,7 +894,7 @@ internal static class Sheets
 /// </summary>
 internal sealed class Shape
 {
-    public const int Up = 3;          // distance-field samples per cell pixel
+    public const int Up = 4;          // distance-field samples per cell pixel
     public int W, H;                  // cell size in px
     public float[] Alpha;             // the matte (W x H)
     public float[] Sd;                // signed distance in cell px, negative inside; (W*Up) x (H*Up)
@@ -818,10 +962,34 @@ internal sealed class Shape
                 inside[y * uw + x] = v >= 0.5;
             }
         }
+        return SdFromMask(inside, uw, uh);
+    }
+
+    /// <summary>The signed distance field (cell px, negative inside) of a mask sampled Up times per cell px.</summary>
+    private static float[] SdFromMask(bool[] inside, int uw, int uh)
+    {
         float[] toInside = Edt(inside, uw, uh, true), toOutside = Edt(inside, uw, uh, false);
         var sd = new float[uw * uh];
         for (int i = 0; i < sd.Length; i++)
             sd[i] = (inside[i] ? -(toOutside[i] - 0.5f) : toInside[i] - 0.5f) / Up;
+        // The threshold puts the outline on the sample grid; a light blur of the field turns the
+        // one-sample steps of a nearly straight edge back into a straight edge.
+        var tmp = new float[sd.Length];
+        for (int pass = 0; pass < 3; pass++)
+        {
+            for (int y = 0; y < uh; y++)
+                for (int x = 0; x < uw; x++)
+                {
+                    int i = y * uw + x;
+                    tmp[i] = 0.25f * sd[y * uw + Math.Max(x - 1, 0)] + 0.5f * sd[i] + 0.25f * sd[y * uw + Math.Min(x + 1, uw - 1)];
+                }
+            for (int y = 0; y < uh; y++)
+                for (int x = 0; x < uw; x++)
+                {
+                    int i = y * uw + x;
+                    sd[i] = 0.25f * tmp[Math.Max(y - 1, 0) * uw + x] + 0.5f * tmp[i] + 0.25f * tmp[Math.Min(y + 1, uh - 1) * uw + x];
+                }
+        }
         return sd;
     }
 
@@ -885,6 +1053,39 @@ internal sealed class Shape
         return (float)v;
     }
 
+    /// <summary>
+    /// Thins (or, with a negative amount, widens) only what the shape encloses: marks cut out of a solid body,
+    /// such as the rows of a list. The outline of the shape itself stays where it is. Amount in cell px.
+    /// </summary>
+    public void GrowIntoHoles(double amount)
+    {
+        int uw = W * Up, uh = H * Up;
+        // Outside: every sample that is not ink and can be reached from the border of the cell.
+        var outside = new bool[uw * uh];
+        var stack = new Stack<int>();
+        void Push(int x, int y) { int i = y * uw + x; if (outside[i] || Sd[i] < 0) return; outside[i] = true; stack.Push(i); }
+        for (int x = 0; x < uw; x++) { Push(x, 0); Push(x, uh - 1); }
+        for (int y = 0; y < uh; y++) { Push(0, y); Push(uw - 1, y); }
+        while (stack.Count > 0)
+        {
+            int i = stack.Pop(); int x = i % uw, y = i / uw;
+            if (x > 0) Push(x - 1, y); if (x < uw - 1) Push(x + 1, y); if (y > 0) Push(x, y - 1); if (y < uh - 1) Push(x, y + 1);
+        }
+        // The new shape: the ink, plus every enclosed sample closer to the ink than the amount. Its distance
+        // field is built afresh, so the outline can still be moved as a whole afterwards.
+        var inside = new bool[uw * uh];
+        int holes = 0, filled = 0;
+        for (int i = 0; i < Sd.Length; i++)
+        {
+            bool hole = Sd[i] >= 0 && !outside[i];
+            if (hole) holes++;
+            inside[i] = Sd[i] < 0 || (hole && Sd[i] < amount);
+            if (hole && inside[i]) filled++;
+        }
+        Sd = SdFromMask(inside, uw, uh);
+        Console.WriteLine($"   enclosed marks: {holes / (double)(Up * Up):0} cell px, of which {filled / (double)(Up * Up):0} filled by growing the ink {amount:0.00} cell px into them");
+    }
+
     /// <summary>Makes the shape mirror-symmetric about the vertical line through the middle of its box.</summary>
     public void Symmetrise()
     {
@@ -943,6 +1144,13 @@ internal static class Fit
                 cov[y * w + x] = (float)(acc / (sub * sub));
             }
         return cov;
+    }
+
+    /// <summary>The cell position that a pose puts at a mockup position.</summary>
+    public static (double cx, double cy) ToCell(Pose p, double mx, double my)
+    {
+        double cos = Math.Cos(p.Rot), sin = Math.Sin(p.Rot), dx = mx - p.Tx, dy = my - p.Ty;
+        return ((cos * dx + sin * dy) / p.Sx, (-sin * dx + cos * dy) / p.Sy);
     }
 
     public static float[] Gauss(float[] a, int w, int h, double sigma)
@@ -1136,7 +1344,9 @@ internal static class Splitter
             int m = 14;
             int ox = Math.Max(0, x0 - m), oy = Math.Max(0, y0 - m), ow = Math.Min(w, x1 + 1 + m) - ox, oh = Math.Min(h, y1 + 1 + m) - oy;
             Img cut = img.Crop(ox, oy, ow, oh);
-            string file = Path.Combine(outDir, $"{s.Cells[c]}_{attempt}.png");
+            // --attempt a1 names every cell alike; --attempt a1,a1,a2,a2 names them cell by cell (a sheet with second attempts).
+            string[] perCell = attempt.Split(',');
+            string file = Path.Combine(outDir, $"{s.Cells[c]}_{(perCell.Length > 1 ? perCell[Math.Min(c, perCell.Length - 1)] : attempt)}.png");
             cut.Save(file);
             Console.WriteLine($"{c + 1,2} {s.Cells[c],-24} ink {x0},{y0} {x1 - x0 + 1}x{y1 - y0 + 1}{(touches ? "  TOUCHES THE CELL EDGE" : "")}  -> {Path.GetFileName(file)}");
         }
@@ -1152,7 +1362,7 @@ internal static class Maker
 
     public sealed class Result
     {
-        public string Name; public Pose Pose; public double Rms, RmsBest, Iou, Weight, Aspect, SourceScale, EdgeMean, EdgeMax;
+        public string Name; public Pose Pose; public double Rms, RmsBest, Iou, Weight, Aspect, SourceScale, EdgeMean, EdgeMax, OuterMean, OuterMax;
         public int W, H; public double[] MockRect; public double[] InkRect; public string File;
     }
 
@@ -1161,24 +1371,44 @@ internal static class Maker
         IconDef d = Spec.Get(name);
         MockIcon m = MockIcon.Read(d);
         Img cell = Img.Load(Tool.Full(src));
-        Shape s = Shape.FromInkCell(cell);
-        if (opt.ContainsKey("symmetric") || d.Symmetric) s.Symmetrise();
+        bool colour = d.Mode == "color";
+        ColourCell cc = colour ? ColourCell.From(cell, d.KeepWhite) : null;
+        if (colour && d.Palette != null) cc.SnapTo(d.Palette.Select(Img.Hex).ToArray());
+        Shape s = colour ? Shape.FromAlpha(cc.Alpha, cell.W, cell.H, (0f, 0f, 0f), (1f, 1f, 1f)) : Shape.FromInkCell(cell);
+        if (!colour && (opt.ContainsKey("symmetric") || d.Symmetric)) s.Symmetrise();
+        if (opt.TryGetValue("hole-grow", out string hgs))
+        {
+            // Given in mockup px; the size of the drawing on the mockup is known well enough from the two boxes.
+            double unit0 = Math.Sqrt((m.Box[2] - m.Box[0]) / (s.Box[2] - s.Box[0]) * (m.Box[3] - m.Box[1]) / (s.Box[3] - s.Box[1]));
+            s.GrowIntoHoles(double.Parse(hgs) / unit0);
+        }
         (float r, float g, float b) mockInk = m.Ink;
+        double Err(Pose q) => colour ? Fit.CoverError(s, q, m) : Fit.Error(s, q, m, mockInk);
 
         // 1. Where the redrawn shape sits on the mockup, first rigidly, then with its own aspect, weight and softness.
         bool rotate = d.Angle != null;
-        Pose p3 = Fit.Solve(s, m, mockInk, false, 3, null, rotate, d.Angle ?? 0);
-        Pose p6 = Fit.Solve(s, m, mockInk, false, 6, p3, rotate);
-        double rmsBest = Math.Sqrt(Fit.Error(s, p6, m, mockInk));
+        Pose p3 = Fit.Solve(s, m, mockInk, colour, 3, null, rotate, d.Angle ?? 0);
+        Pose p6 = Fit.Solve(s, m, mockInk, colour, 6, p3, rotate);
+        double rmsBest = Math.Sqrt(Err(p6));
         Pose asDrawn = p6; asDrawn.Grow = 0;
-        Console.WriteLine($"   rms with the outline as drawn (grow 0): {Math.Sqrt(Fit.Error(s, asDrawn, m, mockInk)):0.00}; with the fitted grow {p6.Grow:+0.00;-0.00}: {rmsBest:0.00}; rigid fit only: {Math.Sqrt(Fit.Error(s, p3, m, mockInk)):0.00}");
+        Console.WriteLine($"   rms with the outline as drawn (grow 0): {Math.Sqrt(Err(asDrawn)):0.00}; with the fitted grow {p6.Grow:+0.00;-0.00}: {rmsBest:0.00}; rigid fit only: {Math.Sqrt(Err(p3)):0.00}");
 
         // 2. What is baked into the sprite: position, size and aspect from the fit; the weight only as far as asked.
         double grow = opt.TryGetValue("grow", out string gs) ? double.Parse(gs) : p6.Grow;
+        if (opt.TryGetValue("max-grow", out string mg)) grow = Math.Min(grow, double.Parse(mg));
         bool keepAspect = opt.ContainsKey("uniform");
         Pose p = p6; p.Grow = grow;
-        if (keepAspect) { p = Fit.Solve(s, m, mockInk, false, 3, p3, rotate); p.Grow = grow; p.Blur = p6.Blur; }
-        double rms = Math.Sqrt(Fit.Error(s, p, m, mockInk));
+        if (Math.Abs(grow - p6.Grow) > 1e-6)
+        {
+            // A weight that is set by hand changes where the outline sits: place and size are fitted again around it.
+            p = Fit.Solve(s, m, mockInk, colour, 4, p, rotate);
+        }
+        if (keepAspect) { Pose u = p3; u.Grow = grow; u.Blur = p6.Blur; p = Fit.Solve(s, m, mockInk, colour, 3, u, rotate); }
+        double rms = Math.Sqrt(Err(p));
+        if (colour)
+        {
+            if (d.Tone == "mock") cc.ToneTo(m);
+        }
 
         // 3. Render at @2x on a canvas that keeps Margin px clear around the ink. A drawing that is tilted on
         //    the mockup is exported upright, about the same centre.
@@ -1190,21 +1420,39 @@ internal static class Maker
             crisp.Rot = 0; crisp.Tx = mcx - bcx; crisp.Ty = mcy - bcy;
         }
         // --ink-height N: the sprite's ink is N px tall whatever size the mockup draws it (a set of symbols at one height).
-        if (opt.TryGetValue("ink-height", out string ihs))
+        double pad = 4;   // mockup px of slack around the box for the first pass
+        if (opt.TryGetValue("scale", out string scs))
         {
-            double target = double.Parse(ihs) / Scale2x;
-            double padH = 6;
-            int th0 = (int)Math.Ceiling((m.Box[3] - m.Box[1] + 2 * padH) * 4), tw0 = (int)Math.Ceiling((m.Box[2] - m.Box[0] + 2 * padH) * 4);
-            float[] probe = Fit.Render(s, crisp, m.Box[0] - padH, m.Box[1] - padH, 4.0, tw0, th0, 2);
-            double[] pb = Bounds.HalfBox(probe, tw0, th0, 0, 0, 0.02f);
-            double f = target / ((pb[3] - pb[1]) / 4.0);
+            // Another screen draws the icon larger than the one it is fitted to: the sprite is exported at
+            // that size (same shape, same weight in proportion), so that no use enlarges it.
+            double f = double.Parse(scs);
             double bcx = (s.Box[0] + s.Box[2]) / 2, bcy = (s.Box[1] + s.Box[3]) / 2;
             double mcx = crisp.Tx + bcx * crisp.Sx, mcy = crisp.Ty + bcy * crisp.Sy;
             crisp.Sx *= f; crisp.Sy *= f; crisp.Grow *= f;
             crisp.Tx = mcx - bcx * crisp.Sx; crisp.Ty = mcy - bcy * crisp.Sy;
-            Console.WriteLine($"   ink height set to {ihs} px: x{f:0.000} of the mockup size");
+            pad += Math.Max(m.Box[2] - m.Box[0], m.Box[3] - m.Box[1]) * Math.Max(0, f - 1);
         }
-        double pad = opt.ContainsKey("ink-height") ? Math.Max(m.Box[2] - m.Box[0], m.Box[3] - m.Box[1]) : 4;   // mockup px of slack around the box for the first pass
+        if (opt.TryGetValue("ink-height", out string ihs))
+        {
+            // Measured the way the sprite is trimmed (where the ink becomes visible at @2x), and aimed just
+            // under the target so that every symbol of a set rounds to the same even height.
+            double target = double.Parse(ihs) - 0.4, total = 1;
+            pad = Math.Max(m.Box[2] - m.Box[0], m.Box[3] - m.Box[1]) + double.Parse(ihs) / Scale2x;
+            for (int round = 0; round < 4; round++)
+            {
+                double px0 = m.Box[0] - pad, py0 = m.Box[1] - pad;
+                int pw0 = (int)Math.Ceiling((m.Box[2] - m.Box[0] + 2 * pad) * Scale2x), ph0 = (int)Math.Ceiling((m.Box[3] - m.Box[1] + 2 * pad) * Scale2x);
+                float[] probe = Fit.Render(s, crisp, px0, py0, Scale2x, pw0, ph0, 4);
+                double[] pb = Bounds.HalfBox(probe, pw0, ph0, 0, 0, 0.02f);
+                double f = target / (pb[3] - pb[1]);
+                if (Math.Abs(f - 1) < 0.0015) break;
+                double bcx = (s.Box[0] + s.Box[2]) / 2, bcy = (s.Box[1] + s.Box[3]) / 2;
+                double mcx = crisp.Tx + bcx * crisp.Sx, mcy = crisp.Ty + bcy * crisp.Sy;
+                crisp.Sx *= f; crisp.Sy *= f; crisp.Grow *= f; total *= f;
+                crisp.Tx = mcx - bcx * crisp.Sx; crisp.Ty = mcy - bcy * crisp.Sy;
+            }
+            Console.WriteLine($"   ink height set to {ihs} px: x{total:0.000} of the mockup size");
+        }
         double bx0 = m.Box[0] - pad, by0 = m.Box[1] - pad, bx1 = m.Box[2] + pad, by1 = m.Box[3] + pad;
         int fw = (int)Math.Ceiling((bx1 - bx0) * Scale2x), fh = (int)Math.Ceiling((by1 - by0) * Scale2x);
         float[] first = Fit.Render(s, crisp, bx0, by0, Scale2x, fw, fh, 4);
@@ -1219,6 +1467,25 @@ internal static class Maker
         {
             float a = alpha[i] < 0.004f ? 0f : alpha[i] > 0.996f ? 1f : alpha[i];
             sprite.R[i] = inkCol.r; sprite.G[i] = inkCol.g; sprite.B[i] = inkCol.b; sprite.A[i] = a;
+        }
+        if (colour)
+        {
+            // Its own colours: the mean over each sprite pixel of the (bled) drawing.
+            const int N = 3;
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    float r = 0, g = 0, b = 0;
+                    for (int j = 0; j < N; j++)
+                        for (int i = 0; i < N; i++)
+                        {
+                            (double cx, double cy) = Fit.ToCell(crisp, ox + (x + (i + 0.5) / N) / Scale2x, oy + (y + (j + 0.5) / N) / Scale2x);
+                            (float cr, float cg, float cb) = cc.At(cx, cy);
+                            r += cr; g += cg; b += cb;
+                        }
+                    int k = y * w + x;
+                    sprite.R[k] = r / (N * N); sprite.G[k] = g / (N * N); sprite.B[k] = b / (N * N);
+                }
         }
         string attempt = opt.TryGetValue("attempt", out string at) ? at : "a1";
         string outFile = Path.Combine(Spec.Work, "fitted", $"{name}_{attempt}.png");
@@ -1244,12 +1511,37 @@ internal static class Maker
             MockRect = new[] { ox, oy, w / Scale2x, h / Scale2x }, InkRect = new[] { inkL, inkT, inkR - inkL, inkB - inkT },
         };
         (res.EdgeMean, res.EdgeMax) = EdgeDeviation(covSoft, m.Cover, m.Inside, mw, mh);
+        // The same for the outer outline alone: marks enclosed by the shape (the rows of a list) are left out,
+        // because a mockup that draws them faintly has no outline there to compare with.
+        bool[] band = OuterBand(covSoft, m.Cover, m.Inside, mw, mh, 3);
+        (res.OuterMean, res.OuterMax) = EdgeDeviation(covSoft, m.Cover, band, mw, mh);
+        if (!colour)
+        {
+            // The ink the mockup itself uses for this icon: the colour that, laid over the ground with the
+            // fitted coverage, comes closest to the crop (least squares in linear light).
+            double nr = 0, ng = 0, nb = 0, dn = 0;
+            for (int i = 0; i < covSoft.Length; i++)
+            {
+                if (!m.Inside[i]) continue;
+                double c = covSoft[i];
+                if (c < 0.05) continue;
+                nr += c * (m.Region.R[i] - m.Ground.R[i] * (1 - c)); ng += c * (m.Region.G[i] - m.Ground.G[i] * (1 - c)); nb += c * (m.Region.B[i] - m.Ground.B[i] * (1 - c));
+                dn += c * c;
+            }
+            var own = ((float)Math.Clamp(nr / dn, 0, 1), (float)Math.Clamp(ng / dn, 0, 1), (float)Math.Clamp(nb / dn, 0, 1));
+            // The opacity at which the family ink reads as that colour on this ground (linear-light blend).
+            int mid = (mh / 2) * mw + mw / 2;
+            double gl = m.Ground.Lum(mid), il = 0.2126 * inkCol.r + 0.7152 * inkCol.g + 0.0722 * inkCol.b, ol = 0.2126 * own.Item1 + 0.7152 * own.Item2 + 0.0722 * own.Item3;
+            double opacity = Math.Clamp((gl - ol) / Math.Max(1e-6, gl - il), 0, 1);
+            Console.WriteLine($"   mockup ink here {Img.Hex(own.Item1, own.Item2, own.Item3)} (sprite ink {Img.Hex(inkCol.r, inkCol.g, inkCol.b)}; opacity {opacity:0.000} over this ground reads the same)");
+            File.WriteAllText(Path.Combine(Spec.Work, "fitted", $"{name}_{attempt}.ink"), FormattableString.Invariant($"{Img.Hex(own.Item1, own.Item2, own.Item3)} {opacity:0.000}"));
+        }
         Console.WriteLine($"{name}  {w}x{h}  ink on {d.Screen}: {inkL:0.00},{inkT:0.00} {inkR - inkL:0.00}x{inkB - inkT:0.00}  sprite rect {ox:0.00},{oy:0.00} {w / Scale2x:0.00}x{h / Scale2x:0.00}");
         Console.WriteLine($"   rms {rms:0.00} (best {rmsBest:0.00})  iou {res.Iou:0.000}  weight {res.Weight:0.000}  edge mean {res.EdgeMean:0.00} max {res.EdgeMax:0.00} px" +
                           $"  aspect {res.Aspect:0.000}  fit grow {p6.Grow:+0.00;-0.00} baked {p.Grow:+0.00;-0.00}  blur {p6.Blur:0.00}  source x{res.SourceScale:0.00}" + (rotate ? $"  tilt on the mockup {p.Rot * 180 / Math.PI:+0.0;-0.0} deg" : ""));
         Check.Write(d, m, s, p, sprite, res, attempt);
         File.WriteAllText(Path.ChangeExtension(outFile, ".txt"),
-            FormattableString.Invariant($"{name} {attempt}\nsize {w}x{h}\nscreen {d.Screen}\nink_rect {inkL:0.00},{inkT:0.00},{inkR - inkL:0.00},{inkB - inkT:0.00}\nsprite_rect {ox:0.00},{oy:0.00},{w / Scale2x:0.00},{h / Scale2x:0.00}\nrms {rms:0.00}\niou {res.Iou:0.000}\nweight {res.Weight:0.000}\nedge_mean {res.EdgeMean:0.00}\nedge_max {res.EdgeMax:0.00}\naspect {res.Aspect:0.000}\ngrow_fit {p6.Grow:0.00}\ngrow_baked {p.Grow:0.00}\nblur {p6.Blur:0.00}\nsource_scale {res.SourceScale:0.00}\n"));
+            FormattableString.Invariant($"{name} {attempt}\nsize {w}x{h}\nscreen {d.Screen}\nink_rect {inkL:0.00},{inkT:0.00},{inkR - inkL:0.00},{inkB - inkT:0.00}\nsprite_rect {ox:0.00},{oy:0.00},{w / Scale2x:0.00},{h / Scale2x:0.00}\nrms {rms:0.00}\niou {res.Iou:0.000}\nweight {res.Weight:0.000}\nedge_mean {res.EdgeMean:0.00}\nedge_max {res.EdgeMax:0.00}\nouter_mean {res.OuterMean:0.00}\nouter_max {res.OuterMax:0.00}\naspect {res.Aspect:0.000}\ngrow_fit {p6.Grow:0.00}\ngrow_baked {p.Grow:0.00}\nblur {p6.Blur:0.00}\nsource_scale {res.SourceScale:0.00}\n"));
         return 0;
     }
 
@@ -1277,6 +1569,40 @@ internal static class Maker
         return (all.Average(), all[(int)(all.Count * 0.98)]);
     }
 
+    /// <summary>The pixels within <paramref name="width"/> px of what lies outside both shapes (reached from the border).</summary>
+    private static bool[] OuterBand(float[] a, float[] b, bool[] inside, int w, int h, int width)
+    {
+        var dist = new int[w * h];
+        var queue = new Queue<int>();
+        for (int i = 0; i < dist.Length; i++) dist[i] = -1;
+        bool Ink(int i) => inside[i] && (a[i] >= 0.5f || b[i] >= 0.5f);
+        void Seed(int x, int y) { int i = y * w + x; if (dist[i] >= 0 || Ink(i)) return; dist[i] = 0; queue.Enqueue(i); }
+        for (int x = 0; x < w; x++) { Seed(x, 0); Seed(x, h - 1); }
+        for (int y = 0; y < h; y++) { Seed(0, y); Seed(w - 1, y); }
+        for (int i = 0; i < dist.Length; i++) if (!inside[i] && dist[i] < 0) { dist[i] = 0; queue.Enqueue(i); }
+        int[] ox = { 1, -1, 0, 0 }, oy = { 0, 0, 1, -1 };
+        while (queue.Count > 0)
+        {
+            int i = queue.Dequeue(); int x = i % w, y = i / w;
+            for (int d = 0; d < 4; d++)
+            {
+                int xx = x + ox[d], yy = y + oy[d];
+                if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+                int j = yy * w + xx;
+                if (dist[j] >= 0) continue;
+                bool ink = Ink(j);
+                // Through open ground the distance stays 0; into the ink it counts up to the band's width.
+                if (!ink && dist[i] > 0) continue;       // ground behind ink is enclosed: not reached
+                int dj = ink ? dist[i] + 1 : 0;
+                if (dj > width) continue;
+                dist[j] = dj; queue.Enqueue(j);
+            }
+        }
+        var band = new bool[w * h];
+        for (int i = 0; i < band.Length; i++) band[i] = inside[i] && dist[i] >= 0;
+        return band;
+    }
+
     // Points where the coverage crosses one half between neighbouring pixel centres.
     private static List<(double x, double y)> Contour(float[] c, bool[] inside, int w, int h)
     {
@@ -1298,6 +1624,36 @@ internal static class Maker
 /// <summary>Side-by-side review images: the mockup crop, the sprite on the same ground, their difference, the alpha on black and white.</summary>
 internal static class Check
 {
+    /// <summary>The sprite drawn over a ground image whose pixel (0, 0) is mockup (x0, y0) at the given scale.</summary>
+    public static Img SpriteOver(Img sprite, double[] mockRect, Img ground, double x0, double y0, double scale)
+    {
+        var o = ground.Clone2();
+        double perMock = sprite.W / mockRect[2];          // sprite px per mockup px (2.3 unless the sprite is shown at another size)
+        double k = perMock / scale;                       // sprite px per output px
+        int n = Math.Max(2, (int)Math.Ceiling(k * 1.5));
+        for (int y = 0; y < o.H; y++)
+            for (int x = 0; x < o.W; x++)
+            {
+                float r = 0, g = 0, b = 0, a = 0;
+                for (int j = 0; j < n; j++)
+                    for (int i = 0; i < n; i++)
+                    {
+                        double sx = (x0 + (x + (i + 0.5) / n) / scale - mockRect[0]) * perMock;
+                        double sy = (y0 + (y + (j + 0.5) / n) / scale - mockRect[1]) * sprite.H / mockRect[3];
+                        int px = (int)Math.Floor(sx), py = (int)Math.Floor(sy);
+                        if (px < 0 || py < 0 || px >= sprite.W || py >= sprite.H) continue;
+                        int si = py * sprite.W + px;
+                        float sa = sprite.A[si];
+                        r += sprite.R[si] * sa; g += sprite.G[si] * sa; b += sprite.B[si] * sa; a += sa;
+                    }
+                float inv = 1f / (n * n);
+                int t = y * o.W + x;
+                a *= inv;
+                o.R[t] = o.R[t] * (1 - a) + r * inv; o.G[t] = o.G[t] * (1 - a) + g * inv; o.B[t] = o.B[t] * (1 - a) + b * inv;
+            }
+        return o;
+    }
+
     public static void Write(IconDef d, MockIcon m, Shape s, Pose p, Img sprite, Maker.Result res, string attempt)
     {
         int mw = m.Region.W, mh = m.Region.H;
@@ -1324,6 +1680,17 @@ internal static class Check
         {
             float c = cov1[i];
             c1.R[i] = m.Ground.R[i] + (ink.r - m.Ground.R[i]) * c; c1.G[i] = m.Ground.G[i] + (ink.g - m.Ground.G[i]) * c; c1.B[i] = m.Ground.B[i] + (ink.b - m.Ground.B[i]) * c;
+        }
+        if (d.Mode == "color")
+        {
+            // A multi-coloured sprite is shown with its own pixels, placed by its sprite rect.
+            b = SpriteOver(sprite, res.MockRect, groundZ, m.X0, m.Y0, z);
+            c1 = SpriteOver(sprite, res.MockRect, m.Ground, m.X0, m.Y0, 1.0);
+            if (p.Blur >= 0.12)
+            {
+                float[] br = Fit.Gauss(c1.R, mw, mh, p.Blur), bg = Fit.Gauss(c1.G, mw, mh, p.Blur), bb = Fit.Gauss(c1.B, mw, mh, p.Blur);
+                Array.Copy(br, c1.R, br.Length); Array.Copy(bg, c1.G, bg.Length); Array.Copy(bb, c1.B, bb.Length);
+            }
         }
         Img c3 = c1.Resize(pw, ph);
         // Panel 4: outline overlay: red = ink only on the mockup, blue = ink only on the sprite, dark = both.
@@ -1384,5 +1751,854 @@ internal static class Check
         string file = Path.Combine(Spec.Work, "check", $"{d.Name}_{attempt}.png");
         Directory.CreateDirectory(Path.GetDirectoryName(file));
         bmp.Save(file, ImageFormat.Png);
+    }
+}
+
+/// <summary>
+/// A redrawn multi-coloured icon on a flat white ground: its silhouette as alpha, and its colours with the
+/// white of the ground taken out of the edge pixels and carried outwards, so resampling never pulls white in.
+/// </summary>
+internal sealed class ColourCell
+{
+    public int W, H;
+    public float[] Alpha;
+    public Img Colour;      // defined everywhere (bled from the inside)
+    public bool[] Core;     // pixels that are fully the icon
+    public bool[] Ground;   // pixels that are the flat ground around the icon
+    private Img _source;    // the cell as drawn
+
+    public static ColourCell From(Img cell, bool keepWhite)
+    {
+        int w = cell.W, h = cell.H, n = cell.Count;
+        var c = new ColourCell { W = w, H = h, Alpha = new float[n], Colour = new Img(w, h), Core = new bool[n] };
+        bool hasAlpha = false;
+        for (int i = 0; i < n && !hasAlpha; i++) if (cell.A[i] < 0.98f) hasAlpha = true;
+        var ground = new bool[n];        // pixels that are the flat ground (or fully transparent)
+        var white = new float[n];        // how far a pixel is from white, 0..~1.7
+        for (int i = 0; i < n; i++)
+        {
+            float dr = 1f - cell.R[i], dg = 1f - cell.G[i], db = 1f - cell.B[i];
+            white[i] = MathF.Sqrt(dr * dr + dg * dg + db * db);
+        }
+        if (hasAlpha)
+        {
+            for (int i = 0; i < n; i++) { c.Alpha[i] = Math.Clamp((cell.A[i] - 12f / 255f) / (238f / 255f), 0f, 1f); c.Core[i] = c.Alpha[i] >= 0.995f; ground[i] = c.Alpha[i] <= 0.005f; }
+        }
+        else
+        {
+            const float Near = 0.10f;     // closer to white than this: ground (or a white part of the icon)
+            var isWhite = new bool[n];
+            for (int i = 0; i < n; i++) isWhite[i] = white[i] < Near;
+            if (keepWhite)
+            {
+                // Only white that is connected to the image edge is ground; enclosed white is part of the icon.
+                var stack = new Stack<int>();
+                void Push(int x, int y) { int i = y * w + x; if (ground[i] || !isWhite[i]) return; ground[i] = true; stack.Push(i); }
+                for (int x = 0; x < w; x++) { Push(x, 0); Push(x, h - 1); }
+                for (int y = 0; y < h; y++) { Push(0, y); Push(w - 1, y); }
+                while (stack.Count > 0)
+                {
+                    int i = stack.Pop(); int x = i % w, y = i / w;
+                    if (x > 0) Push(x - 1, y); if (x < w - 1) Push(x + 1, y); if (y > 0) Push(x, y - 1); if (y < h - 1) Push(x, y + 1);
+                }
+            }
+            else Array.Copy(isWhite, ground, n);
+            // Core: not ground and not next to ground (2 px), so its colour holds no white from the edge blend.
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    int i = y * w + x;
+                    if (ground[i]) continue;
+                    bool core = true;
+                    for (int dy = -2; dy <= 2 && core; dy++)
+                        for (int dx = -2; dx <= 2 && core; dx++)
+                        {
+                            int xx = x + dx, yy = y + dy;
+                            if (xx < 0 || yy < 0 || xx >= w || yy >= h || ground[yy * w + xx]) core = false;
+                        }
+                    c.Core[i] = core;
+                }
+        }
+
+        c.Ground = ground; c._source = cell;
+        // Colours: the core keeps its own; everything else takes the colour of the nearest core pixel.
+        var nearest = new int[n];
+        var queue = new Queue<int>();
+        for (int i = 0; i < n; i++) { nearest[i] = c.Core[i] ? i : -1; if (c.Core[i]) queue.Enqueue(i); }
+        int[] ox = { 1, -1, 0, 0, 1, 1, -1, -1 }, oy = { 0, 0, 1, -1, 1, -1, 1, -1 };
+        while (queue.Count > 0)
+        {
+            int i = queue.Dequeue(); int x = i % w, y = i / w;
+            for (int k = 0; k < 8; k++)
+            {
+                int xx = x + ox[k], yy = y + oy[k];
+                if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+                int j = yy * w + xx;
+                if (nearest[j] >= 0) continue;
+                nearest[j] = nearest[i]; queue.Enqueue(j);
+            }
+        }
+        for (int i = 0; i < n; i++)
+        {
+            int s = nearest[i] < 0 ? i : nearest[i];
+            c.Colour.R[i] = cell.R[s]; c.Colour.G[i] = cell.G[s]; c.Colour.B[i] = cell.B[s];
+        }
+        if (!hasAlpha)
+        {
+            // Alpha of the edge band: how far the pixel has moved from white towards its core colour.
+            for (int i = 0; i < n; i++)
+            {
+                if (c.Core[i]) { c.Alpha[i] = 1f; continue; }
+                float fr = 1f - c.Colour.R[i], fg = 1f - c.Colour.G[i], fb = 1f - c.Colour.B[i];
+                float den = fr * fr + fg * fg + fb * fb;
+                if (den < 1e-4f) { c.Alpha[i] = ground[i] ? 0f : 1f; continue; }
+                float num = (1f - cell.R[i]) * fr + (1f - cell.G[i]) * fg + (1f - cell.B[i]) * fb;
+                float a = Math.Clamp(num / den, 0f, 1f);
+                c.Alpha[i] = ground[i] && a < 0.06f ? 0f : a;
+            }
+            // Ground far from the icon is never part of it, whatever its colour says.
+            var nearCore = new bool[n];
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    if (!c.Core[y * w + x]) continue;
+                    for (int dy = -5; dy <= 5; dy++)
+                        for (int dx = -5; dx <= 5; dx++)
+                        {
+                            int xx = x + dx, yy = y + dy;
+                            if (xx >= 0 && yy >= 0 && xx < w && yy < h) nearCore[yy * w + xx] = true;
+                        }
+                }
+            for (int i = 0; i < n; i++) if (!nearCore[i]) c.Alpha[i] = 0f;
+        }
+        return c;
+    }
+
+    /// <summary>
+    /// Redraws a flat-coloured icon in a palette. Only pixels well inside a shape decide which palette colour
+    /// the shape is (the drawn edges carry darker rims and soft mixes that would mislabel single pixels);
+    /// every other pixel takes the label of the nearest such pixel. The alpha of a pixel is how far it has
+    /// moved from the white ground towards its shape's drawn colour, so a narrow gap that the drawing left
+    /// light grey stays a gap. Where two colours meet inside a shape (a white mark on a badge) the drawn
+    /// transition between them is kept.
+    /// </summary>
+    public void SnapTo((float r, float g, float b)[] palette)
+    {
+        int n = W * H, k = palette.Length;
+        Img src = _source;
+        var sr = new float[n]; var sg = new float[n]; var sb = new float[n];      // the drawing in display space
+        for (int i = 0; i < n; i++) { sr[i] = Img.ToSrgb(src.R[i]); sg[i] = Img.ToSrgb(src.G[i]); sb[i] = Img.ToSrgb(src.B[i]); }
+        var pal = new (double r, double g, double b)[k];
+        bool hasWhite = false;
+        for (int j = 0; j < k; j++)
+        {
+            pal[j] = (Img.ToSrgb(palette[j].r), Img.ToSrgb(palette[j].g), Img.ToSrgb(palette[j].b));
+            if (1 - pal[j].r + 1 - pal[j].g + 1 - pal[j].b < 0.2) hasWhite = true;
+        }
+        // Coverage of pixel i if it were colour c over white: the projection of (white - pixel) on (white - c).
+        double Cover((double r, double g, double b) c, int i)
+        {
+            double vr = 1 - c.r, vg = 1 - c.g, vb = 1 - c.b, len = vr * vr + vg * vg + vb * vb;
+            return len < 0.02 ? 1.0 : ((1 - sr[i]) * vr + (1 - sg[i]) * vg + (1 - sb[i]) * vb) / len;
+        }
+        double Dist2((double r, double g, double b) c, int i)
+        {
+            double dr = c.r - sr[i], dg = c.g - sg[i], db = c.b - sb[i];
+            return dr * dr + dg * dg + db * db;
+        }
+        // Light pixels that connect to the image border through light pixels are outside the icon: the ground,
+        // the faint end of a soft edge, or a smudge in the ground that is barely off-white. None of them is a
+        // white part of the icon (a white mark counts only where the icon encloses it).
+        var outsideLight = new bool[n];
+        {
+            var light = new bool[n];
+            for (int i = 0; i < n; i++)
+            {
+                float dr = 1f - src.R[i], dg = 1f - src.G[i], db = 1f - src.B[i];
+                light[i] = MathF.Sqrt(dr * dr + dg * dg + db * db) < 0.25f;
+            }
+            var stack = new Stack<int>();
+            void Push(int x, int y) { int i = y * W + x; if (outsideLight[i] || !light[i]) return; outsideLight[i] = true; stack.Push(i); }
+            for (int x = 0; x < W; x++) { Push(x, 0); Push(x, H - 1); }
+            for (int y = 0; y < H; y++) { Push(0, y); Push(W - 1, y); }
+            while (stack.Count > 0)
+            {
+                int i = stack.Pop(); int x = i % W, y = i / W;
+                if (x > 0) Push(x - 1, y); if (x < W - 1) Push(x + 1, y); if (y > 0) Push(x, y - 1); if (y < H - 1) Push(x, y + 1);
+            }
+        }
+        var centre = ((double r, double g, double b)[])pal.Clone();
+        var label = new int[n];
+        var depth = new int[n];
+        var queue = new Queue<int>();
+        int[] ox = { 1, -1, 0, 0, 1, 1, -1, -1 }, oy = { 0, 0, 1, -1, 1, -1, 1, -1 };
+        bool[] deep = null;
+        for (int round = 0; round < 3; round++)
+        {
+            // Shape pixels: not ground, and at least half covered by one of the colours (with a white entry
+            // in the palette, every enclosed pixel is a shape pixel).
+            for (int i = 0; i < n; i++)
+            {
+                bool shape = !Ground[i] && !outsideLight[i];
+                if (shape && !hasWhite)
+                {
+                    double best = 0;
+                    for (int j = 0; j < k; j++) best = Math.Max(best, Cover(centre[j], i));
+                    shape = best >= 0.5;
+                }
+                depth[i] = shape ? -1 : 0;
+                if (!shape) queue.Enqueue(i);
+            }
+            while (queue.Count > 0)
+            {
+                int i = queue.Dequeue(); int x = i % W, y = i / W;
+                for (int d = 0; d < 8; d++)
+                {
+                    int xx = x + ox[d], yy = y + oy[d];
+                    if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+                    int j = yy * W + xx;
+                    if (depth[j] >= 0) continue;
+                    depth[j] = depth[i] + 1; queue.Enqueue(j);
+                }
+            }
+            // Deep pixels: at least 4 px inside (or as deep as a thin shape goes) and flat in colour.
+            deep = new bool[n];
+            for (int y = 1; y < H - 1; y++)
+                for (int x = 1; x < W - 1; x++)
+                {
+                    int i = y * W + x;
+                    if (depth[i] < 2) continue;
+                    int m = 0;
+                    for (int dy = -4; dy <= 4; dy++)
+                        for (int dx = -4; dx <= 4; dx++)
+                        {
+                            int xx = x + dx, yy = y + dy;
+                            if (xx >= 0 && yy >= 0 && xx < W && yy < H && depth[yy * W + xx] > m) m = depth[yy * W + xx];
+                        }
+                    if (depth[i] < Math.Min(4, Math.Max(2, m - 1))) continue;
+                    float lo = 9f, hi = -9f;
+                    for (int dy = -1; dy <= 1; dy++)
+                        for (int dx = -1; dx <= 1; dx++)
+                        {
+                            int j = (y + dy) * W + x + dx;
+                            float v = sr[j] + sg[j] + sb[j];
+                            if (v < lo) lo = v; if (v > hi) hi = v;
+                        }
+                    deep[i] = hi - lo < 0.12f;
+                }
+            // The drawn colours: each palette entry moved onto the deep pixels nearest to it.
+            for (int it = 0; it < 8; it++)
+            {
+                var sum = new (double r, double g, double b, int n)[k];
+                for (int i = 0; i < n; i++)
+                {
+                    if (!deep[i]) continue;
+                    int best = 0; double bd = double.MaxValue;
+                    for (int j = 0; j < k; j++) { double d = Dist2(centre[j], i); if (d < bd) { bd = d; best = j; } }
+                    sum[best].r += sr[i]; sum[best].g += sg[i]; sum[best].b += sb[i]; sum[best].n++;
+                }
+                for (int j = 0; j < k; j++) if (sum[j].n > 0) centre[j] = (sum[j].r / sum[j].n, sum[j].g / sum[j].n, sum[j].b / sum[j].n);
+            }
+        }
+        for (int j = 0; j < k; j++)
+            Console.WriteLine($"   palette {j}: drawn #{(int)Math.Round(centre[j].r * 255):X2}{(int)Math.Round(centre[j].g * 255):X2}{(int)Math.Round(centre[j].b * 255):X2} -> {Img.Hex(palette[j].r, palette[j].g, palette[j].b)}");
+        // Labels: deep pixels by their own colour, everything else from the nearest deep pixel.
+        for (int i = 0; i < n; i++)
+        {
+            label[i] = -1;
+            if (!deep[i]) continue;
+            int best = 0; double bd = double.MaxValue;
+            for (int j = 0; j < k; j++) { double d = Dist2(centre[j], i); if (d < bd) { bd = d; best = j; } }
+            label[i] = best; queue.Enqueue(i);
+        }
+        while (queue.Count > 0)
+        {
+            int i = queue.Dequeue(); int x = i % W, y = i / W;
+            for (int d = 0; d < 8; d++)
+            {
+                int xx = x + ox[d], yy = y + oy[d];
+                if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+                int j = yy * W + xx;
+                if (label[j] >= 0) continue;
+                label[j] = label[i]; queue.Enqueue(j);
+            }
+        }
+        var outR = new float[n]; var outG = new float[n]; var outB = new float[n];
+        for (int y = 0; y < H; y++)
+            for (int x = 0; x < W; x++)
+            {
+                int i = y * W + x, a = Math.Max(0, label[i]), b = -1;
+                // Another colour of the same shape within 2 px: a colour-to-colour edge.
+                if (depth[i] >= 1)
+                    for (int dy = -2; dy <= 2 && b < 0; dy++)
+                        for (int dx = -2; dx <= 2 && b < 0; dx++)
+                        {
+                            int xx = x + dx, yy = y + dy;
+                            if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+                            int j = yy * W + xx;
+                            if (depth[j] >= 2 && label[j] != a && label[j] >= 0) b = label[j];
+                        }
+                double t = 0;
+                if (b >= 0 && depth[i] >= 2)
+                {
+                    double vr = centre[b].r - centre[a].r, vg = centre[b].g - centre[a].g, vb = centre[b].b - centre[a].b;
+                    double len = vr * vr + vg * vg + vb * vb;
+                    t = len < 1e-9 ? 0 : Math.Clamp(((sr[i] - centre[a].r) * vr + (sg[i] - centre[a].g) * vg + (sb[i] - centre[a].b) * vb) / len, 0, 1);
+                    Alpha[i] = 1f;
+                }
+                else
+                {
+                    b = a;
+                    if (Ground[i]) Alpha[i] = 0f;
+                    else if (hasWhite && depth[i] >= 3) Alpha[i] = 1f;
+                    else
+                    {
+                        double c = Cover(centre[a], i);
+                        Alpha[i] = c < 0.05 ? 0f : c > 0.96 ? 1f : (float)c;
+                    }
+                }
+                outR[i] = (float)(palette[a].r + (palette[b].r - palette[a].r) * t);
+                outG[i] = (float)(palette[a].g + (palette[b].g - palette[a].g) * t);
+                outB[i] = (float)(palette[a].b + (palette[b].b - palette[a].b) * t);
+            }
+        Array.Copy(outR, Colour.R, n); Array.Copy(outG, Colour.G, n); Array.Copy(outB, Colour.B, n);
+    }
+
+    /// <summary>Moves the drawing's colours onto the mockup's: same mean and spread per channel (a painted, shaded icon).</summary>
+    public void ToneTo(MockIcon m)
+    {
+        int n = W * H;
+        double[] mc = new double[3], sc = new double[3], mm = new double[3], sm = new double[3];
+        int nc = 0, nm = 0;
+        for (int i = 0; i < n; i++)
+        {
+            if (!Core[i]) continue;
+            mc[0] += Colour.R[i]; mc[1] += Colour.G[i]; mc[2] += Colour.B[i]; nc++;
+        }
+        for (int i = 0; i < m.Region.Count; i++)
+        {
+            if (!m.Inside[i] || m.Cover[i] < 0.97f) continue;
+            mm[0] += m.Region.R[i]; mm[1] += m.Region.G[i]; mm[2] += m.Region.B[i]; nm++;
+        }
+        if (nc == 0 || nm == 0) return;
+        for (int k = 0; k < 3; k++) { mc[k] /= nc; mm[k] /= nm; }
+        for (int i = 0; i < n; i++)
+        {
+            if (!Core[i]) continue;
+            sc[0] += Math.Pow(Colour.R[i] - mc[0], 2); sc[1] += Math.Pow(Colour.G[i] - mc[1], 2); sc[2] += Math.Pow(Colour.B[i] - mc[2], 2);
+        }
+        for (int i = 0; i < m.Region.Count; i++)
+        {
+            if (!m.Inside[i] || m.Cover[i] < 0.97f) continue;
+            sm[0] += Math.Pow(m.Region.R[i] - mm[0], 2); sm[1] += Math.Pow(m.Region.G[i] - mm[1], 2); sm[2] += Math.Pow(m.Region.B[i] - mm[2], 2);
+        }
+        var gain = new double[3];
+        for (int k = 0; k < 3; k++) { sc[k] = Math.Sqrt(sc[k] / nc); sm[k] = Math.Sqrt(sm[k] / nm); gain[k] = sc[k] < 1e-5 ? 1 : Math.Clamp(sm[k] / sc[k], 0.6, 1.6); }
+        Console.WriteLine($"   tone: drawn mean {Img.Hex((float)mc[0], (float)mc[1], (float)mc[2])} -> mockup mean {Img.Hex((float)mm[0], (float)mm[1], (float)mm[2])}  gain {gain[0]:0.00} {gain[1]:0.00} {gain[2]:0.00}");
+        for (int i = 0; i < n; i++)
+        {
+            Colour.R[i] = (float)Math.Clamp((Colour.R[i] - mc[0]) * gain[0] + mm[0], 0, 1);
+            Colour.G[i] = (float)Math.Clamp((Colour.G[i] - mc[1]) * gain[1] + mm[1], 0, 1);
+            Colour.B[i] = (float)Math.Clamp((Colour.B[i] - mc[2]) * gain[2] + mm[2], 0, 1);
+        }
+    }
+
+    /// <summary>The colour at a cell position (bilinear).</summary>
+    public (float r, float g, float b) At(double cx, double cy)
+    {
+        double qx = Math.Clamp(cx - 0.5, 0, W - 1), qy = Math.Clamp(cy - 0.5, 0, H - 1);
+        int x0 = (int)Math.Floor(qx), y0 = (int)Math.Floor(qy), x1 = Math.Min(x0 + 1, W - 1), y1 = Math.Min(y0 + 1, H - 1);
+        float fx = (float)(qx - x0), fy = (float)(qy - y0);
+        int a = y0 * W + x0, b = y0 * W + x1, c = y1 * W + x0, d = y1 * W + x1;
+        float w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy;
+        return (Colour.R[a] * w00 + Colour.R[b] * w10 + Colour.R[c] * w01 + Colour.R[d] * w11,
+                Colour.G[a] * w00 + Colour.G[b] * w10 + Colour.G[c] * w01 + Colour.G[d] * w11,
+                Colour.B[a] * w00 + Colour.B[b] * w10 + Colour.B[c] * w01 + Colour.B[d] * w11);
+    }
+}
+
+/// <summary>
+/// The accepted attempt of every icon (accepted.json) and what is made from it: the sprites in
+/// Assets/_Project/Art/UI/Icons and ArtSource/Exports/Icons, and the import manifest ArtSource/Kit/Icons.json.
+/// </summary>
+internal static class Build
+{
+    public sealed class Entry
+    {
+        public string Name, Attempt = "a1", Status = "ready", Note;
+        public Dictionary<string, string> Options = new Dictionary<string, string>();
+    }
+
+    public static List<Entry> Load()
+    {
+        var opts = new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
+        JsonNode root = JsonNode.Parse(File.ReadAllText(Path.Combine(Spec.Here, "accepted.json")), null, opts);
+        var list = new List<Entry>();
+        foreach (JsonNode n in root["icons"].AsArray())
+        {
+            var e = new Entry { Name = (string)n["name"], Attempt = (string)n["attempt"] ?? "a1", Status = (string)n["status"] ?? "ready", Note = (string)n["note"] };
+            e.Options["attempt"] = e.Attempt;
+            if (n["inkHeight"] != null) e.Options["ink-height"] = ((double)n["inkHeight"]).ToString(CultureInfo.InvariantCulture);
+            if (n["grow"] != null) e.Options["grow"] = ((double)n["grow"]).ToString(CultureInfo.InvariantCulture);
+            if (n["maxGrow"] != null) e.Options["max-grow"] = ((double)n["maxGrow"]).ToString(CultureInfo.InvariantCulture);
+            if (n["holeGrow"] != null) e.Options["hole-grow"] = ((double)n["holeGrow"]).ToString(CultureInfo.InvariantCulture);
+            if (n["scale"] != null) e.Options["scale"] = ((double)n["scale"]).ToString(CultureInfo.InvariantCulture);
+            if (n["uniform"] != null && (bool)n["uniform"]) e.Options["uniform"] = "true";
+            list.Add(e);
+        }
+        return list;
+    }
+
+    /// <summary>Fits every accepted cell again (after a change to the pipeline) and refreshes the check images.</summary>
+    public static int Make(string only)
+    {
+        string[] names = only?.Split(',');
+        foreach (Entry e in Load())
+        {
+            if (names != null && !names.Contains(e.Name)) continue;
+            string src = Path.Combine(Spec.Work, "chatgpt", "cells", $"{e.Name}_{e.Attempt}.png");
+            Maker.Run(e.Name, src, e.Options);
+        }
+        return 0;
+    }
+
+    /// <summary>Copies the accepted sprites into the game and the exports folder and writes the import manifest.</summary>
+    public static int Export()
+    {
+        string art = Path.Combine(Spec.Repo, "Assets", "_Project", "Art", "UI", "Icons");
+        string exports = Path.Combine(Spec.Repo, "ArtSource", "Exports", "Icons");
+        Directory.CreateDirectory(art); Directory.CreateDirectory(exports);
+        var sb = new StringBuilder();
+        sb.Append("{\n  \"sprites\": [\n");
+        List<Entry> list = Load();
+        for (int i = 0; i < list.Count; i++)
+        {
+            Entry e = list[i];
+            string fitted = Path.Combine(Spec.Work, "fitted", $"{e.Name}_{e.Attempt}.png");
+            if (!File.Exists(fitted)) { Console.WriteLine($"{e.Name}: {fitted} missing - run build first"); return 1; }
+            File.Copy(fitted, Path.Combine(art, e.Name + ".png"), true);
+            File.Copy(fitted, Path.Combine(exports, e.Name + ".png"), true);
+            sb.Append($"    {{ \"path\": \"UI/Icons/{e.Name}.png\", \"ppu\": 200 }}{(i < list.Count - 1 ? "," : "")}\n");
+            using var bmp = new Bitmap(fitted);
+            Console.WriteLine($"{e.Name,-26} {bmp.Width,3}x{bmp.Height,-3} {e.Attempt}  {e.Status}");
+        }
+        sb.Append("  ]\n}\n");
+        string manifest = Path.Combine(Spec.Repo, "ArtSource", "Kit", "Icons.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(manifest));
+        File.WriteAllText(manifest, sb.ToString());
+        Console.WriteLine($"{list.Count} sprites -> {art}, {exports}; manifest {manifest}");
+        return 0;
+    }
+}
+
+/// <summary>
+/// Review sheets of finished sprites: for every icon the mockup crop and, beside it, the sprite drawn over
+/// the same ground at the place and size it is fitted to, both enlarged. One image per batch of icons.
+/// </summary>
+internal static class Review
+{
+    public static int Run(string names, string outPath, int zoom, string attemptOverride)
+    {
+        var entries = Build.Load();
+        string[] list = names == null ? entries.Select(e => e.Name).ToArray() : names.Split(',');
+        var tiles = new List<Img>(); var captions = new List<string>();
+        foreach (string name in list)
+        {
+            IconDef d = Spec.Get(name);
+            Build.Entry e = entries.FirstOrDefault(x => x.Name == name);
+            string attempt = attemptOverride ?? e?.Attempt ?? "a1";
+            string fitted = Path.Combine(Spec.Work, "fitted", $"{name}_{attempt}.png");
+            string info = Path.ChangeExtension(fitted, ".txt");
+            if (!File.Exists(fitted) || !File.Exists(info)) { Console.WriteLine($"{name}: no fitted sprite for {attempt}"); continue; }
+            double[] rect = File.ReadAllLines(info).First(l => l.StartsWith("sprite_rect ")).Substring(12).Split(',').Select(v => double.Parse(v, CultureInfo.InvariantCulture)).ToArray();
+            Img sprite = Img.Load(fitted);
+            MockIcon m = MockIcon.Read(d);
+            int mw = m.Region.W, mh = m.Region.H;
+            // A sprite exported at another size than this mockup draws it (the suit set) is shown at the mockup's size.
+            double inkH = (sprite.H - 2 * Maker.Margin) / Maker.Scale2x, mockH = m.Box[3] - m.Box[1];
+            if (Math.Abs(inkH / mockH - 1) > 0.06)
+            {
+                double f = mockH / inkH, cxm = (m.Box[0] + m.Box[2]) / 2, cym = (m.Box[1] + m.Box[3]) / 2;
+                rect = new[] { cxm - rect[2] * f / 2, cym - rect[3] * f / 2, rect[2] * f, rect[3] * f };
+            }
+            int z = zoom > 0 ? zoom : Math.Max(2, Math.Min(6, 220 / Math.Max(mw, mh)));
+            Img a = m.Region.Resize(mw * z, mh * z);
+            Img b = Check.SpriteOver(sprite, rect, m.Ground.Resize(mw * z, mh * z), m.X0, m.Y0, z);
+            var pair = new Img(a.W * 2 + 6, a.H);
+            pair.Fill(0.55f, 0f, 0.55f);
+            pair.Paste(a, 0, 0); pair.Paste(b, a.W + 6, 0);
+            tiles.Add(pair);
+            captions.Add($"{name.Replace("Icon_", "")} {attempt}  {sprite.W}x{sprite.H}  x{z}");
+        }
+        if (tiles.Count == 0) return 1;
+        // Shelf layout, at most 1900 px wide.
+        const int MaxW = 1900, Gap = 14, Text = 20;
+        var pos = new List<(int x, int y)>();
+        int cx = Gap, cy = Gap, rowH = 0, sheetW = 0;
+        foreach (Img t in tiles)
+        {
+            if (cx + t.W + Gap > MaxW && cx > Gap) { cx = Gap; cy += rowH + Text + Gap; rowH = 0; }
+            pos.Add((cx, cy));
+            cx += t.W + Gap; rowH = Math.Max(rowH, t.H); sheetW = Math.Max(sheetW, cx);
+        }
+        var sheet = new Img(sheetW, cy + rowH + Text + Gap);
+        sheet.Fill(0.12f, 0.12f, 0.12f);
+        for (int i = 0; i < tiles.Count; i++) sheet.Paste(tiles[i], pos[i].x, pos[i].y);
+        using Bitmap bmp = sheet.ToBitmap();
+        using (Graphics g = Graphics.FromImage(bmp))
+        {
+            g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+            using var font = new Font("Segoe UI", 13f, FontStyle.Regular, GraphicsUnit.Pixel);
+            for (int i = 0; i < tiles.Count; i++) g.DrawString(captions[i], font, Brushes.White, pos[i].x, pos[i].y + tiles[i].H + 2);
+        }
+        string full = Tool.Full(outPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(full));
+        bmp.Save(full, ImageFormat.Png);
+        Console.WriteLine($"{full}  {bmp.Width}x{bmp.Height}  ({tiles.Count} icons; left: mockup, right: sprite on the same ground)");
+        return 0;
+    }
+}
+
+/// <summary>
+/// Where each finished sprite goes on every screen that shows the icon: the sprite is laid over that
+/// mockup's own drawing at one scale (its proportions are kept) and the rectangle of the whole texture is
+/// reported, with how well the two agree there.
+/// </summary>
+internal static class Place
+{
+    public sealed class Use
+    {
+        public string Icon, ScreenName, Screen, Node, Old;
+        public double[] Rect, Disc, NodeRect;
+        public bool Hidden, Swapped;
+        // results
+        public double[] SpriteRect; public double Iou, EdgeMean, EdgeMax, PxPerMock; public string MockInk; public double Opacity;
+        public double[] StretchRect; public double StretchEdgeMean, StretchEdgeMax, StretchAspect;   // fitted with its own width:height on this screen
+    }
+
+    public static List<Use> Load()
+    {
+        JsonNode root = JsonNode.Parse(File.ReadAllText(Path.Combine(Spec.Here, "uses.json")));
+        var list = new List<Use>();
+        foreach (JsonNode n in root["uses"].AsArray())
+            list.Add(new Use
+            {
+                Icon = (string)n["icon"], ScreenName = (string)n["screenName"], Screen = (string)n["screen"], Node = (string)n["node"], Old = (string)n["old"],
+                Rect = n["rect"].AsArray().Select(v => (double)v).ToArray(),
+                Disc = n["disc"]?.AsArray().Select(v => (double)v).ToArray(),
+                NodeRect = n["nodeRect"].AsArray().Select(v => (double)v).ToArray(),
+                Hidden = n["hidden"] != null && (bool)n["hidden"],
+                Swapped = n["swapped"] != null && (bool)n["swapped"],
+            });
+        return list;
+    }
+
+    public static List<Use> Run(string only, bool quiet = false)
+    {
+        string[] names = only?.Split(',');
+        List<Build.Entry> accepted = Build.Load();
+        List<Use> uses = Load();
+        var done = new List<Use>();
+        foreach (Build.Entry e in accepted)
+        {
+            if (names != null && !names.Contains(e.Name)) continue;
+            IconDef d = Spec.Get(e.Name);
+            string fitted = Path.Combine(Spec.Work, "fitted", $"{e.Name}_{e.Attempt}.png");
+            if (!File.Exists(fitted)) { Console.WriteLine($"{e.Name}: no fitted sprite"); continue; }
+            Img sprite = Img.Load(fitted);
+            Shape s = Shape.FromAlpha((float[])sprite.A.Clone(), sprite.W, sprite.H, (0f, 0f, 0f), (1f, 1f, 1f));
+            bool colour = d.Mode == "color";
+            foreach (Use u in uses.Where(x => x.Icon == e.Name))
+            {
+                if (u.Hidden) { done.Add(u); continue; }
+                MockIcon m = MockIcon.Read(u.Screen, u.Rect, colour, u.Disc);
+                if (colour && d.KeepWhite) m.FillEnclosed();
+                if (m.Box == null) { Console.WriteLine($"{e.Name} on {u.ScreenName}: no ink in {string.Join(",", u.Rect)}"); continue; }
+                // One scale, no tilt: a card pip that the mockup draws tilted is still placed upright.
+                Pose p = Fit.Solve(s, m, m.Ink, colour, 3);
+                // The softness of this mockup's rendering only matters for the comparison.
+                Pose soft = Fit.Solve(s, m, m.Ink, colour, 3, p);
+                double best = double.MaxValue;
+                foreach (double blur in new[] { 0.2, 0.35, 0.5 })
+                {
+                    Pose q = p; q.Blur = blur;
+                    q = Fit.Solve(s, m, m.Ink, colour, 3, q);
+                    double err = colour ? Fit.CoverError(s, q, m) : Fit.Error(s, q, m, m.Ink);
+                    if (err < best) { best = err; soft = q; }
+                }
+                p = soft;
+                int mw = m.Region.W, mh = m.Region.H;
+                var sharp = p; sharp.Blur = 0;
+                float[] cov = Fit.Gauss(Fit.Render(s, sharp, m.X0, m.Y0, 1.0, mw, mh, 4), mw, mh, p.Blur);
+                double inter = 0, union = 0;
+                for (int i = 0; i < cov.Length; i++)
+                {
+                    if (!m.Inside[i]) continue;
+                    bool a = cov[i] >= 0.5f, b = m.Cover[i] >= 0.5f;
+                    if (a && b) inter++; if (a || b) union++;
+                }
+                u.Iou = union > 0 ? inter / union : 0;
+                (u.EdgeMean, u.EdgeMax) = Maker.EdgeDeviation(cov, m.Cover, m.Inside, mw, mh);
+                u.SpriteRect = new[] { p.Tx, p.Ty, p.Sx * sprite.W, p.Sy * sprite.H };
+                u.PxPerMock = 1.0 / p.Sx;
+                // The same with the width:height ratio left free: some screens draw the icon a little wider or lower.
+                {
+                    Pose q = Fit.Solve(s, m, m.Ink, colour, 4, p);
+                    var qs = q; qs.Blur = 0;
+                    float[] cq = Fit.Gauss(Fit.Render(s, qs, m.X0, m.Y0, 1.0, mw, mh, 4), mw, mh, q.Blur);
+                    (u.StretchEdgeMean, u.StretchEdgeMax) = Maker.EdgeDeviation(cq, m.Cover, m.Inside, mw, mh);
+                    u.StretchRect = new[] { q.Tx, q.Ty, q.Sx * sprite.W, q.Sy * sprite.H };
+                    u.StretchAspect = q.Sx / q.Sy;
+                }
+                if (!colour)
+                {
+                    double nr = 0, ng = 0, nb = 0, dn = 0;
+                    for (int i = 0; i < cov.Length; i++)
+                    {
+                        if (!m.Inside[i] || cov[i] < 0.05f) continue;
+                        double c = cov[i];
+                        nr += c * (m.Region.R[i] - m.Ground.R[i] * (1 - c)); ng += c * (m.Region.G[i] - m.Ground.G[i] * (1 - c)); nb += c * (m.Region.B[i] - m.Ground.B[i] * (1 - c));
+                        dn += c * c;
+                    }
+                    var own = ((float)Math.Clamp(nr / dn, 0, 1), (float)Math.Clamp(ng / dn, 0, 1), (float)Math.Clamp(nb / dn, 0, 1));
+                    var ink = Img.Hex(d.Ink ?? Spec.FamilyInk);
+                    int mid = (mh / 2) * mw + mw / 2;
+                    double gl = m.Ground.Lum(mid), il = 0.2126 * ink.r + 0.7152 * ink.g + 0.0722 * ink.b, ol = 0.2126 * own.Item1 + 0.7152 * own.Item2 + 0.0722 * own.Item3;
+                    u.MockInk = Img.Hex(own.Item1, own.Item2, own.Item3);
+                    u.Opacity = Math.Clamp((gl - ol) / Math.Max(1e-6, gl - il), 0, 1);
+                }
+                done.Add(u);
+                if (!quiet)
+                    Console.WriteLine(FormattableString.Invariant($"{e.Name,-22} {u.Screen} {u.ScreenName + "." + u.Node,-30} rect [{u.SpriteRect[0]:0.00}, {u.SpriteRect[1]:0.00}, {u.SpriteRect[2]:0.00}, {u.SpriteRect[3]:0.00}]  {u.PxPerMock:0.00} px/mock px{(u.PxPerMock < 2.25 ? " (upscaled)" : "")}  iou {u.Iou:0.000}  edge {u.EdgeMean:0.00}/{u.EdgeMax:0.00}  ink {u.MockInk}  | stretched x{u.StretchAspect:0.000}: [{u.StretchRect[0]:0.00}, {u.StretchRect[1]:0.00}, {u.StretchRect[2]:0.00}, {u.StretchRect[3]:0.00}] edge {u.StretchEdgeMean:0.00}/{u.StretchEdgeMax:0.00}"));
+            }
+        }
+        return done;
+    }
+
+    /// <summary>Writes ArtSource/Kit/Icons.map.csv: one row per cut sprite that a family icon replaces.</summary>
+    public static int Map()
+    {
+        List<Build.Entry> accepted = Build.Load();
+        List<Use> uses = Run(null, quiet: true);
+        var sb = new StringBuilder();
+        sb.Append("old_sprite,screens,new_sprite,mock_rect_note,nine_ltrb,status\n");
+        string Q(string v) => "\"" + v.Replace("\"", "\"\"") + "\"";
+        int rows = 0;
+        foreach (var group in uses.GroupBy(u => (u.Old, u.Icon)).OrderBy(g => g.Key.Icon).ThenBy(g => g.Key.Old))
+        {
+            Build.Entry e = accepted.First(a => a.Name == group.Key.Icon);
+            IconDef d = Spec.Get(e.Name);
+            var screens = group.Select(u => $"{u.Screen} {u.ScreenName}").Distinct();
+            var notes = new List<string>();
+            foreach (Use u in group)
+            {
+                if (u.Hidden || u.SpriteRect == null) { notes.Add($"{u.ScreenName}.{u.Node}: hidden alternate, same size as the visible one, keep its own position"); continue; }
+                // The mockup's own ink at this place, and the Image alpha at which the sprite reads the same over
+                // this ground. Only where the shapes agree well: on a poor fit the estimate is too light.
+                string tint = d.Mode == "color" || u.MockInk == null || u.Iou < 0.93 ? "" : FormattableString.Invariant($" (mockup ink {u.MockInk}, alpha {u.Opacity:0.00} reads the same)");
+                // A screen that already shows the family icon: is its rectangle the one for the sprite as it is now?
+                string state = "";
+                if (u.Swapped)
+                {
+                    double off = 0, offStretched = 0;
+                    for (int k = 0; k < 4; k++)
+                    {
+                        off = Math.Max(off, Math.Abs(u.NodeRect[k] - u.SpriteRect[k]));
+                        offStretched = Math.Max(offStretched, u.StretchRect == null ? 99 : Math.Abs(u.NodeRect[k] - u.StretchRect[k]));
+                    }
+                    state = off <= 0.12 ? " [already swapped, rect up to date]"
+                        : offStretched <= 0.12 ? " [already swapped, at the stretched rect]"
+                        : FormattableString.Invariant($" [already swapped with rect {u.NodeRect[0]:0.##}, {u.NodeRect[1]:0.##}, {u.NodeRect[2]:0.##}, {u.NodeRect[3]:0.##}: update it, the sprite changed since]");
+                }
+                // Where this screen draws the icon with other proportions, the sprite stretched to them lands closer.
+                string stretch = "";
+                if (u.StretchRect != null && Math.Abs(u.StretchAspect - 1) > 0.02 && u.EdgeMean - u.StretchEdgeMean >= 0.12)
+                    stretch = FormattableString.Invariant($" {{this screen draws it {(u.StretchAspect > 1 ? "wider" : "narrower")}: at its own proportions the outlines are {u.EdgeMean:0.00} px apart; stretched to [{u.StretchRect[0]:0.00}, {u.StretchRect[1]:0.00}, {u.StretchRect[2]:0.00}, {u.StretchRect[3]:0.00}] they are {u.StretchEdgeMean:0.00} px apart}}");
+                notes.Add(FormattableString.Invariant($"{u.ScreenName}.{u.Node} rect [{u.SpriteRect[0]:0.00}, {u.SpriteRect[1]:0.00}, {u.SpriteRect[2]:0.00}, {u.SpriteRect[3]:0.00}]{tint}{state}{stretch}"));
+            }
+            string note = "use without \"shape\" at the rect given (whole texture, 2 px margin included): " + string.Join("; ", notes);
+            if (!string.IsNullOrEmpty(e.Note)) note += ". " + e.Note;
+            sb.Append($"{group.Key.Old},{Q(string.Join("; ", screens))},UI/Icons/{e.Name}.png,{Q(note)},,{e.Status}\n");
+            rows++;
+        }
+        // Icons that replace nothing yet.
+        foreach (Build.Entry e in accepted.Where(a => uses.All(u => u.Icon != a.Name)))
+        {
+            sb.Append($"-,{Q("not on a built screen yet")},UI/Icons/{e.Name}.png,{Q(string.IsNullOrEmpty(e.Note) ? "new" : e.Note)},,{e.Status}\n");
+            rows++;
+        }
+        string file = Path.Combine(Spec.Repo, "ArtSource", "Kit", "Icons.map.csv");
+        File.WriteAllText(file, sb.ToString());
+        Console.WriteLine($"{rows} rows -> {file}");
+        return 0;
+    }
+}
+
+/// <summary>The rows this family adds to ArtSource/handoff.csv, written to the working folder for one append.</summary>
+internal static class Handoff
+{
+    public static int Run()
+    {
+        var opts = new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
+        JsonNode root = JsonNode.Parse(File.ReadAllText(Path.Combine(Spec.Here, "accepted.json")), null, opts);
+        List<Place.Use> uses = Place.Load();
+        var sb = new StringBuilder();
+        string Q(string v) => v.Contains(',') || v.Contains('"') ? "\"" + v.Replace("\"", "\"\"") + "\"" : v;
+        int rows = 0;
+        foreach (JsonNode n in root["icons"].AsArray())
+        {
+            string name = (string)n["name"], attempt = (string)n["attempt"], sheet = (string)n["sheet"], note = (string)n["note"];
+            int attempts = n["attempts"] != null ? (int)n["attempts"] : 1;
+            string fitted = Path.Combine(Spec.Work, "fitted", $"{name}_{attempt}.png");
+            string info = Path.ChangeExtension(fitted, ".txt");
+            using var bmp = new Bitmap(fitted);
+            var screens = uses.Where(u => u.Icon == name).Select(u => u.Screen).Distinct().OrderBy(s => s).ToList();
+            IconDef d = Spec.Get(name);
+            if (!screens.Contains(d.Screen)) screens.Add(d.Screen);
+            // Screens that show the icon without having a node for it (the table HUD behind the bidding panel and the game menu).
+            if (n["alsoOn"] != null)
+                foreach (JsonNode a in n["alsoOn"].AsArray()) if (!screens.Contains((string)a)) screens.Add((string)a);
+            screens.Sort();
+            string[] lines = File.ReadAllLines(info);
+            string Val(string key) => lines.First(l => l.StartsWith(key + " ")).Substring(key.Length + 1);
+            bool enclosed = double.Parse(Val("edge_max"), CultureInfo.InvariantCulture) > 2.0;
+            string fit = enclosed
+                ? $"fitted to {d.Screen}: outer outlines {Val("outer_mean")} px apart on average ({Val("outer_max")} px at the 98th percentile)"
+                : $"fitted to {d.Screen}: outlines {Val("edge_mean")} px apart on average ({Val("edge_max")} px at the 98th percentile), overlap {Val("iou")}";
+            string notes = $"Assets: UI/Icons/{name}.png. {fit}" + (string.IsNullOrEmpty(note) ? "" : ". " + note);
+            sb.Append($"Icons/{name}.png,icon,{bmp.Width}x{bmp.Height},,{string.Join(" ", screens)},{Q($"Icons_Kit {sheet} {attempt} (contact sheet; {attempts} attempt{(attempts == 1 ? "" : "s")})")},review,{Q(notes)}\r\n");
+            rows++;
+        }
+        string file = Path.Combine(Spec.Work, "handoff_rows.csv");
+        File.WriteAllText(file, sb.ToString(), new UTF8Encoding(false));
+        Console.WriteLine($"{rows} rows -> {file}");
+        return 0;
+    }
+}
+
+/// <summary>
+/// Checks the exported sprites themselves: even size, clear border, margin around the ink, no stray specks,
+/// no colour fringe (the colour under partly transparent pixels is the colour of the solid ones next to
+/// them), and that the copy in ArtSource/Exports is the same file. Also writes every sprite on black and on
+/// white into one overview image.
+/// </summary>
+internal static class Audit
+{
+    public static int Run()
+    {
+        string art = Path.Combine(Spec.Repo, "Assets", "_Project", "Art", "UI", "Icons");
+        string exports = Path.Combine(Spec.Repo, "ArtSource", "Exports", "Icons");
+        List<Build.Entry> list = Build.Load();
+        int problems = 0;
+        var tiles = new List<Img>();
+        Console.WriteLine($"{"sprite",-24} {"size",-9} {"margin l,t,r,b",-16} {"parts",5} {"specks",6} {"fringe",7}  export copy");
+        foreach (Build.Entry e in list)
+        {
+            string file = Path.Combine(art, e.Name + ".png");
+            if (!File.Exists(file)) { Console.WriteLine($"{e.Name,-24} MISSING"); problems++; continue; }
+            Img s = Img.Load(file);
+            int w = s.W, h = s.H;
+            var notes = new List<string>();
+            if (w % 2 != 0 || h % 2 != 0) notes.Add("odd size");
+            // Border must be fully transparent.
+            float border = 0;
+            for (int x = 0; x < w; x++) border = Math.Max(border, Math.Max(s.A[x], s.A[(h - 1) * w + x]));
+            for (int y = 0; y < h; y++) border = Math.Max(border, Math.Max(s.A[y * w], s.A[y * w + w - 1]));
+            if (border > 0) notes.Add($"border alpha {border:0.00}");
+            // Margin: first and last row/column with any alpha.
+            int l = w, t = h, r = -1, b = -1;
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                    if (s.A[y * w + x] > 0f) { if (x < l) l = x; if (x > r) r = x; if (y < t) t = y; if (y > b) b = y; }
+            int mr = w - 1 - r, mb = h - 1 - b;
+            if (l < 2 || t < 2 || mr < 2 || mb < 2) notes.Add("margin under 2 px");
+            if (l > 3 || t > 3 || mr > 3 || mb > 3) notes.Add("margin over 3 px");
+            // Connected parts of the ink (alpha above 10 %); a part smaller than 12 px is a speck.
+            var seen = new bool[w * h];
+            int parts = 0, specks = 0;
+            var stack = new Stack<int>();
+            for (int i = 0; i < seen.Length; i++)
+            {
+                if (seen[i] || s.A[i] <= 0.1f) continue;
+                int area = 0; seen[i] = true; stack.Push(i);
+                while (stack.Count > 0)
+                {
+                    int j = stack.Pop(); area++;
+                    int x = j % w, y = j / w;
+                    for (int dy = -1; dy <= 1; dy++)
+                        for (int dx = -1; dx <= 1; dx++)
+                        {
+                            int xx = x + dx, yy = y + dy;
+                            if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+                            int k = yy * w + xx;
+                            if (seen[k] || s.A[k] <= 0.1f) continue;
+                            seen[k] = true; stack.Push(k);
+                        }
+                }
+                parts++;
+                if (area < 12) specks++;
+            }
+            if (specks > 0) notes.Add($"{specks} specks");
+            // Fringe: the largest difference (sRGB, 0-255) between a partly transparent pixel's colour and the
+            // nearest solid pixel's colour within 2 px.
+            double fringe = 0;
+            (int x, int y, float a) fringeAt = (0, 0, 0f);
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    int i = y * w + x;
+                    if (s.A[i] <= 0.02f || s.A[i] >= 0.98f) continue;
+                    double best = double.MaxValue;
+                    for (int dy = -2; dy <= 2; dy++)
+                        for (int dx = -2; dx <= 2; dx++)
+                        {
+                            int xx = x + dx, yy = y + dy;
+                            if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+                            int k = yy * w + xx;
+                            if (s.A[k] < 0.98f) continue;
+                            double d = Math.Max(Math.Abs(Img.ToSrgb(s.R[i]) - Img.ToSrgb(s.R[k])), Math.Max(Math.Abs(Img.ToSrgb(s.G[i]) - Img.ToSrgb(s.G[k])), Math.Abs(Img.ToSrgb(s.B[i]) - Img.ToSrgb(s.B[k])))) * 255;
+                            if (d < best) best = d;
+                        }
+                    if (best != double.MaxValue && best > fringe) { fringe = best; fringeAt = (x, y, s.A[i]); }
+                }
+            if (fringe > 1.5) Console.WriteLine($"   largest fringe at {fringeAt.x},{fringeAt.y} (alpha {fringeAt.a:0.00}, colour {Img.Hex(s.R[fringeAt.y * w + fringeAt.x], s.G[fringeAt.y * w + fringeAt.x], s.B[fringeAt.y * w + fringeAt.x])})");
+            IconDef d0 = Spec.Get(e.Name);
+            if (d0.Mode != "color" && fringe > 1.5) notes.Add("colour fringe");
+            string copy = Path.Combine(exports, e.Name + ".png");
+            bool same = File.Exists(copy) && File.ReadAllBytes(copy).AsSpan().SequenceEqual(File.ReadAllBytes(file));
+            if (!same) notes.Add("export copy differs");
+            string meta = file + ".meta";
+            if (!File.Exists(meta)) notes.Add("no .meta yet (run KitImporter.Apply)");
+            else if (!File.ReadAllText(meta).Contains("spritePixelsToUnits: 200")) notes.Add("ppu is not 200");
+            if (notes.Count > 0) problems++;
+            Console.WriteLine($"{e.Name,-24} {w + "x" + h,-9} {l + "," + t + "," + mr + "," + mb,-16} {parts,5} {specks,6} {fringe,7:0.0}  {(same ? "same" : "DIFFERS")}{(notes.Count > 0 ? "   <-- " + string.Join("; ", notes) : "")}");
+
+            // Overview tile: on black (left) and on white (right), at the sprite's own pixels.
+            var tile = new Img(w * 2 + 6, h);
+            tile.Fill(0.5f, 0f, 0.5f);
+            var onBlack = new Img(w, h); onBlack.Fill(0, 0, 0); onBlack.Over(s, 0, 0);
+            var onWhite = new Img(w, h); onWhite.Fill(1, 1, 1); onWhite.Over(s, 0, 0);
+            // On black a near-black icon would vanish: show its alpha as light grey instead, so halo and specks show.
+            if (d0.Mode != "color" && (d0.Ink ?? Spec.FamilyInk) == Spec.FamilyInk)
+                for (int i = 0; i < onBlack.Count; i++) { float v = Img.ToLinear(s.A[i] * 0.85f); onBlack.R[i] = v; onBlack.G[i] = v; onBlack.B[i] = v; }
+            tile.Paste(onBlack, 0, 0); tile.Paste(onWhite, w + 6, 0);
+            tiles.Add(tile);
+        }
+        // Overview, shelf layout.
+        const int MaxW = 1900, Gap = 10;
+        var pos = new List<(int x, int y)>();
+        int cx = Gap, cy = Gap, rowH = 0, sheetW = 0;
+        foreach (Img t in tiles)
+        {
+            if (cx + t.W + Gap > MaxW && cx > Gap) { cx = Gap; cy += rowH + Gap; rowH = 0; }
+            pos.Add((cx, cy)); cx += t.W + Gap; rowH = Math.Max(rowH, t.H); sheetW = Math.Max(sheetW, cx);
+        }
+        var sheet = new Img(sheetW, cy + rowH + Gap);
+        sheet.Fill(0.2f, 0.2f, 0.2f);
+        for (int i = 0; i < tiles.Count; i++) sheet.Paste(tiles[i], pos[i].x, pos[i].y);
+        string outFile = Path.Combine(Spec.Work, "review", "alpha_black_white.png");
+        sheet.Save(outFile);
+        Console.WriteLine($"{list.Count} sprites, {problems} with remarks; overview {outFile} ({sheet.W}x{sheet.H}; each pair: alpha on black, sprite on white)");
+        return problems == 0 ? 0 : 1;
     }
 }

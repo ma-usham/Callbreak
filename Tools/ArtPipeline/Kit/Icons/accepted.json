@@ -1,0 +1,49 @@
+{
+  // The attempt each icon is made from (cells/<name>_<attempt>.png) and the sheet it was requested on.
+  // "icons.sh build" fits them all again, "icons.sh export" copies the results into the game.
+  // inkHeight: the ink is that many px tall whatever size the mockup draws it (the four suits share one height).
+  // grow: the outline is moved by exactly that many mockup px instead of the fitted amount.
+  // holeGrow: the ink is grown by that many mockup px into what the shape encloses (the white rows of the
+  //           clipboard), leaving the outline alone.
+  // scale: exported that much larger than on the screen it is fitted to, because another screen draws it larger.
+  // attempts: how many times ChatGPT was asked for it. alsoOn: mockups that show it without a node of their own.
+  "icons": [
+    { "name": "Icon_Back", "attempt": "a1", "sheet": "S1", "attempts": 1, "scale": 1.03 },
+    { "name": "Icon_Home", "attempt": "a1", "sheet": "S1", "attempts": 1, "scale": 1.01, "alsoOn": ["07", "13"] },
+    { "name": "Icon_Scorecard", "attempt": "a3", "sheet": "S8", "attempts": 4, "grow": -0.25, "holeGrow": 0.4, "alsoOn": ["07"],
+      "note": "the three white rows are 1.3 px thick: 07/08 draw them at about 0.8 px and faint, 09/10/13 at about 2 px" },
+    { "name": "Icon_Close", "attempt": "a1", "sheet": "S1", "attempts": 1 },
+    { "name": "Icon_Emote", "attempt": "a1", "sheet": "S1", "attempts": 1, "alsoOn": ["07", "13"] },
+    { "name": "Icon_Sort", "attempt": "a1", "sheet": "S1", "attempts": 1, "alsoOn": ["07", "13"] },
+    { "name": "Icon_Sound", "attempt": "a1", "sheet": "S1", "attempts": 1 },
+    { "name": "Icon_Leave", "attempt": "a1", "sheet": "S1", "attempts": 1, "note": "in the red of the mockup (#B60116), like its label; not the family charcoal" },
+    { "name": "Icon_Suit_Spade", "attempt": "a1", "sheet": "S2", "attempts": 1, "inkHeight": 182, "alsoOn": ["07", "13"],
+      "note": "one of a set of four, all 182 px tall; also the trump spade of the HUD, the spade of rule 3 and of the search ring" },
+    { "name": "Icon_Suit_Heart", "attempt": "a1", "sheet": "S2", "attempts": 2, "inkHeight": 182,
+      "note": "suit set; in the red of the mockup's cards (#F90214). The text sprites take only its outline and use their own red" },
+    { "name": "Icon_Suit_Diamond", "attempt": "a1", "sheet": "S2", "attempts": 1, "inkHeight": 182, "note": "suit set; red #F90214; drawn upright (the card on 08 is tilted 5 degrees)" },
+    { "name": "Icon_Suit_Club", "attempt": "a1", "sheet": "S2", "attempts": 1, "inkHeight": 182, "note": "suit set; drawn upright (the card on 07 is tilted 8 degrees)" },
+    { "name": "Icon_HowToPlay", "attempt": "a1", "sheet": "S3", "attempts": 1 },
+    { "name": "Icon_About", "attempt": "a1", "sheet": "S3", "attempts": 1 },
+    { "name": "Icon_OfflineMonitor", "attempt": "a1", "sheet": "S4", "attempts": 1 },
+    { "name": "Icon_DifficultyEasy", "attempt": "a1", "sheet": "S3", "attempts": 1 },
+    { "name": "Icon_DifficultyNormal", "attempt": "a1", "sheet": "S4", "attempts": 1 },
+    { "name": "Icon_DifficultyHard", "attempt": "a1", "sheet": "S4", "attempts": 1 },
+    { "name": "Icon_CreateRoom", "attempt": "a1", "sheet": "S6", "attempts": 1,
+      "note": "four flat colours: front player in the family ink, the two heads behind #454542, badge #8A0913, plus #FCF9F5" },
+    { "name": "Icon_EnterRoom", "attempt": "a1", "sheet": "S4", "attempts": 1, "note": "03 draws the same icon with a lower frame: placed at its best fit there" },
+    { "name": "Icon_Cards", "attempt": "a1", "sheet": "S3", "attempts": 1 },
+    { "name": "Icon_Lock", "attempt": "a1", "sheet": "S3", "attempts": 1 },
+    { "name": "Icon_Copy", "attempt": "a1", "sheet": "S3", "attempts": 2, "note": "the copy icon of 04 and the paste icon of 03 are the same icon" },
+    { "name": "Icon_CardStack", "attempt": "a2", "sheet": "S8", "attempts": 2 },
+    { "name": "Icon_Rule_Call", "attempt": "a2", "sheet": "S8", "attempts": 2 },
+    { "name": "Icon_Rule_Follow", "attempt": "a1", "sheet": "S7", "attempts": 1, "note": "two flat colours: outlines in the family ink, diamonds #B00814" },
+    { "name": "Icon_Rule_Score", "attempt": "a2", "sheet": "S8", "attempts": 2, "note": "on the mockup each dot runs into its bar; drawn as a dot and a bar" },
+    { "name": "Icon_Clock", "attempt": "a1", "sheet": "S3", "attempts": 1, "note": "in the dark brown of the mockup (#2F1B0E), not the family charcoal" },
+    { "name": "Icon_Pencil", "attempt": "a1", "sheet": "S3", "attempts": 1 },
+    { "name": "Icon_StatGames", "attempt": "a1", "sheet": "S5", "attempts": 1 },
+    { "name": "Icon_StatWins", "attempt": "a1", "sheet": "S5", "attempts": 1 },
+    { "name": "Icon_StatWinRate", "attempt": "a1", "sheet": "S5", "attempts": 1 },
+    { "name": "Icon_StatBestScore", "attempt": "a1", "sheet": "S5", "attempts": 1 }
+  ]
+}

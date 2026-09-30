@@ -1,10 +1,16 @@
 {
   // The Icons family. One entry per distinct icon: "screen" + "rect" is where it is drawn largest
   // (a loose rect: the whole icon and only ground around it, at least 3 px of ground on every
-  // side); "disc" is the round button it sits on when the loose rect leaves that button;
-  // "uses" are the other places the same icon appears, with the cut sprite it replaces.
+  // side); "disc" is the round button (or ring) it sits in when the loose rect leaves it.
   // mode "ink": one flat colour (the family charcoal unless "ink" says otherwise);
-  // mode "color": the icon keeps its own colours.
+  // mode "color": the icon keeps its own colours: "palette" = its flat colours as measured on the
+  // mockup (the first is the family ink), "keepWhite" = white enclosed by the icon is part of it,
+  // "tone": "mock" = a shaded icon whose colours are moved onto the mockup colours.
+  // "symmetric": mirrored about its vertical axis; "angle": the mockup draws it tilted by about that
+  // many degrees (the fit finds the tilt, the sprite is exported upright).
+  // Entries named X_... are the same icons as other screens draw them (and two approved main-menu
+  // icons): they are only measured and compared (sheets/V*.json), never exported.
+  // Where a finished sprite is shown on the built screens is not listed here: see uses.js.
   "ink": "#0E0B0B",
   "icons": [
     { "name": "Icon_Back", "screen": "01", "rect": [54, 49, 62, 60] },
@@ -14,7 +20,7 @@
     { "name": "Icon_Emote", "screen": "08", "rect": [38, 753, 54, 54], "disc": [28.5, 743.8, 72.2, 71.8] },
     { "name": "Icon_Sort", "screen": "08", "rect": [1574, 843, 60, 62], "disc": [1562.7, 832.3, 83.0, 83.2] },
     { "name": "Icon_Suit_Spade", "screen": "05", "rect": [793, 256, 85, 94], "disc": [779, 246, 112, 112], "symmetric": true },
-    { "name": "Icon_Suit_Heart", "ink": "#F90214", "screen": "08", "rect": [696, 810, 80, 88], "symmetric": true },
+    { "name": "Icon_Suit_Heart", "ink": "#F90214", "screen": "08", "rect": [696, 810, 80, 88], "symmetric": true, "angle": 0 },
     { "name": "Icon_Suit_Diamond", "ink": "#F90214", "screen": "08", "rect": [1010, 821, 64, 96], "symmetric": true, "angle": 5 },
     { "name": "Icon_Suit_Club", "screen": "07", "rect": [1210, 800, 42, 43], "symmetric": true, "angle": -5 },
     { "name": "X_Diamond07", "screen": "07", "rect": [941, 777, 35, 44] },
@@ -28,23 +34,23 @@
     { "name": "Icon_DifficultyEasy", "screen": "06", "rect": [526, 521, 79, 78] },
     { "name": "Icon_DifficultyNormal", "screen": "06", "rect": [781, 518, 112, 80] },
     { "name": "Icon_DifficultyHard", "screen": "06", "rect": [1048, 516, 120, 82] },
-    { "name": "Icon_CreateRoom", "mode": "color", "screen": "01", "rect": [496, 301, 220, 173] },
+    { "name": "Icon_CreateRoom", "mode": "color", "keepWhite": true, "palette": ["#0E0B0B", "#454542", "#8A0913", "#FCF9F5"], "screen": "01", "rect": [496, 301, 220, 173] },
     { "name": "Icon_EnterRoom", "screen": "01", "rect": [992, 302, 168, 158] },
     { "name": "Icon_Cards", "screen": "02", "rect": [867, 501, 70, 66] },
     { "name": "Icon_Lock", "screen": "02", "rect": [654, 704, 44, 49] },
     { "name": "Icon_Copy", "screen": "03", "rect": [733, 622, 55, 53] },
     { "name": "Icon_CardStack", "screen": "15", "rect": [1556, 44, 66, 66], "disc": [1542.8, 31.8, 91.4, 91.4] },
     { "name": "Icon_Rule_Call", "screen": "12", "rect": [498, 358, 83, 83] },
-    { "name": "Icon_Rule_Follow", "mode": "color", "screen": "12", "rect": [499, 454, 90, 82] },
+    { "name": "Icon_Rule_Follow", "mode": "color", "palette": ["#0E0B0B", "#B00814"], "screen": "12", "rect": [499, 454, 90, 82] },
     { "name": "Icon_Rule_Score", "screen": "12", "rect": [507, 638, 72, 84] },
-    { "name": "Icon_Crown", "mode": "color", "screen": "10", "rect": [663, 402, 48, 42] },
-    { "name": "Icon_Clock", "screen": "05", "rect": [1049, 788, 39, 39] },
+    { "name": "Icon_Crown", "mode": "color", "tone": "mock", "screen": "10", "rect": [663, 402, 48, 42] },
+    { "name": "Icon_Clock", "ink": "#2F1B0E", "screen": "05", "rect": [1049, 788, 39, 39] },
     { "name": "Icon_Pencil", "screen": "14", "rect": [654, 414, 38, 38], "disc": [639.7, 399.7, 67.0, 67.0] },
     { "name": "Icon_StatGames", "screen": "14", "rect": [798, 278, 72, 74] },
     { "name": "Icon_StatWins", "screen": "14", "rect": [1058, 280, 70, 72] },
     { "name": "Icon_StatWinRate", "screen": "14", "rect": [803, 423, 66, 70] },
     { "name": "Icon_StatBestScore", "screen": "14", "rect": [1056, 421, 74, 72] },
-    { "name": "Icon_Leave", "ink": "#A20108", "screen": "13", "rect": [728, 632, 50, 48] },
+    { "name": "Icon_Leave", "ink": "#B60116", "screen": "13", "rect": [728, 632, 50, 48] },
     { "name": "X_Scorecard13", "screen": "13", "rect": [712, 460, 52, 54] },
     { "name": "X_Sound13", "screen": "13", "rect": [632, 548, 54, 48] },
     { "name": "X_Copy04", "screen": "04", "rect": [798, 298, 48, 46] },
@@ -54,6 +60,9 @@
     { "name": "X_Scorecard09", "screen": "09", "rect": [722, 775, 46, 50] },
     { "name": "X_Players02", "screen": "02", "rect": [570, 502, 80, 60] },
 
+    { "name": "X_Gear00", "screen": "00", "rect": [1371, 65, 62, 63] },
+    { "name": "X_Shop00", "screen": "00", "rect": [1518, 70, 58, 56] },
+    { "name": "X_Enter03", "screen": "03", "rect": [758, 219, 144, 136] },
     { "name": "X_Home07", "screen": "07", "rect": [56, 38, 60, 61], "disc": [45.3, 29.2, 80.2, 79.9] },
     { "name": "X_Home10", "screen": "10", "rect": [54, 36, 63, 64], "disc": [42.4, 26.4, 86.2, 85.7] },
     { "name": "X_Home13", "screen": "13", "rect": [56, 38, 60, 61], "disc": [45.3, 29.2, 80.2, 79.9] },
