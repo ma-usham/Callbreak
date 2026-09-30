@@ -26,6 +26,10 @@ namespace Callbreak.Editor
         private const float TextWidth = 540f;
         private const float ButtonWidth = 514f;
         private const float ButtonHeight = 79f;
+
+        // The primary button is the crimson box of mockup 13's Resume; its sprite's box is the
+        // outer edge, 78.12 mockup px tall where the keyline's inside measured 79 canvas px.
+        private const float ConfirmHeight = 89.7f;
         private const float PanelShadowSpread = 27.5f;
         private const float PanelShadowDrop = 3.5f;
 
@@ -108,7 +112,9 @@ namespace Callbreak.Editor
             body.lineSpacing = 8f;
 
             var buttonSize = new Vector2(ButtonWidth, ButtonHeight);
-            Button confirm = KitButton("ConfirmButton", panel, buttonSize, "UI/Buttons/UI_ButtonPrimary_Normal.png", "UI/Buttons/UI_Shadow_Primary.png", 6.9f, 0.45f);
+            Button confirm = KitButton(
+                "ConfirmButton", panel, new Vector2(ButtonWidth, ConfirmHeight),
+                "UI/Controls/UI_Button_Crimson_Box.png", "UI/Controls/UI_Button_Crimson_Box_Shadow.png", 1.7f, 0.82f);
             TextMeshProUGUI confirmLabel = ButtonLabel(confirm.transform, serif, ConfirmLabelSize, "Leave Match", UiBuildKit.Hex("#FEFCFC"));
             confirmLabel.fontSharedMaterial = UiBuildKit.LoadShadowPreset(serif, "ButtonLabel", new Color(0.29f, 0.03f, 0.04f, 0.9f), new Vector2(0.25f, -0.35f), 0.2f);
 

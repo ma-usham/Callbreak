@@ -38,6 +38,9 @@ poke() { powershell -NoProfile -ExecutionPolicy Bypass -File "$here/focus-editor
 
 if [ $compile -eq 1 ]; then
   if ! node "$here/compile-check.js" --quiet; then echo "compile check failed"; exit 6; fi
+  # Import new and changed files first: a recompile alone once ran a new test file's assembly
+  # without that file. The refresh may itself start the compile, so its answer may time out.
+  run eval --timeout 120 --code 'UnityEditor.AssetDatabase.Refresh(); return "refreshed";' >/dev/null
   r=$(run recompile)
   case "$r" in *timed\ out*) poke; r=$(run recompile) ;; esac
   for i in $(seq 1 90); do
