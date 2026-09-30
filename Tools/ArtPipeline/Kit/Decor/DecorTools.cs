@@ -205,6 +205,207 @@ public static class DecorTools
         return Color.FromArgb(r[r.Count / 2], g[g.Count / 2], b[b.Count / 2]);
     }
 
+    // The 'hi' to use with KeyColor so that anti-aliased edges un-mix cleanly: a little under the
+    // colour distance between the key and the object's own colour (the median distance of the
+    // pixels that are clearly not ground). Too low a 'hi' leaves a fringe of the key colour.
+    public static double AutoKeyHi(Bitmap bmp, Color key)
+    {
+        byte[] px = Read(bmp);
+        int n = bmp.Width * bmp.Height;
+        List<int> d = new List<int>();
+        for (int i = 0; i < n; i++)
+        {
+            int v = Math.Max(Math.Abs(px[i * 4 + 2] - key.R), Math.Max(Math.Abs(px[i * 4 + 1] - key.G), Math.Abs(px[i * 4] - key.B)));
+            if (v > 80) d.Add(v);
+        }
+        if (d.Count == 0) return 60;
+        d.Sort();
+        return Math.Max(40, d[(int)(d.Count * 0.4)] * 0.92);
+    }
+
+    public static Bitmap Rotate(Bitmap bmp, int degreesClockwise)
+    {
+        Bitmap c = (Bitmap)bmp.Clone();
+        c.RotateFlip(degreesClockwise == 90 ? RotateFlipType.Rotate90FlipNone : (degreesClockwise == 180 ? RotateFlipType.Rotate180FlipNone : RotateFlipType.Rotate270FlipNone));
+        Bitmap o = new Bitmap(c.Width, c.Height, PixelFormat.Format32bppArgb);
+        using (Graphics g = Graphics.FromImage(o))
+        {
+            g.CompositingMode = CompositingMode.SourceCopy;
+            g.DrawImage(c, new Rectangle(0, 0, c.Width, c.Height), 0, 0, c.Width, c.Height, GraphicsUnit.Pixel);
+        }
+        c.Dispose();
+        return o;
+    }
+
+    // Glow sprites: faint pixels often carry a dark colour under their low alpha, which shows as
+    // a grey fringe on a light ground. Every pixel with alpha below 'threshold' takes the mean
+    // colour of the pixels at or above it within 'radius' (or of the whole sprite if none).
+    public static Bitmap FixFringe(Bitmap bmp, int threshold, int radius)
+    {
+        byte[] px = Read(bmp);
+        int w = bmp.Width, h = bmp.Height, n = w * h;
+        double[] sr = new double[n], sg = new double[n], sb = new double[n], sw = new double[n];
+        double tr = 0, tg = 0, tb = 0, tw = 0;
+        for (int i = 0; i < n; i++)
+        {
+            if (px[i * 4 + 3] >= threshold)
+            {
+                sr[i] = px[i * 4 + 2]; sg[i] = px[i * 4 + 1]; sb[i] = px[i * 4]; sw[i] = 1;
+                tr += sr[i]; tg += sg[i]; tb += sb[i]; tw += 1;
+            }
+        }
+        if (tw == 0) return Write(px, w, h);
+        double[] br = Box(sr, w, h, radius), bg = Box(sg, w, h, radius), bb = Box(sb, w, h, radius), bw = Box(sw, w, h, radius);
+        for (int i = 0; i < n; i++)
+        {
+            int a = px[i * 4 + 3];
+            if (a == 0 || a >= threshold) continue;
+            if (bw[i] > 1e-6) { px[i * 4 + 2] = ToByte(br[i] / bw[i]); px[i * 4 + 1] = ToByte(bg[i] / bw[i]); px[i * 4] = ToByte(bb[i] / bw[i]); }
+            else { px[i * 4 + 2] = ToByte(tr / tw); px[i * 4 + 1] = ToByte(tg / tw); px[i * 4] = ToByte(tb / tw); }
+        }
+        return Write(px, w, h);
+    }
+
+    // Soft blur of a sprite in premultiplied alpha (two box passes): gives a crisp ChatGPT glow
+    // the softness it has on the mockup.
+    public static Bitmap Soften(Bitmap bmp, int radius)
+    {
+        byte[] px = Read(bmp);
+        int w = bmp.Width, h = bmp.Height, n = w * h;
+        double[][] ch = new double[4][];
+        for (int c = 0; c < 4; c++) ch[c] = new double[n];
+        for (int i = 0; i < n; i++)
+        {
+            double a = px[i * 4 + 3] / 255.0;
+            ch[0][i] = px[i * 4] * a; ch[1][i] = px[i * 4 + 1] * a; ch[2][i] = px[i * 4 + 2] * a; ch[3][i] = a;
+        }
+        for (int c = 0; c < 4; c++) ch[c] = Box(Box(ch[c], w, h, radius), w, h, radius);
+        for (int i = 0; i < n; i++)
+        {
+            double a = ch[3][i];
+            if (a <= 0.002) { px[i * 4] = px[i * 4 + 1] = px[i * 4 + 2] = px[i * 4 + 3] = 0; continue; }
+            px[i * 4] = ToByte(ch[0][i] / a); px[i * 4 + 1] = ToByte(ch[1][i] / a); px[i * 4 + 2] = ToByte(ch[2][i] / a); px[i * 4 + 3] = ToByte(a * 255);
+        }
+        return Write(px, w, h);
+    }
+
+    // Rotates by a small angle (degrees clockwise) about the centre, on a canvas padded so nothing
+    // is cut off: undoes the slight tilt ChatGPT sometimes gives a piece.
+    public static Bitmap RotateSmall(Bitmap bmp, double degrees)
+    {
+        double rad = Math.Abs(degrees) * Math.PI / 180.0;
+        int pad = (int)Math.Ceiling(Math.Max(bmp.Width, bmp.Height) * Math.Sin(rad) / 2.0) + 2;
+        int w = bmp.Width + pad * 2, h = bmp.Height + pad * 2;
+        using (Bitmap pre = new Bitmap(w, h, PixelFormat.Format32bppPArgb))
+        {
+            using (Graphics g = Graphics.FromImage(pre))
+            {
+                g.CompositingMode = CompositingMode.SourceCopy;
+                g.Clear(Color.Transparent);
+                g.CompositingMode = CompositingMode.SourceOver;
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                g.TranslateTransform(w / 2f, h / 2f);
+                g.RotateTransform((float)degrees);
+                g.DrawImage(bmp, new RectangleF(-bmp.Width / 2f, -bmp.Height / 2f, bmp.Width, bmp.Height), new RectangleF(0, 0, bmp.Width, bmp.Height), GraphicsUnit.Pixel);
+            }
+            return pre.Clone(new Rectangle(0, 0, w, h), PixelFormat.Format32bppArgb);
+        }
+    }
+
+    // An anti-aliased circular mask: alpha is multiplied by the coverage of the circle (cx, cy, r).
+    // With ringWidth > 0 a ring of that width is painted just inside the edge in ringColor.
+    public static Bitmap CircleMask(Bitmap bmp, double cx, double cy, double r, double ringWidth, Color ringColor)
+    {
+        byte[] px = Read(bmp);
+        int w = bmp.Width, h = bmp.Height;
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                int i = (y * w + x) * 4;
+                double d = Math.Sqrt((x + 0.5 - cx) * (x + 0.5 - cx) + (y + 0.5 - cy) * (y + 0.5 - cy));
+                double cover = Clamp01(r - d + 0.5);
+                if (cover <= 0) { px[i] = px[i + 1] = px[i + 2] = px[i + 3] = 0; continue; }
+                if (ringWidth > 0)
+                {
+                    double ring = Clamp01(d - (r - ringWidth) + 0.5);
+                    px[i] = ToByte(px[i] * (1 - ring) + ringColor.B * ring);
+                    px[i + 1] = ToByte(px[i + 1] * (1 - ring) + ringColor.G * ring);
+                    px[i + 2] = ToByte(px[i + 2] * (1 - ring) + ringColor.R * ring);
+                }
+                px[i + 3] = ToByte(px[i + 3] * cover);
+            }
+        }
+        return Write(px, w, h);
+    }
+
+    // Lowest alpha found on a circle of radius r around (cx, cy): tells how far inside a jagged
+    // cut-out edge the disc is fully opaque.
+    public static int MinAlphaOnCircle(Bitmap bmp, double cx, double cy, double r)
+    {
+        byte[] px = Read(bmp);
+        int w = bmp.Width, h = bmp.Height, min = 255;
+        int steps = (int)Math.Ceiling(2 * Math.PI * r * 2);
+        for (int k = 0; k < steps; k++)
+        {
+            double a = 2 * Math.PI * k / steps;
+            int x = (int)Math.Floor(cx + r * Math.Cos(a)), y = (int)Math.Floor(cy + r * Math.Sin(a));
+            if (x < 0 || y < 0 || x >= w || y >= h) return 0;
+            int v = px[(y * w + x) * 4 + 3];
+            if (v < min) min = v;
+        }
+        return min;
+    }
+
+    // Median colour of the pixels on a circle of radius r around (cx, cy).
+    public static Color ColorOnCircle(Bitmap bmp, double cx, double cy, double r)
+    {
+        byte[] px = Read(bmp);
+        int w = bmp.Width, h = bmp.Height;
+        List<int> rr = new List<int>(), gg = new List<int>(), bb = new List<int>();
+        int steps = (int)Math.Ceiling(2 * Math.PI * r);
+        for (int k = 0; k < steps; k++)
+        {
+            double a = 2 * Math.PI * k / steps;
+            int x = (int)Math.Floor(cx + r * Math.Cos(a)), y = (int)Math.Floor(cy + r * Math.Sin(a));
+            if (x < 0 || y < 0 || x >= w || y >= h) continue;
+            int i = (y * w + x) * 4;
+            if (px[i + 3] < 200) continue;
+            bb.Add(px[i]); gg.Add(px[i + 1]); rr.Add(px[i + 2]);
+        }
+        if (rr.Count == 0) return Color.Black;
+        rr.Sort(); gg.Sort(); bb.Sort();
+        return Color.FromArgb(rr[rr.Count / 2], gg[gg.Count / 2], bb[bb.Count / 2]);
+    }
+
+    // Silhouette geometry inside a disc: the bounding box (as fractions of the image size) of
+    // the pixels whose colour differs from the disc colour (taken near the top of the disc) by
+    // more than the threshold, ignoring the outer 6% rim. Returns left, top, right, bottom, area share.
+    public static double[] SilhouetteBox(Bitmap bmp, int threshold)
+    {
+        byte[] px = Read(bmp);
+        int w = bmp.Width, h = bmp.Height;
+        int di = ((int)(h * 0.09) * w + w / 2) * 4;
+        int dr = px[di + 2], dg = px[di + 1], db = px[di];
+        int minX = w, minY = h, maxX = -1, maxY = -1; long n = 0;
+        double cx = w / 2.0, cy = h / 2.0, rim = Math.Min(w, h) / 2.0 * 0.94;
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                double d = Math.Sqrt((x + 0.5 - cx) * (x + 0.5 - cx) + (y + 0.5 - cy) * (y + 0.5 - cy));
+                if (d > rim) continue;
+                int i = (y * w + x) * 4;
+                int diff = Math.Max(Math.Abs(px[i + 2] - dr), Math.Max(Math.Abs(px[i + 1] - dg), Math.Abs(px[i] - db)));
+                if (diff <= threshold) continue;
+                n++;
+                if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
+            }
+        }
+        return new double[] { minX / (double)w, minY / (double)h, (maxX + 1) / (double)w, (maxY + 1) / (double)h, n / (double)(w * h) };
+    }
+
     // Keys out a flat ground colour. Alpha rises from 0 at colour distance lo to 1 at hi (distance
     // = largest channel difference, 0-255); edge pixels are un-mixed from the key so no halo of
     // the key colour remains. With connected = true only ground reachable from the image border
@@ -253,6 +454,70 @@ public static class DecorTools
             }
             px[i * 4 + 3] = ToByte(a * a0 * 255);
         }
+        return Write(px, w, h);
+    }
+
+    // Box blur of the colour channels (two passes), to calm paper grain before a faint drawing is
+    // matted against its ground.
+    public static Bitmap BlurRgb(Bitmap bmp, int radius)
+    {
+        int w = bmp.Width, h = bmp.Height;
+        byte[] a = Read(bmp);
+        for (int c = 0; c < 3; c++)
+        {
+            double[] v = new double[w * h];
+            for (int i = 0; i < w * h; i++) v[i] = a[i * 4 + c];
+            double[] s = Box(Box(v, w, h, radius), w, h, radius);
+            for (int i = 0; i < w * h; i++) a[i * 4 + c] = ToByte(s[i]);
+        }
+        return Write(a, w, h);
+    }
+
+    // Turns a faint drawing on a flat ground (a watermark such as the pale mountains on the ivory
+    // card) into a transparent overlay. The ground colour is the median of the top rows. Pixels
+    // darker than the ground become the drawing's darkest tone at the alpha that reproduces them
+    // over the ground; pixels lighter than the ground become white the same way. Differences
+    // below 'dead' (0-1 of the full tone) are treated as paper noise and dropped.
+    public static Bitmap MatteOnGround(Bitmap bmp, double dead, out string info)
+    {
+        byte[] px = Read(bmp);
+        int w = bmp.Width, h = bmp.Height, n = w * h;
+        List<int> r = new List<int>(), g = new List<int>(), b = new List<int>();
+        for (int y = 0; y < Math.Max(4, h / 12); y++)
+            for (int x = 0; x < w; x += 2) { int i = (y * w + x) * 4; b.Add(px[i]); g.Add(px[i + 1]); r.Add(px[i + 2]); }
+        r.Sort(); g.Sort(); b.Sort();
+        double[] B = { r[r.Count / 2], g[g.Count / 2], b[b.Count / 2] };
+        // darkest tone: mean colour of the darkest 0.5% of pixels
+        int[] lum = new int[n];
+        int[] hist = new int[256 * 3 + 1];
+        for (int i = 0; i < n; i++) { lum[i] = px[i * 4] + px[i * 4 + 1] + px[i * 4 + 2]; hist[lum[i]]++; }
+        int want = Math.Max(50, n / 200), acc = 0, cutoff = 0;
+        for (int v = 0; v < hist.Length; v++) { acc += hist[v]; if (acc >= want) { cutoff = v; break; } }
+        double[] D = new double[3]; long cnt = 0;
+        for (int i = 0; i < n; i++) if (lum[i] <= cutoff) { D[0] += px[i * 4 + 2]; D[1] += px[i * 4 + 1]; D[2] += px[i * 4]; cnt++; }
+        for (int c = 0; c < 3; c++) D[c] /= Math.Max(1, cnt);
+        double[] dv = { D[0] - B[0], D[1] - B[1], D[2] - B[2] };
+        double dd = dv[0] * dv[0] + dv[1] * dv[1] + dv[2] * dv[2];
+        double[] wv = { 255 - B[0], 255 - B[1], 255 - B[2] };
+        double ww = wv[0] * wv[0] + wv[1] * wv[1] + wv[2] * wv[2];
+        for (int i = 0; i < n; i++)
+        {
+            double c0 = px[i * 4 + 2] - B[0], c1 = px[i * 4 + 1] - B[1], c2 = px[i * 4] - B[2];
+            double t = dd > 0 ? (c0 * dv[0] + c1 * dv[1] + c2 * dv[2]) / dd : 0;
+            double u = ww > 0 ? (c0 * wv[0] + c1 * wv[1] + c2 * wv[2]) / ww : 0;
+            if (t > dead)
+            {
+                double a = Clamp01((t - dead) / (1 - dead));
+                px[i * 4] = ToByte(D[2]); px[i * 4 + 1] = ToByte(D[1]); px[i * 4 + 2] = ToByte(D[0]); px[i * 4 + 3] = ToByte(a * 255);
+            }
+            else if (u > dead)
+            {
+                double a = Clamp01((u - dead) / (1 - dead));
+                px[i * 4] = 255; px[i * 4 + 1] = 255; px[i * 4 + 2] = 255; px[i * 4 + 3] = ToByte(a * 255);
+            }
+            else { px[i * 4] = px[i * 4 + 1] = px[i * 4 + 2] = px[i * 4 + 3] = 0; }
+        }
+        info = string.Format("ground #{0:X2}{1:X2}{2:X2}, darkest tone #{3:X2}{4:X2}{5:X2}", (int)B[0], (int)B[1], (int)B[2], (int)D[0], (int)D[1], (int)D[2]);
         return Write(px, w, h);
     }
 
@@ -563,26 +828,61 @@ public static class DecorTools
 
     // The sprite drawn into a roi-sized transparent bitmap at a (fractional) rectangle given in
     // roi pixels. Straight alpha out.
+    // Done by hand in premultiplied alpha (bilinear, with sub-samples when the sprite is drawn
+    // smaller than it is): GDI+'s bicubic leaves dark specks where faint pixels meet transparent
+    // ones, which showed as ticks at the tips of glow sprites in the check sheets.
     static byte[] RenderInto(Bitmap sprite, int rw, int rh, double x, double y, double w, double h)
     {
-        using (Bitmap pre = new Bitmap(rw, rh, PixelFormat.Format32bppPArgb))
+        byte[] s = Read(sprite);
+        int sw = sprite.Width, sh = sprite.Height;
+        byte[] o = new byte[rw * rh * 4];
+        if (w <= 0 || h <= 0) return o;
+        double kx = sw / w, ky = sh / h;                         // source pixels per canvas pixel
+        int nx = Math.Max(1, Math.Min(8, (int)Math.Ceiling(kx))), ny = Math.Max(1, Math.Min(8, (int)Math.Ceiling(ky)));
+        int x0 = Math.Max(0, (int)Math.Floor(x) - 1), x1 = Math.Min(rw - 1, (int)Math.Ceiling(x + w) + 1);
+        int y0 = Math.Max(0, (int)Math.Floor(y) - 1), y1 = Math.Min(rh - 1, (int)Math.Ceiling(y + h) + 1);
+        double norm = 1.0 / (nx * ny);
+        for (int dy = y0; dy <= y1; dy++)
         {
-            using (Graphics g = Graphics.FromImage(pre))
-            using (ImageAttributes attrs = new ImageAttributes())
+            for (int dx = x0; dx <= x1; dx++)
             {
-                attrs.SetWrapMode(WrapMode.Clamp, Color.Transparent);
-                g.CompositingMode = CompositingMode.SourceCopy;
-                g.Clear(Color.Transparent);
-                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                g.DrawImage(sprite, new PointF[] { new PointF((float)x, (float)y), new PointF((float)(x + w), (float)y), new PointF((float)x, (float)(y + h)) },
-                    new RectangleF(0, 0, sprite.Width, sprite.Height), GraphicsUnit.Pixel, attrs);
-            }
-            using (Bitmap argb = pre.Clone(new Rectangle(0, 0, rw, rh), PixelFormat.Format32bppArgb))
-            {
-                return Read(argb);
+                double pa = 0, pr = 0, pg = 0, pb = 0;
+                for (int j = 0; j < ny; j++)
+                {
+                    double sy = (dy + (j + 0.5) / ny - y) * ky - 0.5;
+                    int iy = (int)Math.Floor(sy); double fy = sy - iy;
+                    for (int i = 0; i < nx; i++)
+                    {
+                        double sx = (dx + (i + 0.5) / nx - x) * kx - 0.5;
+                        int ix = (int)Math.Floor(sx); double fx = sx - ix;
+                        for (int b = 0; b < 2; b++)
+                        {
+                            int py = iy + b; if (py < 0 || py >= sh) continue;
+                            double wy = b == 0 ? 1 - fy : fy;
+                            for (int a = 0; a < 2; a++)
+                            {
+                                int px = ix + a; if (px < 0 || px >= sw) continue;
+                                int q = (py * sw + px) * 4;
+                                double al = s[q + 3] * (a == 0 ? 1 - fx : fx) * wy;
+                                if (al <= 0) continue;
+                                pa += al; pb += s[q] * al; pg += s[q + 1] * al; pr += s[q + 2] * al;
+                            }
+                        }
+                    }
+                }
+                if (pa <= 0) continue;
+                int t = (dy * rw + dx) * 4;
+                o[t] = ToByte(pb / pa); o[t + 1] = ToByte(pg / pa); o[t + 2] = ToByte(pr / pa); o[t + 3] = ToByte(pa * norm);
             }
         }
+        return o;
+    }
+
+    // Public face of RenderInto, for checks: the sprite drawn at a fractional rectangle on a
+    // transparent canvas.
+    public static Bitmap RenderSprite(Bitmap sprite, int canvasW, int canvasH, double x, double y, double w, double h)
+    {
+        return Write(RenderInto(sprite, canvasW, canvasH, x, y, w, h), canvasW, canvasH);
     }
 
     // Median colour of the outer ring of a roi in an image: the ground an element sits on.
@@ -759,6 +1059,81 @@ public static class DecorTools
         return FitError(m, bg, RingColor(m, rw, rh, 2), RenderInto(sprite, rw, rh, x - rx, y - ry, w, h), rw * rh);
     }
 
+    // Finds the soft drop shadow the mockup shows under an element: the sprite's silhouette,
+    // blurred, in one dark colour, shifted down. Tries blur radii, opacities and drops (mockup
+    // pixels) and returns the combination whose composite (ground, shadow, sprite) is closest to
+    // the mockup: blur, opacity, drop, shift right, error without shadow, error with it.
+    public static double[] ShadowSearch(Bitmap mockup, Bitmap sprite, double x, double y, double w, double h, Color color, int margin)
+    {
+        int rx = Math.Max(0, (int)Math.Floor(x - margin)), ry = Math.Max(0, (int)Math.Floor(y - margin));
+        int rw = Math.Min(mockup.Width - rx, (int)Math.Ceiling(w + 2 * margin)), rh = Math.Min(mockup.Height - ry, (int)Math.Ceiling(h + 2 * margin));
+        byte[] m; using (Bitmap c = Crop(mockup, rx, ry, rw, rh)) { m = Read(c); }
+        double[] flat = RingColor(m, rw, rh, 2);
+        byte[] s = RenderInto(sprite, rw, rh, x - rx, y - ry, w, h);
+        int n = rw * rh;
+        double[] alpha = new double[n];
+        for (int i = 0; i < n; i++) alpha[i] = s[i * 4 + 3] / 255.0;
+        double errNone = FitError(m, null, flat, s, n);
+        double best = double.MaxValue; double[] bestP = { 0, 0, 0, 0 };
+        foreach (int blur in new int[] { 3, 5, 7, 9, 12, 16 })
+        {
+            double[] soft = Box(Box(Box(alpha, rw, rh, blur), rw, rh, blur), rw, rh, blur);
+            foreach (int drop in new int[] { 0, 2, 4, 6, 8, 11 })
+            {
+                foreach (int dx in new int[] { -2, 0, 2, 4 })
+                {
+                    foreach (double op in new double[] { 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5 })
+                    {
+                        double sum = 0;
+                        for (int yy = 0; yy < rh; yy++)
+                        {
+                            int sy = yy - drop; bool rowOk = sy >= 0 && sy < rh;
+                            for (int xx = 0; xx < rw; xx++)
+                            {
+                                int i = yy * rw + xx;
+                                int sx = xx - dx;
+                                double sh = rowOk && sx >= 0 && sx < rw ? soft[sy * rw + sx] * op : 0;
+                                double a = alpha[i];
+                                for (int c = 0; c < 3; c++)
+                                {
+                                    double ground = flat[2 - c];
+                                    double col = c == 0 ? color.B : (c == 1 ? color.G : color.R);
+                                    double under = col * sh + ground * (1 - sh);
+                                    double v = s[i * 4 + c] * a + under * (1 - a);
+                                    sum += Math.Abs(v - m[i * 4 + c]);
+                                }
+                            }
+                        }
+                        double e = sum / (n * 3.0);
+                        if (e < best) { best = e; bestP = new double[] { blur, op, drop, dx }; }
+                    }
+                }
+            }
+        }
+        return new double[] { bestP[0], bestP[1], bestP[2], bestP[3], errNone, best };
+    }
+
+    // The shadow sprite itself: the cut-out's silhouette blurred (three box passes of 'blur'
+    // pixels), in one colour, on a canvas padded by 'pad' pixels on every side. Full strength:
+    // the opacity is applied where it is drawn.
+    public static Bitmap ShadowSprite(Bitmap cutout, int blur, int pad, Color color)
+    {
+        int w = cutout.Width + pad * 2, h = cutout.Height + pad * 2;
+        byte[] src = Read(cutout);
+        double[] a = new double[w * h];
+        for (int y = 0; y < cutout.Height; y++)
+            for (int x = 0; x < cutout.Width; x++)
+                a[(y + pad) * w + x + pad] = src[(y * cutout.Width + x) * 4 + 3] / 255.0;
+        double[] soft = Box(Box(Box(a, w, h, blur), w, h, blur), w, h, blur);
+        byte[] px = new byte[w * h * 4];
+        for (int i = 0; i < w * h; i++)
+        {
+            px[i * 4] = color.B; px[i * 4 + 1] = color.G; px[i * 4 + 2] = color.R; px[i * 4 + 3] = ToByte(soft[i] * 255);
+            if (px[i * 4 + 3] == 0) { px[i * 4] = px[i * 4 + 1] = px[i * 4 + 2] = 0; }
+        }
+        return Write(px, w, h);
+    }
+
     // The sprite on black and on white, side by side: halos and grey fringes show at once.
     public static Bitmap AlphaSheet(Bitmap sprite, int maxWidth)
     {
@@ -803,6 +1178,236 @@ public static class DecorTools
             }
         }
         return Write(px, w, h);
+    }
+
+    // Line ornaments (a hair line with a diamond): ChatGPT draws the line thinner than the
+    // mockup. This thickens only the line: columns whose opaque run is short (the diamond's
+    // columns are tall and are left alone) get a vertical max filter so the line's median
+    // thickness becomes 'target' pixels. With vertical = true the image is treated as upright
+    // (rows instead of columns). Returns the new bitmap; 'info' reports before and after.
+    public static Bitmap ThickenLine(Bitmap bmp, double target, bool vertical, out string info)
+    {
+        byte[] px = Read(bmp);
+        int w = bmp.Width, h = bmp.Height;
+        int len = vertical ? h : w, across = vertical ? w : h;
+        Func<int, int, int> idx = delegate(int along, int acr) { return vertical ? (along * w + acr) * 4 : (acr * w + along) * 4; };
+        int[] count = new int[len];
+        for (int a = 0; a < len; a++) { int c = 0; for (int b = 0; b < across; b++) if (px[idx(a, b) + 3] >= 128) c++; count[a] = c; }
+        List<int> lineCounts = new List<int>();
+        for (int a = 0; a < len; a++) if (count[a] > 0 && count[a] <= across * 0.45) lineCounts.Add(count[a]);
+        if (lineCounts.Count == 0) { info = "no line found"; return Write(px, w, h); }
+        lineCounts.Sort();
+        double t = lineCounts[lineCounts.Count / 2];
+        int r = (int)Math.Round((target - t) / 2.0);
+        if (r <= 0) { info = string.Format("line {0} px, target {1:F1}: left as is", t, target); return Write(px, w, h); }
+        byte[] o = (byte[])px.Clone();
+        int[] dia = DiamondSpan(bmp, vertical);
+        for (int a = 0; a < len; a++)
+        {
+            if (a >= dia[0] && a <= dia[1]) continue;
+            for (int b = 0; b < across; b++)
+            {
+                int best = idx(a, b); int bestA = px[best + 3];
+                for (int d = -r; d <= r; d++)
+                {
+                    int bb = b + d; if (bb < 0 || bb >= across) continue;
+                    int i = idx(a, bb);
+                    if (px[i + 3] > bestA) { bestA = px[i + 3]; best = i; }
+                }
+                int t0 = idx(a, b);
+                o[t0] = px[best]; o[t0 + 1] = px[best + 1]; o[t0 + 2] = px[best + 2]; o[t0 + 3] = px[best + 3];
+            }
+        }
+        info = string.Format("line {0} px -> about {1} px (target {2:F1}, radius {3})", t, t + 2 * r, target, r);
+        return Write(o, w, h);
+    }
+
+    // First and last column (row when vertical) of the diamond of a line ornament: the columns
+    // whose opaque run is taller than 45% of the sprite.
+    public static int[] DiamondSpan(Bitmap bmp, bool vertical)
+    {
+        byte[] px = Read(bmp);
+        int w = bmp.Width, h = bmp.Height;
+        int len = vertical ? h : w, across = vertical ? w : h;
+        int[] count = new int[len];
+        for (int a = 0; a < len; a++)
+        {
+            int c = 0;
+            for (int b = 0; b < across; b++) { int i = vertical ? (a * w + b) * 4 : (b * w + a) * 4; if (px[i + 3] >= 128) c++; }
+            count[a] = c;
+        }
+        // The diamond is a square standing on its corner: it is as wide as it is tall. Its centre
+        // is the middle of the tallest columns; its tips (as thin as the line) are included.
+        int max = 0;
+        for (int a = 0; a < len; a++) if (count[a] > max) max = count[a];
+        int first = -1, last = -1;
+        for (int a = 0; a < len; a++) if (count[a] >= max * 0.9) { if (first < 0) first = a; last = a; }
+        double centre = (first + last) / 2.0;
+        int d0 = Math.Max(0, (int)Math.Round(centre - max / 2.0)), d1 = Math.Min(len - 1, (int)Math.Round(centre + max / 2.0));
+        return new int[] { d0, d1 };
+    }
+
+    // Three-slices a line ornament along its length: the diamond keeps its pixels, the part
+    // before it is resampled to newBefore pixels and the part after it to newAfter pixels, so
+    // the line can be as long as on the mockup while the diamond keeps its shape.
+    public static Bitmap StretchLines(Bitmap bmp, bool vertical, int newBefore, int newAfter)
+    {
+        int[] d = DiamondSpan(bmp, vertical);
+        int w = bmp.Width, h = bmp.Height;
+        int len = vertical ? h : w, across = vertical ? w : h;
+        int before = d[0], dia = d[1] - d[0] + 1, after = len - d[1] - 1;
+        if (before <= 0) newBefore = 0;
+        if (after <= 0) newAfter = 0;
+        int total = newBefore + dia + newAfter;
+        Bitmap o = vertical ? new Bitmap(w, total, PixelFormat.Format32bppPArgb) : new Bitmap(total, h, PixelFormat.Format32bppPArgb);
+        using (Graphics g = Graphics.FromImage(o))
+        using (ImageAttributes attrs = new ImageAttributes())
+        {
+            attrs.SetWrapMode(WrapMode.TileFlipXY);
+            g.CompositingMode = CompositingMode.SourceCopy;
+            g.Clear(Color.Transparent);
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = PixelOffsetMode.Half;
+            int[][] parts = new int[][] { new int[] { 0, before, 0, newBefore }, new int[] { d[0], dia, newBefore, dia }, new int[] { d[1] + 1, after, newBefore + dia, newAfter } };
+            foreach (int[] p in parts)
+            {
+                if (p[1] <= 0 || p[3] <= 0) continue;
+                if (vertical) g.DrawImage(bmp, new Rectangle(0, p[2], w, p[3]), 0, p[0], w, p[1], GraphicsUnit.Pixel, attrs);
+                else g.DrawImage(bmp, new Rectangle(p[2], 0, p[3], h), p[0], 0, p[1], h, GraphicsUnit.Pixel, attrs);
+            }
+        }
+        Bitmap argb = o.Clone(new Rectangle(0, 0, o.Width, o.Height), PixelFormat.Format32bppArgb);
+        o.Dispose();
+        return argb;
+    }
+
+    // Measures a line ornament on the mockup: the ink colour (middle of the diamond) and, for
+    // every mockup pixel along the line, how strong the line is there relative to the ink
+    // (0 = ground, 1 = as dark as the diamond). Returns inkR, inkG, inkB, groundR, groundG,
+    // groundB, then one strength per mockup pixel along the rectangle's length.
+    public static double[] LineProfile(Bitmap mockup, double x, double y, double w, double h, double dStart, double dWidth, bool vertical)
+    {
+        byte[] px = Read(mockup);
+        int W = mockup.Width, H = mockup.Height;
+        Func<int, int, int> at = delegate(int along, int acr)
+        {
+            int xx = vertical ? acr : along, yy = vertical ? along : acr;
+            xx = Math.Max(0, Math.Min(W - 1, xx)); yy = Math.Max(0, Math.Min(H - 1, yy));
+            return (yy * W + xx) * 4;
+        };
+        double axisStart = vertical ? y : x, axisLen = vertical ? h : w, acrStart = vertical ? x : y, acrLen = vertical ? w : h;
+        // ground: median of two strips beside the ornament, 3 to 6 px away from it
+        List<int> gr = new List<int>(), gg = new List<int>(), gb = new List<int>();
+        for (int a = (int)axisStart; a < axisStart + axisLen; a += 2)
+        {
+            for (int k = 3; k <= 6; k++)
+            {
+                foreach (int acr in new int[] { (int)Math.Floor(acrStart) - k, (int)Math.Ceiling(acrStart + acrLen) + k })
+                {
+                    int i = at(a, acr); gb.Add(px[i]); gg.Add(px[i + 1]); gr.Add(px[i + 2]);
+                }
+            }
+        }
+        gr.Sort(); gg.Sort(); gb.Sort();
+        double[] ground = { gr[gr.Count / 2], gg[gg.Count / 2], gb[gb.Count / 2] };
+        // ink: median of the middle of the diamond
+        List<int> ir = new List<int>(), ig = new List<int>(), ib = new List<int>();
+        double acrMid = acrStart + acrLen / 2;
+        for (int a = (int)Math.Round(dStart + dWidth * 0.3); a <= (int)Math.Round(dStart + dWidth * 0.7); a++)
+        {
+            for (int acr = (int)Math.Round(acrMid - dWidth * 0.2); acr <= (int)Math.Round(acrMid + dWidth * 0.2); acr++)
+            {
+                int i = at(a, acr); ib.Add(px[i]); ig.Add(px[i + 1]); ir.Add(px[i + 2]);
+            }
+        }
+        ir.Sort(); ig.Sort(); ib.Sort();
+        double[] ink = { ir[ir.Count / 2], ig[ig.Count / 2], ib[ib.Count / 2] };
+        Func<double[], double> lum = delegate(double[] c) { return 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]; };
+        double gl = lum(ground), il = lum(ink);
+        int n = (int)Math.Ceiling(axisLen);
+        double[] raw = new double[n];
+        for (int k = 0; k < n; k++)
+        {
+            int a = (int)Math.Floor(axisStart) + k;
+            double min = 255;
+            for (int acr = (int)Math.Floor(acrStart) - 1; acr <= (int)Math.Ceiling(acrStart + acrLen) + 1; acr++)
+            {
+                int i = at(a, acr);
+                double l = 0.299 * px[i + 2] + 0.587 * px[i + 1] + 0.114 * px[i];
+                if (l < min) min = l;
+            }
+            raw[k] = Clamp01((gl - min) / Math.Max(1, gl - il));
+        }
+        double[] res = new double[6 + n];
+        res[0] = ink[0]; res[1] = ink[1]; res[2] = ink[2]; res[3] = ground[0]; res[4] = ground[1]; res[5] = ground[2];
+        for (int k = 0; k < n; k++)
+        {
+            double s = 0; int c = 0;
+            for (int j = -3; j <= 3; j++) { int q = k + j; if (q < 0 || q >= n) continue; s += raw[q]; c++; }
+            res[6 + k] = s / c;
+        }
+        return res;
+    }
+
+    // Gives a line ornament the mockup's ink and line strength: every pixel takes the ink colour;
+    // outside the diamond the alpha is multiplied by the measured strength at that place along
+    // the line (the sprite spans exactly the measured rectangle's length).
+    public static Bitmap ApplyLineProfile(Bitmap bmp, bool vertical, double[] profile)
+    {
+        byte[] px = Read(bmp);
+        int w = bmp.Width, h = bmp.Height;
+        int len = vertical ? h : w, across = vertical ? w : h, n = profile.Length - 6;
+        int[] dia = DiamondSpan(bmp, vertical);
+        byte r = ToByte(profile[0]), g = ToByte(profile[1]), b = ToByte(profile[2]);
+        for (int a = 0; a < len; a++)
+        {
+            double pos = (a + 0.5) * n / len - 0.5;
+            int k0 = Math.Max(0, Math.Min(n - 1, (int)Math.Floor(pos))), k1 = Math.Min(n - 1, k0 + 1);
+            double f = pos - Math.Floor(pos);
+            double c = profile[6 + k0] * (1 - f) + profile[6 + k1] * f;
+            bool inDiamond = a >= dia[0] && a <= dia[1];
+            for (int q = 0; q < across; q++)
+            {
+                int i = vertical ? (a * w + q) * 4 : (q * w + a) * 4;
+                if (px[i + 3] == 0) { px[i] = px[i + 1] = px[i + 2] = 0; continue; }
+                px[i] = b; px[i + 1] = g; px[i + 2] = r;
+                if (!inDiamond) px[i + 3] = ToByte(px[i + 3] * c);
+            }
+        }
+        return Write(px, w, h);
+    }
+
+    // Replaces the diamond of a line ornament with a sharper drawing of the same diamond (taken
+    // from a larger ornament of the same sheet): the old diamond's columns are cleared and the
+    // new one is drawn w x h pixels, centred across the sprite at 'centreAlong' along the line.
+    public static Bitmap ReplaceDiamond(Bitmap sprite, bool vertical, Bitmap diamond, double centreAlong, double w, double h)
+    {
+        int[] d = DiamondSpan(sprite, vertical);
+        byte[] px = Read(sprite);
+        int W = sprite.Width, H = sprite.Height;
+        int len = vertical ? H : W, across = vertical ? W : H;
+        // Where the old diamond stood, continue whatever lies just before it (the line when the
+        // line touches the diamond, nothing when there is a gap), then draw the new diamond on top.
+        int srcCol = Math.Max(0, d[0] - 6);
+        for (int a = Math.Max(0, d[0] - 4); a <= Math.Min(len - 1, d[1] + 4); a++)
+        {
+            for (int q = 0; q < across; q++)
+            {
+                int i = vertical ? (a * W + q) * 4 : (q * W + a) * 4;
+                int s = vertical ? (srcCol * W + q) * 4 : (q * W + srcCol) * 4;
+                px[i] = px[s]; px[i + 1] = px[s + 1]; px[i + 2] = px[s + 2]; px[i + 3] = px[s + 3];
+            }
+        }
+        using (Bitmap cleared = Write(px, W, H))
+        {
+            double cx = vertical ? W / 2.0 : centreAlong, cy = vertical ? centreAlong : H / 2.0;
+            double dw = vertical ? h : w, dh = vertical ? w : h;   // w is always the size along the line
+            byte[] dpx = RenderInto(diamond, W, H, cx - dw / 2, cy - dh / 2, dw, dh);
+            using (Bitmap layer = Write(dpx, W, H))
+            {
+                return Over(cleared, layer, 0, 0);
+            }
+        }
     }
 
     // Multiplies alpha by a factor (0-1).
