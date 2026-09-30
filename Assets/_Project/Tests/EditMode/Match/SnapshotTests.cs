@@ -51,7 +51,7 @@ namespace Callbreak.Tests.EditMode.Match
         }
 
         [Test]
-        public void SnapshotShape_OnlyPublicFieldsOfSerializableTypes()
+        public void SnapshotTypes_Reflected_OnlyPublicFieldsOfSerializableTypes()
         {
             var allowed = new HashSet<Type>
             {
@@ -138,6 +138,8 @@ namespace Callbreak.Tests.EditMode.Match
                 Corrupt("round delta tampered", s => s.rounds[0].deltas[0] += 1),
                 Corrupt("null profile", s => s.seats[1] = null),
                 Corrupt("missing match id", s => s.matchId = null),
+                Corrupt("ended flag on an unfinished match", s => s.matchEnded = true),
+                Corrupt("match over without the ended flag", s => s.phase = (int)Phase.MatchOver),
             };
 
             Assert.IsFalse(MatchEngine.TryRestore(null, rules, new Pcg32Random(1UL), out _, out string nullError));
@@ -167,6 +169,22 @@ namespace Callbreak.Tests.EditMode.Match
 
             Assert.IsFalse(restored);
             StringAssert.Contains("deltas", error);
+        }
+
+        [Test]
+        public void TryRestore_MatchOverWithoutTheEndedFlag_Refused()
+        {
+            var driver = new MatchDriver(new MatchEngine(RuleSet.NepaliStandard.With(rounds: 1), new Pcg32Random(47UL), TestSetups.AllBots()), randomPolicy: true);
+            driver.Start();
+            driver.PlayToEnd();
+            MatchSnapshot snapshot = driver.Engine.Snapshot();
+            Assert.IsTrue(snapshot.matchEnded);
+
+            snapshot.matchEnded = false;
+            bool restored = MatchEngine.TryRestore(snapshot, RuleSet.NepaliStandard.With(rounds: 1), new Pcg32Random(1UL), out _, out string error);
+
+            Assert.IsFalse(restored);
+            StringAssert.Contains("without final standings", error);
         }
 
         [Test]

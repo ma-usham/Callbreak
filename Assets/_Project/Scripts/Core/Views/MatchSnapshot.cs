@@ -60,5 +60,11 @@ namespace Callbreak.Core.Views
 
         /// <summary>Every scored round in order.</summary>
         public RoundSnapshot[] rounds;
+
+        /// <summary>
+        /// True once <c>MatchEnded</c> was emitted, so final standings exist (recomputed on restore). Stays
+        /// true for a table closed after the match ended.
+        /// </summary>
+        public bool matchEnded;
     }
 }

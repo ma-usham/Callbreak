@@ -377,12 +377,24 @@ namespace Callbreak.Core.Match
 
         private static string CheckStandings(MatchState s)
         {
-            if (s.Phase != Phase.MatchOver)
+            // Standings exist exactly once MatchEnded was emitted; a table closed afterwards keeps them.
+            bool ended = s.Standings.Count > 0;
+            if (s.Phase == Phase.MatchOver && !ended)
             {
-                return s.Standings.Count == 0 ? null : "Standings exist before the match ended.";
+                return "MatchOver without final standings.";
             }
 
-            if (s.Round != s.Rules.Rounds)
+            if (!ended)
+            {
+                return null;
+            }
+
+            if (s.Phase != Phase.MatchOver && s.Phase != Phase.Closed)
+            {
+                return "Standings exist before the match ended.";
+            }
+
+            if (s.Round != s.Rules.Rounds || s.Scores.Rounds.Count != s.Rules.Rounds)
             {
                 return "The match ended after round " + Text(s.Round) + " of " + Text(s.Rules.Rounds) + ".";
             }

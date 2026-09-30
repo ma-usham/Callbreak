@@ -274,6 +274,37 @@ namespace Callbreak.Tests.EditMode.Match
             Assert.IsNull(engine.FindInvariantViolation());
         }
 
+        [Test]
+        public void Close_AfterTheMatchEnded_KeepsFinalStandingsThroughSnapshots()
+        {
+            var driver = new MatchDriver(new MatchEngine(RuleSet.NepaliStandard.With(rounds: 1), new Pcg32Random(43UL), TestSetups.Humans(Seat.West)), randomPolicy: true);
+            driver.Start();
+            driver.PlayToEnd();
+            IReadOnlyList<Standing> standings = driver.Engine.ViewFor(Seat.South).FinalStandings;
+
+            driver.Engine.Close();
+            MatchEngine restored = MatchEngine.Restore(SnapshotComparer.Clone(driver.Engine.Snapshot()), driver.Engine.Rules, new Pcg32Random(1UL));
+
+            Assert.AreEqual(4, standings.Count);
+            Assert.IsNull(driver.Engine.FindInvariantViolation());
+            CollectionAssert.AreEqual(standings.ToArray(), driver.Engine.ViewFor(Seat.South).FinalStandings.ToArray());
+            Assert.AreEqual(driver.Engine.ViewFor(Seat.East), restored.ViewFor(Seat.East));
+        }
+
+        [Test]
+        public void Close_InTheLastRoundSummary_NoStandingsThroughSnapshots()
+        {
+            MatchEngine engine = PlayFirstRound(TestSetups.Humans(Seat.West), RuleSet.NepaliStandard.With(rounds: 1));
+            Assert.AreEqual(Phase.RoundSummary, engine.Phase);
+
+            engine.Close();
+            MatchEngine restored = MatchEngine.Restore(SnapshotComparer.Clone(engine.Snapshot()), engine.Rules, new Pcg32Random(1UL));
+
+            Assert.IsNull(engine.FindInvariantViolation());
+            Assert.AreEqual(0, engine.ViewFor(Seat.South).FinalStandings.Count);
+            Assert.AreEqual(engine.ViewFor(Seat.North), restored.ViewFor(Seat.North));
+        }
+
         private static MatchEngine OrdinaryEngine(RuleSet rules)
         {
             var engine = new MatchEngine(
@@ -302,9 +333,9 @@ namespace Callbreak.Tests.EditMode.Match
             engine.AssertInvariants();
         }
 
-        private static MatchEngine PlayFirstRound(MatchSetup setup)
+        private static MatchEngine PlayFirstRound(MatchSetup setup, RuleSet rules = null)
         {
-            var engine = new MatchEngine(RuleSet.NepaliStandard, new Pcg32Random(37UL), setup);
+            var engine = new MatchEngine(rules ?? RuleSet.NepaliStandard, new Pcg32Random(37UL), setup);
             engine.Start();
             while (engine.Phase == Phase.Calling)
             {

@@ -264,8 +264,9 @@ namespace Callbreak.Core.Match
 
         /// <summary>
         /// Closes the table from any phase (GDD §7 "Closed · from any state": the host closes the room, all
-        /// humans leave, or the server drains). Every later command is rejected with
-        /// <see cref="RejectReason.WrongPhase"/>. Emits nothing; scores so far remain in views and snapshots.
+        /// humans leave, or the server drains; results are kept). Every later command is rejected with
+        /// <see cref="RejectReason.WrongPhase"/>. Emits nothing; scores so far, and final standings if the
+        /// match had ended, remain in views and snapshots.
         /// </summary>
         public void Close()
         {

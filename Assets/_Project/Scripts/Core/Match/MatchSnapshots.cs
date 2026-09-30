@@ -78,6 +78,7 @@ namespace Callbreak.Core.Match
                 currentTrick = Capture(s.Trick),
                 completedTricks = completed,
                 rounds = rounds,
+                matchEnded = s.Standings.Count > 0,
             };
         }
 
@@ -238,7 +239,7 @@ namespace Callbreak.Core.Match
             }
 
             state.Scores = scores;
-            if (state.Phase == Phase.MatchOver)
+            if (snap.matchEnded)
             {
                 state.Standings = Standings.Compute(scores);
             }
