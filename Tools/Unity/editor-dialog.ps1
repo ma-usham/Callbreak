@@ -2,7 +2,9 @@
 # A dialog blocks the Editor's main thread, so every `unity command` times out until someone
 # answers it. With -DismissTestScene it answers "Don't Save" to a "Scene(s) Have Been Modified"
 # prompt, but only when every scene it lists is one of the Test Framework's own InitTestScene files.
-param([switch]$DismissTestScene)
+# With -ReloadScenes it answers Reload to "The open scene(s) have been modified externally" (a
+# scene the Editor has open was changed on disk, e.g. by git checkout): the disk version is loaded.
+param([switch]$DismissTestScene, [switch]$ReloadScenes)
 
 $source = @'
 using System;
@@ -23,7 +25,7 @@ public static class EditorDialog {
 
   static string Text(IntPtr h) { var s = new StringBuilder(4000); SendMessage(h, WM_GETTEXT, (IntPtr)4000, s); return s.ToString(); }
 
-  public static List<string> Inspect(uint pid, bool dismissTestScene) {
+  public static List<string> Inspect(uint pid, bool dismissTestScene, bool reloadScenes) {
     var lines = new List<string>();
     EnumWindows((h, l) => {
       uint p; GetWindowThreadProcessId(h, out p);
@@ -32,6 +34,11 @@ public static class EditorDialog {
       string title = Text(h);
       lines.Add("dialog: " + title);
       EnumChildWindows(h, (ch, l2) => { string t = Text(ch).Trim(); if (t.Length > 0) lines.Add("  " + t.Replace("\r\n", " | ")); return true; }, IntPtr.Zero);
+      if (reloadScenes && title == "The open scene(s) have been modified externally") {
+        bool clicked = false;
+        EnumChildWindows(h, (ch, l2) => { if (!clicked && Text(ch).Trim() == "Reload") { PostMessage(ch, BM_CLICK, IntPtr.Zero, IntPtr.Zero); clicked = true; } return true; }, IntPtr.Zero);
+        lines.Add(clicked ? "  -> answered Reload" : "  -> no Reload button found");
+      }
       if (dismissTestScene && title == "Scene(s) Have Been Modified") {
         string[] body = Text(GetDlgItem(h, 1019)).Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
         int scenes = 0, testScenes = 0;
@@ -55,5 +62,5 @@ $project = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 foreach ($unity in Get-Process Unity -ErrorAction SilentlyContinue) {
   # Only the Editor that has this project open.
   if ($unity.MainWindowTitle -and $unity.MainWindowTitle -notlike "$(Split-Path $project -Leaf) - *") { continue }
-  [EditorDialog]::Inspect([uint32]$unity.Id, [bool]$DismissTestScene)
+  [EditorDialog]::Inspect([uint32]$unity.Id, [bool]$DismissTestScene, [bool]$ReloadScenes)
 }
