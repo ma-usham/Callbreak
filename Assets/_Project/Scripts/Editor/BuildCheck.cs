@@ -74,6 +74,10 @@ namespace Callbreak.Editor
                         {
                             text.Append("error in ").Append(step.name).Append(": ").AppendLine(message.content);
                         }
+                        else if (message.type == LogType.Warning)
+                        {
+                            text.Append("warning in ").Append(step.name).Append(": ").AppendLine(message.content);
+                        }
                     }
                 }
             }

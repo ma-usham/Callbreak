@@ -36,7 +36,8 @@ while [ ! -f "$report" ]; do
 done
 cat "$report"
 echo
-manifest=$(find "$repo/Temp/AndroidExport" -name AndroidManifest.xml -path '*launcher*' 2>/dev/null | head -1)
-[ -n "$manifest" ] && { echo "launcher manifest: ${manifest#$repo/}"; grep -n -A8 'android.intent.action.VIEW' "$manifest" | head -14; }
+# The invite-link filter sits on the game activity, in the unityLibrary module's manifest.
+manifest=$(grep -l 'android.intent.action.VIEW' $(find "$repo/Temp/AndroidExport" -name AndroidManifest.xml 2>/dev/null) 2>/dev/null | head -1)
+if [ -n "$manifest" ]; then echo "invite-link filter in ${manifest#$repo/}:"; grep -n -B1 -A4 'android.intent.action.VIEW' "$manifest" | head -10; else echo "no manifest has an invite-link (VIEW) filter"; fi
 grep -q '^Succeeded' "$report" && exit 0
 exit 6

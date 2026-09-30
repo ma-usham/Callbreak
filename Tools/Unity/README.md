@@ -11,7 +11,7 @@ and waits its turn (the lock's `owner` file says who holds it).
 | `Tools/Unity/screen.sh <Name> [--compile]` | Builds one screen prefab from `ArtSource/Screens/<Name>/layout.json`, captures it at 16:9, 21:9 and 4:3 and compares the 16:9 capture with its mockup. |
 | `Tools/Unity/playcheck.sh wait:N eval:'<C#>' shot:<png> log:N ...` | Plays the game from the Boot scene, runs the steps in order and always leaves Play mode again. Exit 4 when the run logged errors. |
 | `Tools/Unity/utest.sh <EditMode\|PlayMode> [filter] [--no-compile]` | Runs the Unity tests and prints every test that did not pass. Exit 0 passed, 8 tests failed, 6 the run broke. |
-| `Tools/Unity/android-export.sh` | Exports the Android player as a Gradle project into `Temp/AndroidExport` and prints the build report and the launcher manifest's invite-link filter. The Editor is busy for the whole build. |
+| `Tools/Unity/android-export.sh` | Exports the Android player as a Gradle project into `Temp/AndroidExport` and prints the build report (errors and warnings) and the invite-link filter of the exported manifest. The Editor is busy for the whole build. |
 | `powershell -File Tools/Unity/editor-dialog.ps1 [-DismissTestScene] [-ReloadScenes]` | Prints a modal dialog the Editor is showing (every `unity command` times out while one is up). `-DismissTestScene` answers Don't Save when only the Test Framework's scenes are listed; `-ReloadScenes` answers Reload when an open scene was changed on disk (e.g. by `git checkout`). |
 
 Helpers for `playcheck.sh` steps (all in `Assets/_Project/Scripts/Editor`; each call returns a line
