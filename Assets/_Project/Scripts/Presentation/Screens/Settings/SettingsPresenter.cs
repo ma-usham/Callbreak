@@ -35,6 +35,7 @@ namespace Callbreak.Presentation.Screens
         private readonly IDialogs _dialogs;
         private readonly IClock _clock;
         private readonly IHaptics _haptics;
+        private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private bool _volumeDirty;
         private float _pendingVolume;
@@ -106,6 +107,8 @@ namespace Callbreak.Presentation.Screens
             _settings.Changed -= Render;
             _profile.Changed -= Render;
             _localization.LanguageChanged -= Render;
+            _lifetime.Cancel();
+            _lifetime.Dispose();
         }
 
         private void Render()
@@ -195,7 +198,7 @@ namespace Callbreak.Presentation.Screens
             string body = _localization.Format("ui.about.body", UnityEngine.Application.version);
             _ = _dialogs.ConfirmAsync(
                 new DialogRequest(_localization.Get("ui.settings.about"), body, _localization.Get("ui.settings.done"), null),
-                CancellationToken.None);
+                _lifetime.Token);
         }
 
         private static string PercentText(float volume) =>

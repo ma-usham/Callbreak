@@ -26,8 +26,10 @@ namespace Callbreak.Presentation.Screens
         private readonly IDialogs _dialogs;
         private readonly ILocalization _localization;
         private readonly MatchLauncher _launcher;
+        private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private bool _asking;
+        private bool _disposed;
 
         public OfflineSetupPresenter(
             OfflineSetupView view,
@@ -70,6 +72,9 @@ namespace Callbreak.Presentation.Screens
             _view.StartClicked -= OnStart;
             _profile.Changed -= Render;
             _settings.Changed -= Render;
+            _disposed = true;
+            _lifetime.Cancel();
+            _lifetime.Dispose();
         }
 
         private void Render()
@@ -113,8 +118,8 @@ namespace Callbreak.Presentation.Screens
                         _localization.Get("ui.dialog.replace_match.body"),
                         _localization.Get("ui.dialog.replace_match.confirm"),
                         _localization.Get("ui.dialog.replace_match.cancel")),
-                    CancellationToken.None);
-                if (replace)
+                    _lifetime.Token);
+                if (replace && !_disposed)
                 {
                     Launch();
                 }

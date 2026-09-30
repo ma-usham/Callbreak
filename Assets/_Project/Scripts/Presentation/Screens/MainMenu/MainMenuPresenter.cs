@@ -32,8 +32,10 @@ namespace Callbreak.Presentation.Screens
         private readonly IAppFlow _flow;
         private readonly MatchLauncher _launcher;
         private readonly IAppExit _exit;
+        private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private bool _asking;
+        private bool _disposed;
 
         public MainMenuPresenter(
             MainMenuView view,
@@ -95,6 +97,11 @@ namespace Callbreak.Presentation.Screens
             _view.BackRequested -= OnBack;
             _profile.Changed -= Render;
             _network.Changed -= OnNetworkChanged;
+
+            // A question still open is answered "no" and closes with the screen.
+            _disposed = true;
+            _lifetime.Cancel();
+            _lifetime.Dispose();
         }
 
         private void Render() => _view.SetPlayerName(_profile.DisplayName);
@@ -167,8 +174,8 @@ namespace Callbreak.Presentation.Screens
                         string.Empty,
                         _localization.Get("ui.dialog.exit.confirm"),
                         _localization.Get("ui.dialog.exit.cancel")),
-                    CancellationToken.None);
-                if (exit)
+                    _lifetime.Token);
+                if (exit && !_disposed)
                 {
                     _exit.Quit();
                 }
@@ -199,7 +206,12 @@ namespace Callbreak.Presentation.Screens
                         string.Empty,
                         _localization.Get("ui.dialog.resume_match.confirm"),
                         _localization.Get(declineKey)),
-                    CancellationToken.None);
+                    _lifetime.Token);
+                if (_disposed)
+                {
+                    return;
+                }
+
                 if (resume)
                 {
                     _launcher.Launch(new MatchLaunchRequest(MatchMode.Offline, _settings.Difficulty, resumeSaved: true));

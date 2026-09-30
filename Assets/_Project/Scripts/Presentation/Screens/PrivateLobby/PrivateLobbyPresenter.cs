@@ -33,6 +33,8 @@ namespace Callbreak.Presentation.Screens
         private readonly AvatarLibrary _avatars;
         private readonly MatchLauncher _launcher;
 
+        private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
+
         private IRoomSession _room;
         private bool _asking;
 
@@ -93,6 +95,8 @@ namespace Callbreak.Presentation.Screens
             _router.Changed -= OnScreenChanged;
             _localization.LanguageChanged -= Render;
             Bind(null);
+            _lifetime.Cancel();
+            _lifetime.Dispose();
         }
 
         private void OnScreenChanged(ScreenId id)
@@ -296,7 +300,7 @@ namespace Callbreak.Presentation.Screens
                     : _localization.Format("ui.dialog.fill_bots.title", empty);
                 bool fill = await _dialogs.ConfirmAsync(
                     new DialogRequest(title, string.Empty, _localization.Get("ui.dialog.fill_bots.confirm"), _localization.Get("ui.dialog.fill_bots.cancel")),
-                    CancellationToken.None);
+                    _lifetime.Token);
                 if (fill && _room == room)
                 {
                     await room.StartAsync(true, CancellationToken.None);
@@ -334,7 +338,7 @@ namespace Callbreak.Presentation.Screens
                         string.Empty,
                         _localization.Get("ui.dialog.remove_player.confirm"),
                         _localization.Get("ui.dialog.remove_player.cancel")),
-                    CancellationToken.None);
+                    _lifetime.Token);
                 if (remove && _room == room && index < room.Seats.Count && room.Seats[index].Occupied && room.Seats[index].Name == name)
                 {
                     await room.KickAsync(index, CancellationToken.None);
