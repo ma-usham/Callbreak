@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Runs the engine-free EditMode tests outside Unity. Unity's Test Framework ships NUnit 3.5,
+       so tests may only use APIs that exist there (no Assert.Multiple, no async tests). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>Callbreak.Tests.EditMode</AssemblyName>
+    <RootNamespace>Callbreak.Tests.EditMode</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(UnityTests)\SmokeTests.cs" />
+    <Compile Include="$(UnityTests)\Cards\**\*.cs" />
+    <Compile Include="$(UnityTests)\Rules\**\*.cs" />
+    <Compile Include="$(UnityTests)\Scoring\**\*.cs" />
+    <Compile Include="$(UnityTests)\Match\**\*.cs" />
+    <Compile Include="$(UnityTests)\Bots\**\*.cs" />
+    <Compile Include="$(UnityTests)\Application\**\*.cs" />
+    <Compile Include="$(UnityTests)\Support\**\*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Callbreak.Core\Callbreak.Core.csproj" />
+    <ProjectReference Include="..\Callbreak.Bots\Callbreak.Bots.csproj" />
+    <ProjectReference Include="..\Callbreak.Application\Callbreak.Application.csproj" />
+  </ItemGroup>
+</Project>

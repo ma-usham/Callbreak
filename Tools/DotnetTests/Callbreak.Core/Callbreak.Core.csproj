@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The rules engine: the same sources Unity compiles as Callbreak.Core (noEngineReferences). -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>Callbreak.Core</AssemblyName>
+    <RootNamespace>Callbreak.Core</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(UnityScripts)\Core\**\*.cs" />
+  </ItemGroup>
+</Project>

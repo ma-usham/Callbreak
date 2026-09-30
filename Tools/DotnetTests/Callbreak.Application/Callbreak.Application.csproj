@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The engine-free part of Callbreak.Application. Anything that needs UnityEngine lives in
+       Application/Config (ScriptableObject assets) or in a folder named Unity, and is left out here. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>Callbreak.Application</AssemblyName>
+    <RootNamespace>Callbreak.Application</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(UnityScripts)\Application\**\*.cs" Exclude="$(UnityScripts)\Application\Config\**\*.cs;$(UnityScripts)\Application\**\Unity\**\*.cs" />
+    <ProjectReference Include="..\Callbreak.Core\Callbreak.Core.csproj" />
+    <ProjectReference Include="..\Callbreak.Bots\Callbreak.Bots.csproj" />
+  </ItemGroup>
+</Project>

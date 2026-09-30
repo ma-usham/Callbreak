@@ -125,3 +125,7 @@ InitTestScene*.unity*
 /Tools/ArtTool/obj/
 /Tools/ArtPipeline/DeckExport/bin/
 /Tools/ArtPipeline/DeckExport/obj/
+
+# Keep hand-written tool projects (the Unity rule above ignores generated *.csproj)
+!/Tools/DotnetTests/**/*.csproj
+!/Tools/ArtTool/*.csproj

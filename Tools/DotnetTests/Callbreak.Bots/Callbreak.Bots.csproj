@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>Callbreak.Bots</AssemblyName>
+    <RootNamespace>Callbreak.Bots</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(UnityScripts)\Bots\**\*.cs" />
+    <ProjectReference Include="..\Callbreak.Core\Callbreak.Core.csproj" />
+  </ItemGroup>
+</Project>
