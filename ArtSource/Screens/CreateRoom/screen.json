@@ -29,9 +29,9 @@
 
     { "id": "Logo", "rect": [628.93, 24.65, 411.24, 163.26], "use": "UI/Ornaments/Logo_Callbreak.png" },
 
-    // The shared panel was cut from this mockup: its pixel box is used as the rect, so it lands pixel for pixel.
-    { "id": "Panel", "shape": "roundrect", "radius": 25.5, "rect": [449, 214, 775, 672],
-      "use": "UI/Common/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
+    // Generated kit panel (ArtSource/Kit/Panels.map.csv) at the panel's measured edge.
+    { "id": "Panel", "shape": "roundrect", "radius": 25.5, "rect": [449.1, 214.3, 774.8, 670.8],
+      "use": "UI/Panels/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
     { "id": "Title", "kind": "label", "parent": "Panel", "text": "Your table", "font": "SerifBold", "rect": [705, 240, 265, 64], "key": "ui.create_room.title" },
     { "id": "Subtitle", "kind": "label", "parent": "Panel", "text": "SET UP A TABLE FOR YOUR FRIENDS", "font": "SansSemiBold", "tracked": true, "rect": [612, 303, 450, 25], "key": "ui.create_room.subtitle" },
     { "id": "TitleDivider", "parent": "Panel", "rect": [727.48, 333.46, 223.39, 21.79], "use": "UI/Common/Deco_TitleDivider.png", "hole": false },
@@ -40,13 +40,14 @@
     { "id": "RoomNameField", "kind": "input", "parent": "Panel", "shape": "roundrect", "radius": 14.3, "rect": [562.0, 398.9, 548.8, 63.2], "use": "UI_Field_RoomName" },
     { "id": "RoomNameText", "kind": "label", "parent": "RoomNameField", "text": "Friends' Table", "font": "SansSemiBold", "align": "left", "rect": [582, 412, 182, 40] },
 
-    { "id": "PlayersTile", "parent": "Panel", "shape": "roundrect", "radius": 15, "rect": [555.4, 483.8, 270.7, 98.1],
-      "use": "UI/Common/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    // Generated kit card; its corners are drawn for radius 21, so sliceScale 21 / 15 gives this tile's radius 15.
+    { "id": "PlayersTile", "parent": "Panel", "shape": "roundrect", "radius": 15, "rect": [555.4, 483.8, 270.7, 98.1], "sliceScale": 1.4,
+      "use": "UI/Panels/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
     { "id": "PlayersIcon", "parent": "PlayersTile", "rect": [576.75, 508.94, 67.37, 46.56], "use": "UI/Icons/Icon_Friends.png", "hole": false },
     { "id": "PlayersCaption", "kind": "label", "parent": "PlayersTile", "text": "Players", "font": "SansBold", "align": "left", "rect": [659, 503, 78, 26], "key": "ui.create_room.players" },
     { "id": "PlayersValue", "kind": "label", "parent": "PlayersTile", "text": "4 players", "font": "SansBold", "align": "left", "rect": [659, 530, 120, 32] },
-    { "id": "MatchTile", "parent": "Panel", "shape": "roundrect", "radius": 15, "rect": [846.3, 483.8, 270.8, 98.2],
-      "use": "UI/Common/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "MatchTile", "parent": "Panel", "shape": "roundrect", "radius": 15, "rect": [846.3, 483.8, 270.8, 98.2], "sliceScale": 1.4,
+      "use": "UI/Panels/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
     // Placeholder cut (ink box 877.0,511.4 49.7 x 46.4; the rect adds a 2 px fringe).
     { "id": "MatchIcon", "parent": "MatchTile", "shape": "ink", "rect": [875, 509, 54, 51], "out": "Icon_Cards" },
     { "id": "MatchCaption", "kind": "label", "parent": "MatchTile", "text": "Match length", "font": "SansBold", "align": "left", "rect": [949, 503, 133, 25], "key": "ui.create_room.match_length" },
