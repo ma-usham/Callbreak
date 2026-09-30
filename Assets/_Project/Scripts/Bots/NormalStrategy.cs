@@ -13,10 +13,11 @@ namespace Callbreak.Bots
     /// top remaining card of the suit (and only when no later seat is known able to trump it).</item>
     /// <item>Call made: the lowest legal card, unless the cheapest winning card surely takes the trick from an
     /// opponent who still needs it.</item>
-    /// <item>Leading: the top remaining card of a suit, avoiding suits an opponent is void in while it may hold
-    /// spades; without one, lead low from a safe suit.</item>
+    /// <item>Leading, whether or not the call is made: the top remaining card of a suit, avoiding suits an
+    /// opponent is void in while it may hold spades. Without one, lead low from a safe suit while tricks are
+    /// needed, else rule 2's lowest legal card.</item>
     /// <item>Trumping: the lowest spade that wins; if the trick is already trumped higher, discard the lowest card
-    /// of the longest side suit.</item>
+    /// of the longest side suit (keeping a suit whose lowest card is itself a winner).</item>
     /// <item>Memory: played cards and voids, rebuilt from the view by <see cref="CardTracker"/>.</item>
     /// </list>
     /// Uses no randomness. Stateless and thread-safe.
@@ -60,7 +61,8 @@ namespace Callbreak.Bots
                 return legal.Lowest();
             }
 
-            return NormalPolicy.ChooseCard(new CardTracker(view), view.Viewer, view.Hand);
+            var tracker = new CardTracker(view);
+            return Card.FromId(NormalPolicy.ChooseCard(tracker.State, (int)view.Viewer, view.Hand.Bits, legal.Bits));
         }
     }
 }

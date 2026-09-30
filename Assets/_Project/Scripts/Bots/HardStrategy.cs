@@ -180,19 +180,25 @@ namespace Callbreak.Bots
 
             if (!EveryCallIsValid(tracker) || !DealSampler.TryCreate(tracker, out DealSampler sampler))
             {
-                return NormalPolicy.ChooseCard(tracker, view.Viewer, view.Hand);
+                return Card.FromId(NormalPolicy.ChooseCard(tracker.State, (int)view.Viewer, view.Hand.Bits, legal.Bits));
             }
 
             var rollout = new Rollout(tracker, _spoilPercent);
-            var deal = new CardSet[SeatExtensions.Count];
-            var attempt = new CardSet[SeatExtensions.Count];
+            var deal = new ulong[SeatExtensions.Count];
+            var attempt = new ulong[SeatExtensions.Count];
+            var ids = new int[count];
             var totals = new long[count];
+            for (int c = 0; c < count; c++)
+            {
+                ids[c] = candidates[c].Id;
+            }
+
             for (int i = 0; i < Samples; i++)
             {
                 SampleDeal(sampler, tracker, rng, deal, attempt);
                 for (int c = 0; c < count; c++)
                 {
-                    totals[c] += rollout.Run(deal, candidates[c]);
+                    totals[c] += rollout.Run(deal, ids[c]);
                 }
             }
 
@@ -224,23 +230,24 @@ namespace Callbreak.Bots
             }
 
             var rollout = new Rollout(tracker, 0);
-            var deal = new CardSet[SeatExtensions.Count];
-            var attempt = new CardSet[SeatExtensions.Count];
+            var deal = new ulong[SeatExtensions.Count];
+            var attempt = new ulong[SeatExtensions.Count];
             var calls = new int[SeatExtensions.Count];
+            int[] placed = tracker.State.Calls;
+            int viewer = (int)view.Viewer;
             for (int i = 0; i < CallSamples; i++)
             {
                 SampleDeal(sampler, tracker, rng, deal, attempt);
                 for (int s = 0; s < SeatExtensions.Count; s++)
                 {
-                    var seat = (Seat)s;
-                    if (seat == view.Viewer)
+                    if (s == viewer)
                     {
                         // The highest call there is, so the viewer never stops trying.
                         calls[s] = RuleSet.CallLimit;
                     }
                     else
                     {
-                        calls[s] = tracker.CallOf(seat) != CallRules.NotCalled ? tracker.CallOf(seat) : CallEstimator.Call(deal[s], rules);
+                        calls[s] = placed[s] != CallRules.NotCalled ? placed[s] : CallEstimator.Call(deal[s], rules);
                     }
                 }
 
@@ -323,21 +330,21 @@ namespace Callbreak.Bots
         /// <summary>
         /// How badly sampled hands fit the opponents' calls (GDD §9 Hard: "calls as hints"): for every opponent
         /// that has called, the distance beyond ±1 between its call and the estimator's call for its original
-        /// hand (its sampled cards plus those it has played). 0 means the deal fits.
+        /// hand (its sampled cards plus those it has played). 0 means the deal fits. Hands are card masks by seat.
         /// </summary>
-        internal static int CallMismatch(CardTracker tracker, CardSet[] hands)
+        internal static int CallMismatch(CardTracker tracker, ulong[] hands)
         {
+            RoundState state = tracker.State;
             int total = 0;
             for (int s = 0; s < SeatExtensions.Count; s++)
             {
-                var seat = (Seat)s;
-                int call = tracker.CallOf(seat);
-                if (seat == tracker.Viewer || call == CallRules.NotCalled)
+                int call = state.Calls[s];
+                if (s == (int)tracker.Viewer || call == CallRules.NotCalled)
                 {
                     continue;
                 }
 
-                int off = Math.Abs(CallEstimator.Call(hands[s] | tracker.PlayedBy(seat), tracker.Rules) - call) - HintTolerance;
+                int off = Math.Abs(CallEstimator.Call(hands[s] | state.PlayedBy[s], state.Rules) - call) - HintTolerance;
                 if (off > 0)
                 {
                     total += off;
@@ -351,7 +358,7 @@ namespace Callbreak.Bots
         /// Fills <paramref name="deal"/> with the first of up to <see cref="DefaultHintTries"/> sampled deals that
         /// fits the opponents' calls, or else the one that fits best.
         /// </summary>
-        private void SampleDeal(DealSampler sampler, CardTracker tracker, IRandom rng, CardSet[] deal, CardSet[] attempt)
+        private void SampleDeal(DealSampler sampler, CardTracker tracker, IRandom rng, ulong[] deal, ulong[] attempt)
         {
             if (_hintTries == 1)
             {

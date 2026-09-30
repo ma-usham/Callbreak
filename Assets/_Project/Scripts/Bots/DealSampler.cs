@@ -1,4 +1,3 @@
-using Callbreak.Core.Cards;
 using Callbreak.Core.Match;
 using Callbreak.Core.Randomness;
 
@@ -8,7 +7,7 @@ namespace Callbreak.Bots
     /// Deals the viewer's unseen cards to the other three seats at random, consistent with everything the
     /// tracker has observed (GDD §9 Hard: "samples deals of the unseen cards that are consistent with everything
     /// observed (played cards, voids)"): each seat gets exactly its hand count and never a card it
-    /// <see cref="CardTracker.CannotHold"/>.
+    /// <see cref="CardTracker.CannotHold"/>. Hands are card masks (see <see cref="Bits"/>) indexed by seat.
     /// <para>
     /// Cards are grouped by the set of seats that may hold them (7 kinds for 3 seats). Cards only one seat may
     /// hold go straight to it; the rest are dealt one at a time, the more constrained kinds first, each to an
@@ -24,25 +23,25 @@ namespace Callbreak.Bots
         private const int Kinds = 1 << Others;
         private const int AnySeat = Kinds - 1;
 
-        private readonly Seat _viewer;
-        private readonly CardSet _viewerHand;
-        private readonly Seat[] _seats = new Seat[Others];
+        private readonly int _viewer;
+        private readonly ulong _viewerHand;
+        private readonly int[] _seats = new int[Others];
         private readonly int[] _handCounts = new int[Others];
-        private readonly CardSet[] _byKind = new CardSet[Kinds];
+        private readonly ulong[] _byKind = new ulong[Kinds];
         private readonly int[] _free = new int[Others];
         private readonly int[] _left = new int[Kinds];
 
         private DealSampler(CardTracker tracker)
         {
-            _viewer = tracker.Viewer;
-            _viewerHand = tracker.Hand;
+            _viewer = (int)tracker.Viewer;
+            _viewerHand = tracker.Hand.Bits;
             int next = 0;
             for (int s = 0; s < SeatExtensions.Count; s++)
             {
-                if (s != (int)_viewer)
+                if (s != _viewer)
                 {
-                    _seats[next] = (Seat)s;
-                    _handCounts[next] = tracker.HandCountOf((Seat)s);
+                    _seats[next] = s;
+                    _handCounts[next] = tracker.State.HandCounts[s];
                     next++;
                 }
             }
@@ -58,7 +57,7 @@ namespace Callbreak.Bots
         internal static bool TryCreate(CardTracker tracker, out DealSampler sampler)
         {
             sampler = new DealSampler(tracker);
-            CardSet unseen = tracker.Unseen;
+            ulong unseen = tracker.Unseen.Bits;
             int total = 0;
             for (int j = 0; j < Others; j++)
             {
@@ -70,28 +69,30 @@ namespace Callbreak.Bots
                 total += sampler._handCounts[j];
             }
 
-            if (total != unseen.Count)
+            if (total != Bits.Count(unseen))
             {
                 return false;
             }
 
-            foreach (Card card in unseen)
+            ulong[] excluded = tracker.State.Excluded;
+            for (ulong rest = unseen; rest != 0UL; rest &= rest - 1UL)
             {
+                ulong card = rest & unchecked(~rest + 1UL);
                 int kind = 0;
                 for (int j = 0; j < Others; j++)
                 {
-                    if (!tracker.CannotHold(sampler._seats[j]).Contains(card))
+                    if ((excluded[sampler._seats[j]] & card) == 0UL)
                     {
                         kind |= 1 << j;
                     }
                 }
 
-                sampler._byKind[kind] = sampler._byKind[kind].With(card);
+                sampler._byKind[kind] |= card;
             }
 
             for (int kind = 0; kind < Kinds; kind++)
             {
-                sampler._left[kind] = sampler._byKind[kind].Count;
+                sampler._left[kind] = Bits.Count(sampler._byKind[kind]);
             }
 
             for (int j = 0; j < Others; j++)
@@ -103,7 +104,7 @@ namespace Callbreak.Bots
             {
                 for (int kind = 0; kind < AnySeat; kind++)
                 {
-                    sampler._byKind[kind] = CardSet.Empty;
+                    sampler._byKind[kind] = 0UL;
                 }
 
                 sampler._byKind[AnySeat] = unseen;
@@ -117,9 +118,9 @@ namespace Callbreak.Bots
         /// Fills <paramref name="hands"/> (indexed by seat) with one consistent deal: the viewer's own hand and a
         /// sampled hand for each other seat.
         /// </summary>
-        internal void Deal(IRandom rng, CardSet[] hands)
+        internal void Deal(IRandom rng, ulong[] hands)
         {
-            hands[(int)_viewer] = _viewerHand;
+            hands[_viewer] = _viewerHand;
             for (int kind = 0; kind < Kinds; kind++)
             {
                 _left[kind] = 0;
@@ -127,27 +128,27 @@ namespace Callbreak.Bots
 
             for (int j = 0; j < Others; j++)
             {
-                CardSet forced = _byKind[1 << j];
-                hands[(int)_seats[j]] = forced;
-                _free[j] = _handCounts[j] - forced.Count;
+                ulong forced = _byKind[1 << j];
+                hands[_seats[j]] = forced;
+                _free[j] = _handCounts[j] - Bits.Count(forced);
             }
 
             // Two-seat kinds first (3, 5, 6), then cards any seat may hold (7).
-            _left[3] = _byKind[3].Count;
-            _left[5] = _byKind[5].Count;
-            _left[6] = _byKind[6].Count;
-            _left[AnySeat] = _byKind[AnySeat].Count;
+            _left[3] = Bits.Count(_byKind[3]);
+            _left[5] = Bits.Count(_byKind[5]);
+            _left[6] = Bits.Count(_byKind[6]);
+            _left[AnySeat] = Bits.Count(_byKind[AnySeat]);
             DealKind(3, rng, hands);
             DealKind(5, rng, hands);
             DealKind(6, rng, hands);
             DealKind(AnySeat, rng, hands);
         }
 
-        private void DealKind(int kind, IRandom rng, CardSet[] hands)
+        private void DealKind(int kind, IRandom rng, ulong[] hands)
         {
             // Once only unconstrained cards are left, any seat with a free place keeps the rest dealable.
             bool check = kind != AnySeat;
-            foreach (Card card in _byKind[kind])
+            for (ulong cards = _byKind[kind]; cards != 0UL; cards &= cards - 1UL)
             {
                 _left[kind]--;
                 int w0 = Weight(0, kind, check);
@@ -155,7 +156,7 @@ namespace Callbreak.Bots
                 int w2 = Weight(2, kind, check);
                 int roll = rng.NextInt(w0 + w1 + w2);
                 int seat = roll < w0 ? 0 : roll < w0 + w1 ? 1 : 2;
-                hands[(int)_seats[seat]] = hands[(int)_seats[seat]].With(card);
+                hands[_seats[seat]] |= cards & unchecked(~cards + 1UL);
                 _free[seat]--;
             }
         }

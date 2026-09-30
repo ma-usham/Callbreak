@@ -23,15 +23,8 @@ namespace Callbreak.Bots
     /// </summary>
     public sealed class CardTracker
     {
-        private readonly CardSet[] _cannotHold = new CardSet[SeatExtensions.Count];
-        private readonly CardSet[] _playedBy = new CardSet[SeatExtensions.Count];
-        private readonly int[] _calls = new int[SeatExtensions.Count];
-        private readonly int[] _won = new int[SeatExtensions.Count];
-        private readonly int[] _handCounts = new int[SeatExtensions.Count];
+        private readonly RoundState _state;
         private CardSet _hand;
-        private CardSet _played;
-        private Trick _trick;
-        private int _trickIndex;
 
         /// <summary>Rebuilds the round's knowledge from what <paramref name="view"/> shows its viewer.</summary>
         /// <param name="view">Any view; before the first card the tracker simply knows the viewer's hand.</param>
@@ -46,6 +39,7 @@ namespace Callbreak.Bots
             Rules = view.Rules;
             Viewer = view.Viewer;
             _hand = view.Hand;
+            _state = new RoundState(view.Rules);
             IReadOnlyList<CompletedTrick> completed = view.CompletedTricks;
             for (int i = 0; i < completed.Count; i++)
             {
@@ -56,20 +50,12 @@ namespace Callbreak.Bots
             for (int s = 0; s < SeatExtensions.Count; s++)
             {
                 // The view is authoritative for counts; the replay above only infers what seats cannot hold.
-                _calls[s] = view.CallOf((Seat)s);
-                _won[s] = view.TricksWonBy((Seat)s);
-                _handCounts[s] = view.HandCountOf((Seat)s);
+                _state.Calls[s] = view.CallOf((Seat)s);
+                _state.Won[s] = view.TricksWonBy((Seat)s);
+                _state.HandCounts[s] = view.HandCountOf((Seat)s);
             }
 
-            _trick = view.CurrentTrick;
-            _trickIndex = completed.Count;
-        }
-
-        private CardTracker(CardTracker source)
-        {
-            Rules = source.Rules;
-            Viewer = source.Viewer;
-            CopyFrom(source);
+            _state.Completed = completed.Count;
         }
 
         /// <summary>The seat whose knowledge this is.</summary>
@@ -82,25 +68,40 @@ namespace Callbreak.Bots
         public CardSet Hand => _hand;
 
         /// <summary>Every card played this round: completed tricks and the trick in progress.</summary>
-        public CardSet Played => _played;
+        public CardSet Played => CardSet.FromBits(_state.Played);
 
         /// <summary>
         /// The cards the viewer has not seen: neither in its hand nor played. Exactly the other three hands.
         /// </summary>
-        public CardSet Unseen => CardSet.FullDeck - _hand - _played;
+        public CardSet Unseen => CardSet.FullDeck - _hand - Played;
 
         /// <summary>The trick in progress.</summary>
-        public Trick CurrentTrick => _trick;
+        public Trick CurrentTrick
+        {
+            get
+            {
+                var trick = new Trick((Seat)_state.Leader, Rules.Direction);
+                for (int i = 0; i < _state.Count; i++)
+                {
+                    trick = trick.With(Card.FromId(_state.TrickIds[i]));
+                }
+
+                return trick;
+            }
+        }
 
         /// <summary>Tricks completed this round (the index of the trick in progress, 0–12).</summary>
-        public int TrickIndex => _trickIndex;
+        public int TrickIndex => _state.Completed;
+
+        /// <summary>The raw state the Normal policy and the rollouts read.</summary>
+        internal RoundState State => _state;
 
         /// <summary>A seat's call this round, or <see cref="CallRules.NotCalled"/>.</summary>
         /// <param name="seat">Any seat.</param>
         /// <returns>The call.</returns>
         public int CallOf(Seat seat)
         {
-            return _calls[Index(seat)];
+            return _state.Calls[Index(seat)];
         }
 
         /// <summary>Tricks a seat has won this round.</summary>
@@ -108,7 +109,7 @@ namespace Callbreak.Bots
         /// <returns>The count.</returns>
         public int TricksWonBy(Seat seat)
         {
-            return _won[Index(seat)];
+            return _state.Won[Index(seat)];
         }
 
         /// <summary>
@@ -119,8 +120,8 @@ namespace Callbreak.Bots
         public int TricksNeededBy(Seat seat)
         {
             int index = Index(seat);
-            int call = _calls[index];
-            return call == CallRules.NotCalled || _won[index] >= call ? 0 : call - _won[index];
+            int call = _state.Calls[index];
+            return call == CallRules.NotCalled || _state.Won[index] >= call ? 0 : call - _state.Won[index];
         }
 
         /// <summary>How many cards a seat holds.</summary>
@@ -128,7 +129,7 @@ namespace Callbreak.Bots
         /// <returns>The count.</returns>
         public int HandCountOf(Seat seat)
         {
-            return _handCounts[Index(seat)];
+            return _state.HandCounts[Index(seat)];
         }
 
         /// <summary>The cards a seat has played this round.</summary>
@@ -136,7 +137,7 @@ namespace Callbreak.Bots
         /// <returns>Its played cards.</returns>
         public CardSet PlayedBy(Seat seat)
         {
-            return _playedBy[Index(seat)];
+            return CardSet.FromBits(_state.PlayedBy[Index(seat)]);
         }
 
         /// <summary>
@@ -148,7 +149,7 @@ namespace Callbreak.Bots
         /// <returns>The excluded cards (they may include cards already played).</returns>
         public CardSet CannotHold(Seat seat)
         {
-            return _cannotHold[Index(seat)];
+            return CardSet.FromBits(_state.Excluded[Index(seat)]);
         }
 
         /// <summary>
@@ -160,7 +161,7 @@ namespace Callbreak.Bots
         public CardSet PossibleCards(Seat seat)
         {
             int index = Index(seat);
-            return seat == Viewer ? _hand : Unseen - _cannotHold[index];
+            return seat == Viewer ? _hand : Unseen - CardSet.FromBits(_state.Excluded[index]);
         }
 
         /// <summary>
@@ -194,127 +195,26 @@ namespace Callbreak.Bots
             return !Unseen.Overlaps(CardSet.Above(card));
         }
 
-        /// <summary>A copy that can be advanced independently (a Monte-Carlo rollout).</summary>
-        internal CardTracker Clone()
-        {
-            return new CardTracker(this);
-        }
-
-        /// <summary>Makes this tracker equal to <paramref name="source"/>, which must share its rules and viewer.</summary>
-        internal void CopyFrom(CardTracker source)
-        {
-            for (int s = 0; s < SeatExtensions.Count; s++)
-            {
-                _cannotHold[s] = source._cannotHold[s];
-                _playedBy[s] = source._playedBy[s];
-                _calls[s] = source._calls[s];
-                _won[s] = source._won[s];
-                _handCounts[s] = source._handCounts[s];
-            }
-
-            _hand = source._hand;
-            _played = source._played;
-            _trick = source._trick;
-            _trickIndex = source._trickIndex;
-        }
-
-        /// <summary>Sets a seat's call for a rollout that tries out calls.</summary>
-        internal void SetCall(Seat seat, int call)
-        {
-            _calls[(int)seat] = call;
-        }
-
         /// <summary>
-        /// Advances the round by one play, as the engine would: records what the play reveals, and after the
-        /// fourth card credits the winner, who leads the next trick. Used by rollouts; the caller guarantees the
-        /// play is legal.
+        /// Advances the round by one play, as the engine would (see <see cref="RoundState.Play"/>); the caller
+        /// guarantees the play is legal.
         /// </summary>
         internal void Record(Seat seat, Card card)
         {
-            Infer(seat, card, _trick);
-            _played = _played.With(card);
-            _playedBy[(int)seat] = _playedBy[(int)seat].With(card);
-            _handCounts[(int)seat]--;
+            _state.Play((int)seat, card.Id);
             if (seat == Viewer)
             {
                 _hand = _hand.Without(card);
-            }
-
-            _trick = _trick.With(card);
-            if (_trick.IsComplete)
-            {
-                Seat winner = TrickResolver.Winner(_trick);
-                _won[(int)winner]++;
-                _trickIndex++;
-                _trick = new Trick(winner, _trick.Direction);
             }
         }
 
         private void Replay(Trick trick)
         {
-            var partial = new Trick(trick.Leader, trick.Direction);
+            _state.Lead((int)trick.Leader);
             for (int i = 0; i < trick.Count; i++)
             {
-                Seat seat = trick.SeatAt(i);
-                Card card = trick[i];
-                Infer(seat, card, partial);
-                _played = _played.With(card);
-                _playedBy[(int)seat] = _playedBy[(int)seat].With(card);
-                partial = partial.With(card);
+                _state.Play((int)trick.SeatAt(i), trick[i].Id);
             }
-        }
-
-        /// <summary>
-        /// What playing <paramref name="card"/> to <paramref name="before"/> proves about the rest of the seat's
-        /// hand, given that the play was legal (the exact negation of the <see cref="LegalMoves"/> branches).
-        /// </summary>
-        private void Infer(Seat seat, Card card, in Trick before)
-        {
-            if (before.IsEmpty)
-            {
-                return;
-            }
-
-            Suit led = before.LedSuit;
-            CardSet trickCards = before.Cards;
-            CardSet excluded = CardSet.Empty;
-            if (card.Suit == led)
-            {
-                if (Rules.MustBeatLedSuit && !before.IsTrumped)
-                {
-                    Card best = trickCards.InSuit(led).Highest();
-                    if (!CardSet.Above(best).Contains(card))
-                    {
-                        excluded = CardSet.Above(best);
-                    }
-                }
-            }
-            else
-            {
-                excluded = CardSet.OfSuit(led);
-                if (Rules.MustTrumpWhenVoid)
-                {
-                    CardSet playedSpades = trickCards.InSuit(Suit.Spades);
-                    bool mustOvertrump = Rules.MustOvertrump && !playedSpades.IsEmpty;
-                    if (card.IsTrump)
-                    {
-                        if (mustOvertrump && !CardSet.Above(playedSpades.Highest()).Contains(card))
-                        {
-                            excluded |= CardSet.Above(playedSpades.Highest());
-                        }
-                    }
-                    else if (mustOvertrump && Rules.DiscardWhenCannotOvertrump)
-                    {
-                        excluded |= CardSet.Above(playedSpades.Highest());
-                    }
-                    else
-                    {
-                        excluded |= CardSet.OfSuit(Suit.Spades);
-                    }
-                }
-            }
-
-            _cannotHold[(int)seat] |= excluded;
         }
 
         private static int Index(Seat seat)

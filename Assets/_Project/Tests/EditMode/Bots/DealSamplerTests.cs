@@ -24,13 +24,10 @@ namespace Callbreak.Tests.EditMode.Bots
             var tracker = new CardTracker(BotViews.For(Seat.South, SouthHand).Build());
             Assert.IsTrue(DealSampler.TryCreate(tracker, out DealSampler sampler));
             var rng = new Pcg32Random(5UL);
-            var hands = new CardSet[4];
 
             for (int i = 0; i < 50; i++)
             {
-                sampler.Deal(rng, hands);
-
-                AssertConsistent(tracker, hands);
+                AssertConsistent(tracker, Deal(sampler, rng));
             }
 
             Assert.IsFalse(sampler.IgnoredConstraints);
@@ -44,15 +41,10 @@ namespace Callbreak.Tests.EditMode.Bots
             Assert.IsTrue(DealSampler.TryCreate(tracker, out DealSampler second));
             var rngA = new Pcg32Random(42UL);
             var rngB = new Pcg32Random(42UL);
-            var a = new CardSet[4];
-            var b = new CardSet[4];
 
             for (int i = 0; i < 20; i++)
             {
-                first.Deal(rngA, a);
-                second.Deal(rngB, b);
-
-                CollectionAssert.AreEqual(a, b);
+                CollectionAssert.AreEqual(Deal(first, rngA), Deal(second, rngB));
             }
         }
 
@@ -62,11 +54,10 @@ namespace Callbreak.Tests.EditMode.Bots
             var tracker = new CardTracker(NorthVoidInHeartsAndSpades());
             Assert.IsTrue(DealSampler.TryCreate(tracker, out DealSampler sampler));
             var rng = new Pcg32Random(9UL);
-            var hands = new CardSet[4];
 
             for (int i = 0; i < 200; i++)
             {
-                sampler.Deal(rng, hands);
+                CardSet[] hands = Deal(sampler, rng);
 
                 AssertConsistent(tracker, hands);
                 Assert.IsFalse(hands[(int)Seat.North].HasSuit(Suit.Hearts));
@@ -86,11 +77,10 @@ namespace Callbreak.Tests.EditMode.Bots
             var tracker = new CardTracker(view);
             Assert.IsTrue(DealSampler.TryCreate(tracker, out DealSampler sampler));
             var rng = new Pcg32Random(11UL);
-            var hands = new CardSet[4];
 
             for (int i = 0; i < 100; i++)
             {
-                sampler.Deal(rng, hands);
+                CardSet[] hands = Deal(sampler, rng);
 
                 AssertConsistent(tracker, hands);
                 Assert.IsTrue(Set("3♥ 4♥ 5♥ 6♥ 7♥").IsSubsetOf(hands[(int)Seat.West]));
@@ -106,13 +96,12 @@ namespace Callbreak.Tests.EditMode.Bots
             var tracker = new CardTracker(BotViews.For(Seat.South, SouthHand).Build());
             Assert.IsTrue(DealSampler.TryCreate(tracker, out DealSampler sampler));
             var rng = new Pcg32Random(21UL);
-            var hands = new CardSet[4];
             var holders = new int[4];
             Card aceOfClubs = C("A♣");
 
             for (int i = 0; i < 3000; i++)
             {
-                sampler.Deal(rng, hands);
+                CardSet[] hands = Deal(sampler, rng);
                 for (int s = 0; s < 4; s++)
                 {
                     if (hands[s].Contains(aceOfClubs))
@@ -147,8 +136,7 @@ namespace Callbreak.Tests.EditMode.Bots
 
             Assert.IsTrue(DealSampler.TryCreate(tracker, out DealSampler sampler));
             Assert.IsTrue(sampler.IgnoredConstraints);
-            var hands = new CardSet[4];
-            sampler.Deal(new Pcg32Random(1UL), hands);
+            CardSet[] hands = Deal(sampler, new Pcg32Random(1UL));
             CardSet dealt = CardSet.Empty;
             for (int s = 1; s < 4; s++)
             {
@@ -166,7 +154,6 @@ namespace Callbreak.Tests.EditMode.Bots
             ulong seed = 900UL;
             var bots = new IBotStrategy[] { new RandomBot(), new RandomBot(), new RandomBot(), new RandomBot() };
             var rng = new Pcg32Random(4UL);
-            var hands = new CardSet[4];
             foreach (RuleSet legality in RuleVariants.LegalityCombinations())
             {
                 RuleSet rules = legality.With(rounds: 2, direction: seed % 2 == 0 ? Direction.Clockwise : Direction.Anticlockwise);
@@ -175,13 +162,26 @@ namespace Callbreak.Tests.EditMode.Bots
                     var tracker = new CardTracker(view);
                     Assert.IsTrue(DealSampler.TryCreate(tracker, out DealSampler sampler), "real views always add up");
                     Assert.IsFalse(sampler.IgnoredConstraints, "real observations never contradict each other");
-                    sampler.Deal(rng, hands);
-                    AssertConsistent(tracker, hands);
+                    AssertConsistent(tracker, Deal(sampler, rng));
                     deals++;
                 });
             }
 
             Assert.Greater(deals, 1000);
+        }
+
+        /// <summary>One sampled deal, as card sets by seat (the sampler itself works on card masks).</summary>
+        private static CardSet[] Deal(DealSampler sampler, IRandom rng)
+        {
+            var masks = new ulong[4];
+            sampler.Deal(rng, masks);
+            var hands = new CardSet[4];
+            for (int s = 0; s < 4; s++)
+            {
+                hands[s] = CardSet.FromBits(masks[s]);
+            }
+
+            return hands;
         }
 
         /// <summary>The viewer keeps its hand; every other seat gets its count, nothing it cannot hold, and together exactly the unseen cards.</summary>

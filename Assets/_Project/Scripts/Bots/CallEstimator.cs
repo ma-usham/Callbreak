@@ -60,6 +60,12 @@ namespace Callbreak.Bots
         /// <summary>A singleton side suit with a spare spade to trump it once it is gone.</summary>
         public const int RuffableSingleton = 40;
 
+        // A suit's thirteen cards shifted down to bits 0-12 (two … ace).
+        private const ulong OneSuit = (1UL << Card.PerSuit) - 1UL;
+        private const ulong Ace = 1UL << ((int)Rank.Ace - (int)Rank.Two);
+        private const ulong King = 1UL << ((int)Rank.King - (int)Rank.Two);
+        private const ulong Queen = 1UL << ((int)Rank.Queen - (int)Rank.Two);
+
         /// <summary>
         /// The expected tricks of <paramref name="hand"/> in hundredths (450 = 4.5), per the GDD §9 lines above.
         /// The GDD §2 sample hand (A♠ K♠ J♠ 9♠ 4♠ · A♥ J♥ 8♥ · K♦ 10♦ 5♦ · Q♣ 7♣) is 450.
@@ -68,24 +74,30 @@ namespace Callbreak.Bots
         /// <returns>The estimate, never negative.</returns>
         public static int EstimateHundredths(CardSet hand)
         {
-            CardSet spades = hand.InSuit(Suit.Spades);
-            int spadeCount = spades.Count;
+            return Estimate(hand.Bits);
+        }
+
+        /// <summary><see cref="EstimateHundredths"/> for a hand given as a card mask (see <see cref="Bits"/>).</summary>
+        internal static int Estimate(ulong hand)
+        {
+            ulong spades = SuitCards(hand, Bits.Spades);
+            int spadeCount = Bits.Count(spades);
             int total = 0;
             int honourWinners = 0;
 
-            if (spades.Contains(new Card(Suit.Spades, Rank.Ace)))
+            if ((spades & Ace) != 0UL)
             {
                 total += AceOfSpades;
                 honourWinners++;
             }
 
-            if (spades.Contains(new Card(Suit.Spades, Rank.King)))
+            if ((spades & King) != 0UL)
             {
                 total += spadeCount >= 2 ? GuardedKingOfSpades : BareKingOfSpades;
                 honourWinners++;
             }
 
-            if (spadeCount >= 3 && spades.Contains(new Card(Suit.Spades, Rank.Queen)))
+            if (spadeCount >= 3 && (spades & Queen) != 0UL)
             {
                 total += GuardedQueenOfSpades;
                 honourWinners++;
@@ -98,11 +110,10 @@ namespace Callbreak.Bots
 
             int voids = 0;
             int singletons = 0;
-            for (int s = 0; s < (int)Suit.Spades; s++)
+            for (int suit = 0; suit < Bits.Spades; suit++)
             {
-                var suit = (Suit)s;
-                CardSet cards = hand.InSuit(suit);
-                int length = cards.Count;
+                ulong cards = SuitCards(hand, suit);
+                int length = Bits.Count(cards);
                 if (length == 0)
                 {
                     voids++;
@@ -114,17 +125,17 @@ namespace Callbreak.Bots
                     singletons++;
                 }
 
-                if (cards.Contains(new Card(suit, Rank.Ace)))
+                if ((cards & Ace) != 0UL)
                 {
                     total += length >= 6 ? LongSuitSideAce : SideAce;
                 }
 
-                if (length >= 2 && length <= 4 && cards.Contains(new Card(suit, Rank.King)))
+                if (length >= 2 && length <= 4 && (cards & King) != 0UL)
                 {
                     total += SideKing;
                 }
 
-                if (length >= 3 && length <= 4 && cards.Contains(new Card(suit, Rank.Queen)))
+                if (length >= 3 && length <= 4 && (cards & Queen) != 0UL)
                 {
                     total += SideQueen;
                 }
@@ -155,8 +166,8 @@ namespace Callbreak.Bots
         }
 
         /// <summary>
-        /// The estimator's call: <c>clamp(⌊E + 0.3⌋, MinCall, MaxCall)</c> (GDD §9). Normal calls this; Easy and
-        /// Hard start from it.
+        /// The estimator's call: <c>clamp(⌊E + 0.3⌋, MinCall, MaxCall)</c> (GDD §9). Normal calls this, Easy starts
+        /// from it, and Hard uses it for the seats whose calls it has to guess.
         /// </summary>
         /// <param name="hand">The hand to call on.</param>
         /// <param name="rules">The match's rule set, for MinCall and MaxCall.</param>
@@ -164,7 +175,18 @@ namespace Callbreak.Bots
         /// <exception cref="ArgumentNullException"><paramref name="rules"/> is null.</exception>
         public static int Call(CardSet hand, RuleSet rules)
         {
-            return CallRules.Clamp(RoundDown(EstimateHundredths(hand)), rules);
+            return Call(hand.Bits, rules);
+        }
+
+        /// <summary><see cref="Call(CardSet, RuleSet)"/> for a hand given as a card mask.</summary>
+        internal static int Call(ulong hand, RuleSet rules)
+        {
+            return CallRules.Clamp(RoundDown(Estimate(hand)), rules);
+        }
+
+        private static ulong SuitCards(ulong hand, int suit)
+        {
+            return (hand >> (suit * Card.PerSuit)) & OneSuit;
         }
     }
 }

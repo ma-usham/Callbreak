@@ -81,7 +81,7 @@ namespace Callbreak.Presentation.Screens
                 string deck = decks[i];
                 _view.SetDeck(
                     i,
-                    _localization.Get("ui.deck." + deck),
+                    _localization.Get("ui.deck." + deck.Replace('-', '_')),
                     _localization.Get(i == equipped ? "ui.card_collection.equipped" : "ui.card_collection.owned"));
                 _view.SetPreview(i, i == _selected ? _sprites.Face(deck, AceOfSpades) : _sprites.Back(deck));
             }

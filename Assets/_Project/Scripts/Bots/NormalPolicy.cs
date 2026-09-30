@@ -6,75 +6,74 @@ namespace Callbreak.Bots
 {
     /// <summary>
     /// The Normal play heuristics (GDD §9 "Normal play heuristics" 1–5) as a pure function of the round's
-    /// public knowledge and the acting seat's hand. <see cref="NormalStrategy"/> asks it for the viewer;
-    /// <see cref="HardStrategy"/>'s rollouts ask it for every seat of a sampled deal, so it never allocates.
+    /// public state and the acting seat's hand. <see cref="NormalStrategy"/> asks it for the viewer;
+    /// <see cref="HardStrategy"/>'s rollouts ask it for every seat of a sampled deal, tens of thousands of times
+    /// per decision, so it works on card masks and ids (see <see cref="Bits"/>) and never allocates.
     /// "Unseen" here is always from the acting seat's point of view: the cards neither in its hand nor played.
     /// </summary>
     internal static class NormalPolicy
     {
         /// <summary>
-        /// The Normal card for <paramref name="me"/> holding <paramref name="hand"/> at <paramref name="table"/>'s
-        /// current trick. Always one of <c>LegalMoves.Compute(hand, trick, rules)</c>.
+        /// The id of the Normal card for seat <paramref name="me"/> holding <paramref name="hand"/>, chosen from
+        /// <paramref name="legal"/> (its legal cards at <paramref name="table"/>'s trick in progress).
         /// </summary>
-        internal static Card ChooseCard(CardTracker table, Seat me, CardSet hand)
+        internal static int ChooseCard(RoundState table, int me, ulong hand, ulong legal)
         {
-            Trick trick = table.CurrentTrick;
-            CardSet legal = LegalMoves.Compute(hand, trick, table.Rules);
-            if (legal.Count == 1)
+            if ((legal & (legal - 1UL)) == 0UL)
             {
-                return legal.Lowest();
+                return Bits.Lowest(legal);
             }
 
-            CardSet unseen = CardSet.FullDeck - table.Played - hand;
-            bool needsTricks = table.TricksNeededBy(me) > 0;
-            if (trick.IsEmpty)
+            ulong unseen = Bits.Deck & ~table.Played & ~hand;
+            bool needsTricks = table.Calls[me] > table.Won[me];
+            if (table.Count == 0)
             {
                 return Lead(table, me, hand, unseen, needsTricks);
             }
 
-            CardSet beating = Beating(legal, TrickResolver.WinningCard(trick));
+            ulong beating = Beating(legal, table.WinningId);
             return needsTricks
-                ? FollowForTricks(table, trick, hand, legal, beating, unseen)
-                : FollowWithCallMade(table, trick, hand, legal, beating, unseen);
+                ? FollowForTricks(table, hand, legal, beating, unseen)
+                : FollowWithCallMade(table, hand, legal, beating, unseen);
         }
 
-        /// <summary>The cards of <paramref name="legal"/> that would take the lead from <paramref name="winning"/>.</summary>
-        internal static CardSet Beating(CardSet legal, Card winning)
+        /// <summary>The cards of <paramref name="legal"/> that would take the lead from the winning card.</summary>
+        internal static ulong Beating(ulong legal, int winningId)
         {
-            CardSet higher = legal & CardSet.Above(winning);
-            return winning.IsTrump ? higher : higher | legal.InSuit(Suit.Spades);
+            ulong higher = legal & Bits.Above(winningId);
+            return winningId >= Bits.FirstSpade ? higher : higher | (legal & Bits.SpadeCards);
         }
 
         /// <summary>
         /// GDD §9 rule 2's "lowest legal card": the lowest-ranked side-suit card (ties: the longer suit, then
         /// ♣ ♦ ♥), or the lowest spade when only spades are legal.
         /// </summary>
-        internal static Card LowestLegal(CardSet legal, CardSet hand)
+        internal static int LowestLegal(ulong legal, ulong hand)
         {
-            CardSet side = legal - CardSet.OfSuit(Suit.Spades);
-            if (side.IsEmpty)
+            ulong side = legal & ~Bits.SpadeCards;
+            if (side == 0UL)
             {
-                return legal.Lowest();
+                return Bits.Lowest(legal);
             }
 
-            bool found = false;
-            Card pick = default;
+            int pick = -1;
+            int pickRank = 0;
             int pickLength = 0;
-            for (int s = 0; s < (int)Suit.Spades; s++)
+            for (int suit = 0; suit < Bits.Spades; suit++)
             {
-                var suit = (Suit)s;
-                CardSet cards = side.InSuit(suit);
-                if (cards.IsEmpty)
+                ulong cards = side & Bits.OfSuit(suit);
+                if (cards == 0UL)
                 {
                     continue;
                 }
 
-                Card low = cards.Lowest();
-                int length = hand.InSuit(suit).Count;
-                if (!found || low.Rank < pick.Rank || (low.Rank == pick.Rank && length > pickLength))
+                int low = Bits.Lowest(cards);
+                int rank = Bits.RankOf(low);
+                int length = Bits.Count(hand & Bits.OfSuit(suit));
+                if (pick < 0 || rank < pickRank || (rank == pickRank && length > pickLength))
                 {
-                    found = true;
                     pick = low;
+                    pickRank = rank;
                     pickLength = length;
                 }
             }
@@ -87,32 +86,29 @@ namespace Callbreak.Bots
         /// passing over suits whose lowest card is itself the top remaining card (ties: the lower card, then
         /// ♣ ♦ ♥); the lowest spade when only spades are legal. With one legal suit, its lowest card.
         /// </summary>
-        internal static Card Discard(CardSet legal, CardSet hand, CardSet unseen)
+        internal static int Discard(ulong legal, ulong hand, ulong unseen)
         {
-            CardSet side = legal - CardSet.OfSuit(Suit.Spades);
-            if (side.IsEmpty)
+            ulong side = legal & ~Bits.SpadeCards;
+            if (side == 0UL)
             {
-                return legal.Lowest();
+                return Bits.Lowest(legal);
             }
 
-            bool found = false;
-            Card pick = default;
+            int pick = -1;
             int pickKey = 0;
-            for (int s = 0; s < (int)Suit.Spades; s++)
+            for (int suit = 0; suit < Bits.Spades; suit++)
             {
-                var suit = (Suit)s;
-                CardSet cards = side.InSuit(suit);
-                if (cards.IsEmpty)
+                ulong cards = side & Bits.OfSuit(suit);
+                if (cards == 0UL)
                 {
                     continue;
                 }
 
                 // Not a winner first, then the longer suit, then the lower card.
-                Card low = cards.Lowest();
-                int key = (IsTop(low, unseen) ? 0 : 1 << 10) | (hand.InSuit(suit).Count << 5) | (15 - (int)low.Rank);
-                if (!found || key > pickKey)
+                int low = Bits.Lowest(cards);
+                int key = (IsTop(low, unseen) ? 0 : 1 << 10) | (Bits.Count(hand & Bits.OfSuit(suit)) << 5) | (Card.PerSuit - Bits.RankOf(low));
+                if (pick < 0 || key > pickKey)
                 {
-                    found = true;
                     pick = low;
                     pickKey = key;
                 }
@@ -121,10 +117,10 @@ namespace Callbreak.Bots
             return pick;
         }
 
-        /// <summary>Whether no unseen card of the suit outranks <paramref name="card"/>.</summary>
-        internal static bool IsTop(Card card, CardSet unseen)
+        /// <summary>Whether no unseen card of the suit outranks the card <paramref name="id"/>.</summary>
+        internal static bool IsTop(int id, ulong unseen)
         {
-            return !unseen.Overlaps(CardSet.Above(card));
+            return (unseen & Bits.Above(id)) == 0UL;
         }
 
         /// <summary>
@@ -134,50 +130,54 @@ namespace Callbreak.Bots
         /// (ties: the shorter suit, heading for a void), else the lowest spade; once the call is made, rule 2's
         /// lowest legal card.
         /// </summary>
-        private static Card Lead(CardTracker table, Seat me, CardSet hand, CardSet unseen, bool needsTricks)
+        private static int Lead(RoundState table, int me, ulong hand, ulong unseen, bool needsTricks)
         {
-            bool haveWinner = false;
-            Card winner = default;
+            int winner = -1;
             int winnerOutstanding = -1;
-            bool haveLow = false;
-            Card low = default;
+            int low = -1;
+            int lowRank = 0;
             int lowLength = 0;
-            for (int s = 0; s < (int)Suit.Spades; s++)
+            for (int suit = 0; suit < Bits.Spades; suit++)
             {
-                var suit = (Suit)s;
-                CardSet mine = hand.InSuit(suit);
-                if (mine.IsEmpty || OpponentMayTrump(table, me, suit, unseen))
+                ulong suitCards = Bits.OfSuit(suit);
+                ulong mine = hand & suitCards;
+                if (mine == 0UL || OpponentMayTrump(table, me, suitCards, unseen))
                 {
                     continue;
                 }
 
-                Card top = mine.Highest();
-                int outstanding = unseen.InSuit(suit).Count;
+                int top = Bits.Highest(mine);
+                int outstanding = Bits.Count(unseen & suitCards);
                 if (IsTop(top, unseen) && outstanding > winnerOutstanding)
                 {
-                    haveWinner = true;
                     winner = top;
                     winnerOutstanding = outstanding;
                 }
 
-                Card lowest = mine.Lowest();
-                if (!haveLow || lowest.Rank < low.Rank || (lowest.Rank == low.Rank && mine.Count < lowLength))
+                int lowest = Bits.Lowest(mine);
+                int rank = Bits.RankOf(lowest);
+                int length = Bits.Count(mine);
+                if (low < 0 || rank < lowRank || (rank == lowRank && length < lowLength))
                 {
-                    haveLow = true;
                     low = lowest;
-                    lowLength = mine.Count;
+                    lowRank = rank;
+                    lowLength = length;
                 }
             }
 
-            if (haveWinner)
+            if (winner >= 0)
             {
                 return winner;
             }
 
-            CardSet spades = hand.InSuit(Suit.Spades);
-            if (!spades.IsEmpty && IsTop(spades.Highest(), unseen))
+            ulong spades = hand & Bits.SpadeCards;
+            if (spades != 0UL)
             {
-                return spades.Highest();
+                int topSpade = Bits.Highest(spades);
+                if (IsTop(topSpade, unseen))
+                {
+                    return topSpade;
+                }
             }
 
             if (!needsTricks)
@@ -185,12 +185,12 @@ namespace Callbreak.Bots
                 return LowestLegal(hand, hand);
             }
 
-            if (haveLow)
+            if (low >= 0)
             {
                 return low;
             }
 
-            return spades.IsEmpty ? LowestLegal(hand, hand) : spades.Lowest();
+            return spades == 0UL ? LowestLegal(hand, hand) : Bits.Lowest(spades);
         }
 
         /// <summary>
@@ -198,28 +198,28 @@ namespace Callbreak.Bots
         /// suit earlier, play high only with the top remaining card (and only if no later seat is known to be
         /// able to trump it), else low; void, trump with the lowest spade that wins; unable to win, discard.
         /// </summary>
-        private static Card FollowForTricks(CardTracker table, Trick trick, CardSet hand, CardSet legal, CardSet beating, CardSet unseen)
+        private static int FollowForTricks(RoundState table, ulong hand, ulong legal, ulong beating, ulong unseen)
         {
-            if (beating.IsEmpty)
+            if (beating == 0UL)
             {
                 return Discard(legal, hand, unseen);
             }
 
-            Suit led = trick.LedSuit;
-            if (trick.Count == Trick.Size - 1 || !hand.HasSuit(led))
+            ulong ledCards = Bits.OfSuit(table.LedSuit);
+            if (table.Count == Trick.Size - 1 || (hand & ledCards) == 0UL)
             {
                 return Cheapest(beating);
             }
 
-            Card top = legal.Highest();
-            if (beating.Contains(top)
+            int top = Bits.Highest(legal);
+            if ((beating & (1UL << top)) != 0UL
                 && IsTop(top, unseen)
-                && (led == Suit.Spades || !LaterSeatMayTrump(table, trick, led, unseen)))
+                && (table.LedSuit == Bits.Spades || !LaterSeatMayTrump(table, ledCards, unseen)))
             {
                 return top;
             }
 
-            return legal.Lowest();
+            return Bits.Lowest(legal);
         }
 
         /// <summary>
@@ -227,12 +227,12 @@ namespace Callbreak.Bots
         /// still needs tricks and the cheapest winning card is sure to hold it (last to play, or no later seat
         /// can beat it).
         /// </summary>
-        private static Card FollowWithCallMade(CardTracker table, Trick trick, CardSet hand, CardSet legal, CardSet beating, CardSet unseen)
+        private static int FollowWithCallMade(RoundState table, ulong hand, ulong legal, ulong beating, ulong unseen)
         {
-            if (!beating.IsEmpty && table.TricksNeededBy(TrickResolver.Winner(trick)) > 0)
+            if (beating != 0UL && table.Calls[table.WinningSeat] > table.Won[table.WinningSeat])
             {
-                Card cheapest = Cheapest(beating);
-                if (trick.Count == Trick.Size - 1 || IsSecure(table, trick, cheapest, unseen))
+                int cheapest = Cheapest(beating);
+                if (table.Count == Trick.Size - 1 || IsSecure(table, cheapest, unseen))
                 {
                     return cheapest;
                 }
@@ -242,24 +242,27 @@ namespace Callbreak.Bots
         }
 
         /// <summary>The cheapest of some winning cards: a side-suit card before a spade, then the lowest rank.</summary>
-        private static Card Cheapest(CardSet winners)
+        private static int Cheapest(ulong winners)
         {
-            CardSet side = winners - CardSet.OfSuit(Suit.Spades);
-            return side.IsEmpty ? winners.Lowest() : LowestLegal(side, side);
+            ulong side = winners & ~Bits.SpadeCards;
+            return side == 0UL ? Bits.Lowest(winners) : LowestLegal(side, side);
         }
 
-        /// <summary>Whether no seat still to play can beat <paramref name="card"/> as far as the actor knows.</summary>
-        private static bool IsSecure(CardTracker table, Trick trick, Card card, CardSet unseen)
+        /// <summary>Whether no seat still to play can beat the card <paramref name="id"/> as far as the actor knows.</summary>
+        private static bool IsSecure(RoundState table, int id, ulong unseen)
         {
-            for (int i = trick.Count + 1; i < Trick.Size; i++)
+            ulong above = Bits.Above(id);
+            ulong suitCards = Bits.OfSuit(Bits.SuitOf(id));
+            bool isTrump = id >= Bits.FirstSpade;
+            for (int position = table.Count + 1; position < Trick.Size; position++)
             {
-                CardSet possible = unseen - table.CannotHold(trick.SeatAt(i));
-                if (possible.Overlaps(CardSet.Above(card)))
+                ulong possible = unseen & ~table.Excluded[table.SeatAt(position)];
+                if ((possible & above) != 0UL)
                 {
                     return false;
                 }
 
-                if (!card.IsTrump && !possible.HasSuit(card.Suit) && possible.HasSuit(Suit.Spades))
+                if (!isTrump && (possible & suitCards) == 0UL && (possible & Bits.SpadeCards) != 0UL)
                 {
                     return false;
                 }
@@ -268,13 +271,13 @@ namespace Callbreak.Bots
             return true;
         }
 
-        /// <summary>Whether a seat still to play is known void in <paramref name="led"/> and may hold a spade.</summary>
-        private static bool LaterSeatMayTrump(CardTracker table, Trick trick, Suit led, CardSet unseen)
+        /// <summary>Whether a seat still to play is known void in the led suit and may hold a spade.</summary>
+        private static bool LaterSeatMayTrump(RoundState table, ulong ledCards, ulong unseen)
         {
-            for (int i = trick.Count + 1; i < Trick.Size; i++)
+            for (int position = table.Count + 1; position < Trick.Size; position++)
             {
-                CardSet possible = unseen - table.CannotHold(trick.SeatAt(i));
-                if (!possible.HasSuit(led) && possible.HasSuit(Suit.Spades))
+                ulong possible = unseen & ~table.Excluded[table.SeatAt(position)];
+                if ((possible & ledCards) == 0UL && (possible & Bits.SpadeCards) != 0UL)
                 {
                     return true;
                 }
@@ -283,18 +286,18 @@ namespace Callbreak.Bots
             return false;
         }
 
-        /// <summary>GDD §9 rule 3: an opponent is void in <paramref name="suit"/> and may still hold spades.</summary>
-        private static bool OpponentMayTrump(CardTracker table, Seat me, Suit suit, CardSet unseen)
+        /// <summary>GDD §9 rule 3: an opponent is void in the suit and may still hold spades.</summary>
+        private static bool OpponentMayTrump(RoundState table, int me, ulong suitCards, ulong unseen)
         {
-            for (int s = 0; s < SeatExtensions.Count; s++)
+            for (int seat = 0; seat < SeatExtensions.Count; seat++)
             {
-                if (s == (int)me)
+                if (seat == me)
                 {
                     continue;
                 }
 
-                CardSet possible = unseen - table.CannotHold((Seat)s);
-                if (!possible.HasSuit(suit) && possible.HasSuit(Suit.Spades))
+                ulong possible = unseen & ~table.Excluded[seat];
+                if ((possible & suitCards) == 0UL && (possible & Bits.SpadeCards) != 0UL)
                 {
                     return true;
                 }

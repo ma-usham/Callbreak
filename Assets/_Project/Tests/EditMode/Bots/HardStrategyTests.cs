@@ -340,16 +340,16 @@ namespace Callbreak.Tests.EditMode.Bots
             // East called 5. A hand the estimator would call 1 is three tricks beyond the ±1 allowance.
             PlayerView view = BotViews.For(Seat.South, SampleHand).Calls(3, 5, -1, 1).Build();
             var tracker = new CardTracker(view);
-            var hands = new CardSet[4];
-            hands[(int)Seat.South] = view.Hand;
-            hands[(int)Seat.East] = Set("7♥ 6♥ 5♥ 4♥ 7♦ 6♦ 4♦ 3♦ 6♣ 5♣ 4♣ 3♣ 2♣");
-            hands[(int)Seat.North] = Set("Q♠ 10♠ 8♠ 7♠ 6♠ K♥ Q♥ 10♥ A♦ Q♦ A♣ K♣ J♣");
-            hands[(int)Seat.West] = Set("5♠ 3♠ 2♠ 9♥ 3♥ 2♥ J♦ 9♦ 8♦ 2♦ 10♣ 9♣ 8♣");
+            var hands = new ulong[4];
+            hands[(int)Seat.South] = view.Hand.Bits;
+            hands[(int)Seat.East] = Set("7♥ 6♥ 5♥ 4♥ 7♦ 6♦ 4♦ 3♦ 6♣ 5♣ 4♣ 3♣ 2♣").Bits;
+            hands[(int)Seat.North] = Set("Q♠ 10♠ 8♠ 7♠ 6♠ K♥ Q♥ 10♥ A♦ Q♦ A♣ K♣ J♣").Bits;
+            hands[(int)Seat.West] = Set("5♠ 3♠ 2♠ 9♥ 3♥ 2♥ J♦ 9♦ 8♦ 2♦ 10♣ 9♣ 8♣").Bits;
 
             Assert.AreEqual(3, HardStrategy.CallMismatch(tracker, hands));
 
             hands[(int)Seat.East] = hands[(int)Seat.North];
-            hands[(int)Seat.North] = Set("7♥ 6♥ 5♥ 4♥ 7♦ 6♦ 4♦ 3♦ 6♣ 5♣ 4♣ 3♣ 2♣");
+            hands[(int)Seat.North] = Set("7♥ 6♥ 5♥ 4♥ 7♦ 6♦ 4♦ 3♦ 6♣ 5♣ 4♣ 3♣ 2♣").Bits;
             Assert.AreEqual(0, HardStrategy.CallMismatch(tracker, hands), "the strong hand fits the 5; North has not called");
         }
 
@@ -358,34 +358,44 @@ namespace Callbreak.Tests.EditMode.Bots
         [Test]
         public void Rollout_TrueHandsAndTheNormalCard_EndsExactlyLikeTheRealGame()
         {
-            // Four Normal bots play. At every decision a rollout is given the real hands and the card Normal is
-            // about to play; it must finish the round with the very tricks the real game then produces.
+            // Four Normal bots play under every combination of the legality switches, in both directions. At
+            // every decision a rollout is given the real hands and the card Normal is about to play; it must
+            // finish the round with the very tricks the real game then produces.
             var normal = new NormalStrategy();
             var seats = new IBotStrategy[] { normal, normal, normal, normal };
-            var predictions = new List<int[]>();
-            PlayerView final = BotMatches.Play(RuleSet.NepaliStandard.With(rounds: 3), 58UL, seats, null, (engine, view) =>
+            int decisions = 0;
+            ulong seed = 58UL;
+            foreach (RuleSet legality in RuleVariants.LegalityCombinations())
             {
-                var rollout = new Rollout(new CardTracker(view), 0);
-                rollout.Run(BotMatches.TrueHands(engine), normal.ChooseCard(view, new Pcg32Random(1UL)));
-                predictions.Add(new[]
+                RuleSet rules = legality.With(rounds: 1, direction: seed % 2 == 0 ? Direction.Anticlockwise : Direction.Clockwise);
+                var predictions = new List<int[]>();
+                PlayerView final = BotMatches.Play(rules, seed++, seats, null, (engine, view) =>
                 {
-                    view.Round,
-                    rollout.TricksWonBy(Seat.South),
-                    rollout.TricksWonBy(Seat.East),
-                    rollout.TricksWonBy(Seat.North),
-                    rollout.TricksWonBy(Seat.West),
+                    var rollout = new Rollout(new CardTracker(view), 0);
+                    CardSet[] truth = BotMatches.TrueHands(engine);
+                    rollout.Run(new[] { truth[0].Bits, truth[1].Bits, truth[2].Bits, truth[3].Bits }, normal.ChooseCard(view, new Pcg32Random(1UL)).Id);
+                    predictions.Add(new[]
+                    {
+                        rollout.TricksWonBy(Seat.South),
+                        rollout.TricksWonBy(Seat.East),
+                        rollout.TricksWonBy(Seat.North),
+                        rollout.TricksWonBy(Seat.West),
+                    });
                 });
-            });
 
-            Assert.AreEqual(3 * 48, predictions.Count);
-            foreach (int[] prediction in predictions)
-            {
-                RoundResult real = final.History[prediction[0] - 1];
-                for (int s = 0; s < 4; s++)
+                RoundResult real = final.History[0];
+                foreach (int[] prediction in predictions)
                 {
-                    Assert.AreEqual(real[(Seat)s].Won, prediction[s + 1], "round " + prediction[0] + " seat " + (Seat)s);
+                    for (int s = 0; s < 4; s++)
+                    {
+                        Assert.AreEqual(real[(Seat)s].Won, prediction[s], rules + " seat " + (Seat)s);
+                    }
                 }
+
+                decisions += predictions.Count;
             }
+
+            Assert.AreEqual(16 * 48, decisions);
         }
 
         [Test]
@@ -396,11 +406,11 @@ namespace Callbreak.Tests.EditMode.Bots
             var few = new HardStrategy(2);
             var many = new HardStrategy(8);
 
-            long fewBytes = AllocationProbe.BytesAllocatedBy(() => few.ChooseCard(view, new Pcg32Random(3UL)), 4);
-            long manyBytes = AllocationProbe.BytesAllocatedBy(() => many.ChooseCard(view, new Pcg32Random(3UL)), 4);
+            long few4 = AllocationProbe.BytesAllocatedBy(() => few.ChooseCard(view, new Pcg32Random(3UL)), 4);
+            long many4 = AllocationProbe.BytesAllocatedBy(() => many.ChooseCard(view, new Pcg32Random(3UL)), 4);
 
-            Assert.AreEqual(fewBytes, manyBytes);
-            Assert.Less(fewBytes / 4, 4096L, "bytes per decision");
+            Assert.AreEqual(few4, many4, "allocated by four decisions (bytes under .NET, allocations inside Unity)");
+            Assert.Less(few4 / 4, 4096L, "per decision: a few small buffers");
         }
 
         [Test]
@@ -410,11 +420,11 @@ namespace Callbreak.Tests.EditMode.Bots
             var few = new HardStrategy(2);
             var many = new HardStrategy(8);
 
-            long fewBytes = AllocationProbe.BytesAllocatedBy(() => few.ChooseCall(view, new Pcg32Random(3UL)), 4);
-            long manyBytes = AllocationProbe.BytesAllocatedBy(() => many.ChooseCall(view, new Pcg32Random(3UL)), 4);
+            long few4 = AllocationProbe.BytesAllocatedBy(() => few.ChooseCall(view, new Pcg32Random(3UL)), 4);
+            long many4 = AllocationProbe.BytesAllocatedBy(() => many.ChooseCall(view, new Pcg32Random(3UL)), 4);
 
-            Assert.AreEqual(fewBytes, manyBytes);
-            Assert.Less(fewBytes / 4, 4096L, "bytes per decision");
+            Assert.AreEqual(few4, many4, "allocated by four decisions (bytes under .NET, allocations inside Unity)");
+            Assert.Less(few4 / 4, 4096L, "per decision: a few small buffers");
         }
 
         private static PlayerView CallTurn(string hand)

@@ -16,19 +16,26 @@ namespace Callbreak.Tests.EditMode.Bots
     /// The GDD §9 Bot Arena: "target: one Hard bot wins ≥ 35% against three Normal bots". Every arena plays the
     /// same seeded matches (the deals depend only on the seed, not on the bots), with the hero seat rotating
     /// through the four seats; a win is finishing first, alone or shared. The numbers are written to the test
-    /// output. Slow: run with <c>--filter "TestCategory=Slow"</c>.
+    /// output. Slow: run with <c>-c Release --filter "TestCategory=Slow" --logger "console;verbosity=detailed"</c>
+    /// (under a minute; about four minutes in the harness's default Debug build, where the timings are not
+    /// representative).
     /// </summary>
-    [Explicit("Arena of 1,000 matches per test; run with --filter \"TestCategory=Slow\"")]
+    [Explicit("Arenas of up to 1,000 matches; run with -c Release --filter \"TestCategory=Slow\"")]
     [Category("Slow")]
     public sealed class BotArenaTests
     {
+        /// <summary>Matches for the GDD target and its baseline (standard error about 1.5 points).</summary>
         private const int Matches = 1000;
+
+        /// <summary>Matches for the comparisons that only put the target in context.</summary>
+        private const int SideMatches = 400;
+
         private const ulong FirstSeed = 1000UL;
 
         [Test]
         public void Arena_OneHardAgainstThreeNormal_WinsAtLeastThirtyFivePercent()
         {
-            Result result = Run("Hard vs 3 Normal", new HardStrategy(), new NormalStrategy());
+            Result result = Run("Hard vs 3 Normal", new HardStrategy(), new NormalStrategy(), Matches);
 
             Assert.GreaterOrEqual(result.WinRate, 0.35, "GDD §9 target");
         }
@@ -36,7 +43,7 @@ namespace Callbreak.Tests.EditMode.Bots
         [Test]
         public void Arena_FourNormal_EachWinsAboutAQuarter()
         {
-            Result result = Run("Normal vs 3 Normal (baseline)", new NormalStrategy(), new NormalStrategy());
+            Result result = Run("Normal vs 3 Normal (baseline)", new NormalStrategy(), new NormalStrategy(), Matches);
 
             Assert.That(result.WinRate, Is.InRange(0.20, 0.30));
         }
@@ -47,7 +54,7 @@ namespace Callbreak.Tests.EditMode.Bots
             // What the Monte-Carlo card play is worth without the calibrated calls.
             var estimatorCalls = new HardStrategy(HardStrategy.DefaultSamples, HardStrategy.SpoilPercent, 0, HardStrategy.DefaultHintTries, 0);
 
-            Result result = Run("Hard with estimator calls vs 3 Normal", estimatorCalls, new NormalStrategy());
+            Result result = Run("Hard with estimator calls vs 3 Normal", estimatorCalls, new NormalStrategy(), SideMatches);
 
             Assert.Greater(result.WinRate, 0.25);
         }
@@ -55,7 +62,7 @@ namespace Callbreak.Tests.EditMode.Bots
         [Test]
         public void Arena_OneNormalAgainstThreeEasy_WinsMoreThanItsShare()
         {
-            Result result = Run("Normal vs 3 Easy", new NormalStrategy(), new EasyStrategy());
+            Result result = Run("Normal vs 3 Easy", new NormalStrategy(), new EasyStrategy(), SideMatches);
 
             Assert.Greater(result.WinRate, 0.35);
         }
@@ -63,7 +70,7 @@ namespace Callbreak.Tests.EditMode.Bots
         [Test]
         public void Arena_OneHardAgainstThreeEasy_WinsMoreThanNormalDoes()
         {
-            Result result = Run("Hard vs 3 Easy", new HardStrategy(), new EasyStrategy());
+            Result result = Run("Hard vs 3 Easy", new HardStrategy(), new EasyStrategy(), SideMatches);
 
             Assert.Greater(result.WinRate, 0.45);
         }
@@ -108,11 +115,11 @@ namespace Callbreak.Tests.EditMode.Bots
             return (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency / repeats;
         }
 
-        private static Result Run(string name, IBotStrategy hero, IBotStrategy field)
+        private static Result Run(string name, IBotStrategy hero, IBotStrategy field, int matches)
         {
             var timings = new DecisionTimings();
             var result = new Result();
-            for (int match = 0; match < Matches; match++)
+            for (int match = 0; match < matches; match++)
             {
                 var heroSeat = (Seat)(match % 4);
                 var seats = new IBotStrategy[4];
@@ -125,7 +132,7 @@ namespace Callbreak.Tests.EditMode.Bots
                 result.Add(final, heroSeat);
             }
 
-            TestContext.Out.WriteLine(name + ", " + Matches + " matches: " + result.Describe());
+            TestContext.Out.WriteLine(name + ", " + matches + " matches: " + result.Describe());
             TestContext.Out.WriteLine("  " + timings.Describe(hero.Level));
             if (field.Level != hero.Level)
             {

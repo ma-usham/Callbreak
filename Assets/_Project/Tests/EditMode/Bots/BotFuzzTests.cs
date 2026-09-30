@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Callbreak.Bots;
 using Callbreak.Core.Match;
@@ -44,7 +43,7 @@ namespace Callbreak.Tests.EditMode.Bots
         }
 
         [Test]
-        [Explicit("1,000 full matches; run with --filter \"TestCategory=Slow\"")]
+        [Explicit("1,000 full matches; run with -c Release --filter \"TestCategory=Slow\"")]
         [Category("Slow")]
         public void Play_ThousandMixedMatches_OnlyLegalMoves()
         {

@@ -7,33 +7,34 @@ namespace Callbreak.Bots
     /// <summary>
     /// Plays one sampled deal to the end of the round (GDD §9 Hard: "rolling out every sample with the Normal
     /// policy"): <see cref="NormalPolicy"/> chooses for every seat, each from its own hand plus the public
-    /// knowledge, exactly as a Normal bot would play it. Allocation-free after construction; one instance serves
-    /// every sample and candidate of a decision.
+    /// state, exactly as a Normal bot would play it. Hands are card masks indexed by seat. Allocation-free
+    /// after construction; one instance serves every sample and candidate of a decision.
     /// </summary>
     internal sealed class Rollout
     {
-        private readonly CardTracker _start;
-        private readonly CardTracker _table;
-        private readonly CardSet[] _hands = new CardSet[SeatExtensions.Count];
-        private readonly Seat _viewer;
+        private readonly RoundState _start;
+        private readonly RoundState _table;
+        private readonly ulong[] _hands = new ulong[SeatExtensions.Count];
+        private readonly int _viewer;
         private readonly int _spoilPercent;
 
         internal Rollout(CardTracker start, int spoilPercent)
         {
-            _start = start;
-            _table = start.Clone();
-            _viewer = start.Viewer;
+            _start = start.State;
+            _table = new RoundState(start.Rules);
+            _viewer = (int)start.Viewer;
             _spoilPercent = spoilPercent;
         }
 
         /// <summary>
-        /// Plays <paramref name="first"/> for the viewer from <paramref name="deal"/> and the rest of the round
-        /// with the Normal policy, and returns the result's value for the viewer (see <see cref="Value"/>).
+        /// Plays the card <paramref name="first"/> for the viewer from <paramref name="deal"/> and the rest of the
+        /// round with the Normal policy, and returns the result's value for the viewer (see <see cref="Value"/>).
         /// </summary>
-        internal int Run(CardSet[] deal, Card first)
+        internal int Run(ulong[] deal, int first)
         {
             Reset(deal);
-            Play(_viewer, first);
+            _hands[_viewer] &= ~(1UL << first);
+            _table.Play(_viewer, first);
             PlayOut();
             return Value();
         }
@@ -42,25 +43,25 @@ namespace Callbreak.Bots
         /// Plays the whole round from the start with the Normal policy and the given calls (indexed by seat),
         /// and returns the tricks the viewer wins.
         /// </summary>
-        internal int RunRound(CardSet[] deal, int[] calls)
+        internal int RunRound(ulong[] deal, int[] calls)
         {
             Reset(deal);
             for (int s = 0; s < SeatExtensions.Count; s++)
             {
-                _table.SetCall((Seat)s, calls[s]);
+                _table.Calls[s] = calls[s];
             }
 
             PlayOut();
-            return _table.TricksWonBy(_viewer);
+            return _table.Won[_viewer];
         }
 
         /// <summary>Tricks a seat had won when the last rollout ended.</summary>
         internal int TricksWonBy(Seat seat)
         {
-            return _table.TricksWonBy(seat);
+            return _table.Won[(int)seat];
         }
 
-        private void Reset(CardSet[] deal)
+        private void Reset(ulong[] deal)
         {
             _table.CopyFrom(_start);
             for (int s = 0; s < SeatExtensions.Count; s++)
@@ -71,10 +72,15 @@ namespace Callbreak.Bots
 
         private void PlayOut()
         {
-            while (_table.TrickIndex < Deck.HandSize)
+            RoundState table = _table;
+            ulong[] hands = _hands;
+            while (table.Completed < Deck.HandSize)
             {
-                Seat seat = _table.CurrentTrick.NextSeat;
-                Play(seat, NormalPolicy.ChooseCard(_table, seat, _hands[(int)seat]));
+                int seat = table.SeatAt(table.Count);
+                ulong hand = hands[seat];
+                int card = NormalPolicy.ChooseCard(table, seat, hand, table.Legal(hand));
+                hands[seat] = hand & ~(1UL << card);
+                table.Play(seat, card);
             }
         }
 
@@ -85,23 +91,16 @@ namespace Callbreak.Bots
         /// </summary>
         private int Value()
         {
-            int value = 100 * ScoreCalculator.RoundScore(_table.CallOf(_viewer), _table.TricksWonBy(_viewer), _table.Rules);
+            int value = 100 * ScoreCalculator.RoundScore(_table.Calls[_viewer], _table.Won[_viewer], _table.Rules);
             for (int s = 0; s < SeatExtensions.Count; s++)
             {
-                var seat = (Seat)s;
-                if (seat != _viewer && _table.TricksWonBy(seat) < _table.CallOf(seat))
+                if (s != _viewer && _table.Won[s] < _table.Calls[s])
                 {
-                    value += _spoilPercent * _table.CallOf(seat) * 10;
+                    value += _spoilPercent * _table.Calls[s] * 10;
                 }
             }
 
             return value;
-        }
-
-        private void Play(Seat seat, Card card)
-        {
-            _hands[(int)seat] = _hands[(int)seat].Without(card);
-            _table.Record(seat, card);
         }
     }
 }

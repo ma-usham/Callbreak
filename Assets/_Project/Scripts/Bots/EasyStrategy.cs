@@ -55,7 +55,7 @@ namespace Callbreak.Bots
 
             if (rng.NextInt(100) < LowestCardPercent)
             {
-                return NormalPolicy.LowestLegal(legal, view.Hand);
+                return Card.FromId(NormalPolicy.LowestLegal(legal.Bits, view.Hand.Bits));
             }
 
             return legal.ElementAt(rng.NextInt(legal.Count));
