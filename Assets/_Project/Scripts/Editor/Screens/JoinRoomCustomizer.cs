@@ -87,15 +87,17 @@ namespace Callbreak.Editor.Screens
                 focusLooks[i] = AddFocusRim(ctx, box, $"CodeBox{i}");
             }
 
-            // One size for all six, fitted on the reference letter; each centred in its box.
+            // One size and one baseline for all six, fitted on the reference letter; each character
+            // is centred on its box (any character can land in any box).
             TMP_Text reference = letters[ReferenceLetter];
             var referenceRect = (RectTransform)reference.transform;
+            float baselineY = referenceRect.anchoredPosition.y;
             for (int i = 0; i < letters.Length; i++)
             {
                 var rect = (RectTransform)letters[i].transform;
                 rect.pivot = new Vector2(0.5f, referenceRect.pivot.y);
                 rect.sizeDelta = referenceRect.sizeDelta;
-                rect.anchoredPosition = referenceRect.anchoredPosition;
+                rect.anchoredPosition = new Vector2(0f, baselineY);
                 letters[i].font = reference.font;
                 letters[i].fontSize = reference.fontSize;
                 letters[i].characterHorizontalScale = reference.characterHorizontalScale;

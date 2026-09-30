@@ -148,7 +148,7 @@
         757
       ],
       "spritePpu": 0,
-      "checkError": 4.96
+      "checkError": 5.01
     },
     {
       "id": "Title",
@@ -166,6 +166,7 @@
         167,
         210.4
       ],
+      "dilate": 0.12,
       "lineGradient": [
         "#B20517",
         "#480406"
@@ -187,26 +188,30 @@
       "id": "SealLineLeft",
       "parent": "Panel",
       "rect": [
-        610,
-        257.2,
-        143,
-        2
+        588,
+        257.25,
+        164.9,
+        2.04
+      ],
+      "fade": [
+        88,
+        0
       ],
       "make": {
         "type": "rect",
-        "fill": "#634121",
+        "fill": "#5A4427",
         "out": "Deco_SealLine"
       },
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/Scorecard/Deco_SealLine.png",
       "spriteRect": [
-        610,
-        257.2,
-        143,
-        2
+        588,
+        257.25,
+        164.9,
+        2.04
       ],
       "spritePpu": 200,
-      "checkError": 27.06
+      "checkError": 26.48
     },
     {
       "id": "SealDiamondLeft",
@@ -229,7 +234,7 @@
         15
       ],
       "spritePpu": 174.1667,
-      "checkError": 3.95
+      "checkError": 3.73
     },
     {
       "id": "Seal",
@@ -277,28 +282,32 @@
         14.5
       ],
       "spritePpu": 0,
-      "checkError": 17.18
+      "checkError": 17.09
     },
     {
       "id": "SealLineRight",
       "parent": "Panel",
       "rect": [
         917.4,
-        257.2,
-        145,
-        2
+        257.23,
+        167.6,
+        2.02
+      ],
+      "fade": [
+        0,
+        80
       ],
       "use": "Deco_SealLine",
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/Scorecard/Deco_SealLine.png",
       "spriteRect": [
         917.4,
-        257.2,
-        145,
-        2
+        257.23,
+        167.6,
+        2.02
       ],
       "spritePpu": 0,
-      "checkError": 26.35
+      "checkError": 26.13
     },
     {
       "id": "Subtitle",
@@ -349,75 +358,75 @@
         335.5
       ],
       "spritePpu": 0,
-      "checkError": 3.18
+      "checkError": 3.29
     },
     {
       "id": "RowSeparator1",
       "parent": "TableBody",
       "rect": [
-        345,
-        535.3,
-        982.3,
-        1.9
+        344,
+        535.52,
+        984,
+        1.47
       ],
       "make": {
         "type": "rect",
-        "fill": "#DCCAB8",
+        "fill": "#E0CEBC",
         "out": "Deco_RowSeparator"
       },
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/Scorecard/Deco_RowSeparator.png",
       "spriteRect": [
-        345,
-        535.3,
-        982.3,
-        1.9
+        344,
+        535.52,
+        984,
+        1.47
       ],
       "spritePpu": 200,
-      "checkError": 5.45
+      "checkError": 6.78
     },
     {
       "id": "RowSeparator0",
       "parent": "TableBody",
       "rect": [
-        345,
-        465,
-        982.3,
-        1.9
+        344,
+        465.9,
+        984,
+        1.5
       ],
       "use": "Deco_RowSeparator",
       "hidden": true,
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/Scorecard/Deco_RowSeparator.png",
       "spriteRect": [
-        345,
-        465,
-        982.3,
-        1.9
+        344,
+        465.9,
+        984,
+        1.5
       ],
       "spritePpu": 0,
-      "checkError": 15.98
+      "checkError": 18.11
     },
     {
       "id": "RowSeparator2",
       "parent": "TableBody",
       "rect": [
-        345,
-        605,
-        982.3,
-        1.9
+        344,
+        605.06,
+        984,
+        1.63
       ],
       "use": "Deco_RowSeparator",
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/Scorecard/Deco_RowSeparator.png",
       "spriteRect": [
-        345,
-        605,
-        982.3,
-        1.9
+        344,
+        605.06,
+        984,
+        1.63
       ],
       "spritePpu": 0,
-      "checkError": 3.91
+      "checkError": 5.18
     },
     {
       "id": "HighlightBand",
@@ -446,7 +455,7 @@
         68.2
       ],
       "spritePpu": 200,
-      "checkError": 4.65
+      "checkError": 5.02
     },
     {
       "id": "Row0",
@@ -1624,29 +1633,44 @@
       "checkError": 5.61
     },
     {
-      "id": "FooterLineLeft",
+      "id": "FooterLeft",
+      "kind": "group",
       "parent": "Panel",
       "rect": [
-        553,
-        722.7,
-        76.8,
-        1.9
+        534,
+        719,
+        95.8,
+        8
+      ]
+    },
+    {
+      "id": "FooterLineLeft",
+      "parent": "FooterLeft",
+      "rect": [
+        534,
+        722.86,
+        95.8,
+        1.39
+      ],
+      "fade": [
+        48,
+        0
       ],
       "make": {
         "type": "rect",
-        "fill": "#6E5030",
+        "fill": "#6D5431",
         "out": "Deco_FooterLine"
       },
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/Scorecard/Deco_FooterLine.png",
       "spriteRect": [
-        553,
-        722.7,
-        76.8,
-        1.9
+        534,
+        722.86,
+        95.8,
+        1.39
       ],
       "spritePpu": 200,
-      "checkError": 17.71
+      "checkError": 16.66
     },
     {
       "id": "Footer",
@@ -1671,25 +1695,40 @@
       "color": "#6A472C"
     },
     {
-      "id": "FooterLineRight",
+      "id": "FooterRight",
+      "kind": "group",
       "parent": "Panel",
       "rect": [
         1041.2,
-        722.7,
-        77,
-        1.9
+        719,
+        88.8,
+        8
+      ]
+    },
+    {
+      "id": "FooterLineRight",
+      "parent": "FooterRight",
+      "rect": [
+        1041.2,
+        722.92,
+        88.8,
+        1.31
+      ],
+      "fade": [
+        0,
+        40
       ],
       "use": "Deco_FooterLine",
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/Scorecard/Deco_FooterLine.png",
       "spriteRect": [
         1041.2,
-        722.7,
-        77,
-        1.9
+        722.92,
+        88.8,
+        1.31
       ],
       "spritePpu": 0,
-      "checkError": 16.43
+      "checkError": 15.06
     },
     {
       "id": "PrimaryButton",

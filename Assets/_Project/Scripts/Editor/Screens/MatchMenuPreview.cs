@@ -10,7 +10,7 @@ namespace Callbreak.Editor.Screens
     {
         public static void Prepare(GameObject instance)
         {
-            BiddingPreview.TableUnder(instance, TablePreview.Moment.Gameplay);
+            BiddingPanelPreview.TableUnder(instance, TablePreview.Moment.Gameplay);
         }
     }
 }

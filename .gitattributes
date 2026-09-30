@@ -169,3 +169,7 @@ Packages/packages-lock.json linguist-generated
 
 # Exceptions for .asset files such as lightning pre-baking
 LightingData.asset     binary
+
+# Shell scripts run under Git Bash: never convert their line endings
+*.sh                    text eol=lf
+/Tools/art              text eol=lf

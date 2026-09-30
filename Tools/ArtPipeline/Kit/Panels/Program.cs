@@ -16,7 +16,7 @@ namespace KitPanels
     /// them and checks every sprite against its mockup. Rectangles are mockup pixels (1672 x 941,
     /// top-left origin); "unit" is sprite pixels per mockup pixel (2.3 for an @2x export).
     /// </summary>
-    internal static class Program
+    internal static partial class Program
     {
         private static string _repo;
 
@@ -47,6 +47,17 @@ namespace KitPanels
                     case "stretch": return Stretch(o);
                     case "stats": return Stats(o);
                     case "recolor": return Recolor(o);
+                    case "gradmap": return GradMap(o);
+                    case "extent": return Extent(o);
+                    case "seams": return Seams(o);
+                    case "line": return Line(o);
+                    case "tile": return TileCmd(o);
+                    case "defringe": return Defringe(o);
+                    case "flatfill": return FlatFill(o);
+                    case "rot180": return Rot180(o);
+                    case "curve": return Curve(o);
+                    case "compose": return Compose(o);
+                    case "pad": return PadCmd(o);
                     case "export": return Export(o);
                     case "onbg": return OnBg(o);
                     case "sheet": return Sheet(o);
@@ -72,12 +83,22 @@ namespace KitPanels
   mirror  --in a --out b --axis h|v|hv [--from left|right|top|bottom]   copy the better half over the other
   resize  --in a --out b --w W --h H
   shape   --in a --out b --type roundrect|pill|ellipse [--radius r] [--inset i]   exact geometric alpha over bled colour
-  nine    --in a --out b --border L,T,R,B [--mid 32,32] [--feather 12]        compact 9-slice with a plain middle
-  flatten --in a --out b --border L,T,R,B [--feather 12]                       same size, middle made plain
+  nine    --in a --out b --border L,T,R,B [--mid 32,32]                       compact 9-slice: the middle squeezed to a few plain pixels
+  flatten --in a --out b --border L,T,R,B [--mid 32,32]                       same size, the middle as the game will stretch it
   check   --sprite s --screen 02 --rect x,y,w,h [--nine L,T,R,B] [--unit 2.3] [--view x,y,w,h] [--zoom 3] --out f
+  tile    --out f [--bg #808080] [--maxh 160] [--cols 0] <png>...   several images side by side, for looking at them
+  defringe --in a --out b [--px 2]                   edge pixels take the colour just inside them (removes the magenta fringe)
+  flatfill --in a --out b [--thr 8] [--grow 3] [--fill #hex]   plain fill everywhere except ornaments and outline
+  rot180  --in a --out b [--from top|bottom]         point symmetry: one half becomes the other turned by 180 degrees
+  curve   --in a --out b --anchors ""#src>#dst;...""   per-channel curve through the anchors (nearest offset outside them)
+  pad     --in a --out b --w W --h H                 centre on a transparent canvas
   stretch --sprite s --nine L,T,R,B [--unit 2.3] --size W,H --out f [--zoom 1] [--bg #E9DDD0]
   stats   --sprite s --screen 02 --rect x,y,w,h [--nine ..] [--unit 2.3] --sample ""x,y,w,h;...""
   recolor --in a --out b --anchors ""#src>#dst;..."" [--mode affine|offset|gain]
+  gradmap --in a --out b --channel b --stops ""178:#F6DFCB;239:#F7EEE3;255:#FCF8F2"" [--stops2 ... (colours at the bottom row)]
+  extent  --in a [--thr 3] [--edge 12]             how far the corner ornaments reach (for choosing 9-slice borders)
+  seams   --in a --nine L,T,R,B                      largest colour step across each 9-slice line (sRGB levels)
+  line    --in a (--row y | --col x) --from a --to b   pixel colours and alpha along a line of any image
   export  --in a --name UI/Panels/UI_Panel_Large.png [--w W --h H]   bleed colour, save to Assets/_Project/Art + ArtSource/Exports/UI
   onbg    --in a --out f [--zoom 1]                  the sprite on black, white and magenta side by side
   sheet   --out f --items ""02:x,y,w,h:scale;..."" [--cols 4] [--gap 40] [--bg #FFFFFF]
@@ -450,13 +471,13 @@ namespace KitPanels
         }
 
         // ------------------------------------------------------------------------------------
-        // nine: compact 9-slice with a plain middle; flatten: same size, plain middle
+        // nine: compact 9-slice with a plain middle
         private static int Nine(Opts o)
         {
             Img f = Img.Load(o.Need("in"));
             int[] b = o.Ints("border", 4);
             int[] mid = o.Ints("mid", 2, new[] { 32, 32 });
-            Img n = BuildNine(f, b[0], b[1], b[2], b[3], mid[0], mid[1], o.Int("feather", 12));
+            Img n = BuildNine(f, b[0], b[1], b[2], b[3], mid[0], mid[1]);
             n.Save(o.Need("out"));
             Console.WriteLine($"{o.Need("out")}  {f.W}x{f.H} -> {n.W}x{n.H}  border L{b[0]} T{b[1]} R{b[2]} B{b[3]}");
             return 0;
@@ -464,136 +485,138 @@ namespace KitPanels
 
         private static int Flatten(Opts o)
         {
+            // Squeezes the middle to a few pixels and stretches it back: what is left between the
+            // borders is exactly what the game will draw there.
             Img f = Img.Load(o.Need("in"));
             int[] b = o.Ints("border", 4);
-            int mx = f.W - b[0] - b[2], my = f.H - b[1] - b[3];
-            Img n = BuildNine(f, b[0], b[1], b[2], b[3], b[1] + b[3] == 0 ? mx : mx, my, o.Int("feather", 12));
-            n.Save(o.Need("out"));
-            Console.WriteLine($"{o.Need("out")}  {n.W}x{n.H}  middle made plain inside L{b[0]} T{b[1]} R{b[2]} B{b[3]}");
+            int[] mid = o.Ints("mid", 2, new[] { 32, 32 });
+            Img n = BuildNine(f, b[0], b[1], b[2], b[3], mid[0], mid[1]);
+            Img back = Render(n, b, 1, 1, f.W, f.H);
+            back.Save(o.Need("out"));
+            Console.WriteLine($"{o.Need("out")}  {back.W}x{back.H}  middle made plain inside L{b[0]} T{b[1]} R{b[2]} B{b[3]}");
             return 0;
         }
 
         /// <summary>
-        /// Keeps the four corners (or, with no top/bottom border, the two caps) and replaces what
-        /// lies between them with the average cross-section of the edge it belongs to, so the
-        /// middle is plain along the direction it stretches. The corners fade into that
-        /// cross-section over their last <paramref name="feather"/> pixels, so no seam shows.
+        /// Keeps the borders as they are and squeezes what lies between them down to a few pixels
+        /// by averaging along the direction it will stretch: grain and stray marks in the middle
+        /// average out, a smooth gradient survives and comes back when the game stretches the
+        /// sprite. With no left/right (or top/bottom) border that direction is left alone.
         /// </summary>
-        private static Img BuildNine(Img f, int L, int T, int R, int B, int midX, int midY, int feather)
+        private static Img BuildNine(Img f, int L, int T, int R, int B, int midX, int midY)
         {
-            int w = f.W, h = f.H;
-            bool vertical = T + B > 0;     // does it stretch vertically too?
-            bool horizontal = L + R > 0;
-            int ow = horizontal ? L + R + midX : w, oh = vertical ? T + B + midY : h;
-            var n = new Img(ow, oh, 0f);
-            float[][] src = { f.R, f.G, f.B, f.A }, dst = { n.R, n.G, n.B, n.A };
+            Img a = L + R > 0 ? Squeeze(f, L, R, midX, true) : f;
+            Img n = T + B > 0 ? Squeeze(a, T, B, midY, false) : a;
+            Regularize(n, L + R > 0 ? L : 0, L + R > 0 ? midX : 0, T + B > 0 ? T : 0, T + B > 0 ? midY : 0);
+            return n;
+        }
 
-            // Cross-sections, premultiplied so clear pixels do not tint the average.
-            // colProfile[y] = mean over the middle columns (for the part that stretches sideways)
-            // rowProfile[x] = mean over the middle rows    (for the part that stretches up/down)
-            var colProfile = new float[4][];
-            var rowProfile = new float[4][];
-            for (int c = 0; c < 4; c++) { colProfile[c] = new float[h]; rowProfile[c] = new float[w]; }
-            int x0 = horizontal ? L : 0, x1 = horizontal ? w - R : w, y0 = vertical ? T : 0, y1 = vertical ? h - B : h;
-            if (x1 <= x0 || y1 <= y0) throw new ArgumentException("the borders leave no middle");
-            for (int y = 0; y < h; y++)
+        /// <summary>
+        /// Makes the squeezed middle exactly plain along the direction it stretches: every middle
+        /// column of a top/bottom strip becomes the strip's mean column, the centre keeps only its
+        /// top-to-bottom course, and the side strips their cross-section plus that course. What
+        /// is left of ChatGPT's faint unevenness would otherwise come back as soft blotches
+        /// when the middle is stretched over a whole panel.
+        /// </summary>
+        private static void Regularize(Img n, int L, int midX, int T, int midY)
+        {
+            float[][] ch = { n.R, n.G, n.B, n.A };
+            int w = n.W, h = n.H;
+            if (midX > 0)
             {
-                double r = 0, g = 0, bl = 0, a = 0;
-                for (int x = x0; x < x1; x++)
+                // Rows: all middle columns take the row's mean over the middle (premultiplied).
+                for (int y = 0; y < h; y++)
                 {
-                    int i = y * w + x;
-                    r += f.R[i] * f.A[i]; g += f.G[i] * f.A[i]; bl += f.B[i] * f.A[i]; a += f.A[i];
-                }
-
-                colProfile[3][y] = (float)(a / (x1 - x0));
-                colProfile[0][y] = a > 1e-6 ? (float)(r / a) : 0; colProfile[1][y] = a > 1e-6 ? (float)(g / a) : 0; colProfile[2][y] = a > 1e-6 ? (float)(bl / a) : 0;
-            }
-
-            for (int x = 0; x < w; x++)
-            {
-                double r = 0, g = 0, bl = 0, a = 0;
-                for (int y = y0; y < y1; y++)
-                {
-                    int i = y * w + x;
-                    r += f.R[i] * f.A[i]; g += f.G[i] * f.A[i]; bl += f.B[i] * f.A[i]; a += f.A[i];
-                }
-
-                rowProfile[3][x] = (float)(a / (y1 - y0));
-                rowProfile[0][x] = a > 1e-6 ? (float)(r / a) : 0; rowProfile[1][x] = a > 1e-6 ? (float)(g / a) : 0; rowProfile[2][x] = a > 1e-6 ? (float)(bl / a) : 0;
-            }
-
-            // Source coordinate of an output pixel: inside a corner/cap it maps straight, in the
-            // middle it has none (-1).
-            int SrcX(int x) => !horizontal ? x : (x < L ? x : (x >= L + midX ? x - (L + midX) + (w - R) : -1));
-            int SrcY(int y) => !vertical ? y : (y < T ? y : (y >= T + midY ? y - (T + midY) + (h - B) : -1));
-
-            // The centre colour: where both profiles meet.
-            var centre = new float[4];
-            {
-                double r = 0, g = 0, bl = 0, a = 0; long k = 0;
-                for (int y = y0; y < y1; y++)
-                    for (int x = x0; x < x1; x++)
+                    double r = 0, g = 0, b = 0, a = 0;
+                    for (int x = L; x < L + midX; x++)
                     {
                         int i = y * w + x;
-                        r += f.R[i] * f.A[i]; g += f.G[i] * f.A[i]; bl += f.B[i] * f.A[i]; a += f.A[i]; k++;
+                        r += n.R[i] * n.A[i]; g += n.G[i] * n.A[i]; b += n.B[i] * n.A[i]; a += n.A[i];
                     }
 
-                centre[3] = (float)(a / k);
-                centre[0] = a > 1e-6 ? (float)(r / a) : 0; centre[1] = a > 1e-6 ? (float)(g / a) : 0; centre[2] = a > 1e-6 ? (float)(bl / a) : 0;
-            }
-
-            for (int y = 0; y < oh; y++)
-            {
-                int sy = SrcY(y);
-                for (int x = 0; x < ow; x++)
-                {
-                    int sx = SrcX(x);
-                    int t = y * ow + x;
-                    if (sx >= 0 && sy >= 0)
+                    float fa = (float)(a / midX);
+                    float fr = a > 1e-9 ? (float)(r / a) : 0f, fg = a > 1e-9 ? (float)(g / a) : 0f, fb = a > 1e-9 ? (float)(b / a) : 0f;
+                    for (int x = L; x < L + midX; x++)
                     {
-                        // A corner (or cap) pixel: the original, fading into the cross-sections
-                        // near the side that touches the middle.
-                        int i = sy * w + sx;
-                        float wx = 0f, wy = 0f;   // weight of the sideways / vertical cross-section
-                        if (horizontal && feather > 0)
-                        {
-                            int d = sx < L ? L - 1 - sx : sx - (w - R);   // distance to the middle
-                            if (d < feather) wx = 1f - (d + 0.5f) / feather;
-                        }
-
-                        if (vertical && feather > 0)
-                        {
-                            int d = sy < T ? T - 1 - sy : sy - (h - B);
-                            if (d < feather) wy = 1f - (d + 0.5f) / feather;
-                        }
-
-                        wx = Smooth(wx); wy = Smooth(wy);
-                        for (int c = 0; c < 4; c++)
-                        {
-                            float v = src[c][i];
-                            if (wx > 0f) v = v + (colProfile[c][sy] - v) * wx;
-                            if (wy > 0f) v = v + (rowProfile[c][sx] - v) * wy;
-                            dst[c][t] = v;
-                        }
-                    }
-                    else if (sx < 0 && sy >= 0)
-                    {
-                        for (int c = 0; c < 4; c++) dst[c][t] = colProfile[c][sy];
-                    }
-                    else if (sx >= 0 && sy < 0)
-                    {
-                        for (int c = 0; c < 4; c++) dst[c][t] = rowProfile[c][sx];
-                    }
-                    else
-                    {
-                        for (int c = 0; c < 4; c++) dst[c][t] = centre[c];
+                        int i = y * w + x;
+                        n.R[i] = fr; n.G[i] = fg; n.B[i] = fb; n.A[i] = fa;
                     }
                 }
             }
 
-            // Top/bottom edge strips must also meet the centre smoothly: the strip's own profile
-            // already ends at the centre colour when the source middle is even; nothing more to do.
-            for (int i = 0; i < n.Count; i++) if (n.A[i] <= 0.002f) { n.A[i] = 0; n.R[i] = 0; n.G[i] = 0; n.B[i] = 0; }
+            if (midY > 0)
+            {
+                // The centre's top-to-bottom course (its middle columns are already identical).
+                int cx = midX > 0 ? L + midX / 2 : w / 2;
+                var course = new float[4][];
+                var mean = new double[4];
+                for (int c = 0; c < 4; c++)
+                {
+                    course[c] = new float[midY];
+                    for (int k = 0; k < midY; k++) { course[c][k] = ch[c][(T + k) * w + cx]; mean[c] += course[c][k]; }
+                    mean[c] /= midY;
+                }
+
+                // Side strips (and, without left/right borders, everything): each column keeps its
+                // mean over the middle rows and follows the centre's course around that mean.
+                for (int x = 0; x < w; x++)
+                {
+                    if (midX > 0 && x >= L && x < L + midX) continue;
+                    for (int c = 0; c < 4; c++)
+                    {
+                        double m = 0;
+                        for (int k = 0; k < midY; k++) m += ch[c][(T + k) * w + x];
+                        m /= midY;
+                        for (int k = 0; k < midY; k++)
+                        {
+                            // Alpha and colour of the rim stay as they are; only opaque fill follows the course.
+                            float v = c == 3 ? (float)m : (float)(m + (course[c][k] - mean[c]));
+                            ch[c][(T + k) * w + x] = Math.Clamp(v, 0f, 1f);
+                        }
+                    }
+                }
+            }
+        }
+
+        private static Img Squeeze(Img f, int lead, int trail, int mid, bool alongX)
+        {
+            int len = alongX ? f.W : f.H, other = alongX ? f.H : f.W;
+            int srcMid = len - lead - trail;
+            if (srcMid <= 0) throw new ArgumentException("the borders leave no middle");
+            if (mid >= srcMid) return f;
+            int outLen = lead + mid + trail;
+            var n = alongX ? new Img(outLen, other, 0f) : new Img(other, outLen, 0f);
+            float[][] src = { f.R, f.G, f.B, f.A }, dst = { n.R, n.G, n.B, n.A };
+            double step = (double)srcMid / mid;
+            for (int q = 0; q < other; q++)
+            {
+                for (int p = 0; p < outLen; p++)
+                {
+                    int t = alongX ? q * n.W + p : p * n.W + q;
+                    if (p < lead || p >= lead + mid)
+                    {
+                        int sp = p < lead ? p : p - (lead + mid) + (len - trail);
+                        int s = alongX ? q * f.W + sp : sp * f.W + q;
+                        for (int c = 0; c < 4; c++) dst[c][t] = src[c][s];
+                        continue;
+                    }
+
+                    // Area average of the source span this output pixel stands for, premultiplied.
+                    double a0 = lead + (p - lead) * step, a1 = a0 + step;
+                    double r = 0, g = 0, b = 0, al = 0, wsum = 0;
+                    for (int sp = (int)Math.Floor(a0); sp < Math.Ceiling(a1); sp++)
+                    {
+                        double wgt = Math.Min(a1, sp + 1) - Math.Max(a0, sp);
+                        if (wgt <= 0) continue;
+                        int s = alongX ? q * f.W + sp : sp * f.W + q;
+                        r += f.R[s] * f.A[s] * wgt; g += f.G[s] * f.A[s] * wgt; b += f.B[s] * f.A[s] * wgt; al += f.A[s] * wgt; wsum += wgt;
+                    }
+
+                    dst[3][t] = (float)(al / wsum);
+                    dst[0][t] = al > 1e-9 ? (float)(r / al) : 0f; dst[1][t] = al > 1e-9 ? (float)(g / al) : 0f; dst[2][t] = al > 1e-9 ? (float)(b / al) : 0f;
+                }
+            }
+
             return n;
         }
 
@@ -609,7 +632,9 @@ namespace KitPanels
             using (Graphics g = Graphics.FromImage(dst))
             {
                 g.CompositingMode = CompositingMode.SourceCopy;
-                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                // Bilinear, as the game filters: bicubic overshoots on thin bright rims and would
+                // show them whiter than they are.
+                g.InterpolationMode = InterpolationMode.HighQualityBilinear;
                 g.PixelOffsetMode = PixelOffsetMode.HighQuality;
                 g.SmoothingMode = SmoothingMode.HighQuality;
                 g.Clear(Color.Transparent);
@@ -709,7 +734,7 @@ namespace KitPanels
             Img white = Flat(mock.W, mock.H, "#FFFFFF"); white.Over(drawn, ox, oy);
             var tiles = new List<Img> { mock, comp };
             if (!o.Has("noalpha")) { tiles.Add(black); tiles.Add(white); }
-            Img sheet = o.Has("stack") ? Stack(tiles, 6) : Tiles(tiles, 6);
+            Img sheet = o.Has("stack") ? Stack(tiles, 6) : (tiles.Count == 4 && tiles[0].W * 4 > 2000 ? Stack(new List<Img> { Tiles(tiles.GetRange(0, 2), 6), Tiles(tiles.GetRange(2, 2), 6) }, 0) : Tiles(tiles, 6));
             sheet.Save(o.Need("out"));
 
             // How far the composite is from the mockup inside the rect (text included, so read it as a trend).
@@ -897,6 +922,176 @@ namespace KitPanels
             ApplyBytes(m, gain, off);
             m.Save(o.Need("out"));
             Console.WriteLine($"{o.Need("out")}  mode {mode}  gain {gain[0]:0.000} {gain[1]:0.000} {gain[2]:0.000}  offset {off[0]:0.0} {off[1]:0.0} {off[2]:0.0}");
+            return 0;
+        }
+
+        /// <summary>
+        /// Gradient map: one channel of the extraction (the one that separates its tones best)
+        /// picks a colour on a ramp measured on the mockup, e.g. ornament - fill - rim highlight.
+        /// The result has exactly the mockup palette whatever hue ChatGPT drifted to. With
+        /// --stops2 the ramp changes linearly from the top row (--stops) to the bottom row.
+        /// </summary>
+        private static int GradMap(Opts o)
+        {
+            Img m = Img.Load(o.Need("in"));
+            string chName = o.Get("channel", "b");
+            float[] ch = chName == "r" ? m.R : (chName == "g" ? m.G : m.B);
+            (double v, double[] c)[] top = ParseStops(o.Need("stops"));
+            (double v, double[] c)[] bottom = o.Has("stops2") ? ParseStops(o.Get("stops2")) : top;
+            if (bottom.Length != top.Length) throw new ArgumentException("--stops and --stops2 need the same number of stops");
+            double extra = o.Num("extrapolate", 0.5);
+            for (int y = 0; y < m.H; y++)
+            {
+                double ty = m.H > 1 ? (double)y / (m.H - 1) : 0;
+                for (int x = 0; x < m.W; x++)
+                {
+                    int i = y * m.W + x;
+                    if (m.A[i] <= 0f) continue;
+                    double v = Img.ToSrgb01(ch[i]) * 255.0;
+                    int k = 0;
+                    while (k < top.Length - 2 && v > top[k + 1].v) k++;
+                    double t = (v - top[k].v) / (top[k + 1].v - top[k].v);
+                    t = Math.Clamp(t, k == 0 ? -extra : 0, k == top.Length - 2 ? 1 : 1);
+                    var outc = new double[3];
+                    for (int c = 0; c < 3; c++)
+                    {
+                        double a = top[k].c[c] + (bottom[k].c[c] - top[k].c[c]) * ty;
+                        double b = top[k + 1].c[c] + (bottom[k + 1].c[c] - top[k + 1].c[c]) * ty;
+                        outc[c] = a + (b - a) * t;
+                    }
+
+                    m.R[i] = Img.ToLinear((float)Math.Clamp(outc[0] / 255.0, 0, 1));
+                    m.G[i] = Img.ToLinear((float)Math.Clamp(outc[1] / 255.0, 0, 1));
+                    m.B[i] = Img.ToLinear((float)Math.Clamp(outc[2] / 255.0, 0, 1));
+                }
+            }
+
+            m.Save(o.Need("out"));
+            Console.WriteLine($"{o.Need("out")}  gradient map on {chName}: {o.Need("stops")}{(o.Has("stops2") ? "  ->  " + o.Get("stops2") : "")}");
+            return 0;
+        }
+
+        private static (double v, double[] c)[] ParseStops(string s)
+        {
+            return s.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(p =>
+            {
+                string[] q = p.Split(':');
+                return (double.Parse(q[0], CultureInfo.InvariantCulture), HexBytes(q[1]));
+            }).OrderBy(p => p.Item1).ToArray();
+        }
+
+        /// <summary>
+        /// How far anything that is not plain fill reaches in from each corner, ignoring the rim
+        /// (the outer --edge pixels): the smallest 9-slice borders that keep the ornaments whole.
+        /// A pixel is "not fill" when it differs from the median of its own row's middle fifth.
+        /// </summary>
+        private static int Extent(Opts o)
+        {
+            Img m = Img.Load(o.Need("in"));
+            double thr = o.Num("thr", 3);
+            int edge = o.Int("edge", 12);
+            int w = m.W, h = m.H;
+            var busy = new bool[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                var mid = new List<(byte r, byte g, byte b)>();
+                for (int x = w * 2 / 5; x < w * 3 / 5; x++) { int i = y * w + x; mid.Add((S8(m.R[i]), S8(m.G[i]), S8(m.B[i]))); }
+                (int r, int g, int b) f = Pct(mid, 50);
+                for (int x = edge; x < w - edge; x++)
+                {
+                    int i = y * w + x;
+                    if (m.A[i] < 0.99f) continue;
+                    double d = Math.Max(Math.Abs(S8(m.R[i]) - f.r), Math.Max(Math.Abs(S8(m.G[i]) - f.g), Math.Abs(S8(m.B[i]) - f.b)));
+                    busy[i] = d > thr;
+                }
+            }
+
+            // Ignore isolated pixels: a busy pixel counts when at least 5 of its 3x3 neighbours are busy.
+            bool Dense(int x, int y)
+            {
+                int k = 0;
+                for (int dy = -1; dy <= 1; dy++)
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        int xx = x + dx, yy = y + dy;
+                        if (xx >= 0 && yy >= 0 && xx < w && yy < h && busy[yy * w + xx]) k++;
+                    }
+                return k >= 5;
+            }
+
+            int[] reachX = new int[4], reachY = new int[4];   // TL, TR, BL, BR
+            for (int y = edge; y < h - edge; y++)
+            {
+                for (int x = edge; x < w - edge; x++)
+                {
+                    if (!busy[y * w + x] || !Dense(x, y)) continue;
+                    int c = (y < h / 2 ? 0 : 2) + (x < w / 2 ? 0 : 1);
+                    int dx = x < w / 2 ? x + 1 : w - x, dy = y < h / 2 ? y + 1 : h - y;
+                    reachX[c] = Math.Max(reachX[c], dx);
+                    reachY[c] = Math.Max(reachY[c], dy);
+                }
+            }
+
+            string[] names = { "top-left", "top-right", "bottom-left", "bottom-right" };
+            for (int c = 0; c < 4; c++) Console.WriteLine($"{names[c],-13} reaches {reachX[c]} px in from the side, {reachY[c]} px in from the {(c < 2 ? "top" : "bottom")}");
+            Console.WriteLine($"borders that keep them whole: L {Math.Max(reachX[0], reachX[2])} T {Math.Max(reachY[0], reachY[1])} R {Math.Max(reachX[1], reachX[3])} B {Math.Max(reachY[2], reachY[3])}  (image {w}x{h})");
+            return 0;
+        }
+
+        /// <summary>
+        /// The largest colour step between neighbouring pixels across each 9-slice line, compared
+        /// with the largest step between neighbours just inside it: a seam shows as a step that
+        /// is clearly larger across the line than beside it.
+        /// </summary>
+        private static int Seams(Opts o)
+        {
+            Img m = Img.Load(o.Need("in"));
+            int[] b = o.Ints("nine", 4);
+            int w = m.W, h = m.H;
+            double Step(int i, int j)
+            {
+                if (m.A[i] < 0.99f || m.A[j] < 0.99f) return 0;
+                return Math.Max(Math.Abs(S8(m.R[i]) - S8(m.R[j])), Math.Max(Math.Abs(S8(m.G[i]) - S8(m.G[j])), Math.Abs(S8(m.B[i]) - S8(m.B[j]))));
+            }
+
+            void Line(string name, bool vertical, int at)
+            {
+                if (at <= 1 || at >= (vertical ? w : h) - 1) return;
+                double across = 0, beside = 0; int where = -1;
+                int len = vertical ? h : w;
+                for (int k = 0; k < len; k++)
+                {
+                    int i0 = vertical ? k * w + at - 1 : (at - 1) * w + k, i1 = vertical ? k * w + at : at * w + k;
+                    int j0 = vertical ? k * w + at - 2 : (at - 2) * w + k;
+                    double s = Step(i0, i1);
+                    if (s > across) { across = s; where = k; }
+                    beside = Math.Max(beside, Step(j0, i0));
+                }
+
+                Console.WriteLine($"  {name,-8} at {at,4}: largest step across {across:0} (at {where}), beside {beside:0}");
+            }
+
+            Console.WriteLine($"{Path.GetFileName(o.Need("in"))}  {w}x{h}");
+            Line("left", true, b[0]);
+            Line("right", true, w - b[2]);
+            Line("top", false, b[1]);
+            Line("bottom", false, h - b[3]);
+            return 0;
+        }
+
+        private static int Line(Opts o)
+        {
+            Img m = Img.Load(o.Need("in"));
+            bool row = o.Has("row");
+            int at = o.Int(row ? "row" : "col", 0), from = o.Int("from", 0), to = o.Int("to", (row ? m.W : m.H) - 1);
+            var sb = new StringBuilder();
+            for (int k = Math.Max(0, from); k <= Math.Min((row ? m.W : m.H) - 1, to); k++)
+            {
+                int i = row ? at * m.W + k : k * m.W + at;
+                sb.Append($"{k}:{Img.Hex(m.R[i], m.G[i], m.B[i]).Substring(1)}/{(int)Math.Round(m.A[i] * 255)} ");
+            }
+
+            Console.WriteLine(sb.ToString());
             return 0;
         }
 

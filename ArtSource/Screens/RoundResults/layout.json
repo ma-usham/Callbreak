@@ -148,7 +148,7 @@
         775.8
       ],
       "spritePpu": 0,
-      "checkError": 5.26
+      "checkError": 5.28
     },
     {
       "id": "Title",
@@ -166,6 +166,7 @@
         145.9,
         202.3
       ],
+      "dilate": 0.12,
       "lineGradient": [
         "#980516",
         "#500408"
@@ -187,26 +188,30 @@
       "id": "MedalLineLeft",
       "parent": "Panel",
       "rect": [
-        630,
-        243.3,
-        123,
-        2
+        591,
+        243.34,
+        161.8,
+        1.9
+      ],
+      "fade": [
+        91,
+        0
       ],
       "make": {
         "type": "rect",
-        "fill": "#644327",
+        "fill": "#5C4121",
         "out": "Deco_MedalLine"
       },
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_MedalLine.png",
       "spriteRect": [
-        630,
-        243.3,
-        123,
-        2
+        591,
+        243.34,
+        161.8,
+        1.9
       ],
       "spritePpu": 200,
-      "checkError": 28.04
+      "checkError": 31.29
     },
     {
       "id": "MedalDiamondLeft",
@@ -229,7 +234,7 @@
         15
       ],
       "spritePpu": 174.1667,
-      "checkError": 2.86
+      "checkError": 2.96
     },
     {
       "id": "Medal",
@@ -277,28 +282,32 @@
         14.4
       ],
       "spritePpu": 0,
-      "checkError": 16.66
+      "checkError": 16.84
     },
     {
       "id": "MedalLineRight",
       "parent": "Panel",
       "rect": [
         919.3,
-        243.3,
-        116,
-        2
+        243.37,
+        155.7,
+        1.89
+      ],
+      "fade": [
+        0,
+        81
       ],
       "use": "Deco_MedalLine",
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_MedalLine.png",
       "spriteRect": [
         919.3,
-        243.3,
-        116,
-        2
+        243.37,
+        155.7,
+        1.89
       ],
       "spritePpu": 0,
-      "checkError": 28.1
+      "checkError": 31.28
     },
     {
       "id": "RoundTitle",
@@ -348,75 +357,75 @@
         311.3
       ],
       "spritePpu": 0,
-      "checkError": 2.98
+      "checkError": 2.97
     },
     {
       "id": "RowSeparator1",
       "parent": "TableBody",
       "rect": [
-        385.8,
-        503.98,
-        900.7,
-        1.5
+        386,
+        504.19,
+        900,
+        1.39
       ],
       "make": {
         "type": "rect",
-        "fill": "#DDCDBC",
+        "fill": "#DFCCBA",
         "out": "Deco_RowSeparator"
       },
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_RowSeparator.png",
       "spriteRect": [
-        385.8,
-        503.98,
-        900.7,
-        1.5
+        386,
+        504.19,
+        900,
+        1.39
       ],
       "spritePpu": 200,
-      "checkError": 4.38
+      "checkError": 5.01
     },
     {
       "id": "RowSeparator0",
       "parent": "TableBody",
       "rect": [
-        385.8,
-        439.36,
-        900.7,
-        1.5
+        386,
+        439.7,
+        900,
+        1.39
       ],
       "use": "Deco_RowSeparator",
       "hidden": true,
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_RowSeparator.png",
       "spriteRect": [
-        385.8,
-        439.36,
-        900.7,
-        1.5
+        386,
+        439.7,
+        900,
+        1.39
       ],
       "spritePpu": 0,
-      "checkError": 13.41
+      "checkError": 13.87
     },
     {
       "id": "RowSeparator2",
       "parent": "TableBody",
       "rect": [
-        385.8,
-        568.6,
-        900.7,
-        1.5
+        386,
+        568.65,
+        900,
+        1.39
       ],
       "use": "Deco_RowSeparator",
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_RowSeparator.png",
       "spriteRect": [
-        385.8,
-        568.6,
-        900.7,
-        1.5
+        386,
+        568.65,
+        900,
+        1.39
       ],
       "spritePpu": 0,
-      "checkError": 7.17
+      "checkError": 4.74
     },
     {
       "id": "HighlightBand",
@@ -445,7 +454,7 @@
         61.9
       ],
       "spritePpu": 200,
-      "checkError": 3.82
+      "checkError": 4.02
     },
     {
       "id": "Row0",
@@ -1324,33 +1333,48 @@
       "color": "#222220"
     },
     {
-      "id": "FooterLineLeft",
+      "id": "FooterLeft",
+      "kind": "group",
       "parent": "Panel",
       "rect": [
-        628,
-        857,
-        75,
-        2
+        610,
+        852,
+        100.4,
+        12
+      ]
+    },
+    {
+      "id": "FooterLineLeft",
+      "parent": "FooterLeft",
+      "rect": [
+        610,
+        857.2,
+        92.4,
+        1.72
+      ],
+      "fade": [
+        63,
+        0
       ],
       "make": {
         "type": "rect",
-        "fill": "#957559",
+        "fill": "#8D7357",
         "out": "Deco_FooterLine"
       },
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_FooterLine.png",
       "spriteRect": [
-        628,
-        857,
-        75,
-        2
+        610,
+        857.2,
+        92.4,
+        1.72
       ],
       "spritePpu": 200,
-      "checkError": 13.08
+      "checkError": 16.52
     },
     {
       "id": "FooterHeadLeft",
-      "parent": "Panel",
+      "parent": "FooterLeft",
       "rect": [
         702.4,
         854.1,
@@ -1367,7 +1391,7 @@
         7.9
       ],
       "spritePpu": 0,
-      "checkError": 14.05
+      "checkError": 14.61
     },
     {
       "id": "Footer",
@@ -1392,8 +1416,19 @@
       "color": "#715239"
     },
     {
-      "id": "FooterHeadRight",
+      "id": "FooterRight",
+      "kind": "group",
       "parent": "Panel",
+      "rect": [
+        960.3,
+        852,
+        102.7,
+        12
+      ]
+    },
+    {
+      "id": "FooterHeadRight",
+      "parent": "FooterRight",
       "rect": [
         960.3,
         854.2,
@@ -1410,28 +1445,32 @@
         7.9
       ],
       "spritePpu": 0,
-      "checkError": 12.73
+      "checkError": 12.28
     },
     {
       "id": "FooterLineRight",
-      "parent": "Panel",
+      "parent": "FooterRight",
       "rect": [
-        968,
-        857,
-        75,
-        2
+        968.3,
+        857.24,
+        94.7,
+        1.66
+      ],
+      "fade": [
+        0,
+        54
       ],
       "use": "Deco_FooterLine",
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_FooterLine.png",
       "spriteRect": [
-        968,
-        857,
-        75,
-        2
+        968.3,
+        857.24,
+        94.7,
+        1.66
       ],
       "spritePpu": 0,
-      "checkError": 13.88
+      "checkError": 16.44
     }
   ]
 }

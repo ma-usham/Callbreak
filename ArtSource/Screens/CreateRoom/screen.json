@@ -47,7 +47,8 @@
     { "id": "PlayersValue", "kind": "label", "parent": "PlayersTile", "text": "4 players", "font": "SansBold", "align": "left", "rect": [659, 530, 120, 32] },
     { "id": "MatchTile", "parent": "Panel", "shape": "roundrect", "radius": 15, "rect": [846.3, 483.8, 270.8, 98.2],
       "use": "UI/Common/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
-    { "id": "MatchIcon", "parent": "MatchTile", "shape": "ink", "rect": [871, 505, 62, 58], "out": "Icon_Cards" },
+    // Placeholder cut (ink box 877.0,511.4 49.7 x 46.4; the rect adds a 2 px fringe).
+    { "id": "MatchIcon", "parent": "MatchTile", "shape": "ink", "rect": [875, 509, 54, 51], "out": "Icon_Cards" },
     { "id": "MatchCaption", "kind": "label", "parent": "MatchTile", "text": "Match length", "font": "SansBold", "align": "left", "rect": [949, 503, 133, 25], "key": "ui.create_room.match_length" },
     { "id": "MatchValue", "kind": "label", "parent": "MatchTile", "text": "5 rounds", "font": "SansBold", "align": "left", "rect": [949, 530, 110, 32] },
 
@@ -62,7 +63,8 @@
     { "id": "TurnLabel15", "kind": "label", "parent": "TurnTrack", "text": "15 sec", "font": "SansSemiBold", "rect": [686, 648, 78, 31], "key": "ui.create_room.turn_15", "hole": false },
     { "id": "TurnLabel30", "kind": "label", "parent": "TurnTrack", "text": "30 sec", "font": "SansSemiBold", "ink": "light", "rect": [911, 648, 82, 31], "key": "ui.create_room.turn_30", "hole": false },
 
-    { "id": "LockIcon", "parent": "Panel", "shape": "ink", "rect": [658, 708, 36, 41], "out": "Icon_Lock" },
+    // Placeholder cut (ink box 663.1,712.1 26.2 x 32.6; the rect adds a 2 px fringe).
+    { "id": "LockIcon", "parent": "Panel", "shape": "ink", "rect": [661, 710, 31, 37], "out": "Icon_Lock" },
     { "id": "PrivateNote", "kind": "label", "parent": "Panel", "text": "Private room · Invite with a code", "font": "SansSemiBold", "align": "left", "rect": [697, 714, 318, 34], "key": "ui.create_room.private_note" },
 
     { "id": "CreateButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [544.3, 761.9, 583.9, 98.0],

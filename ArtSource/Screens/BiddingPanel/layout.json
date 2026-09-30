@@ -1,0 +1,548 @@
+{
+  "name": "BiddingPanel",
+  "mockup": "07-bidding.png",
+  "mockW": 1672,
+  "mockH": 941,
+  "background": "",
+  "backgroundRect": [
+    -279,
+    -157,
+    2230,
+    1255
+  ],
+  "backgroundPpu": 87.0833,
+  "nodes": [
+    {
+      "id": "Panel",
+      "shape": "roundrect",
+      "radius": 25.5,
+      "rect": [
+        482.8,
+        347.4,
+        706.3,
+        309.7
+      ],
+      "use": "UI/Common/UI_Panel_Large.png",
+      "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
+      "shadowSpread": 24,
+      "shadowDrop": 3,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
+      "spriteRect": [
+        482.8,
+        347.4,
+        706.3,
+        309.7
+      ],
+      "spritePpu": 0,
+      "checkError": 10.97
+    },
+    {
+      "id": "Title",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Make your call",
+      "font": "SerifBold",
+      "rect": [
+        676,
+        362,
+        326,
+        57
+      ],
+      "key": "ui.bidding.title",
+      "inkBox": [
+        682.2,
+        369.61,
+        995.49,
+        416.87
+      ],
+      "capTop": 381,
+      "baseline": 406,
+      "color": "#741111"
+    },
+    {
+      "id": "Subtitle",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "How many tricks will you win?",
+      "font": "SansMedium",
+      "rect": [
+        652,
+        419.5,
+        372,
+        29
+      ],
+      "key": "ui.bidding.subtitle",
+      "inkBox": [
+        658.28,
+        420.01,
+        1017.85,
+        445.63
+      ],
+      "capTop": 425,
+      "baseline": 440,
+      "color": "#724E33"
+    },
+    {
+      "id": "Chip0",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        503.58,
+        464.95,
+        68.8,
+        68.8
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        503.58,
+        464.95,
+        68.8,
+        68.8
+      ],
+      "spritePpu": 0,
+      "checkError": 11.47
+    },
+    {
+      "id": "Chip1",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        588.49,
+        464.95,
+        68.8,
+        68.8
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        588.49,
+        464.95,
+        68.8,
+        68.8
+      ],
+      "spritePpu": 0,
+      "checkError": 11.57
+    },
+    {
+      "id": "Chip2",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        673.19,
+        464.95,
+        68.8,
+        68.8
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        673.19,
+        464.95,
+        68.8,
+        68.8
+      ],
+      "spritePpu": 0,
+      "checkError": 11.3
+    },
+    {
+      "id": "Chip3",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        758.72,
+        464.95,
+        68.8,
+        68.8
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        758.72,
+        464.95,
+        68.8,
+        68.8
+      ],
+      "spritePpu": 0,
+      "checkError": 3.92
+    },
+    {
+      "id": "Chip4",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        844.13,
+        464.95,
+        68.8,
+        68.8
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        844.13,
+        464.95,
+        68.8,
+        68.8
+      ],
+      "spritePpu": 0,
+      "checkError": 11.6
+    },
+    {
+      "id": "Chip5",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        929.13,
+        464.95,
+        68.8,
+        68.8
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        929.13,
+        464.95,
+        68.8,
+        68.8
+      ],
+      "spritePpu": 0,
+      "checkError": 11.48
+    },
+    {
+      "id": "Chip6",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        1014.15,
+        464.95,
+        68.8,
+        68.8
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        1014.15,
+        464.95,
+        68.8,
+        68.8
+      ],
+      "spritePpu": 0,
+      "checkError": 11.7
+    },
+    {
+      "id": "Chip7",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        1099.17,
+        464.95,
+        68.8,
+        68.8
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        1099.17,
+        464.95,
+        68.8,
+        68.8
+      ],
+      "spritePpu": 0,
+      "checkError": 12.08
+    },
+    {
+      "id": "ChipSelected",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        756.2,
+        462.5,
+        73.9,
+        73.7
+      ],
+      "scale": 2,
+      "grain": false,
+      "erase": [
+        [
+          779,
+          482,
+          27,
+          35
+        ]
+      ],
+      "out": "UI_Chip_Selected",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/BiddingPanel/UI_Chip_Selected.png",
+      "spriteRect": [
+        756,
+        462,
+        75,
+        75
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 4.81
+    },
+    {
+      "id": "ChipLabel0",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "1",
+      "font": "SerifBold",
+      "rect": [
+        522.98,
+        481,
+        30,
+        37
+      ],
+      "inkBox": [
+        530.73,
+        485.69,
+        544.65,
+        512.79
+      ],
+      "capTop": 487,
+      "baseline": 513,
+      "color": "#131211",
+      "colorTop": "#1C1B1A",
+      "colorBottom": "#0E0E0C"
+    },
+    {
+      "id": "ChipLabel1",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "2",
+      "font": "SerifBold",
+      "rect": [
+        607.89,
+        481,
+        30,
+        37
+      ],
+      "inkBox": [
+        614.04,
+        485.48,
+        631.84,
+        512.81
+      ],
+      "capTop": 486,
+      "baseline": 513,
+      "color": "#161615"
+    },
+    {
+      "id": "ChipLabel2",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "3",
+      "font": "SerifBold",
+      "rect": [
+        692.59,
+        481,
+        30,
+        37
+      ],
+      "inkBox": [
+        698.46,
+        485.64,
+        716.77,
+        512.99
+      ],
+      "capTop": 486,
+      "baseline": 513,
+      "color": "#1A1918"
+    },
+    {
+      "id": "ChipLabel3",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "4",
+      "font": "SerifBold",
+      "ink": "light",
+      "rect": [
+        778.12,
+        481,
+        30,
+        37
+      ],
+      "inkBox": [
+        782.57,
+        486.18,
+        801.74,
+        511.96
+      ],
+      "capTop": 489,
+      "baseline": 506,
+      "color": "#FDFBFA"
+    },
+    {
+      "id": "ChipLabel4",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "5",
+      "font": "SerifBold",
+      "rect": [
+        863.53,
+        481,
+        30,
+        37
+      ],
+      "inkBox": [
+        869.56,
+        485.52,
+        887.5,
+        512.99
+      ],
+      "capTop": 486,
+      "baseline": 513,
+      "color": "#1A1919"
+    },
+    {
+      "id": "ChipLabel5",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "6",
+      "font": "SerifBold",
+      "rect": [
+        948.53,
+        481,
+        30,
+        37
+      ],
+      "inkBox": [
+        954.2,
+        485.58,
+        972.96,
+        512.99
+      ],
+      "capTop": 486,
+      "baseline": 512,
+      "color": "#181818"
+    },
+    {
+      "id": "ChipLabel6",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "7",
+      "font": "SerifBold",
+      "rect": [
+        1033.55,
+        481,
+        30,
+        37
+      ],
+      "inkBox": [
+        1040.16,
+        486.09,
+        1057.99,
+        512.88
+      ],
+      "capTop": 486,
+      "baseline": 493,
+      "color": "#161515"
+    },
+    {
+      "id": "ChipLabel7",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "8",
+      "font": "SerifBold",
+      "rect": [
+        1118.57,
+        481,
+        30,
+        37
+      ],
+      "inkBox": [
+        1123.83,
+        485.62,
+        1142.88,
+        512.99
+      ],
+      "capTop": 486,
+      "baseline": 513,
+      "color": "#181817"
+    },
+    {
+      "id": "ConfirmButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 37,
+      "rect": [
+        625.1,
+        554.9,
+        421.9,
+        81.9
+      ],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Primary.png",
+      "shadowDrop": 6,
+      "shadowOpacity": 0.45,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "spriteRect": [
+        625.1,
+        554.9,
+        421.9,
+        81.9
+      ],
+      "spritePpu": 0,
+      "checkError": 28.94
+    },
+    {
+      "id": "ConfirmLabel",
+      "kind": "label",
+      "parent": "ConfirmButton",
+      "text": "Confirm 4",
+      "font": "SerifBold",
+      "ink": "light",
+      "style": "buttonLabel",
+      "rect": [
+        742,
+        573,
+        186,
+        44
+      ],
+      "inkBox": [
+        749.79,
+        580.71,
+        919.66,
+        609
+      ],
+      "capTop": 583,
+      "baseline": 609,
+      "color": "#FDFBFB"
+    }
+  ]
+}

@@ -49,38 +49,38 @@ namespace Callbreak.Presentation.Widgets
 
         /// <summary>How one label looks in one state: typeface, size, width and colour.</summary>
         [Serializable]
-        public struct TextStyle
+        private struct TextStyle
         {
-            public TMP_FontAsset Font;
-            public Material Material;
-            public float Size;
-            public float HorizontalScale;
-            public Color Color;
+            [SerializeField] private TMP_FontAsset _font;
+            [SerializeField] private Material _material;
+            [SerializeField] private float _size;
+            [SerializeField] private float _horizontalScale;
+            [SerializeField] private Color _color;
 
             public void ApplyTo(TMP_Text label)
             {
-                if (Font != null && label.font != Font)
+                if (_font != null && label.font != _font)
                 {
-                    label.font = Font;
+                    label.font = _font;
                 }
 
-                if (Material != null && label.fontSharedMaterial != Material)
+                if (_material != null && label.fontSharedMaterial != _material)
                 {
-                    label.fontSharedMaterial = Material;
+                    label.fontSharedMaterial = _material;
                 }
 
-                if (Size > 0f)
+                if (_size > 0f)
                 {
-                    label.fontSize = Size;
-                    label.fontSizeMax = Size;   // a name that shrinks to fit starts from this size
+                    label.fontSize = _size;
+                    label.fontSizeMax = _size;   // a name that shrinks to fit starts from this size
                 }
 
-                if (HorizontalScale > 0f)
+                if (_horizontalScale > 0f)
                 {
-                    label.characterHorizontalScale = HorizontalScale;
+                    label.characterHorizontalScale = _horizontalScale;
                 }
 
-                label.color = Color;
+                label.color = _color;
             }
         }
     }

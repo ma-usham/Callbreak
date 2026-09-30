@@ -2,8 +2,8 @@
   // Screen 05 - Matchmaking (GDD §11). Rects are mockup pixels on 05-matchmaking.png.
   // Shared menu background and the shared UI kit (Assets/_Project/Art/UI/...). Cut here (placeholders
   // until the generated kit replaces them): the search arc, the spade, the filled and searching seat
-  // looks (one cut each, reused on the other seats), the elapsed pill and its clock. Hairlines are
-  // "make" shapes.
+  // looks (one cut each, reused on the other seats), the clock icon. Hairlines and the flat elapsed
+  // pill are "make" shapes.
   "name": "Matchmaking",
   "mockup": "05-matchmaking.png",
   "background": "shared",
@@ -68,7 +68,7 @@
     { "id": "CancelButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [664.3, 768.8, 343.4, 75.5], "use": "UI/Buttons/UI_ButtonSecondary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png", "shadowDrop": 2, "shadowOpacity": 0.4 },
     { "id": "CancelLabel", "kind": "label", "parent": "CancelButton", "text": "Cancel", "font": "SansBold", "rect": [780, 785, 110, 42], "key": "ui.matchmaking.cancel" },
 
-    { "id": "ElapsedPill", "parent": "Panel", "shape": "pill", "rect": [1041.8, 780.8, 122.6, 52.6], "scale": 2, "out": "UI_ElapsedPill" },
+    { "id": "ElapsedPill", "parent": "Panel", "rect": [1041.8, 780.9, 122.4, 52.3], "make": { "type": "pill", "fill": "#EADACC", "out": "UI_ElapsedPill" } },
     { "id": "ElapsedClock", "parent": "ElapsedPill", "shape": "diff", "lo": 0.04, "hi": 0.0401, "solid": true, "rect": [1051, 790, 35, 35], "scale": 2, "out": "Icon_Clock" },
     { "id": "Elapsed", "kind": "label", "parent": "ElapsedPill", "text": "00:12", "font": "SansSemiBold", "rect": [1088, 792, 62, 30] }
   ]

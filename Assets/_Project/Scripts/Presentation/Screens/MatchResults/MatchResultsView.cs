@@ -1,5 +1,6 @@
 using System;
 using Callbreak.Presentation.Framework;
+using Callbreak.Presentation.Widgets;
 using TMPro;
 using UnityEngine;
 
@@ -24,6 +25,7 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private TMP_Text _headline;
         [SerializeField] private GameObject _trophy;
         [SerializeField] private TMP_Text _footer;
+        [SerializeField] private LabelFlanks _footerFlanks;
         [SerializeField] private RectTransform[] _row;
         [SerializeField] private TMP_Text[] _rowRank;
         [SerializeField] private UnityEngine.UI.Image[] _rowAvatar;
@@ -32,6 +34,8 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private TMP_Text[] _rowTotal;
         [SerializeField] private GameObject[] _rowSeparator;
         [SerializeField] private RectTransform _highlightBand;
+        [SerializeField] private Color _totalColor = new Color32(0x19, 0x19, 0x14, 0xFF);
+        [SerializeField] private Color _negativeColor = new Color32(0x82, 0x12, 0x16, 0xFF);
 
         public event Action HomeClicked;
         public event Action ScoresClicked;
@@ -46,12 +50,15 @@ namespace Callbreak.Presentation.Screens
         /// <summary>The trophy with its laurels and sparkles: shown only when the local player won.</summary>
         public void SetTrophyVisible(bool visible) => _trophy.SetActive(visible);
 
-        /// <summary>One standing: rank ("1"), name, total points ("21.3"), and the crown for a winner.</summary>
-        public void SetRow(int row, string rank, string name, string total, bool isWinner)
+        /// <summary>
+        /// One standing: rank ("1"; tied players share a rank), name, total points ("21.3") and the
+        /// crown for a winner. A negative total ("−6.1") is drawn in burgundy like every negative score.
+        /// </summary>
+        public void SetRow(int row, string rank, string name, string total, bool isWinner, bool totalNegative = false)
         {
             ResultsTableRows.SetText(_rowRank[row], rank);
             ResultsTableRows.SetText(_rowName[row], name);
-            ResultsTableRows.SetText(_rowTotal[row], total);
+            ResultsTableRows.SetValue(_rowTotal[row], total, totalNegative, _totalColor, _negativeColor);
             _rowCrown[row].SetActive(isWinner);
         }
 
@@ -61,8 +68,12 @@ namespace Callbreak.Presentation.Screens
         /// <summary>Puts the gold band on the local player's row; -1 hides it.</summary>
         public void SetHighlightRow(int row) => ResultsTableRows.Highlight(_highlightBand, _row, _rowSeparator, row);
 
-        /// <summary>"5 rounds completed".</summary>
-        public void SetFooter(string footer) => ResultsTableRows.SetText(_footer, footer);
+        /// <summary>"5 rounds completed"; the rules either side follow the text.</summary>
+        public void SetFooter(string footer)
+        {
+            ResultsTableRows.SetText(_footer, footer);
+            _footerFlanks.Refresh();
+        }
 
         private void OnEnable()
         {

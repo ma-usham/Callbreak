@@ -1,5 +1,6 @@
 using System;
 using Callbreak.Presentation.Framework;
+using Callbreak.Presentation.Widgets;
 using TMPro;
 using UnityEngine;
 
@@ -22,6 +23,7 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private TMP_Text _roundTitle;
         [SerializeField] private TMP_Text _nextLabel;
         [SerializeField] private TMP_Text _footer;
+        [SerializeField] private LabelFlanks _footerFlanks;
         [SerializeField] private RectTransform[] _row;
         [SerializeField] private UnityEngine.UI.Image[] _rowAvatar;
         [SerializeField] private TMP_Text[] _rowName;
@@ -68,8 +70,12 @@ namespace Callbreak.Presentation.Screens
 
         public void SetNextInteractable(bool interactable) => _nextButton.interactable = interactable;
 
-        /// <summary>"Round 2 begins next".</summary>
-        public void SetFooter(string footer) => ResultsTableRows.SetText(_footer, footer);
+        /// <summary>"Round 2 begins next"; the arrows either side follow the text.</summary>
+        public void SetFooter(string footer)
+        {
+            ResultsTableRows.SetText(_footer, footer);
+            _footerFlanks.Refresh();
+        }
 
         private void OnEnable()
         {

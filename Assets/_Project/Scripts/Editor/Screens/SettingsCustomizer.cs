@@ -22,10 +22,12 @@ namespace Callbreak.Editor.Screens
             }
 
             BuildSlider(ctx);
-            ScreenLabelRefit.Apply(ctx);
+            ScreenExtras.Apply(ctx);
 
-            // The language's own name must stay left of the dropdown's chevron.
-            ScreenLabelRefit.LimitWidth(ctx, "LanguageValue", 114f);
+            // The language's own name must stay left of the dropdown's chevron, and the player's
+            // name left of the title.
+            ScreenExtras.LimitWidth(ctx, "LanguageValue", 114f);
+            ScreenExtras.LimitWidth(ctx, "PlayerName", 330f);
         }
 
         private static void BuildToggle(ScreenBuildContext ctx, LayoutNode node)

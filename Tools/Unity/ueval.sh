@@ -31,6 +31,17 @@ poke() { powershell -NoProfile -ExecutionPolicy Bypass -File "$here/focus-editor
 
 run() { $U "$@" 2>&1; }
 
+# Builds and captures must not run while someone is playing the game in the Editor (prefab saves
+# and view code misbehave in Play mode): wait for Play mode to end.
+waited_play=0
+while true; do
+  pm=$(run editor_status | grep -o '"playMode": "[a-z]*"' | sed -E 's/.*: "([a-z]*)"//')
+  if [ -z "$pm" ] || [ "$pm" = "stopped" ]; then break; fi
+  if [ $waited_play -ge 900 ]; then echo "the Editor has been in Play mode for 15 minutes; not running"; exit 6; fi
+  [ $((waited_play % 60)) -eq 0 ] && echo "waiting: the Editor is in Play mode"
+  sleep 5; waited_play=$((waited_play + 5)); touch "$lock" 2>/dev/null
+done
+
 if [ $compile -eq 1 ]; then
   if ! node "$here/compile-check.js" --quiet; then echo "compile check failed: fix the errors above before the Editor sees them"; exit 3; fi
   r=$(run recompile)

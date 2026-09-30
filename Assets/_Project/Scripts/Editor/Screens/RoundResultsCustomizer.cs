@@ -1,24 +1,47 @@
+using System.Linq;
+
 namespace Callbreak.Editor.Screens
 {
     /// <summary>
-    /// Screen 09: refits the title by its capital height and baseline, and gives the texts a
-    /// presenter changes (names, the button label, the footer) a maximum width.
+    /// Screen 09: refits the title by its capital height and baseline, makes the table regular
+    /// (one size per kind of cell, columns and rows on common lines), gives the texts a presenter
+    /// changes a maximum width, and keeps the footer's arrows beside its text.
     /// </summary>
     public static class RoundResultsCustomizer
     {
+        private const int Rows = 4;
+        private static readonly string[] ValueColumns = { "RowBid", "RowWon", "RowDelta", "RowTotal" };
+
         public static void Customize(ScreenBuildContext ctx)
         {
-            ScreenLabelRefit.Apply(ctx);
+            ScreenExtras.Apply(ctx);
 
-            // Names end before the Bid column; the button label stays between the woven ends and
-            // left of the chevron; the footer stays between its two arrows.
-            for (int row = 0; row < 4; row++)
+            ScreenExtras.UnifyStyle(ctx, Column("RowName"));
+            ScreenExtras.UnifyStyle(ctx, ValueColumns.SelectMany(Column));
+            ScreenExtras.AlignColumn(ctx, Column("RowName"));
+            foreach (string column in ValueColumns)
             {
-                ScreenLabelRefit.LimitWidth(ctx, $"RowName{row}", 205f);
+                ScreenExtras.AlignColumn(ctx, Column(column));
             }
 
-            ScreenLabelRefit.LimitWidth(ctx, "NextLabel", 370f);
-            ScreenLabelRefit.LimitWidth(ctx, "Footer", 236f);
+            for (int row = 0; row < Rows; row++)
+            {
+                int r = row;
+                ScreenExtras.AlignRow(ctx, new[] { "RowName" }.Concat(ValueColumns).Select(c => $"{c}{r}"));
+            }
+
+            // Names end before the Bid column; the button label stays between the woven ends and
+            // left of the chevron; the footer stays inside the panel with its arrows.
+            foreach (string name in Column("RowName"))
+            {
+                ScreenExtras.LimitWidth(ctx, name, 205f);
+            }
+
+            ScreenExtras.LimitWidth(ctx, "NextLabel", 370f);
+            ScreenExtras.LimitWidth(ctx, "Footer", 420f);
+            ctx.Bound["_footerFlanks"] = ScreenExtras.Flank(ctx, "Footer", "FooterLeft", "FooterRight");
         }
+
+        private static string[] Column(string prefix) => Enumerable.Range(0, Rows).Select(i => $"{prefix}{i}").ToArray();
     }
 }

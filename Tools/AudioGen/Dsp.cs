@@ -61,7 +61,7 @@ public static class Dsp
         return p;
     }
 
-    public static void Scale(double gain, params double[][] chans)
+    public static void Gain(double gain, params double[][] chans)
     {
         foreach (var c in chans) for (int i = 0; i < c.Length; i++) c[i] *= gain;
     }

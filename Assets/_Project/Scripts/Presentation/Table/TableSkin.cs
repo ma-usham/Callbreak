@@ -1,3 +1,4 @@
+using System;
 using Callbreak.Core.Cards;
 using Callbreak.Presentation.Feedback;
 using UnityEngine;
@@ -6,13 +7,22 @@ namespace Callbreak.Presentation.Table
 {
     /// <summary>
     /// The art the table looks up by id at runtime: card faces and backs by deck, avatars by preset
-    /// id (GDD §12 "generic monochrome silhouettes in v1, with a preset picker"). References are set
-    /// on the prefab by the editor builder; nothing is loaded by name.
+    /// id (GDD §12 "generic monochrome silhouettes in v1, with a preset picker"). It reads the two
+    /// libraries the app shares (the project scope registers both), so the table, the card
+    /// collection and the profile all show the same pictures; nothing is loaded by name.
     /// </summary>
-    public sealed class TableSkin : MonoBehaviour
+    public sealed class TableSkin
     {
-        [SerializeField] private CardSpriteProvider _cards;
-        [SerializeField] private Sprite[] _avatars = System.Array.Empty<Sprite>();
+        private readonly CardSpriteProvider _cards;
+        private readonly AvatarLibrary _avatars;
+
+        /// <param name="cards">Card faces and backs by deck.</param>
+        /// <param name="avatars">The avatar presets; without them seats keep the picture on the prefab.</param>
+        public TableSkin(CardSpriteProvider cards, AvatarLibrary avatars)
+        {
+            _cards = cards != null ? cards : throw new ArgumentNullException(nameof(cards));
+            _avatars = avatars;
+        }
 
         public CardSpriteProvider Cards => _cards;
 
@@ -20,15 +30,7 @@ namespace Callbreak.Presentation.Table
 
         public Sprite Back(string deckId) => _cards.Back(deckId);
 
-        /// <summary>The avatar for a preset id; ids beyond the art that exists share the first one.</summary>
-        public Sprite Avatar(int avatarId)
-        {
-            if (_avatars.Length == 0)
-            {
-                return null;
-            }
-
-            return _avatars[avatarId >= 0 && avatarId < _avatars.Length ? avatarId : 0];
-        }
+        /// <summary>The avatar for a preset id; null when there is no library (the seat keeps its picture).</summary>
+        public Sprite Avatar(int avatarId) => _avatars != null ? _avatars.Get(avatarId) : null;
     }
 }

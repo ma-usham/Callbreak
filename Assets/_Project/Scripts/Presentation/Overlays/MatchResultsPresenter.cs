@@ -1,0 +1,313 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
+using Callbreak.Application.Flow;
+using Callbreak.Application.Ports;
+using Callbreak.Application.Sessions;
+using Callbreak.Application.Settings;
+using Callbreak.Core.Events;
+using Callbreak.Core.Match;
+using Callbreak.Core.Scoring;
+using Callbreak.Presentation.Feedback;
+using Callbreak.Presentation.Framework;
+using Callbreak.Presentation.Screens;
+using Callbreak.Presentation.Table;
+using UnityEngine;
+using VContainer.Unity;
+
+namespace Callbreak.Presentation.Overlays
+{
+    /// <summary>
+    /// GDD §11 screen 10, match results. Opens once MatchEnded has been played back and shows its
+    /// standings: the headline for the local player's place ("You Win!", "Shared Victory!",
+    /// "2nd Place"…), the trophy for a win, a crown on every winner's row, the local row in gold.
+    /// Play Again starts what the mode calls for (offline: a new match at the same difficulty;
+    /// private room: back to the lobby; Quick Match: search again); Main Menu leaves the match and
+    /// goes home. It replaces the last round's results, and waits for a menu or the scorecard the
+    /// player has open to close first.
+    /// </summary>
+    public sealed class MatchResultsPresenter : IStartable, ITickable, IDisposable
+    {
+        private readonly MatchResultsView _view;
+        private readonly AvatarLibrary _avatars;
+        private readonly PlayedTable _table;
+        private readonly IMatchSession _session;
+        private readonly ScreenRouter _router;
+        private readonly ISettingsService _settings;
+        private readonly ILocalization _localization;
+        private readonly IAudioService _audio;
+        private readonly IHaptics _haptics;
+        private readonly IAppFlow _flow;
+
+        private IReadOnlyList<Standing> _standings;
+        private bool _started;
+        private bool _wanted;
+        private bool _shown;
+        private bool _celebrate;
+        private bool _leaving;
+
+        public MatchResultsPresenter(
+            MatchResultsView view,
+            AvatarLibrary avatars,
+            PlayedTable table,
+            IMatchSession session,
+            ScreenRouter router,
+            ISettingsService settings,
+            ILocalization localization,
+            IAudioService audio,
+            IHaptics haptics,
+            IAppFlow flow)
+        {
+            _view = view;
+            _avatars = avatars;
+            _table = table;
+            _session = session;
+            _router = router;
+            _settings = settings;
+            _localization = localization;
+            _audio = audio;
+            _haptics = haptics;
+            _flow = flow;
+        }
+
+        public void Start()
+        {
+            _started = true;
+            _view.PlayAgainClicked += OnPlayAgain;
+            _view.MainMenuClicked += OnMainMenu;
+            _view.HomeClicked += OnMainMenu;
+            _view.ScorecardClicked += OnScorecard;
+            _view.ScoresClicked += OnScorecard;
+            _view.SettingsClicked += OnSettings;
+            _view.BackRequested += OnBack;
+            _table.Played += OnPlayed;
+            _table.Rebuilt += OnRebuilt;
+            _session.SeatsChanged += OnTextChanged;
+            _localization.LanguageChanged += OnTextChanged;
+        }
+
+        public void Dispose()
+        {
+            if (!_started)
+            {
+                return;
+            }
+
+            _started = false;
+            _view.PlayAgainClicked -= OnPlayAgain;
+            _view.MainMenuClicked -= OnMainMenu;
+            _view.HomeClicked -= OnMainMenu;
+            _view.ScorecardClicked -= OnScorecard;
+            _view.ScoresClicked -= OnScorecard;
+            _view.SettingsClicked -= OnSettings;
+            _view.BackRequested -= OnBack;
+            _table.Played -= OnPlayed;
+            _table.Rebuilt -= OnRebuilt;
+            _session.SeatsChanged -= OnTextChanged;
+            _localization.LanguageChanged -= OnTextChanged;
+        }
+
+        public void Tick()
+        {
+            if (!_started || !_wanted || _shown || !_router.Has(ScreenId.MatchResults))
+            {
+                return;
+            }
+
+            // Over the bare table, or in place of the last round's results; anything else the
+            // player has open (menu, scorecard, settings) is left to be closed first.
+            ScreenId top = _router.Current;
+            if (top != ScreenId.Gameplay && top != ScreenId.RoundResults && top != ScreenId.None)
+            {
+                return;
+            }
+
+            if (top == ScreenId.RoundResults && _router.Has(ScreenId.Gameplay))
+            {
+                _router.Show(ScreenId.Gameplay);
+            }
+
+            _router.Push(ScreenId.MatchResults);
+            _shown = true;
+            if (_celebrate && LocalStanding().Rank == 1)
+            {
+                _audio.Play(SoundCue.Victory);
+                _haptics.Play(HapticPattern.Success);
+            }
+        }
+
+        private void OnPlayed(MatchEvent e)
+        {
+            if (e is MatchEnded ended)
+            {
+                Want(ended.Standings, true);
+            }
+        }
+
+        private void OnRebuilt()
+        {
+            TableState state = _table.State;
+            if (state.Phase == TablePhase.MatchEnded && state.FinalStandings.Count == SeatExtensions.Count)
+            {
+                Want(state.FinalStandings, false);
+            }
+        }
+
+        private void OnTextChanged()
+        {
+            if (_standings != null)
+            {
+                Fill();
+            }
+        }
+
+        private void Want(IReadOnlyList<Standing> standings, bool celebrate)
+        {
+            _standings = standings;
+            _wanted = true;
+            _celebrate = celebrate && !_shown;
+            Fill();
+        }
+
+        private Standing LocalStanding()
+        {
+            for (int i = 0; i < _standings.Count; i++)
+            {
+                if (_standings[i].Seat == _session.LocalSeat)
+                {
+                    return _standings[i];
+                }
+            }
+
+            return _standings[0];
+        }
+
+        private void Fill()
+        {
+            Standing local = LocalStanding();
+            _view.SetHeadline(_localization.Get(ResultsText.HeadlineKey(local)));
+            _view.SetTrophyVisible(local.Rank == 1);
+            _view.SetFooter(ResultsText.RoundsCompleted(_table.State.Scores.Rounds.Count, _localization));
+            int highlight = -1;
+            for (int row = 0; row < _standings.Count && row < MatchResultsView.RowCount; row++)
+            {
+                Standing standing = _standings[row];
+                SessionSeat seat = _session.Seats[(int)standing.Seat];
+                bool isLocal = standing.Seat == _session.LocalSeat;
+                if (isLocal)
+                {
+                    highlight = row;
+                }
+
+                _view.SetRow(
+                    row,
+                    standing.Rank.ToString(CultureInfo.InvariantCulture),
+                    isLocal ? _localization.Get(ResultsText.YouKey) : seat.Name,
+                    ScoreTenths.Format(standing.TotalTenths),
+                    standing.Rank == 1);
+                Sprite avatar = _avatars != null ? _avatars.Get(seat.AvatarId) : null;
+                if (avatar != null)
+                {
+                    _view.SetRowAvatar(row, avatar);
+                }
+            }
+
+            _view.SetHighlightRow(highlight);
+        }
+
+        private void OnPlayAgain()
+        {
+            if (_leaving)
+            {
+                return;
+            }
+
+            _leaving = true;
+            _audio.Play(SoundCue.UiTap);
+            _ = PlayAgainAsync();
+        }
+
+        private void OnMainMenu()
+        {
+            if (_leaving)
+            {
+                return;
+            }
+
+            _leaving = true;
+            _audio.Play(SoundCue.UiTap);
+            _ = MainMenuAsync();
+        }
+
+        /// <summary>GDD screen 10 "Play Again": what each mode calls for.</summary>
+        private async Task PlayAgainAsync()
+        {
+            try
+            {
+                switch (_session.Mode)
+                {
+                    case MatchMode.Offline:
+                        await _flow.StartMatchAsync(new MatchLaunchRequest(MatchMode.Offline, _settings.Difficulty), CancellationToken.None);
+                        break;
+
+                    case MatchMode.PrivateRoom:
+                        // The room is a lobby again after the match: same friends, ready flags reset.
+                        await _flow.GoToMenuAsync(MenuEntry.PrivateLobby, CancellationToken.None);
+                        break;
+
+                    default:
+                        await _flow.GoToMenuAsync(MenuEntry.Matchmaking, CancellationToken.None);
+                        break;
+                }
+            }
+            catch (Exception e)
+            {
+                _leaving = false;
+                Debug.LogException(e);
+            }
+        }
+
+        private async Task MainMenuAsync()
+        {
+            try
+            {
+                if (_session.Status != SessionStatus.Ended)
+                {
+                    await _session.LeaveAsync(CancellationToken.None);
+                }
+
+                await _flow.GoToMenuAsync(MenuEntry.MainMenu, CancellationToken.None);
+            }
+            catch (Exception e)
+            {
+                _leaving = false;
+                Debug.LogException(e);
+            }
+        }
+
+        private void OnScorecard()
+        {
+            if (!_leaving && _router.Has(ScreenId.Scorecard))
+            {
+                _audio.Play(SoundCue.UiTap);
+                _router.Push(ScreenId.Scorecard);
+            }
+        }
+
+        private void OnSettings()
+        {
+            if (!_leaving && _router.Has(ScreenId.Settings))
+            {
+                _audio.Play(SoundCue.UiTap);
+                _router.Push(ScreenId.Settings);
+            }
+        }
+
+        /// <summary>Android back stays on the results: the match is over and the table behind them is done.</summary>
+        private void OnBack()
+        {
+        }
+    }
+}

@@ -51,6 +51,13 @@ namespace Callbreak.Tests.EditMode.Presentation
                 Assert.AreEqual(fresh.Dealer, state.Dealer, when + ": dealer");
             }
 
+            Assert.AreEqual(fresh.Scores, state.Scores, when + ": score sheet");
+            Assert.AreEqual(fresh.HasLastTrick, state.HasLastTrick, when + ": previous trick");
+            if (fresh.HasLastTrick)
+            {
+                Assert.AreEqual(fresh.LastTrick, state.LastTrick, when + ": previous trick");
+            }
+
             for (int s = 0; s < SeatExtensions.Count; s++)
             {
                 var seat = (Seat)s;
@@ -103,7 +110,7 @@ namespace Callbreak.Tests.EditMode.Presentation
         }
 
         [Test]
-        public void TheFinishedTrick_StaysOnDisplay_UntilTheNextTurnOrCard()
+        public void TheFinishedTrick_LeavesTheTable_AndIsKeptForThePeek()
         {
             var state = new TableState(Seat.South, Rules);
             state.Apply(new RoundStarted(1, Seat.West));
@@ -117,18 +124,21 @@ namespace Callbreak.Tests.EditMode.Presentation
 
             Assert.AreEqual(12, state.Hand.Count);
             Assert.AreEqual(12, state.HandCountOf(Seat.North));
-            Assert.IsTrue(state.IsTrickOnDisplay);
+            Assert.IsTrue(state.Trick.IsComplete, "four cards lie on the table");
+            Assert.IsFalse(state.HasLastTrick);
 
             state.Apply(new TrickCompleted(new CompletedTrick(0, trick)));
-            Assert.IsTrue(state.IsTrickOnDisplay, "the four cards wait for the sweep");
-            Assert.AreEqual(Seat.South, state.TrickWinner);
+            Assert.AreEqual(0, state.Trick.Count, "once the sweep has played the table is empty");
+            Assert.IsTrue(state.HasLastTrick);
+            Assert.AreEqual(Seat.South, state.LastTrick.Winner);
+            Assert.AreEqual(trick, state.LastTrick.Trick);
             Assert.AreEqual(1, state.WonBy(Seat.South));
             Assert.AreEqual(1, state.TricksCompleted);
             Assert.IsFalse(state.HasTurn);
 
             state.Apply(new PlayTurnStarted(Seat.South, TurnIdOf(9), null));
-            Assert.IsFalse(state.IsTrickOnDisplay);
             Assert.AreEqual(0, state.Trick.Count);
+            Assert.AreEqual(Seat.South, state.Trick.Leader);
             Assert.IsTrue(state.IsLocalPlayTurn);
             Assert.AreEqual(state.Hand, state.Legal, "leading: every card is legal");
             Assert.IsTrue(state.TryGetObligation(out PlayObligation obligation));
@@ -150,7 +160,7 @@ namespace Callbreak.Tests.EditMode.Presentation
 
             state.Apply(new TrickCompleted(new CompletedTrick(0, first)));
             state.Apply(new CardPlayed(Seat.South, Card.Parse("3♣"), true, true));
-            Assert.AreEqual(1, state.Trick.Count, "the swept trick is gone and the forced card leads a new one");
+            Assert.AreEqual(1, state.Trick.Count, "the forced card leads a new trick");
             Assert.AreEqual(Seat.South, state.Trick.Leader);
             Assert.AreEqual(11, state.Hand.Count);
             Assert.IsFalse(state.HasTurn);
@@ -215,6 +225,42 @@ namespace Callbreak.Tests.EditMode.Presentation
             Assert.IsFalse(state.IsReady(Seat.East));
             Assert.AreEqual(CallRules.NotCalled, state.CallOf(Seat.East));
             Assert.AreEqual(82, state.TotalOf(Seat.South), "totals carry over");
+        }
+
+        [Test]
+        public void TheScoreSheet_HoldsExactlyThePlayedRounds()
+        {
+            var state = new TableState(Seat.South, Rules);
+            Assert.AreEqual(0, state.Scores.Rounds.Count);
+
+            var first = new RoundResult(1, new[]
+            {
+                new SeatRoundResult(Seat.South, 4, 5, 41, 41),
+                new SeatRoundResult(Seat.East, 3, 3, 30, 30),
+                new SeatRoundResult(Seat.North, 3, 2, -30, -30),
+                new SeatRoundResult(Seat.West, 3, 3, 30, 30),
+            });
+            state.Apply(new RoundScored(first));
+            Assert.AreEqual(1, state.Scores.Rounds.Count);
+            Assert.AreEqual(41, state.Scores.TotalOf(Seat.South));
+            Assert.AreEqual(-30, state.Scores.TotalOf(Seat.North));
+
+            state.Apply(new RoundScored(first));
+            Assert.AreEqual(1, state.Scores.Rounds.Count, "the same round is never counted twice");
+
+            var third = new RoundResult(3, new[]
+            {
+                new SeatRoundResult(Seat.South, 2, 2, 20, 61),
+                new SeatRoundResult(Seat.East, 3, 3, 30, 60),
+                new SeatRoundResult(Seat.North, 4, 4, 40, 10),
+                new SeatRoundResult(Seat.West, 4, 4, 40, 70),
+            });
+            state.Apply(new RoundScored(third));
+            Assert.AreEqual(1, state.Scores.Rounds.Count, "a round that does not follow the sheet waits for the resync");
+            Assert.AreEqual(61, state.TotalOf(Seat.South), "the totals shown are the event's");
+
+            state.Apply(new MatchStarted("next-match", RuleSet.NepaliStandardId, Seat.South, TestSetups.Humans().Seats));
+            Assert.AreEqual(0, state.Scores.Rounds.Count, "a new match starts a new sheet");
         }
 
         private static TurnId TurnIdOf(int value) => new TurnId(value);

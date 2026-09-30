@@ -40,14 +40,24 @@ if ($Sharpen -gt 0) { $s = [DecorTools]::Sharpen($up, 2, $Sharpen); $up.Dispose(
 
 # Colour: bring the outpaint onto the plate, fitted on the centre.
 $upCentre = [DecorTools]::Crop($up, $cx, $cy, 1920, 1080)
-# Offset only: the centre is re-drawn, so a least-squares gain would flatten the contrast.
-$k = [DecorTools]::FitOffset($plate, $upCentre, $null, 0)
-"colour fit (gain, offset per r g b): " + (($k | ForEach-Object { '{0:F3}' -f $_ }) -join ' ')
-"centre before fit: " + [DecorTools]::Compare($plate, $upCentre, $null, 0, 0, 0, 1920, 1080)
+# Offset only, measured on the plain haze (sky, mist, misty ground) of the centre: the scenery is
+# re-drawn, so fitting on it (or fitting a gain) would follow the re-drawing, not the colour cast.
+$mask = New-Object System.Drawing.Bitmap 1920, 1080, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+$mg = [System.Drawing.Graphics]::FromImage($mask); $mg.Clear([System.Drawing.Color]::Transparent)
+$haze = @(@(500, 20, 900, 230), @(760, 300, 420, 480), @(700, 930, 520, 130))
+foreach ($r in $haze) { $mg.FillRectangle([System.Drawing.Brushes]::White, $r[0], $r[1], $r[2], $r[3]) }
+$mg.Dispose()
+$k = [DecorTools]::FitOffset($plate, $upCentre, $mask, 128)
+"colour offset per r g b (measured on haze): " + (($k[1], $k[3], $k[5] | ForEach-Object { '{0:F2}' -f $_ }) -join ' ')
+foreach ($r in $haze) { "  haze {0,-18} before: {1}" -f ($r -join ','), [DecorTools]::Compare($plate, $upCentre, $null, 0, $r[0], $r[1], $r[2], $r[3]) }
 $fit = [DecorTools]::ApplyColor($up, $k); $up.Dispose(); $upCentre.Dispose()
 $fitCentre = [DecorTools]::Crop($fit, $cx, $cy, 1920, 1080)
-"centre after fit : " + [DecorTools]::Compare($plate, $fitCentre, $null, 0, 0, 0, 1920, 1080)
-$fitCentre.Dispose()
+foreach ($r in $haze) { "  haze {0,-18} after : {1}" -f ($r -join ','), [DecorTools]::Compare($plate, $fitCentre, $null, 0, $r[0], $r[1], $r[2], $r[3]) }
+# Thin strips just inside each edge of the centre: what the seam will look like.
+foreach ($s in @(@('top edge', 300, 0, 1320, 24), @('bottom edge', 300, 1056, 1320, 24), @('left edge', 0, 100, 24, 880), @('right edge', 1896, 100, 24, 880))) {
+    "  seam {0,-12}: {1}" -f $s[0], [DecorTools]::Compare($plate, $fitCentre, $null, 0, $s[1], $s[2], $s[3], $s[4])
+}
+$fitCentre.Dispose(); $mask.Dispose()
 
 $out = [DecorTools]::FeatherPaste($fit, $plate, $cx, $cy, $Feather)
 $dir = "$DecorRepo\ArtSource\Working\Menu\fit"; New-Item -ItemType Directory -Force $dir | Out-Null

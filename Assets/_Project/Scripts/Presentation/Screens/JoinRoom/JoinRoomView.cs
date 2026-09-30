@@ -103,9 +103,12 @@ namespace Callbreak.Presentation.Screens
 
         private void RenderJoinButton()
         {
-            _joinButton.interactable = _joinInteractable;
-            _joinButton.targetGraphic.raycastTarget = !_busy;       // no press feedback while busy
-            float alpha = _joinInteractable ? 1f : DimmedAlpha;
+            // Busy wins: the button keeps its look and shows the spinner, whatever the interactable
+            // flag says meanwhile, and takes no taps (so no press feedback either) until it is over.
+            bool enabledLook = _busy || _joinInteractable;
+            _joinButton.interactable = enabledLook;
+            _joinButton.targetGraphic.raycastTarget = !_busy;
+            float alpha = enabledLook ? 1f : DimmedAlpha;
             SetAlpha(_joinButtonLabel, alpha);
             SetAlpha(_joinChevron, alpha);
             _joinChevron.enabled = !_busy;

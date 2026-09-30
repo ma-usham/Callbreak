@@ -16,7 +16,8 @@ namespace Callbreak.Editor.Screens
     /// touch area, pinned to the bottom edge; the trick slots and the opponents' fans, placed as
     /// mockup 08 draws them; a <see cref="SeatView"/> per seat, with the timer ring, seconds disc
     /// and bubble the opponents' seats need (derived from the local seat's); the turn prompt, the
-    /// trick counter and the emote picker (derived from kit pills, panels and buttons).
+    /// trick counter, the emote picker, the "Reconnecting…" cover and the "I'm back" banner (derived
+    /// from kit pills, panels and buttons).
     /// All mockup measurements are in mockup pixels (1672 × 941), as in the layout.
     /// </summary>
     public static class TableCustomizer
@@ -50,6 +51,9 @@ namespace Callbreak.Editor.Screens
         private static readonly Vector2 TrickLabelCentre = new Vector2(836f, 104f);
         private static readonly Rect EmotePanel = new Rect(112f, 600f, 448f, 216f);
         private const float BubbleHeight = 33f;
+        private const float ReconnectingDim = 0.45f;
+        private static readonly Vector2 ImBackCentre = new Vector2(836f, 300f);
+        private static readonly Vector2 ImBackSize = new Vector2(250f, 66f);
 
         public static void Customize(ScreenBuildContext ctx)
         {
@@ -80,14 +84,6 @@ namespace Callbreak.Editor.Screens
             ctx.Bound["_tableTap"] = tapButton;
 
             CardViewPool pool = BuildPool(ctx);
-            var skin = ctx.Root.gameObject.AddComponent<TableSkin>();
-            var skinSo = new SerializedObject(skin);
-            skinSo.FindProperty("_cards").objectReferenceValue = TableCardBuilder.EnsureLibrary();
-            SerializedProperty avatars = skinSo.FindProperty("_avatars");
-            avatars.arraySize = 1;
-            avatars.GetArrayElementAtIndex(0).objectReferenceValue = UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Avatars/Avatar_Default.png", 0f);
-            skinSo.ApplyModifiedPropertiesWithoutUndo();
-            ctx.Bound["_skin"] = skin;
             ctx.Bound["_cards"] = pool;
 
             BuildTrickArea(ctx);
@@ -100,6 +96,8 @@ namespace Callbreak.Editor.Screens
             BuildPrompt(ctx, handLayer, statusStyle);
             BuildTrickLabel(ctx);
             BuildEmotePicker(ctx, statusStyle);
+            BuildImBack(ctx, centre);
+            BuildReconnecting(ctx, nameStyle);
 
             // Table, hand and HUD rebuild at different rates, so each gets its own canvas (GDD §23).
             NestedCanvas(centre);
@@ -180,7 +178,6 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_cardsRoot").objectReferenceValue = cards;
             so.FindProperty("_widthReference").objectReferenceValue = ctx.SafeArea;
             so.FindProperty("_pool").objectReferenceValue = pool;
-            so.FindProperty("_sprites").objectReferenceValue = TableCardBuilder.EnsureLibrary();
             SerializedProperty layout = so.FindProperty("_layout");
             layout.FindPropertyRelative("CardWidth").floatValue = TableCardBuilder.CardWidth;
             layout.FindPropertyRelative("MinWidthFraction").floatValue = HandWidthFraction;
@@ -467,6 +464,76 @@ namespace Callbreak.Editor.Screens
 
             so.ApplyModifiedPropertiesWithoutUndo();
             ctx.Bound["_emotes"] = picker;
+        }
+
+        /// <summary>
+        /// The "I'm back" banner of GDD §8: after two timeouts a bot plays the local seat until the
+        /// player taps this. A kit primary button above the trick, hidden until the seat is Away.
+        /// </summary>
+        private static void BuildImBack(ScreenBuildContext ctx, RectTransform centre)
+        {
+            RectTransform rect = UiBuildKit.CreateAt("ImBack", centre, ImBackCentre, UiBuildKit.ScreenCentre, UiBuildKit.FromMock(ImBackSize.x, ImBackSize.y));
+            RectTransform shadowRect = Stretched("Shadow", rect);
+            shadowRect.offsetMin = new Vector2(-12f, -16f);
+            shadowRect.offsetMax = new Vector2(12f, 8f);
+            Image shadow = Sliced(shadowRect, UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Buttons/UI_Shadow_Primary.png", 0f));
+            shadow.raycastTarget = false;
+            RectTransform faceRect = Stretched("Face", rect);
+            Image face = Sliced(faceRect, UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Buttons/UI_ButtonPrimary_Normal.png", 0f));
+            face.raycastTarget = true;
+
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = face;
+            ColorBlock colors = button.colors;
+            colors.highlightedColor = Color.white;
+            colors.pressedColor = new Color(0.9f, 0.9f, 0.9f, 1f);
+            colors.selectedColor = Color.white;
+            colors.fadeDuration = 0.08f;
+            button.colors = colors;
+            NoNavigation(button);
+            var feedback = rect.gameObject.AddComponent<ButtonFeedback>();
+            var feedbackSo = new SerializedObject(feedback);
+            feedbackSo.FindProperty("_selectable").objectReferenceValue = button;
+            feedbackSo.ApplyModifiedPropertiesWithoutUndo();
+
+            // Light text on crimson: the seconds disc's label is the table's own example of it.
+            TMP_Text style = ctx.Nodes["SeatTimerText0"].GetComponent<TMP_Text>();
+            TextMeshProUGUI label = Label("Text", rect, style, "I'm back");
+            label.fontSize = 34f;
+            var localized = label.gameObject.AddComponent<LocalizedText>();
+            var so = new SerializedObject(localized);
+            so.FindProperty("_key").stringValue = "ui.banner.im_back";
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            rect.gameObject.SetActive(false);
+            ctx.Bound["_imBackButton"] = button;
+        }
+
+        /// <summary>
+        /// "Reconnecting…" while the session re-joins (GDD §8): a light dim over the whole table, which
+        /// stays visible but takes no input, and the word on the name plate's white pill.
+        /// </summary>
+        private static void BuildReconnecting(ScreenBuildContext ctx, TMP_Text style)
+        {
+            RectTransform cover = Stretched("Reconnecting", ctx.Content);
+            var dim = cover.gameObject.AddComponent<Image>();
+            dim.color = new Color(0f, 0f, 0f, ReconnectingDim);
+            dim.raycastTarget = true;
+
+            var pillObject = new GameObject("Pill", typeof(RectTransform));
+            var pill = (RectTransform)pillObject.transform;
+            pill.SetParent(cover, false);
+            pill.anchorMin = pill.anchorMax = pill.pivot = new Vector2(0.5f, 0.5f);
+            pill.sizeDelta = UiBuildKit.FromMock(230f, 46f);
+            Sliced(pill, LoadTableSprite("UI_NamePlate"));
+            TextMeshProUGUI label = Label("Text", pill, style, "Reconnecting…");
+            var localized = label.gameObject.AddComponent<LocalizedText>();
+            var so = new SerializedObject(localized);
+            so.FindProperty("_key").stringValue = "ui.seat.reconnecting";
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            cover.gameObject.SetActive(false);
+            ctx.Bound["_reconnecting"] = cover.gameObject;
         }
 
         // ------------------------------------------------------------------ helpers

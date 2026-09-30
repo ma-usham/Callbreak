@@ -28,9 +28,10 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private HandView _hand;
         [SerializeField] private TrickAreaView _trick;
         [SerializeField] private CardViewPool _cards;
-        [SerializeField] private TableSkin _skin;
         [SerializeField] private TablePromptView _prompt;
         [SerializeField] private EmotePickerView _emotes;
+        [SerializeField] private GameObject _reconnecting;
+        [SerializeField] private UnityEngine.UI.Button _imBackButton;
 
         /// <summary>Home: opens the match menu; it never leaves the table at once (GDD screen 07, callout 2).</summary>
         public event Action HomeClicked;
@@ -46,6 +47,12 @@ namespace Callbreak.Presentation.Table
         /// <summary>A tap on the table itself, beside every control: skips a long animation.</summary>
         public event Action TableTapped;
 
+        /// <summary>The "I'm back" banner was tapped (GDD §8: an Away player takes the seat back).</summary>
+        public event Action ImBackClicked;
+
+        /// <summary>The app went to the background (GDD §8: an offline match pauses itself).</summary>
+        public event Action AppPaused;
+
         public SeatView Seat(int relativeSeat) => _seat[relativeSeat];
 
         public HandView Hand => _hand;
@@ -53,8 +60,6 @@ namespace Callbreak.Presentation.Table
         public TrickAreaView Trick => _trick;
 
         public CardViewPool Cards => _cards;
-
-        public TableSkin Skin => _skin;
 
         public TablePromptView Prompt => _prompt;
 
@@ -85,6 +90,31 @@ namespace Callbreak.Presentation.Table
             }
         }
 
+        /// <summary>
+        /// The "Reconnecting…" cover while the session is re-joining: the table stays visible
+        /// underneath and takes no input.
+        /// </summary>
+        public void SetReconnecting(bool reconnecting)
+        {
+            if (_reconnecting.activeSelf != reconnecting)
+            {
+                _reconnecting.SetActive(reconnecting);
+            }
+        }
+
+        /// <summary>
+        /// The "I'm back" banner of a seat marked Away after two timeouts: a bot plays its turns
+        /// until the player taps it (GDD §8).
+        /// </summary>
+        public void SetAway(bool away)
+        {
+            GameObject banner = _imBackButton.gameObject;
+            if (banner.activeSelf != away)
+            {
+                banner.SetActive(away);
+            }
+        }
+
         private void OnEnable()
         {
             _homeButton.onClick.AddListener(OnHome);
@@ -93,6 +123,7 @@ namespace Callbreak.Presentation.Table
             _emoteButton.onClick.AddListener(OnEmote);
             _sortButton.onClick.AddListener(OnSort);
             _tableTap.onClick.AddListener(OnTableTap);
+            _imBackButton.onClick.AddListener(OnImBack);
             _hand.Touched += OnTableTap;
         }
 
@@ -104,6 +135,7 @@ namespace Callbreak.Presentation.Table
             _emoteButton.onClick.RemoveListener(OnEmote);
             _sortButton.onClick.RemoveListener(OnSort);
             _tableTap.onClick.RemoveListener(OnTableTap);
+            _imBackButton.onClick.RemoveListener(OnImBack);
             _hand.Touched -= OnTableTap;
         }
 
@@ -118,5 +150,15 @@ namespace Callbreak.Presentation.Table
         private void OnSort() => SortClicked?.Invoke();
 
         private void OnTableTap() => TableTapped?.Invoke();
+
+        private void OnImBack() => ImBackClicked?.Invoke();
+
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused)
+            {
+                AppPaused?.Invoke();
+            }
+        }
     }
 }

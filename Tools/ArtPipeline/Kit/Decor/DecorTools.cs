@@ -310,6 +310,57 @@ public static class DecorTools
         return Write(px, w, h);
     }
 
+    // Finds the separate objects on a sheet: pixels above the alpha threshold are grouped when
+    // they lie within 'merge' pixels of each other (so an ornament made of small pieces, or a
+    // line and its diamond, count as one). Returns one row per object: x, y, w, h, pixel count,
+    // sorted top to bottom, then left to right; objects smaller than minArea are dropped.
+    public static int[][] Blobs(Bitmap bmp, int alphaThreshold, int merge, int minArea)
+    {
+        byte[] px = Read(bmp);
+        int w = bmp.Width, h = bmp.Height, n = w * h;
+        bool[] on = new bool[n];
+        for (int i = 0; i < n; i++) on[i] = px[i * 4 + 3] > alphaThreshold;
+        // dilate by 'merge' (separable)
+        bool[] t = new bool[n], d = new bool[n];
+        for (int y = 0; y < h; y++)
+        {
+            int last = -100000;
+            for (int x = 0; x < w; x++) { if (on[y * w + x]) last = x; t[y * w + x] = x - last <= merge; }
+            last = 100000000;
+            for (int x = w - 1; x >= 0; x--) { if (on[y * w + x]) last = x; if (last - x <= merge) t[y * w + x] = true; }
+        }
+        for (int x = 0; x < w; x++)
+        {
+            int last = -100000;
+            for (int y = 0; y < h; y++) { if (t[y * w + x]) last = y; d[y * w + x] = y - last <= merge; }
+            last = 100000000;
+            for (int y = h - 1; y >= 0; y--) { if (t[y * w + x]) last = y; if (last - y <= merge) d[y * w + x] = true; }
+        }
+        int[] label = new int[n]; int[] stack = new int[n];
+        List<int[]> boxes = new List<int[]>();
+        for (int i = 0; i < n; i++)
+        {
+            if (!d[i] || label[i] != 0) continue;
+            int id = boxes.Count + 1, sp = 0;
+            int minX = w, minY = h, maxX = -1, maxY = -1, count = 0;
+            stack[sp++] = i; label[i] = id;
+            while (sp > 0)
+            {
+                int p = stack[--sp]; int x = p % w, y = p / w;
+                if (on[p]) { count++; if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+                if (x > 0 && d[p - 1] && label[p - 1] == 0) { label[p - 1] = id; stack[sp++] = p - 1; }
+                if (x < w - 1 && d[p + 1] && label[p + 1] == 0) { label[p + 1] = id; stack[sp++] = p + 1; }
+                if (y > 0 && d[p - w] && label[p - w] == 0) { label[p - w] = id; stack[sp++] = p - w; }
+                if (y < h - 1 && d[p + w] && label[p + w] == 0) { label[p + w] = id; stack[sp++] = p + w; }
+            }
+            boxes.Add(new int[] { minX, minY, maxX - minX + 1, maxY - minY + 1, count });
+        }
+        List<int[]> keep = new List<int[]>();
+        foreach (int[] b in boxes) if (b[4] >= minArea) keep.Add(b);
+        keep.Sort(delegate(int[] a, int[] b) { int ra = a[1] / 64, rb = b[1] / 64; return ra != rb ? ra.CompareTo(rb) : a[0].CompareTo(b[0]); });
+        return keep.ToArray();
+    }
+
     public static string Stats(Bitmap bmp)
     {
         byte[] px = Read(bmp);
@@ -506,6 +557,261 @@ public static class DecorTools
             }
         }
         return sb.ToString();
+    }
+
+    // ---------------------------------------------------------------- fitting onto the mockup
+
+    // The sprite drawn into a roi-sized transparent bitmap at a (fractional) rectangle given in
+    // roi pixels. Straight alpha out.
+    static byte[] RenderInto(Bitmap sprite, int rw, int rh, double x, double y, double w, double h)
+    {
+        using (Bitmap pre = new Bitmap(rw, rh, PixelFormat.Format32bppPArgb))
+        {
+            using (Graphics g = Graphics.FromImage(pre))
+            using (ImageAttributes attrs = new ImageAttributes())
+            {
+                attrs.SetWrapMode(WrapMode.Clamp, Color.Transparent);
+                g.CompositingMode = CompositingMode.SourceCopy;
+                g.Clear(Color.Transparent);
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                g.DrawImage(sprite, new PointF[] { new PointF((float)x, (float)y), new PointF((float)(x + w), (float)y), new PointF((float)x, (float)(y + h)) },
+                    new RectangleF(0, 0, sprite.Width, sprite.Height), GraphicsUnit.Pixel, attrs);
+            }
+            using (Bitmap argb = pre.Clone(new Rectangle(0, 0, rw, rh), PixelFormat.Format32bppArgb))
+            {
+                return Read(argb);
+            }
+        }
+    }
+
+    // Median colour of the outer ring of a roi in an image: the ground an element sits on.
+    static double[] RingColor(byte[] px, int w, int h, int ring)
+    {
+        List<int> r = new List<int>(), g = new List<int>(), b = new List<int>();
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                if (x >= ring && x < w - ring && y >= ring && y < h - ring) continue;
+                int i = (y * w + x) * 4; b.Add(px[i]); g.Add(px[i + 1]); r.Add(px[i + 2]);
+            }
+        }
+        r.Sort(); g.Sort(); b.Sort();
+        return new double[] { r[r.Count / 2], g[g.Count / 2], b[b.Count / 2] };
+    }
+
+    static double FitError(byte[] m, byte[] bg, double[] flat, byte[] s, int n)
+    {
+        double sum = 0;
+        for (int i = 0; i < n; i++)
+        {
+            double a = s[i * 4 + 3] / 255.0;
+            for (int c = 0; c < 3; c++)
+            {
+                double back = bg != null ? bg[i * 4 + c] : flat[2 - c];
+                double v = s[i * 4 + c] * a + back * (1 - a);
+                sum += Math.Abs(v - m[i * 4 + c]);
+            }
+        }
+        return sum / (n * 3.0);
+    }
+
+    // Finds where a cut-out sits on the mockup. Starting from a guessed rectangle (mockup pixels)
+    // it moves and resizes the sprite until the sprite composited over the ground best matches
+    // the mockup. The ground is 'background' (an aligned UI-free plate, same size as the mockup)
+    // or, when that is null, the flat colour of the ring around the search region. Returns
+    // x, y, w, h, error at the guess, error at the fit (mean absolute difference, 0-255).
+    public static double[] FitOnMockup(Bitmap mockup, Bitmap background, Bitmap sprite, double x, double y, double w, double h, bool freeAspect, int margin)
+    {
+        int rx = Math.Max(0, (int)Math.Floor(x - margin)), ry = Math.Max(0, (int)Math.Floor(y - margin));
+        int rw = Math.Min(mockup.Width - rx, (int)Math.Ceiling(w + 2 * margin)), rh = Math.Min(mockup.Height - ry, (int)Math.Ceiling(h + 2 * margin));
+        byte[] m, bg = null;
+        using (Bitmap c = Crop(mockup, rx, ry, rw, rh)) { m = Read(c); }
+        if (background != null) { using (Bitmap c = Crop(background, rx, ry, rw, rh)) { bg = Read(c); } }
+        double[] flat = RingColor(m, rw, rh, 2);
+        // A working copy no larger than about three times the size it is drawn at.
+        Bitmap work = sprite; bool own = false;
+        double maxW = Math.Max(16, w * 3);
+        if (sprite.Width > maxW) { work = Resize(sprite, (int)Math.Round(maxW), Math.Max(1, (int)Math.Round(maxW * sprite.Height / sprite.Width))); own = true; }
+        double aspect = (double)sprite.Width / sprite.Height;
+        double[] p = new double[] { x + w / 2, y + h / 2, w, freeAspect ? h : w / aspect };
+        int n = rw * rh;
+        Func<double> err = delegate { return FitError(m, bg, flat, RenderInto(work, rw, rh, p[0] - p[2] / 2 - rx, p[1] - p[3] / 2 - ry, p[2], p[3]), n); };
+        double err0 = err(), best = err0;
+        for (double step = 2; step >= 0.12; step /= 2)
+        {
+            bool improved = true; int guard = 0;
+            while (improved && guard++ < 30)
+            {
+                improved = false;
+                for (int k = 0; k < (freeAspect ? 4 : 3); k++)
+                {
+                    for (int dir = -1; dir <= 1; dir += 2)
+                    {
+                        double keep2 = p[2], keep3 = p[3], keepK = p[k];
+                        p[k] += dir * step;
+                        if (k == 2 && !freeAspect) p[3] = p[2] / aspect;
+                        if (p[2] < 2 || p[3] < 2) { p[k] = keepK; p[2] = keep2; p[3] = keep3; continue; }
+                        double e = err();
+                        if (e < best - 1e-7) { best = e; improved = true; }
+                        else { p[k] = keepK; p[2] = keep2; p[3] = keep3; }
+                    }
+                }
+            }
+        }
+        if (own) work.Dispose();
+        return new double[] { p[0] - p[2] / 2, p[1] - p[3] / 2, p[2], p[3], err0, best };
+    }
+
+    // Per-channel gain and offset that bring the sprite's opaque pixels onto the mockup's, with
+    // the sprite drawn at the fitted rectangle. Pixels that disagree strongly are dropped and the
+    // fit repeated. Returns r gain, r offset, g gain, g offset, b gain, b offset, pixel count.
+    public static double[] FitSpriteColor(Bitmap mockup, Bitmap sprite, double x, double y, double w, double h, bool offsetOnly)
+    {
+        int rx = Math.Max(0, (int)Math.Floor(x) - 1), ry = Math.Max(0, (int)Math.Floor(y) - 1);
+        int rw = Math.Min(mockup.Width - rx, (int)Math.Ceiling(w) + 3), rh = Math.Min(mockup.Height - ry, (int)Math.Ceiling(h) + 3);
+        byte[] m; using (Bitmap c = Crop(mockup, rx, ry, rw, rh)) { m = Read(c); }
+        byte[] s = RenderInto(sprite, rw, rh, x - rx, y - ry, w, h);
+        int n = rw * rh;
+        bool[] keep = new bool[n];
+        for (int i = 0; i < n; i++)
+        {
+            keep[i] = s[i * 4 + 3] >= 250 && Math.Abs(s[i * 4] - m[i * 4]) <= 60 && Math.Abs(s[i * 4 + 1] - m[i * 4 + 1]) <= 60 && Math.Abs(s[i * 4 + 2] - m[i * 4 + 2]) <= 60;
+        }
+        double[] k = new double[] { 1, 0, 1, 0, 1, 0, 0 };
+        for (int round = 0; round < 3; round++)
+        {
+            for (int c = 0; c < 3; c++)
+            {
+                int ch = 2 - c; double sx = 0, sy = 0, sxx = 0, sxy = 0; long cnt = 0;
+                for (int i = 0; i < n; i++)
+                {
+                    if (!keep[i]) continue;
+                    double xv = s[i * 4 + ch], yv = m[i * 4 + ch];
+                    sx += xv; sy += yv; sxx += xv * xv; sxy += xv * yv; cnt++;
+                }
+                double gain = 1;
+                if (!offsetOnly && cnt > 30)
+                {
+                    double den = cnt * sxx - sx * sx;
+                    if (Math.Abs(den) > 1e-6) gain = (cnt * sxy - sx * sy) / den;
+                    if (gain < 0.75 || gain > 1.3) gain = 1;
+                }
+                k[c * 2] = gain; k[c * 2 + 1] = cnt > 0 ? (sy - gain * sx) / cnt : 0; k[6] = cnt;
+            }
+            for (int i = 0; i < n; i++)
+            {
+                if (!keep[i]) continue;
+                for (int c = 0; c < 3; c++)
+                {
+                    if (Math.Abs(s[i * 4 + 2 - c] * k[c * 2] + k[c * 2 + 1] - m[i * 4 + 2 - c]) > 28) { keep[i] = false; break; }
+                }
+            }
+        }
+        return k;
+    }
+
+    // Check sheet for one element: the mockup crop, the sprite composited at its fitted rectangle
+    // over the ground (plate or flat ring colour), and their amplified difference, side by side,
+    // each enlarged by 'scale'. The region is the fitted rectangle grown by 'margin' mockup pixels.
+    public static Bitmap CheckSheet(Bitmap mockup, Bitmap background, Bitmap sprite, double x, double y, double w, double h, int margin, int scale, double diffGain)
+    {
+        int rx = Math.Max(0, (int)Math.Floor(x - margin)), ry = Math.Max(0, (int)Math.Floor(y - margin));
+        int rw = Math.Min(mockup.Width - rx, (int)Math.Ceiling(w + 2 * margin)), rh = Math.Min(mockup.Height - ry, (int)Math.Ceiling(h + 2 * margin));
+        int W = rw * scale, H = rh * scale, gap = 8;
+        using (Bitmap mc = Crop(mockup, rx, ry, rw, rh))
+        using (Bitmap mBig = Resize(mc, W, H))
+        {
+            Bitmap ground;
+            if (background != null) { using (Bitmap bc = Crop(background, rx, ry, rw, rh)) { ground = Resize(bc, W, H); } }
+            else
+            {
+                double[] flat = RingColor(Read(mc), rw, rh, 2);
+                ground = Flat(W, H, Color.FromArgb((int)flat[0], (int)flat[1], (int)flat[2]));
+            }
+            byte[] s = RenderInto(sprite, W, H, (x - rx) * scale, (y - ry) * scale, w * scale, h * scale);
+            Bitmap comp;
+            using (Bitmap sb = Write(s, W, H)) { comp = Over(ground, sb, 0, 0); }
+            ground.Dispose();
+            Bitmap diff = Difference(mBig, comp, diffGain);
+            Bitmap sheet = new Bitmap(W * 3 + gap * 4, H + gap * 2, PixelFormat.Format32bppArgb);
+            using (Graphics g = Graphics.FromImage(sheet))
+            {
+                g.Clear(Color.FromArgb(255, 90, 90, 90));
+                g.DrawImage(mBig, gap, gap, W, H);
+                g.DrawImage(comp, gap * 2 + W, gap, W, H);
+                g.DrawImage(diff, gap * 3 + W * 2, gap, W, H);
+            }
+            comp.Dispose(); diff.Dispose();
+            return sheet;
+        }
+    }
+
+    // Mean absolute difference between the mockup and the composite inside the fitted rectangle.
+    public static double CompositeError(Bitmap mockup, Bitmap background, Bitmap sprite, double x, double y, double w, double h, int margin)
+    {
+        int rx = Math.Max(0, (int)Math.Floor(x - margin)), ry = Math.Max(0, (int)Math.Floor(y - margin));
+        int rw = Math.Min(mockup.Width - rx, (int)Math.Ceiling(w + 2 * margin)), rh = Math.Min(mockup.Height - ry, (int)Math.Ceiling(h + 2 * margin));
+        byte[] m, bg = null;
+        using (Bitmap c = Crop(mockup, rx, ry, rw, rh)) { m = Read(c); }
+        if (background != null) { using (Bitmap c = Crop(background, rx, ry, rw, rh)) { bg = Read(c); } }
+        return FitError(m, bg, RingColor(m, rw, rh, 2), RenderInto(sprite, rw, rh, x - rx, y - ry, w, h), rw * rh);
+    }
+
+    // The sprite on black and on white, side by side: halos and grey fringes show at once.
+    public static Bitmap AlphaSheet(Bitmap sprite, int maxWidth)
+    {
+        Bitmap s = sprite; bool own = false;
+        if (sprite.Width > maxWidth) { s = Resize(sprite, maxWidth, Math.Max(1, sprite.Height * maxWidth / sprite.Width)); own = true; }
+        int pad = 12;
+        Bitmap sheet = new Bitmap(s.Width * 2 + pad * 4, s.Height + pad * 2, PixelFormat.Format32bppArgb);
+        using (Graphics g = Graphics.FromImage(sheet))
+        {
+            g.Clear(Color.Black);
+            g.FillRectangle(Brushes.White, s.Width + pad * 2, 0, s.Width + pad * 2, s.Height + pad * 2);
+            g.DrawImage(s, pad, pad, s.Width, s.Height);
+            g.DrawImage(s, s.Width + pad * 3, pad, s.Width, s.Height);
+        }
+        if (own) s.Dispose();
+        return sheet;
+    }
+
+    // Replaces the colour of every pixel, keeping its alpha (flat single-colour ornaments).
+    public static Bitmap Recolor(Bitmap bmp, Color c)
+    {
+        byte[] px = Read(bmp);
+        int n = bmp.Width * bmp.Height;
+        for (int i = 0; i < n; i++)
+        {
+            if (px[i * 4 + 3] == 0) { px[i * 4] = px[i * 4 + 1] = px[i * 4 + 2] = 0; continue; }
+            px[i * 4] = c.B; px[i * 4 + 1] = c.G; px[i * 4 + 2] = c.R;
+        }
+        return Write(px, bmp.Width, bmp.Height);
+    }
+
+    // Copies the left half, mirrored, over the right half so both ends match exactly.
+    public static Bitmap MirrorLeftHalf(Bitmap bmp)
+    {
+        byte[] px = Read(bmp);
+        int w = bmp.Width, h = bmp.Height;
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w / 2; x++)
+            {
+                Buffer.BlockCopy(px, (y * w + x) * 4, px, (y * w + (w - 1 - x)) * 4, 4);
+            }
+        }
+        return Write(px, w, h);
+    }
+
+    // Multiplies alpha by a factor (0-1).
+    public static Bitmap ScaleAlpha(Bitmap bmp, double k)
+    {
+        byte[] px = Read(bmp);
+        int n = bmp.Width * bmp.Height;
+        for (int i = 0; i < n; i++) px[i * 4 + 3] = ToByte(px[i * 4 + 3] * k);
+        return Write(px, bmp.Width, bmp.Height);
     }
 
     // ---------------------------------------------------------------- backgrounds

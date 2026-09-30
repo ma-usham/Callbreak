@@ -80,16 +80,17 @@ namespace Callbreak.Presentation.Table
         public CardSet Legal { get; private set; }
 
         /// <summary>
-        /// The trick on the table: the one in progress, or the finished one while it is still on
-        /// display (it stays until the next card or turn).
+        /// The trick on the table. Once its TrickCompleted event has played (the four cards were
+        /// shown and swept to the winner) the table is empty again and the trick is
+        /// <see cref="LastTrick"/>.
         /// </summary>
         public Trick Trick { get; private set; }
 
-        /// <summary>The finished trick is still lying on the table.</summary>
-        public bool IsTrickOnDisplay => Trick.IsComplete;
+        /// <summary>This round has a finished trick (for the peek at the previous trick).</summary>
+        public bool HasLastTrick { get; private set; }
 
-        /// <summary>Winner of the trick on display; meaningful while <see cref="IsTrickOnDisplay"/>.</summary>
-        public Seat TrickWinner { get; private set; }
+        /// <summary>The trick finished last this round; meaningful while <see cref="HasLastTrick"/>.</summary>
+        public CompletedTrick LastTrick { get; private set; }
 
         /// <summary>Tricks finished this round ("Trick 6 / 13" shows this plus one).</summary>
         public int TricksCompleted { get; private set; }
@@ -99,6 +100,12 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>Four standings once the match is over; empty before.</summary>
         public IReadOnlyList<Standing> FinalStandings => _standings;
+
+        /// <summary>
+        /// Every round whose RoundScored event has been played, in order: what the scorecard shows
+        /// (GDD §11 screen 16). It never runs ahead of what the player has seen on the table.
+        /// </summary>
+        public ScoreSheet Scores { get; private set; } = ScoreSheet.Empty;
 
         /// <summary>All four seats have called this round.</summary>
         public bool AllCalled
@@ -153,6 +160,7 @@ namespace Callbreak.Presentation.Table
             {
                 case MatchStarted _:
                     Round = 0;
+                    Scores = ScoreSheet.Empty;
                     Array.Clear(_totals, 0, _totals.Length);
                     _standings = Array.Empty<Standing>();
                     LastRoundResult = null;
@@ -231,8 +239,9 @@ namespace Callbreak.Presentation.Table
                     break;
 
                 case TrickCompleted completed:
-                    Trick = completed.Trick;
-                    TrickWinner = completed.Winner;
+                    Trick = default;
+                    LastTrick = completed.Completed;
+                    HasLastTrick = true;
                     _won[(int)completed.Winner]++;
                     TricksCompleted = completed.TrickIndex + 1;
                     CloseTurn();
@@ -240,6 +249,11 @@ namespace Callbreak.Presentation.Table
 
                 case RoundScored scored:
                     LastRoundResult = scored.Result;
+                    if (scored.Result.Round == Scores.Rounds.Count + 1)
+                    {
+                        Scores = Scores.Append(scored.Result);
+                    }
+
                     for (int i = 0; i < _totals.Length; i++)
                     {
                         _totals[i] = scored.Result[(Seat)i].TotalTenths;
@@ -286,7 +300,10 @@ namespace Callbreak.Presentation.Table
 
             Trick = view.CurrentTrick;
             TricksCompleted = view.TrickIndex;
+            HasLastTrick = view.TryGetPreviousTrick(out CompletedTrick previous);
+            LastTrick = previous;
             _standings = view.FinalStandings;
+            Scores = view.Scores;
             LastRoundResult = view.History.Count > 0 ? view.History[view.History.Count - 1] : null;
             switch (view.Phase)
             {
@@ -347,7 +364,8 @@ namespace Callbreak.Presentation.Table
 
             Hand = CardSet.Empty;
             Trick = default;
-            TrickWinner = default;
+            HasLastTrick = false;
+            LastTrick = default;
             TricksCompleted = 0;
             CloseTurn();
         }

@@ -1,24 +1,55 @@
+using System.Linq;
+
 namespace Callbreak.Editor.Screens
 {
     /// <summary>
-    /// Screen 16: refits the title by its x-height and baseline, and gives the texts a presenter
-    /// changes (names, the footer, the button label) a maximum width.
+    /// Screen 16: refits the title by its x-height and baseline, makes the table regular (one
+    /// size per kind of cell, columns and rows on common lines), gives the texts a presenter
+    /// changes a maximum width, and keeps the footer's rules beside its text.
     /// </summary>
     public static class ScorecardCustomizer
     {
+        private const int Rows = 4;
+        private const int Rounds = 5;
+
         public static void Customize(ScreenBuildContext ctx)
         {
-            ScreenLabelRefit.Apply(ctx);
+            ScreenExtras.Apply(ctx);
 
-            // Names end before the R1 column (which also holds a minus sign); the footer stays
-            // between its two lines; the button label stays between the woven ends and the chevron.
-            for (int row = 0; row < 4; row++)
+            // RowRound labels are numbered row-major: row r, round i is RowRound{r * 5 + i}.
+            ScreenExtras.UnifyStyle(ctx, Enumerable.Range(0, Rows * Rounds).Select(i => $"RowRound{i}"));
+            for (int round = 0; round < Rounds; round++)
             {
-                ScreenLabelRefit.LimitWidth(ctx, $"RowName{row}", 124f);
+                int i = round;
+                ScreenExtras.AlignColumn(ctx, Enumerable.Range(0, Rows).Select(r => $"RowRound{r * Rounds + i}"));
             }
 
-            ScreenLabelRefit.LimitWidth(ctx, "Footer", 400f);
-            ScreenLabelRefit.LimitWidth(ctx, "PrimaryLabel", 370f);
+            foreach (string column in new[] { "RowName", "RowTotal", "RowRank" })
+            {
+                ScreenExtras.UnifyStyle(ctx, Column(column));
+                ScreenExtras.AlignColumn(ctx, Column(column));
+            }
+
+            for (int row = 0; row < Rows; row++)
+            {
+                int r = row;
+                ScreenExtras.AlignRow(ctx, new[] { $"RowName{r}", $"RowTotal{r}", $"RowRank{r}" }
+                    .Concat(Enumerable.Range(0, Rounds).Select(i => $"RowRound{r * Rounds + i}")));
+            }
+
+            // Names end before the R1 column (which also holds a minus sign); the footer stays
+            // inside the panel with its rules; the button label stays between the woven ends and
+            // left of the chevron.
+            foreach (string name in Column("RowName"))
+            {
+                ScreenExtras.LimitWidth(ctx, name, 124f);
+            }
+
+            ScreenExtras.LimitWidth(ctx, "Footer", 560f);
+            ScreenExtras.LimitWidth(ctx, "PrimaryLabel", 370f);
+            ctx.Bound["_footerFlanks"] = ScreenExtras.Flank(ctx, "Footer", "FooterLeft", "FooterRight");
         }
+
+        private static string[] Column(string prefix) => Enumerable.Range(0, Rows).Select(i => $"{prefix}{i}").ToArray();
     }
 }

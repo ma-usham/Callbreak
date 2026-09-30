@@ -1,0 +1,5 @@
+old_sprite,screens,new_sprite,mock_rect_note,nine_ltrb,status
+Backgrounds/BG_Menu_Wide.png,all menu screens (00-06 09-12 14-16),Backgrounds/BG_Menu_Wide.png,"replaced in place: same path, 2560x1440, ppu 100; nothing to change in the screens. Centre 1920x1080 = BG_Menu_Clean pixel for pixel; the margins are the ChatGPT outpaint",,ready
+Screens/RoundResults/Deco_SpadeMedal.png,RoundResults,UI/Decor/Deco_SpadeMedal.png,"node Medal: rect 796.6,203,78.2,78 (unchanged); keep its shadowUse UI/Buttons/UI_Shadow_Circle.png",,ready
+Screens/Scorecard/Deco_SpadeSeal.png,Scorecard,UI/Decor/Deco_SpadeMedal.png,"node Seal: rect 795.7,217.5,79.3,77 (unchanged); the seal of 16 is the same element as the medal of 09, so there is no separate Deco_Seal_Spade",,ready
+Screens/MatchResults/Deco_Trophy.png,MatchResults,UI/Decor/Deco_Trophy.png,"node TrophyArt: new rect 728.1,18.0,217.0,120.2 (cup and laurel branches only). The old cut rect 704,6,298,133 also held two sparkles, the faint glow and the pale rays: the sparkles become Deco_TrophySparkle nodes; glow and rays are not rebuilt (2-10 levels over the haze)",,ready

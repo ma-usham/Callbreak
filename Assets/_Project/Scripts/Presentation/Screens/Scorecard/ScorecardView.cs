@@ -1,5 +1,6 @@
 using System;
 using Callbreak.Presentation.Framework;
+using Callbreak.Presentation.Widgets;
 using TMPro;
 using UnityEngine;
 
@@ -21,6 +22,7 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private UnityEngine.UI.Button _primaryButton;
         [SerializeField] private TMP_Text _primaryLabel;
         [SerializeField] private TMP_Text _footer;
+        [SerializeField] private LabelFlanks _footerFlanks;
         [SerializeField] private RectTransform[] _row;
         [SerializeField] private UnityEngine.UI.Image[] _rowAvatar;
         [SerializeField] private TMP_Text[] _rowName;
@@ -64,8 +66,12 @@ namespace Callbreak.Presentation.Screens
         /// <summary>Puts the gold band on the local player's row; -1 hides it.</summary>
         public void SetHighlightRow(int row) => ResultsTableRows.Highlight(_highlightBand, _row, _rowSeparator, row);
 
-        /// <summary>"Final standings · 5 rounds completed".</summary>
-        public void SetFooter(string footer) => ResultsTableRows.SetText(_footer, footer);
+        /// <summary>"Final standings · 5 rounds completed"; the rules either side follow the text.</summary>
+        public void SetFooter(string footer)
+        {
+            ResultsTableRows.SetText(_footer, footer);
+            _footerFlanks.Refresh();
+        }
 
         /// <summary>"Back to Results" or "Back to Game".</summary>
         public void SetPrimaryLabel(string label) => ResultsTableRows.SetText(_primaryLabel, label);

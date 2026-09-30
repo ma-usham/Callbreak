@@ -22,7 +22,6 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private RectTransform _cardsRoot;
         [SerializeField] private RectTransform _widthReference;
         [SerializeField] private CardViewPool _pool;
-        [SerializeField] private CardSpriteProvider _sprites;
         [SerializeField] private HandLayoutSettings _layout = new HandLayoutSettings();
         [SerializeField] private float _minStripMillimetres = 7f;
         [SerializeField] private float _flickDistance = 70f;
@@ -36,6 +35,7 @@ namespace Callbreak.Presentation.Table
         private bool[] _lifted = new bool[Deck.HandSize];
         private CardSet _liftedCards;
         private CardSet _dimmedCards;
+        private CardSpriteProvider _sprites;
         private string _deckId;
         private int _hovered = -1;
         private int _shakeIndex = -1;
@@ -62,9 +62,15 @@ namespace Callbreak.Presentation.Table
 
         public HandLayoutSettings Layout => _layout;
 
-        /// <summary>The deck whose faces the hand shows (the player's own, GDD §13).</summary>
-        public void SetDeck(string deckId)
+        /// <summary>The deck whose faces the hand shows (the player's own, GDD §13); set before the first cards.</summary>
+        public void SetDeck(CardSpriteProvider sprites, string deckId)
         {
+            if (_sprites == sprites && _deckId == deckId)
+            {
+                return;
+            }
+
+            _sprites = sprites;
             _deckId = deckId;
             for (int i = 0; i < _views.Count; i++)
             {

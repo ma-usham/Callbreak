@@ -201,6 +201,7 @@ internal sealed class IconDef
     public double[] Rect;            // loose rect on that mockup: the whole icon and only ground around it
     public double[] Disc;            // the round button it sits on (x, y, w, h), when the loose rect leaves it
     public bool Symmetric;           // mirror-symmetric about its vertical axis
+    public double? Angle;            // the mockup draws it tilted by about this many degrees (clockwise); the sprite is upright
     public string Note;
     public List<(string screen, double[] rect, string old)> Uses = new List<(string, double[], string)>();
 }
@@ -235,6 +236,7 @@ internal static class Spec
                 Rect = n["rect"].AsArray().Select(v => (double)v).ToArray(),
                 Disc = n["disc"]?.AsArray().Select(v => (double)v).ToArray(),
                 Symmetric = n["symmetric"] != null && (bool)n["symmetric"],
+                Angle = n["angle"] != null ? (double)n["angle"] : (double?)null,
                 Note = (string)n["note"],
             };
             if (n["uses"] != null)
@@ -399,6 +401,20 @@ internal sealed class MockIcon
     {
         int tx0 = (int)Math.Floor(x), ty0 = (int)Math.Floor(y), tw = (int)Math.Ceiling(x + w) - tx0, th = (int)Math.Ceiling(y + h) - ty0;
         var t = new Img(tw, th);
+        // Only what lies within 3 px of solid ink counts as the icon's edge; farther away, faint
+        // leftovers of the ground (a button's shading the fit did not flatten) stay white.
+        var nearInk = new bool[Region.Count];
+        for (int yy = 0; yy < Region.H; yy++)
+            for (int xx = 0; xx < Region.W; xx++)
+            {
+                if (Cover[yy * Region.W + xx] < 0.4f) continue;
+                for (int dy = -3; dy <= 3; dy++)
+                    for (int dx = -3; dx <= 3; dx++)
+                    {
+                        int ax = xx + dx, ay = yy + dy;
+                        if (ax >= 0 && ay >= 0 && ax < Region.W && ay < Region.H) nearInk[ay * Region.W + ax] = true;
+                    }
+            }
         for (int yy = 0; yy < th; yy++)
             for (int xx = 0; xx < tw; xx++)
             {
@@ -414,6 +430,7 @@ internal sealed class MockIcon
                 else
                 {
                     float c = inRegion ? Cover[ri] : 0f;
+                    if (c < 0.03f || !nearInk[ri]) c = 0f;
                     t.R[ti] = 1f + (Ink.r - 1f) * c; t.G[ti] = 1f + (Ink.g - 1f) * c; t.B[ti] = 1f + (Ink.b - 1f) * c;
                 }
             }
@@ -551,6 +568,8 @@ internal static class Tool
             {
                 case "measure": return Measure(Get("only"));
                 case "sheet": return Sheets.Build(Get("sheet"), opt.ContainsKey("review"));
+                case "split": return Splitter.Run(Get("sheet"), Get("in"), Get("attempt", "a1"));
+                case "make": return Maker.Run(Get("name"), Get("src"), opt);
                 case "strip": return Sheets.Strip(Get("images").Split(','), Get("captions")?.Split(','), double.Parse(Get("scale", "2")), Get("out"));
                 default:
                     Console.Error.WriteLine($"unknown command '{args[0]}'");
@@ -565,6 +584,9 @@ internal static class Tool
     }
 
     public static int Even(double v) { int n = (int)Math.Ceiling(v - 1e-6); return n % 2 == 0 ? n : n + 1; }
+
+    /// <summary>A path given on the command line: absolute, or relative to the repository root.</summary>
+    public static string Full(string path) => Path.IsPathRooted(path) ? path : Path.Combine(Spec.Repo, path);
 
     private static int Measure(string only)
     {
@@ -655,9 +677,13 @@ internal static class Sheets
             RectangleF cell = Cell(s, i, s.W, s.H);
             float captionH = font.Height * 1.6f;
             double availW = cell.Width * s.Fill, availH = (cell.Height - captionH) * s.Fill;
-            double k = Math.Min(s.MaxScale, Math.Min(availW / (tx1 - tx0), availH / (ty1 - ty0)));
+            double k = colour
+                ? Math.Min(s.MaxScale, Math.Min(availW / (tx1 - tx0), availH / (ty1 - ty0)))
+                : Math.Min(s.MaxScale, Math.Min(availW / bw, availH / bh));
             float tw = (float)((tx1 - tx0) * k), th = (float)((ty1 - ty0) * k);
-            float px = cell.X + (cell.Width - tw) / 2f, py = cell.Y + (cell.Height - captionH - th) / 2f;
+            // Centre the ink box (not the tile) in the cell, above the caption.
+            float px = cell.X + cell.Width / 2f - (float)(((m.Box[0] + m.Box[2]) / 2 - tx0) * k);
+            float py = cell.Y + (cell.Height - captionH) / 2f - (float)(((m.Box[1] + m.Box[3]) / 2 - ty0) * k);
             using (Bitmap tile = m.Tile(tx0, ty0, tx1 - tx0, ty1 - ty0, colour).ToBitmap())
             using (var attrs = new ImageAttributes())
             {
@@ -665,7 +691,9 @@ internal static class Sheets
                 g.DrawImage(tile, new Rectangle((int)Math.Round(px), (int)Math.Round(py), (int)Math.Round(tw), (int)Math.Round(th)), 0, 0, tile.Width, tile.Height, GraphicsUnit.Pixel, attrs);
             }
             string caption = s.Captions[i] ?? d.Name.Replace("Icon_", "").ToLowerInvariant();
-            g.DrawString($"{i + 1}  {caption}", font, brush, new RectangleF(cell.X, py + th + font.Height * 0.35f, cell.Width, captionH), fmt);
+            float inkBottom = py + (float)((m.Box[3] - ty0) * k);
+            float captionY = Math.Min(cell.Bottom - captionH, inkBottom + Math.Max(font.Height * 0.9f, (float)(pad * k * 0.6)));
+            g.DrawString($"{i + 1}  {caption}", font, brush, new RectangleF(cell.X, captionY, cell.Width, captionH), fmt);
             if (review)
             {
                 using var pen = new Pen(Color.FromArgb(200, 0, 140, 255), 1f);
@@ -713,5 +741,648 @@ internal static class Sheets
         foreach (Bitmap b in bitmaps) b.Dispose();
         Console.WriteLine($"{full}  {w}x{h}");
         return 0;
+    }
+}
+
+/// <summary>
+/// A redrawn icon: the matte of one cell of ChatGPT's sheet, kept as a signed distance field so it can be
+/// rendered crisp at any size, position and weight.
+/// </summary>
+internal sealed class Shape
+{
+    public const int Up = 3;          // distance-field samples per cell pixel
+    public int W, H;                  // cell size in px
+    public float[] Alpha;             // the matte (W x H)
+    public float[] Sd;                // signed distance in cell px, negative inside; (W*Up) x (H*Up)
+    public (float r, float g, float b) Ink, Ground;
+    public double[] Box;              // left, top, right, bottom of the half-coverage box, cell px
+
+    /// <summary>Matte of a flat single-ink drawing on a flat ground (ChatGPT's redraw on white).</summary>
+    public static Shape FromInkCell(Img cell)
+    {
+        int w = cell.W, h = cell.H, n = cell.Count;
+        var fr = new List<float>(); var fg = new List<float>(); var fb = new List<float>();
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+                if (x < 3 || y < 3 || x >= w - 3 || y >= h - 3) { int i = y * w + x; fr.Add(cell.R[i]); fg.Add(cell.G[i]); fb.Add(cell.B[i]); }
+        fr.Sort(); fg.Sort(); fb.Sort();
+        var ground = (fr[fr.Count / 2], fg[fg.Count / 2], fb[fb.Count / 2]);
+        var dist = new float[n];
+        float max = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float dr = cell.R[i] - ground.Item1, dg = cell.G[i] - ground.Item2, db = cell.B[i] - ground.Item3;
+            dist[i] = MathF.Sqrt(dr * dr + dg * dg + db * db);
+            if (dist[i] > max) max = dist[i];
+        }
+        // Ink: the median colour of everything at least 70 % as far from the ground as the farthest pixel.
+        var ir = new List<float>(); var ig = new List<float>(); var ib = new List<float>();
+        for (int i = 0; i < n; i++) if (dist[i] >= 0.7f * max) { ir.Add(cell.R[i]); ig.Add(cell.G[i]); ib.Add(cell.B[i]); }
+        ir.Sort(); ig.Sort(); ib.Sort();
+        var ink = (ir[ir.Count / 2], ig[ig.Count / 2], ib[ib.Count / 2]);
+        var a = new float[n];
+        float kr = ground.Item1 - ink.Item1, kg = ground.Item2 - ink.Item2, kb = ground.Item3 - ink.Item3;
+        float den = kr * kr + kg * kg + kb * kb;
+        for (int i = 0; i < n; i++)
+        {
+            float num = (ground.Item1 - cell.R[i]) * kr + (ground.Item2 - cell.G[i]) * kg + (ground.Item3 - cell.B[i]) * kb;
+            float c = den < 1e-6f ? 0f : num / den;
+            a[i] = Math.Clamp((c - 0.04f) / 0.92f, 0f, 1f);
+        }
+        return FromAlpha(a, w, h, ink, ground);
+    }
+
+    public static Shape FromAlpha(float[] alpha, int w, int h, (float, float, float) ink, (float, float, float) ground)
+    {
+        var s = new Shape { W = w, H = h, Alpha = alpha, Ink = ink, Ground = ground };
+        s.Sd = BuildSd(alpha, w, h);
+        s.Box = Bounds.HalfBox(alpha, w, h);
+        return s;
+    }
+
+    private static float[] BuildSd(float[] alpha, int w, int h)
+    {
+        int uw = w * Up, uh = h * Up;
+        var inside = new bool[uw * uh];
+        for (int y = 0; y < uh; y++)
+        {
+            double sy = (y + 0.5) / Up - 0.5;
+            int y0 = (int)Math.Floor(sy); double fy = sy - y0;
+            int ya = Math.Clamp(y0, 0, h - 1), yb = Math.Clamp(y0 + 1, 0, h - 1);
+            for (int x = 0; x < uw; x++)
+            {
+                double sx = (x + 0.5) / Up - 0.5;
+                int x0 = (int)Math.Floor(sx); double fx = sx - x0;
+                int xa = Math.Clamp(x0, 0, w - 1), xb = Math.Clamp(x0 + 1, 0, w - 1);
+                double v = (alpha[ya * w + xa] * (1 - fx) + alpha[ya * w + xb] * fx) * (1 - fy) + (alpha[yb * w + xa] * (1 - fx) + alpha[yb * w + xb] * fx) * fy;
+                inside[y * uw + x] = v >= 0.5;
+            }
+        }
+        float[] toInside = Edt(inside, uw, uh, true), toOutside = Edt(inside, uw, uh, false);
+        var sd = new float[uw * uh];
+        for (int i = 0; i < sd.Length; i++)
+            sd[i] = (inside[i] ? -(toOutside[i] - 0.5f) : toInside[i] - 0.5f) / Up;
+        return sd;
+    }
+
+    /// <summary>Euclidean distance (in samples) from every sample to the nearest one whose flag equals <paramref name="target"/>.</summary>
+    private static float[] Edt(bool[] flag, int w, int h, bool target)
+    {
+        const float Inf = 1e12f;
+        var f = new float[w * h];
+        for (int i = 0; i < f.Length; i++) f[i] = flag[i] == target ? 0f : Inf;
+        int m = Math.Max(w, h);
+        var d = new float[m]; var g = new float[m]; var v = new int[m]; var z = new float[m + 1];
+        void Pass(int len)
+        {
+            int k = 0; v[0] = 0; z[0] = -Inf; z[1] = Inf;
+            for (int q = 1; q < len; q++)
+            {
+                float s;
+                while (true)
+                {
+                    int p = v[k];
+                    s = ((g[q] + (float)q * q) - (g[p] + (float)p * p)) / (2f * q - 2f * p);
+                    if (s <= z[k] && k > 0) k--; else break;
+                }
+                k++; v[k] = q; z[k] = s; z[k + 1] = Inf;
+            }
+            k = 0;
+            for (int q = 0; q < len; q++)
+            {
+                while (z[k + 1] < q) k++;
+                int p = v[k];
+                d[q] = (float)(q - p) * (q - p) + g[p];
+            }
+        }
+        for (int x = 0; x < w; x++)
+        {
+            for (int y = 0; y < h; y++) g[y] = f[y * w + x];
+            Pass(h);
+            for (int y = 0; y < h; y++) f[y * w + x] = d[y];
+        }
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++) g[x] = f[y * w + x];
+            Pass(w);
+            for (int x = 0; x < w; x++) f[y * w + x] = MathF.Sqrt(d[x]);
+        }
+        return f;
+    }
+
+    /// <summary>Signed distance (cell px) at a cell position; beyond the cell it keeps growing.</summary>
+    public float Distance(double cx, double cy)
+    {
+        int uw = W * Up, uh = H * Up;
+        double ux = cx * Up - 0.5, uy = cy * Up - 0.5;
+        double qx = Math.Clamp(ux, 0, uw - 1), qy = Math.Clamp(uy, 0, uh - 1);
+        int x0 = (int)Math.Floor(qx), y0 = (int)Math.Floor(qy);
+        int x1 = Math.Min(x0 + 1, uw - 1), y1 = Math.Min(y0 + 1, uh - 1);
+        double fx = qx - x0, fy = qy - y0;
+        double v = (Sd[y0 * uw + x0] * (1 - fx) + Sd[y0 * uw + x1] * fx) * (1 - fy) + (Sd[y1 * uw + x0] * (1 - fx) + Sd[y1 * uw + x1] * fx) * fy;
+        double ox = ux - qx, oy = uy - qy;
+        if (ox != 0 || oy != 0) v += Math.Sqrt(ox * ox + oy * oy) / Up;
+        return (float)v;
+    }
+
+    /// <summary>Makes the shape mirror-symmetric about the vertical line through the middle of its box.</summary>
+    public void Symmetrise()
+    {
+        int uw = W * Up, uh = H * Up;
+        double axis = (Box[0] + Box[2]) / 2 * Up - 0.5;   // in sample coordinates
+        var m = new float[Sd.Length];
+        for (int y = 0; y < uh; y++)
+            for (int x = 0; x < uw; x++)
+            {
+                double mx = 2 * axis - x;
+                float other = Distance((mx + 0.5) / Up, (y + 0.5) / Up);
+                m[y * uw + x] = 0.5f * (Sd[y * uw + x] + other);
+            }
+        Sd = m;
+    }
+}
+
+/// <summary>Where a shape sits on a mockup: mock = (Tx + Sx * cellX, Ty + Sy * cellY), plus weight and softness.</summary>
+internal struct Pose
+{
+    public double Tx, Ty, Sx, Sy;
+    public double Rot;      // radians, clockwise on screen: mock = T + R(Rot) * (Sx * cellX, Sy * cellY)
+    public double Grow;     // how far the outline is pushed out, mockup px (negative: pulled in)
+    public double Blur;     // softness of the mockup rendering, mockup px (only used when comparing)
+}
+
+internal static class Fit
+{
+    private static readonly float[] SrgbLut = BuildSrgb();
+    private static float[] BuildSrgb() { var l = new float[4097]; for (int i = 0; i <= 4096; i++) l[i] = Img.ToSrgb(i / 4096f); return l; }
+    private static float Srgb(float lin) => SrgbLut[(int)(Math.Clamp(lin, 0f, 1f) * 4096f)];
+
+    /// <summary>Coverage of the shape on a pixel grid: origin (ox, oy) and scale px-per-mockup-px, size w x h.</summary>
+    public static float[] Render(Shape s, Pose p, double ox, double oy, double scale, int w, int h, int sub = 3)
+    {
+        var cov = new float[w * h];
+        double unit = Math.Sqrt(p.Sx * p.Sy);            // mockup px per cell px
+        double ramp = scale * sub;                        // sub-samples per mockup px -> ramp of one sub-sample
+        double cos = Math.Cos(p.Rot), sin = Math.Sin(p.Rot);
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                double acc = 0;
+                for (int j = 0; j < sub; j++)
+                {
+                    double dy = oy + (y + (j + 0.5) / sub) / scale - p.Ty;
+                    for (int i = 0; i < sub; i++)
+                    {
+                        double dx = ox + (x + (i + 0.5) / sub) / scale - p.Tx;
+                        double cx = (cos * dx + sin * dy) / p.Sx;
+                        double cy = (-sin * dx + cos * dy) / p.Sy;
+                        double d = s.Distance(cx, cy) * unit - p.Grow;      // mockup px
+                        acc += Math.Clamp(0.5 - d * ramp, 0.0, 1.0);
+                    }
+                }
+                cov[y * w + x] = (float)(acc / (sub * sub));
+            }
+        return cov;
+    }
+
+    public static float[] Gauss(float[] a, int w, int h, double sigma)
+    {
+        if (sigma < 0.12) return a;
+        int r = (int)Math.Ceiling(sigma * 3);
+        var k = new float[2 * r + 1]; float sum = 0;
+        for (int i = -r; i <= r; i++) { k[i + r] = (float)Math.Exp(-0.5 * i * i / (sigma * sigma)); sum += k[i + r]; }
+        for (int i = 0; i < k.Length; i++) k[i] /= sum;
+        var t = new float[a.Length]; var o = new float[a.Length];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                float v = 0;
+                for (int i = -r; i <= r; i++) v += a[y * w + Math.Clamp(x + i, 0, w - 1)] * k[i + r];
+                t[y * w + x] = v;
+            }
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                float v = 0;
+                for (int i = -r; i <= r; i++) v += t[Math.Clamp(y + i, 0, h - 1) * w + x] * k[i + r];
+                o[y * w + x] = v;
+            }
+        return o;
+    }
+
+    /// <summary>Mean squared sRGB difference (0..255 scale) between the mockup crop and the shape drawn on its ground.</summary>
+    public static double Error(Shape s, Pose p, MockIcon m, (float r, float g, float b) ink)
+    {
+        int w = m.Region.W, h = m.Region.H;
+        float[] cov = Gauss(Render(s, p, m.X0, m.Y0, 1.0, w, h), w, h, p.Blur);
+        double e = 0; int n = 0;
+        for (int i = 0; i < cov.Length; i++)
+        {
+            if (!m.Inside[i]) continue;
+            float c = cov[i];
+            float r = Srgb(m.Ground.R[i] + (ink.r - m.Ground.R[i]) * c) - Srgb(m.Region.R[i]);
+            float g = Srgb(m.Ground.G[i] + (ink.g - m.Ground.G[i]) * c) - Srgb(m.Region.G[i]);
+            float b = Srgb(m.Ground.B[i] + (ink.b - m.Ground.B[i]) * c) - Srgb(m.Region.B[i]);
+            e += r * r + g * g + b * b; n++;
+        }
+        return e / Math.Max(1, n * 3) * 255.0 * 255.0;
+    }
+
+    /// <summary>Same comparison for a coverage-only match (multi-coloured icons): silhouette against silhouette.</summary>
+    public static double CoverError(Shape s, Pose p, MockIcon m)
+    {
+        int w = m.Region.W, h = m.Region.H;
+        float[] cov = Gauss(Render(s, p, m.X0, m.Y0, 1.0, w, h), w, h, p.Blur);
+        double e = 0; int n = 0;
+        for (int i = 0; i < cov.Length; i++)
+        {
+            if (!m.Inside[i]) continue;
+            float d = cov[i] - m.Cover[i];
+            e += d * d; n++;
+        }
+        return e / Math.Max(1, n) * 255.0 * 255.0;
+    }
+
+    /// <summary>
+    /// Finds the pose that lands the shape on the mockup icon. level: 3 = position and one scale;
+    /// 4 = plus its own width/height ratio; 6 = plus weight and softness. With rotate, the tilt is solved too.
+    /// </summary>
+    public static Pose Solve(Shape s, MockIcon m, (float r, float g, float b) ink, bool silhouette, int level, Pose? start = null, bool rotate = false, double angle = 0)
+    {
+        double bw = s.Box[2] - s.Box[0], bh = s.Box[3] - s.Box[1];
+        double mw = m.Box[2] - m.Box[0], mh = m.Box[3] - m.Box[1];
+        double ccx = (s.Box[0] + s.Box[2]) / 2, ccy = (s.Box[1] + s.Box[3]) / 2;
+        // Parameters: centre x, centre y (mockup px), ln scale, rotation, ln aspect, grow, blur.
+        double[] x0;
+        if (start == null)
+        {
+            // A tilted drawing has a larger box than the upright shape: start from the areas instead.
+            double sc = Math.Sqrt(mw / bw * mh / bh);
+            if (rotate && Math.Abs(angle) > 1)
+            {
+                double am = 0, ac = 0;
+                for (int i = 0; i < m.Cover.Length; i++) am += m.Cover[i];
+                for (int i = 0; i < s.Alpha.Length; i++) ac += s.Alpha[i];
+                if (ac > 0 && am > 0) sc = Math.Sqrt(am / ac);
+            }
+            x0 = new[] { (m.Box[0] + m.Box[2]) / 2, (m.Box[1] + m.Box[3]) / 2, Math.Log(sc), angle * Math.PI / 180, 0.0, 0.0, 0.6 };
+        }
+        else
+        {
+            Pose p0 = start.Value;
+            double cos0 = Math.Cos(p0.Rot), sin0 = Math.Sin(p0.Rot);
+            double ux = p0.Sx * ccx, uy = p0.Sy * ccy;
+            x0 = new[] { p0.Tx + cos0 * ux - sin0 * uy, p0.Ty + sin0 * ux + cos0 * uy, Math.Log(Math.Sqrt(p0.Sx * p0.Sy)), p0.Rot, Math.Log(p0.Sx / p0.Sy), p0.Grow, p0.Blur };
+        }
+        double[] step = { 0.6, 0.6, 0.02, 0.03, 0.02, 0.15, 0.2 };
+        var free = new List<int> { 0, 1, 2 };
+        if (rotate) free.Add(3);
+        if (level >= 4) free.Add(4);
+        if (level >= 6) { free.Add(5); free.Add(6); }
+        Pose Make(double[] v)
+        {
+            double sc = Math.Exp(v[2]), asp = Math.Exp(Math.Clamp(v[4], -0.12, 0.12));
+            var q = new Pose { Sx = sc * Math.Sqrt(asp), Sy = sc / Math.Sqrt(asp), Rot = v[3] };
+            double cos = Math.Cos(q.Rot), sin = Math.Sin(q.Rot);
+            double ux = q.Sx * ccx, uy = q.Sy * ccy;
+            q.Tx = v[0] - (cos * ux - sin * uy); q.Ty = v[1] - (sin * ux + cos * uy);
+            q.Grow = Math.Clamp(v[5], -0.8, 0.8);
+            q.Blur = Math.Clamp(v[6], 0.0, 1.6);
+            return q;
+        }
+        double Cost(double[] v) => silhouette ? CoverError(s, Make(v), m) : Error(s, Make(v), m, ink);
+        double[] best = NelderMead(Cost, x0, step, free, 320);
+        best = NelderMead(Cost, best, step.Select(t => t * 0.35).ToArray(), free, 240);
+        return Make(best);
+    }
+
+    private static double[] NelderMead(Func<double[], double> f, double[] x0, double[] step, List<int> free, int maxIter)
+    {
+        int n = free.Count, full = x0.Length;
+        var pts = new double[n + 1][]; var val = new double[n + 1];
+        for (int i = 0; i <= n; i++)
+        {
+            pts[i] = (double[])x0.Clone();
+            if (i > 0) pts[i][free[i - 1]] += step[free[i - 1]];
+            val[i] = f(pts[i]);
+        }
+        for (int it = 0; it < maxIter; it++)
+        {
+            Array.Sort(val, pts);
+            if (Math.Abs(val[n] - val[0]) < 1e-5 * (Math.Abs(val[0]) + 1e-9)) break;
+            var c = new double[full];
+            for (int i = 0; i < n; i++) for (int k = 0; k < full; k++) c[k] += pts[i][k] / n;
+            double[] At(double t) { var r = new double[full]; for (int k = 0; k < full; k++) r[k] = c[k] + t * (pts[n][k] - c[k]); return r; }
+            double[] xr = At(-1); double fr = f(xr);
+            if (fr < val[0])
+            {
+                double[] xe = At(-2); double fe = f(xe);
+                if (fe < fr) { pts[n] = xe; val[n] = fe; } else { pts[n] = xr; val[n] = fr; }
+            }
+            else if (fr < val[n - 1]) { pts[n] = xr; val[n] = fr; }
+            else
+            {
+                double[] xc = At(fr < val[n] ? -0.5 : 0.5); double fc = f(xc);
+                if (fc < Math.Min(fr, val[n])) { pts[n] = xc; val[n] = fc; }
+                else
+                {
+                    for (int i = 1; i <= n; i++)
+                    {
+                        for (int k = 0; k < full; k++) pts[i][k] = pts[0][k] + 0.5 * (pts[i][k] - pts[0][k]);
+                        val[i] = f(pts[i]);
+                    }
+                }
+            }
+        }
+        Array.Sort(val, pts);
+        return pts[0];
+    }
+}
+
+/// <summary>Cuts ChatGPT's redrawn sheet into one cell image per icon.</summary>
+internal static class Splitter
+{
+    public static int Run(string sheetName, string input, string attempt)
+    {
+        Sheets.Sheet s = Sheets.Load(sheetName);
+        Img img = Img.Load(Tool.Full(input));
+        int w = img.W, h = img.H, n = img.Count;
+        // Ground: the median of the image frame.
+        var fr = new List<float>(); var fg = new List<float>(); var fb = new List<float>();
+        for (int y = 0; y < h; y += 2)
+            for (int x = 0; x < w; x += 2)
+                if (x < 6 || y < 6 || x >= w - 6 || y >= h - 6) { int i = y * w + x; fr.Add(img.R[i]); fg.Add(img.G[i]); fb.Add(img.B[i]); }
+        fr.Sort(); fg.Sort(); fb.Sort();
+        float gr = fr[fr.Count / 2], gg = fg[fg.Count / 2], gb = fb[fb.Count / 2];
+        var ink = new bool[n];
+        for (int i = 0; i < n; i++)
+        {
+            float dr = img.R[i] - gr, dg = img.G[i] - gg, db = img.B[i] - gb;
+            ink[i] = MathF.Sqrt(dr * dr + dg * dg + db * db) > 0.10f || img.A[i] < 0.5f != (img.A[0] < 0.5f);
+        }
+        Console.WriteLine($"{Path.GetFileName(input)}  {w}x{h}  ground {Img.Hex(gr, gg, gb)}");
+        string outDir = Path.Combine(Spec.Work, "chatgpt", "cells");
+        Directory.CreateDirectory(outDir);
+        for (int c = 0; c < s.Cells.Count; c++)
+        {
+            RectangleF cell = Sheets.Cell(s, c, w, h);
+            int cx0 = (int)cell.X + 2, cy0 = (int)cell.Y + 2, cx1 = (int)cell.Right - 2, cy1 = (int)cell.Bottom - 2;
+            int x0 = int.MaxValue, y0 = int.MaxValue, x1 = -1, y1 = -1;
+            for (int y = cy0; y < cy1; y++)
+                for (int x = cx0; x < cx1; x++)
+                    if (ink[y * w + x]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+            if (x1 < 0) { Console.WriteLine($"{c + 1,2} {s.Cells[c],-24} EMPTY CELL"); continue; }
+            bool touches = x0 <= cx0 || y0 <= cy0 || x1 >= cx1 - 1 || y1 >= cy1 - 1;
+            int m = 14;
+            int ox = Math.Max(0, x0 - m), oy = Math.Max(0, y0 - m), ow = Math.Min(w, x1 + 1 + m) - ox, oh = Math.Min(h, y1 + 1 + m) - oy;
+            Img cut = img.Crop(ox, oy, ow, oh);
+            string file = Path.Combine(outDir, $"{s.Cells[c]}_{attempt}.png");
+            cut.Save(file);
+            Console.WriteLine($"{c + 1,2} {s.Cells[c],-24} ink {x0},{y0} {x1 - x0 + 1}x{y1 - y0 + 1}{(touches ? "  TOUCHES THE CELL EDGE" : "")}  -> {Path.GetFileName(file)}");
+        }
+        return 0;
+    }
+}
+
+/// <summary>Fits a redrawn icon to its mockup crop, exports the sprite and writes the check images.</summary>
+internal static class Maker
+{
+    public const double Scale2x = 2.3;
+    public const int Margin = 2;
+
+    public sealed class Result
+    {
+        public string Name; public Pose Pose; public double Rms, RmsBest, Iou, Weight, Aspect, SourceScale, EdgeMean, EdgeMax;
+        public int W, H; public double[] MockRect; public double[] InkRect; public string File;
+    }
+
+    public static int Run(string name, string src, Dictionary<string, string> opt)
+    {
+        IconDef d = Spec.Get(name);
+        MockIcon m = MockIcon.Read(d);
+        Img cell = Img.Load(Tool.Full(src));
+        Shape s = Shape.FromInkCell(cell);
+        if (opt.ContainsKey("symmetric") || d.Symmetric) s.Symmetrise();
+        (float r, float g, float b) mockInk = m.Ink;
+
+        // 1. Where the redrawn shape sits on the mockup, first rigidly, then with its own aspect, weight and softness.
+        bool rotate = d.Angle != null;
+        Pose p3 = Fit.Solve(s, m, mockInk, false, 3, null, rotate, d.Angle ?? 0);
+        Pose p6 = Fit.Solve(s, m, mockInk, false, 6, p3, rotate);
+        double rmsBest = Math.Sqrt(Fit.Error(s, p6, m, mockInk));
+        Pose asDrawn = p6; asDrawn.Grow = 0;
+        Console.WriteLine($"   rms with the outline as drawn (grow 0): {Math.Sqrt(Fit.Error(s, asDrawn, m, mockInk)):0.00}; with the fitted grow {p6.Grow:+0.00;-0.00}: {rmsBest:0.00}; rigid fit only: {Math.Sqrt(Fit.Error(s, p3, m, mockInk)):0.00}");
+
+        // 2. What is baked into the sprite: position, size and aspect from the fit; the weight only as far as asked.
+        double grow = opt.TryGetValue("grow", out string gs) ? double.Parse(gs) : p6.Grow;
+        bool keepAspect = opt.ContainsKey("uniform");
+        Pose p = p6; p.Grow = grow;
+        if (keepAspect) { p = Fit.Solve(s, m, mockInk, false, 3, p3, rotate); p.Grow = grow; p.Blur = p6.Blur; }
+        double rms = Math.Sqrt(Fit.Error(s, p, m, mockInk));
+
+        // 3. Render at @2x on a canvas that keeps Margin px clear around the ink. A drawing that is tilted on
+        //    the mockup is exported upright, about the same centre.
+        var crisp = p; crisp.Blur = 0;
+        if (rotate)
+        {
+            double bcx = (s.Box[0] + s.Box[2]) / 2 * p.Sx, bcy = (s.Box[1] + s.Box[3]) / 2 * p.Sy;
+            double mcx = p.Tx + Math.Cos(p.Rot) * bcx - Math.Sin(p.Rot) * bcy, mcy = p.Ty + Math.Sin(p.Rot) * bcx + Math.Cos(p.Rot) * bcy;
+            crisp.Rot = 0; crisp.Tx = mcx - bcx; crisp.Ty = mcy - bcy;
+        }
+        // --ink-height N: the sprite's ink is N px tall whatever size the mockup draws it (a set of symbols at one height).
+        if (opt.TryGetValue("ink-height", out string ihs))
+        {
+            double target = double.Parse(ihs) / Scale2x;
+            double padH = 6;
+            int th0 = (int)Math.Ceiling((m.Box[3] - m.Box[1] + 2 * padH) * 4), tw0 = (int)Math.Ceiling((m.Box[2] - m.Box[0] + 2 * padH) * 4);
+            float[] probe = Fit.Render(s, crisp, m.Box[0] - padH, m.Box[1] - padH, 4.0, tw0, th0, 2);
+            double[] pb = Bounds.HalfBox(probe, tw0, th0, 0, 0, 0.02f);
+            double f = target / ((pb[3] - pb[1]) / 4.0);
+            double bcx = (s.Box[0] + s.Box[2]) / 2, bcy = (s.Box[1] + s.Box[3]) / 2;
+            double mcx = crisp.Tx + bcx * crisp.Sx, mcy = crisp.Ty + bcy * crisp.Sy;
+            crisp.Sx *= f; crisp.Sy *= f; crisp.Grow *= f;
+            crisp.Tx = mcx - bcx * crisp.Sx; crisp.Ty = mcy - bcy * crisp.Sy;
+            Console.WriteLine($"   ink height set to {ihs} px: x{f:0.000} of the mockup size");
+        }
+        double pad = opt.ContainsKey("ink-height") ? Math.Max(m.Box[2] - m.Box[0], m.Box[3] - m.Box[1]) : 4;   // mockup px of slack around the box for the first pass
+        double bx0 = m.Box[0] - pad, by0 = m.Box[1] - pad, bx1 = m.Box[2] + pad, by1 = m.Box[3] + pad;
+        int fw = (int)Math.Ceiling((bx1 - bx0) * Scale2x), fh = (int)Math.Ceiling((by1 - by0) * Scale2x);
+        float[] first = Fit.Render(s, crisp, bx0, by0, Scale2x, fw, fh, 4);
+        double[] ib = Bounds.HalfBox(first, fw, fh, 0, 0, 0.02f);   // where the ink becomes visible
+        double inkL = bx0 + ib[0] / Scale2x, inkT = by0 + ib[1] / Scale2x, inkR = bx0 + ib[2] / Scale2x, inkB = by0 + ib[3] / Scale2x;
+        int w = Tool.Even((inkR - inkL) * Scale2x) + 2 * Margin, h = Tool.Even((inkB - inkT) * Scale2x) + 2 * Margin;
+        double ox = (inkL + inkR) / 2 - w / (2 * Scale2x), oy = (inkT + inkB) / 2 - h / (2 * Scale2x);
+        float[] alpha = Fit.Render(s, crisp, ox, oy, Scale2x, w, h, 4);
+        var inkCol = Img.Hex(d.Ink ?? Spec.FamilyInk);
+        var sprite = new Img(w, h, 0f);
+        for (int i = 0; i < alpha.Length; i++)
+        {
+            float a = alpha[i] < 0.004f ? 0f : alpha[i] > 0.996f ? 1f : alpha[i];
+            sprite.R[i] = inkCol.r; sprite.G[i] = inkCol.g; sprite.B[i] = inkCol.b; sprite.A[i] = a;
+        }
+        string attempt = opt.TryGetValue("attempt", out string at) ? at : "a1";
+        string outFile = Path.Combine(Spec.Work, "fitted", $"{name}_{attempt}.png");
+        sprite.Save(outFile);
+
+        // 4. Numbers.
+        int mw = m.Region.W, mh = m.Region.H;
+        var onMock = p; onMock.Blur = 0;
+        float[] cov = Fit.Render(s, onMock, m.X0, m.Y0, 1.0, mw, mh, 4);
+        float[] covSoft = Fit.Gauss(cov, mw, mh, p.Blur);
+        double inter = 0, union = 0, sumC = 0, sumM = 0;
+        for (int i = 0; i < cov.Length; i++)
+        {
+            if (!m.Inside[i]) continue;
+            bool a = covSoft[i] >= 0.5f, b = m.Cover[i] >= 0.5f;
+            if (a && b) inter++; if (a || b) union++;
+            sumC += covSoft[i]; sumM += m.Cover[i];
+        }
+        var res = new Result
+        {
+            Name = name, Pose = p, Rms = rms, RmsBest = rmsBest, Iou = union > 0 ? inter / union : 0, Weight = sumM > 0 ? sumC / sumM : 0,
+            Aspect = p.Sx / p.Sy, SourceScale = Scale2x * Math.Sqrt(crisp.Sx * crisp.Sy), W = w, H = h, File = outFile,
+            MockRect = new[] { ox, oy, w / Scale2x, h / Scale2x }, InkRect = new[] { inkL, inkT, inkR - inkL, inkB - inkT },
+        };
+        (res.EdgeMean, res.EdgeMax) = EdgeDeviation(covSoft, m.Cover, m.Inside, mw, mh);
+        Console.WriteLine($"{name}  {w}x{h}  ink on {d.Screen}: {inkL:0.00},{inkT:0.00} {inkR - inkL:0.00}x{inkB - inkT:0.00}  sprite rect {ox:0.00},{oy:0.00} {w / Scale2x:0.00}x{h / Scale2x:0.00}");
+        Console.WriteLine($"   rms {rms:0.00} (best {rmsBest:0.00})  iou {res.Iou:0.000}  weight {res.Weight:0.000}  edge mean {res.EdgeMean:0.00} max {res.EdgeMax:0.00} px" +
+                          $"  aspect {res.Aspect:0.000}  fit grow {p6.Grow:+0.00;-0.00} baked {p.Grow:+0.00;-0.00}  blur {p6.Blur:0.00}  source x{res.SourceScale:0.00}" + (rotate ? $"  tilt on the mockup {p.Rot * 180 / Math.PI:+0.0;-0.0} deg" : ""));
+        Check.Write(d, m, s, p, sprite, res, attempt);
+        File.WriteAllText(Path.ChangeExtension(outFile, ".txt"),
+            FormattableString.Invariant($"{name} {attempt}\nsize {w}x{h}\nscreen {d.Screen}\nink_rect {inkL:0.00},{inkT:0.00},{inkR - inkL:0.00},{inkB - inkT:0.00}\nsprite_rect {ox:0.00},{oy:0.00},{w / Scale2x:0.00},{h / Scale2x:0.00}\nrms {rms:0.00}\niou {res.Iou:0.000}\nweight {res.Weight:0.000}\nedge_mean {res.EdgeMean:0.00}\nedge_max {res.EdgeMax:0.00}\naspect {res.Aspect:0.000}\ngrow_fit {p6.Grow:0.00}\ngrow_baked {p.Grow:0.00}\nblur {p6.Blur:0.00}\nsource_scale {res.SourceScale:0.00}\n"));
+        return 0;
+    }
+
+    /// <summary>
+    /// How far the redrawn outline runs from the mockup outline, in mockup px: for every point of the
+    /// half-coverage contour of one, the distance to the contour of the other (both directions), from the
+    /// sub-pixel coverage values. Returns the mean and the 98th percentile.
+    /// </summary>
+    public static (double mean, double max) EdgeDeviation(float[] a, float[] b, bool[] inside, int w, int h)
+    {
+        List<(double x, double y)> ca = Contour(a, inside, w, h), cb = Contour(b, inside, w, h);
+        if (ca.Count == 0 || cb.Count == 0) return (99, 99);
+        var all = new List<double>();
+        void OneWay(List<(double x, double y)> from, List<(double x, double y)> to)
+        {
+            foreach (var q in from)
+            {
+                double best = double.MaxValue;
+                foreach (var t in to) { double dx = q.x - t.x, dy = q.y - t.y, dd = dx * dx + dy * dy; if (dd < best) best = dd; }
+                all.Add(Math.Sqrt(best));
+            }
+        }
+        OneWay(ca, cb); OneWay(cb, ca);
+        all.Sort();
+        return (all.Average(), all[(int)(all.Count * 0.98)]);
+    }
+
+    // Points where the coverage crosses one half between neighbouring pixel centres.
+    private static List<(double x, double y)> Contour(float[] c, bool[] inside, int w, int h)
+    {
+        var pts = new List<(double, double)>();
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                int i = y * w + x;
+                if (!inside[i]) continue;
+                if (x + 1 < w && inside[i + 1] && (c[i] >= 0.5f) != (c[i + 1] >= 0.5f))
+                    pts.Add((x + 0.5 + (0.5 - c[i]) / (c[i + 1] - c[i]), y + 0.5));
+                if (y + 1 < h && inside[i + w] && (c[i] >= 0.5f) != (c[i + w] >= 0.5f))
+                    pts.Add((x + 0.5, y + 0.5 + (0.5 - c[i]) / (c[i + w] - c[i])));
+            }
+        return pts;
+    }
+}
+
+/// <summary>Side-by-side review images: the mockup crop, the sprite on the same ground, their difference, the alpha on black and white.</summary>
+internal static class Check
+{
+    public static void Write(IconDef d, MockIcon m, Shape s, Pose p, Img sprite, Maker.Result res, string attempt)
+    {
+        int mw = m.Region.W, mh = m.Region.H;
+        int z = Math.Max(3, Math.Min(10, 330 / Math.Max(mw, mh)));
+        int pw = mw * z, ph = mh * z, gap = 10;
+        (float r, float g, float b) ink = Img.Hex(d.Ink ?? Spec.FamilyInk);
+        var crisp = p; crisp.Blur = 0;
+
+        // Panel 1: the mockup crop, enlarged.
+        Img a = m.Region.Resize(pw, ph);
+        // Panel 2: the sprite as the game draws it: family ink over the same ground, sharp, at z times the mockup.
+        float[] covZ = Fit.Render(s, crisp, m.X0, m.Y0, z, pw, ph, 2);
+        Img groundZ = m.Ground.Resize(pw, ph);
+        var b = new Img(pw, ph);
+        for (int i = 0; i < b.Count; i++)
+        {
+            float c = covZ[i];
+            b.R[i] = groundZ.R[i] + (ink.r - groundZ.R[i]) * c; b.G[i] = groundZ.G[i] + (ink.g - groundZ.G[i]) * c; b.B[i] = groundZ.B[i] + (ink.b - groundZ.B[i]) * c;
+        }
+        // Panel 3: the sprite at the mockup resolution and softness (what a capture at mockup size shows).
+        float[] cov1 = Fit.Gauss(Fit.Render(s, crisp, m.X0, m.Y0, 1.0, mw, mh, 4), mw, mh, p.Blur);
+        var c1 = new Img(mw, mh);
+        for (int i = 0; i < c1.Count; i++)
+        {
+            float c = cov1[i];
+            c1.R[i] = m.Ground.R[i] + (ink.r - m.Ground.R[i]) * c; c1.G[i] = m.Ground.G[i] + (ink.g - m.Ground.G[i]) * c; c1.B[i] = m.Ground.B[i] + (ink.b - m.Ground.B[i]) * c;
+        }
+        Img c3 = c1.Resize(pw, ph);
+        // Panel 4: outline overlay: red = ink only on the mockup, blue = ink only on the sprite, dark = both.
+        var o = new Img(mw, mh);
+        for (int i = 0; i < o.Count; i++)
+        {
+            float mc = m.Cover[i], sc = cov1[i];
+            float both = Math.Min(mc, sc), onlyM = Math.Max(0, mc - sc), onlyS = Math.Max(0, sc - mc);
+            float rest = Math.Max(0f, 1f - both - onlyM - onlyS);
+            o.R[i] = rest * 1f + onlyM * 1f + onlyS * 0.0f + both * 0.02f;
+            o.G[i] = rest * 1f + onlyM * 0.0f + onlyS * 0.25f + both * 0.02f;
+            o.B[i] = rest * 1f + onlyM * 0.0f + onlyS * 1f + both * 0.02f;
+        }
+        Img o4 = o.Resize(pw, ph, nearest: true);
+        // Second row: the sprite itself. On black, as the white copy the game tints onto crimson, on white.
+        double k = Math.Min((double)pw / sprite.W, (double)ph / sprite.H);
+        int sw = Math.Max(1, (int)(sprite.W * k)), sh = Math.Max(1, (int)(sprite.H * k));
+        Img onBlack = new Img(sprite.W, sprite.H); onBlack.Fill(0, 0, 0); onBlack.Over(sprite, 0, 0);
+        var crimson = Img.Hex("#861018");
+        Img onCrimson = new Img(sprite.W, sprite.H); onCrimson.Fill(crimson.r, crimson.g, crimson.b);
+        var white = new Img(sprite.W, sprite.H, 0f);
+        for (int i = 0; i < white.Count; i++) { white.R[i] = 1f; white.G[i] = 0.965f; white.B[i] = 0.913f; white.A[i] = sprite.A[i]; }
+        onCrimson.Over(white, 0, 0);
+        Img onWhite = new Img(sprite.W, sprite.H); onWhite.Fill(1, 1, 1); onWhite.Over(sprite, 0, 0);
+        // Alpha stretched: shows halo or stray pixels that the eye misses (alpha > 0 drawn solid).
+        var stray = new Img(sprite.W, sprite.H); stray.Fill(1, 1, 1);
+        for (int i = 0; i < stray.Count; i++) if (sprite.A[i] > 0f) { float v = sprite.A[i] >= 0.999f ? 0f : 0.55f; stray.R[i] = v; stray.G[i] = v; stray.B[i] = v; }
+
+        int textH = 66;
+        var sheet = new Img(gap + 4 * (pw + gap), 2 * (ph + gap) + gap + textH);
+        sheet.Fill(0.55f, 0.0f, 0.55f);
+        int x = gap;
+        foreach (Img panel in new[] { a, b, c3, o4 })
+        {
+            sheet.Paste(panel, x, gap); x += pw + gap;
+        }
+        x = gap;
+        foreach (Img full in new[] { onBlack, onCrimson, onWhite, stray })
+        {
+            Img panel = full.Resize(sw, sh, nearest: k >= 1.5);
+            var back = new Img(pw, ph); back.Fill(0.2f, 0.2f, 0.2f);
+            back.Paste(panel, (pw - sw) / 2, (ph - sh) / 2);
+            sheet.Paste(back, x, ph + 2 * gap); x += pw + gap;
+        }
+        using Bitmap bmp = sheet.ToBitmap();
+        using (Graphics g = Graphics.FromImage(bmp))
+        {
+            g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+            using var font = new Font("Segoe UI", 13f, FontStyle.Regular, GraphicsUnit.Pixel);
+            string line1 = $"{d.Name} {attempt}  {res.W}x{res.H}   top: mockup {d.Screen} x{z} | sprite on its ground, sharp | sprite at mockup size | red: mockup only, blue: sprite only";
+            string line2 = "bottom: on black | white copy on crimson | on white | partial alpha in grey";
+            string line3 = FormattableString.Invariant($"rms {res.Rms:0.00}  iou {res.Iou:0.000}  weight {res.Weight:0.000}  edge mean {res.EdgeMean:0.00} / p98 {res.EdgeMax:0.00} px  aspect {res.Aspect:0.000}  grow {p.Grow:+0.00;-0.00}  blur {p.Blur:0.00}  source x{res.SourceScale:0.00}");
+            int ty = 2 * (ph + gap) + gap;
+            g.DrawString(line1, font, Brushes.White, gap, ty);
+            g.DrawString(line2, font, Brushes.White, gap, ty + 20);
+            g.DrawString(line3, font, Brushes.White, gap, ty + 40);
+        }
+        string file = Path.Combine(Spec.Work, "check", $"{d.Name}_{attempt}.png");
+        Directory.CreateDirectory(Path.GetDirectoryName(file));
+        bmp.Save(file, ImageFormat.Png);
     }
 }

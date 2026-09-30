@@ -61,11 +61,11 @@ namespace Callbreak.Editor.Screens
 
         private static void SetStyle(SerializedObject so, string field, TMP_Text label)
         {
-            so.FindProperty($"{field}.Font").objectReferenceValue = label.font;
-            so.FindProperty($"{field}.Material").objectReferenceValue = label.fontSharedMaterial;
-            so.FindProperty($"{field}.Size").floatValue = label.fontSize;
-            so.FindProperty($"{field}.HorizontalScale").floatValue = label.characterHorizontalScale;
-            so.FindProperty($"{field}.Color").colorValue = label.color;
+            so.FindProperty($"{field}._font").objectReferenceValue = label.font;
+            so.FindProperty($"{field}._material").objectReferenceValue = label.fontSharedMaterial;
+            so.FindProperty($"{field}._size").floatValue = label.fontSize;
+            so.FindProperty($"{field}._horizontalScale").floatValue = label.characterHorizontalScale;
+            so.FindProperty($"{field}._color").colorValue = label.color;
         }
     }
 }

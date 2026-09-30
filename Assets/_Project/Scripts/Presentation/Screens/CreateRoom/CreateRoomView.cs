@@ -98,9 +98,12 @@ namespace Callbreak.Presentation.Screens
 
         private void RenderCreateButton()
         {
-            _createButton.interactable = _createInteractable;
-            _createButton.targetGraphic.raycastTarget = !_busy;     // no press feedback while busy
-            float alpha = _createInteractable ? 1f : DimmedAlpha;
+            // Busy wins: the button keeps its look and shows the spinner, whatever the interactable
+            // flag says meanwhile, and takes no taps (so no press feedback either) until it is over.
+            bool enabledLook = _busy || _createInteractable;
+            _createButton.interactable = enabledLook;
+            _createButton.targetGraphic.raycastTarget = !_busy;
+            float alpha = enabledLook ? 1f : DimmedAlpha;
             SetAlpha(_createButtonLabel, alpha);
             SetAlpha(_createChevron, alpha);
             _createChevron.enabled = !_busy;

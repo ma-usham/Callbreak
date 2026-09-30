@@ -77,7 +77,7 @@
         75.54
       ],
       "spritePpu": 0,
-      "checkError": 39.43
+      "checkError": 39.44
     },
     {
       "id": "ScoresButton",
@@ -102,7 +102,7 @@
         82.2
       ],
       "spritePpu": 0,
-      "checkError": 10.84
+      "checkError": 10.85
     },
     {
       "id": "ScoresIcon",
@@ -152,26 +152,26 @@
       "id": "HeaderDivider",
       "group": "HeaderRight",
       "rect": [
-        1528.85,
-        40.8,
-        1.7,
-        56.4
+        1528.97,
+        40.4,
+        1.53,
+        57.1
       ],
       "make": {
         "type": "rect",
-        "fill": "#4A3424",
+        "fill": "#59422F",
         "out": "Deco_HeaderDivider"
       },
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_HeaderDivider.png",
       "spriteRect": [
-        1528.85,
-        40.8,
-        1.7,
-        56.4
+        1528.97,
+        40.4,
+        1.53,
+        57.1
       ],
       "spritePpu": 200,
-      "checkError": 16.32
+      "checkError": 6.86
     },
     {
       "id": "SettingsButton",
@@ -196,7 +196,7 @@
         82.2
       ],
       "spritePpu": 0,
-      "checkError": 9.84
+      "checkError": 9.85
     },
     {
       "id": "SettingsIcon",
@@ -273,7 +273,7 @@
         24
       ],
       "spritePpu": 174.1667,
-      "checkError": 0.44
+      "checkError": 0.43
     },
     {
       "id": "TrophyArt",
@@ -296,7 +296,7 @@
         132
       ],
       "spritePpu": 174.1667,
-      "checkError": 0.25
+      "checkError": 0.26
     },
     {
       "id": "Headline",
@@ -313,6 +313,7 @@
         143.3,
         220
       ],
+      "dilate": 0.12,
       "lineGradient": [
         "#B50617",
         "#3B0406"
@@ -375,7 +376,7 @@
         580.3
       ],
       "spritePpu": 0,
-      "checkError": 7.5
+      "checkError": 7.43
     },
     {
       "id": "TitleDivider",
@@ -395,7 +396,7 @@
         19.79
       ],
       "spritePpu": 0,
-      "checkError": 8.92
+      "checkError": 8.94
     },
     {
       "id": "StandingsTitle",
@@ -413,6 +414,7 @@
         311.9,
         350.7
       ],
+      "dilate": 0.12,
       "lineGradient": [
         "#B30716",
         "#57070B"
@@ -478,75 +480,75 @@
         248.5
       ],
       "spritePpu": 0,
-      "checkError": 5.24
+      "checkError": 5.05
     },
     {
       "id": "RowSeparator1",
       "parent": "TableBody",
       "rect": [
-        457.8,
-        513.45,
-        756.9,
-        1.5
+        456.5,
+        513.69,
+        759.5,
+        1.15
       ],
       "make": {
         "type": "rect",
-        "fill": "#DBC7B6",
+        "fill": "#DEC8B6",
         "out": "Deco_RowSeparator"
       },
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_RowSeparator.png",
       "spriteRect": [
-        457.8,
-        513.45,
-        756.9,
-        1.5
+        456.5,
+        513.69,
+        759.5,
+        1.15
       ],
       "spritePpu": 200,
-      "checkError": 6.45
+      "checkError": 4.35
     },
     {
       "id": "RowSeparator0",
       "parent": "TableBody",
       "rect": [
-        457.8,
-        451.75,
-        756.9,
-        1.5
+        456.5,
+        451.7,
+        759.5,
+        1.15
       ],
       "use": "Deco_RowSeparator",
       "hidden": true,
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_RowSeparator.png",
       "spriteRect": [
-        457.8,
-        451.75,
-        756.9,
-        1.5
+        456.5,
+        451.7,
+        759.5,
+        1.15
       ],
       "spritePpu": 0,
-      "checkError": 13.85
+      "checkError": 11.53
     },
     {
       "id": "RowSeparator2",
       "parent": "TableBody",
       "rect": [
-        457.8,
-        575.45,
-        756.9,
-        1.5
+        456.5,
+        575.69,
+        759.5,
+        1.15
       ],
       "use": "Deco_RowSeparator",
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_RowSeparator.png",
       "spriteRect": [
-        457.8,
-        575.45,
-        756.9,
-        1.5
+        456.5,
+        575.69,
+        759.5,
+        1.15
       ],
       "spritePpu": 0,
-      "checkError": 6.71
+      "checkError": 4.91
     },
     {
       "id": "HighlightBand",
@@ -575,7 +577,7 @@
         59.5
       ],
       "spritePpu": 200,
-      "checkError": 6.22
+      "checkError": 5.85
     },
     {
       "id": "Row0",
@@ -1176,29 +1178,69 @@
       "checkError": 7.57
     },
     {
-      "id": "FooterLineLeft",
+      "id": "FooterLeft",
+      "kind": "group",
       "parent": "Panel",
       "rect": [
-        650,
-        677.4,
-        68.5,
-        1.8
+        634,
+        674,
+        85.4,
+        8
+      ]
+    },
+    {
+      "id": "FooterLineLeft",
+      "parent": "FooterLeft",
+      "rect": [
+        634,
+        677.62,
+        82.8,
+        1.39
+      ],
+      "fade": [
+        33,
+        0
       ],
       "make": {
         "type": "rect",
-        "fill": "#A3866D",
+        "fill": "#9D896F",
         "out": "Deco_FooterLine"
       },
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_FooterLine.png",
       "spriteRect": [
-        650,
-        677.4,
-        68.5,
-        1.8
+        634,
+        677.62,
+        82.8,
+        1.39
       ],
       "spritePpu": 200,
-      "checkError": 20.41
+      "checkError": 15.7
+    },
+    {
+      "id": "FooterCapLeft",
+      "parent": "FooterLeft",
+      "rect": [
+        716.6,
+        676.8,
+        2.8,
+        2.9
+      ],
+      "make": {
+        "type": "ellipse",
+        "fill": "#6A4E36",
+        "out": "Deco_FooterCap"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_FooterCap.png",
+      "spriteRect": [
+        716.6,
+        676.8,
+        2.8,
+        2.9
+      ],
+      "spritePpu": 200,
+      "checkError": 12.51
     },
     {
       "id": "Footer",
@@ -1223,25 +1265,61 @@
       "color": "#6D4F38"
     },
     {
-      "id": "FooterLineRight",
+      "id": "FooterRight",
+      "kind": "group",
       "parent": "Panel",
       "rect": [
-        952,
-        677.4,
-        72,
-        1.8
+        951.9,
+        674,
+        87.1,
+        8
+      ]
+    },
+    {
+      "id": "FooterCapRight",
+      "parent": "FooterRight",
+      "rect": [
+        951.9,
+        676.8,
+        2.8,
+        2.9
+      ],
+      "use": "Deco_FooterCap",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_FooterCap.png",
+      "spriteRect": [
+        951.9,
+        676.8,
+        2.8,
+        2.9
+      ],
+      "spritePpu": 0,
+      "checkError": 11.66
+    },
+    {
+      "id": "FooterLineRight",
+      "parent": "FooterRight",
+      "rect": [
+        954,
+        677.63,
+        85,
+        1.39
+      ],
+      "fade": [
+        0,
+        37
       ],
       "use": "Deco_FooterLine",
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_FooterLine.png",
       "spriteRect": [
-        952,
-        677.4,
-        72,
-        1.8
+        954,
+        677.63,
+        85,
+        1.39
       ],
       "spritePpu": 0,
-      "checkError": 19.74
+      "checkError": 15.32
     },
     {
       "id": "PlayAgainButton",
@@ -1399,7 +1477,7 @@
         240,
         58
       ],
-      "checkError": 5.33
+      "checkError": 5.55
     },
     {
       "id": "ScorecardLabel",
@@ -1429,25 +1507,25 @@
       "parent": "ScorecardButton",
       "rect": [
         757,
-        840.6,
-        156.4,
-        1.7
+        840.98,
+        158,
+        1.75
       ],
       "make": {
         "type": "rect",
-        "fill": "#6F5540",
+        "fill": "#866952",
         "out": "Deco_LinkUnderline"
       },
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_LinkUnderline.png",
       "spriteRect": [
         757,
-        840.6,
-        156.4,
-        1.7
+        840.98,
+        158,
+        1.75
       ],
       "spritePpu": 200,
-      "checkError": 5.91
+      "checkError": 8.79
     }
   ]
 }

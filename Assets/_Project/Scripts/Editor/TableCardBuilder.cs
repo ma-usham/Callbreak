@@ -25,6 +25,7 @@ namespace Callbreak.Editor
         public const string CardsFolder = "Assets/_Project/Art/Cards";
         public const string LibraryPath = "Assets/_Project/Config/Cards/CardSprites.asset";
         public const string CardPrefabPath = "Assets/_Project/Prefabs/Table/Card.prefab";
+        public const string GameplayScreenPrefabPath = "Assets/_Project/Prefabs/Table/GameplayScreen.prefab";
         public const string SilhouettePath = "Assets/_Project/Art/Screens/Table/FX_CardSilhouette.png";
         public const string GlowPath = "Assets/_Project/Art/Screens/Table/FX_CardGlow.png";
         public const string ShadowPath = "Assets/_Project/Art/UI/Common/UI_Panel_Card_Shadow.png";
@@ -74,8 +75,9 @@ namespace Callbreak.Editor
             CardSpriteProvider library = BuildLibrary(out string libraryReport);
             BuildEffects();
             BuildCardPrefab(library);
+            BuildGameplayScreen();
             AssetDatabase.SaveAssets();
-            return $"[TableCardBuilder] {libraryReport}; effects {SilhouettePath}, {GlowPath}; prefab {CardPrefabPath}";
+            return $"[TableCardBuilder] {libraryReport}; effects {SilhouettePath}, {GlowPath}; prefabs {CardPrefabPath}, {GameplayScreenPrefabPath}";
         }
 
         /// <summary>The library asset, built on first use.</summary>
@@ -394,6 +396,34 @@ namespace Callbreak.Editor
 
                 UiBuildKit.EnsureFolder(Path.GetDirectoryName(CardPrefabPath).Replace('\\', '/'));
                 PrefabUtility.SaveAsPrefabAsset(root, CardPrefabPath);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>
+        /// GameplayScreen.prefab: the empty, see-through screen at the bottom of the in-match screen
+        /// stack (its id is Gameplay). The Table scene's router gets it as its first screen.
+        /// </summary>
+        public static void BuildGameplayScreen()
+        {
+            var root = new GameObject("GameplayScreen", typeof(RectTransform));
+            try
+            {
+                var rect = (RectTransform)root.transform;
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+                var screen = root.AddComponent<GameplayScreen>();
+                var so = new SerializedObject(screen);
+                so.FindProperty("_screenId").intValue = (int)Callbreak.Presentation.Framework.ScreenId.Gameplay;
+                so.ApplyModifiedPropertiesWithoutUndo();
+                root.layer = LayerMask.NameToLayer("UI");
+                UiBuildKit.EnsureFolder(Path.GetDirectoryName(GameplayScreenPrefabPath).Replace('\\', '/'));
+                PrefabUtility.SaveAsPrefabAsset(root, GameplayScreenPrefabPath);
             }
             finally
             {

@@ -7,7 +7,9 @@ using Callbreak.Application.Ports;
 using Callbreak.Application.Sessions;
 using Callbreak.Core.Cards;
 using Callbreak.Core.Rules;
+using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Table;
+using UnityEditor;
 using UnityEngine;
 
 namespace Callbreak.Editor.Screens
@@ -32,6 +34,9 @@ namespace Callbreak.Editor.Screens
 
         public const string Deck = "classic-crimson";
 
+        /// <summary>The avatar presets the project scope hands to the table (built with the scenes).</summary>
+        public const string AvatarLibraryPath = "Assets/_Project/Config/UI/AvatarLibrary.asset";
+
         private static readonly string[] Names = { null, "Suman", "Asha", "Bikash" };
 
         /// <summary>Called by ScreenCaptureTool for the Table prefab: mockup 08.</summary>
@@ -49,7 +54,7 @@ namespace Callbreak.Editor.Screens
 
             ILocalization text = EditorStrings.Load();
             bool playing = moment == Moment.Gameplay;
-            TableSkin skin = view.Skin;
+            TableSkin skin = Skin();
 
             view.SetRound(text.Format("ui.table.round", 1, 5));
             view.SetTrick(null);
@@ -87,7 +92,7 @@ namespace Callbreak.Editor.Screens
             }
 
             view.Hand.Clear();
-            view.Hand.SetDeck(Deck);
+            view.Hand.SetDeck(skin.Cards, Deck);
             view.Hand.SetCards(hand, false);
 
             // As drawn: only A♥ is lifted and only 8♥ is subdued (in the game every illegal card is).
@@ -100,16 +105,22 @@ namespace Callbreak.Editor.Screens
             if (playing)
             {
                 // Suman led 9♥, Asha played Q♥, Bikash 10♥ (GDD §13 FIG 13.5).
-                Place(view, 1, Card.Parse("9♥"));
-                Place(view, 2, Card.Parse("Q♥"));
-                Place(view, 3, Card.Parse("10♥"));
+                Place(view, skin, 1, Card.Parse("9♥"));
+                Place(view, skin, 2, Card.Parse("Q♥"));
+                Place(view, skin, 3, Card.Parse("10♥"));
             }
         }
 
-        private static void Place(TableView view, int relativeSeat, Card card)
+        /// <summary>The table's art as the game gets it: the card library and the avatar presets.</summary>
+        public static TableSkin Skin()
+        {
+            return new TableSkin(TableCardBuilder.EnsureLibrary(), AssetDatabase.LoadAssetAtPath<AvatarLibrary>(AvatarLibraryPath));
+        }
+
+        private static void Place(TableView view, TableSkin skin, int relativeSeat, Card card)
         {
             CardView cardView = view.Cards.Rent(view.Trick.Area);
-            cardView.ShowFace(card, view.Skin.Face(Deck, card));
+            cardView.ShowFace(card, skin.Face(Deck, card));
             view.Trick.Adopt(relativeSeat, cardView);
             view.Trick.Settle(relativeSeat);
         }

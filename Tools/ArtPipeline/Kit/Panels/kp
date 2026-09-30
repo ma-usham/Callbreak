@@ -6,6 +6,6 @@ repo="$(cd "$here/../../../.." && pwd)"
 art="$repo/Temp/KitPanels"
 dll="$art/bin/KitPanels/release/kitpanels.dll"
 if [ ! -f "$dll" ] || [ -n "$(find "$here" "$repo/Tools/ArtTool" -maxdepth 1 -name '*.cs' -newer "$dll" 2>/dev/null | head -1)" ] || [ "$here/KitPanels.csproj" -nt "$dll" ]; then
-  dotnet build "$here/KitPanels.csproj" -c Release -nologo -v q --artifacts-path "$art" >"$art.build.log" 2>&1 || { cat "$art.build.log" >&2; echo "kitpanels build failed" >&2; exit 1; }
+  dotnet build "$here/KitPanels.csproj" -c Release -nologo -v q --artifacts-path "$art" >"$art.build.log" 2>&1 || { grep -E 'error' "$art.build.log" | sort -u | head -12 >&2; echo "kitpanels build failed (full log: $art.build.log)" >&2; exit 1; }
 fi
 cd "$repo" && exec dotnet "$dll" "$@"
