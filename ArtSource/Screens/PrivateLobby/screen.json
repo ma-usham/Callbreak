@@ -1,11 +1,13 @@
 {
   // Screen 04 - Private lobby (GDD §11). Rects are mockup pixels on 04-private-lobby.png.
-  // Shared menu background and shared kit; only what is unique here is cut or derived from the mockup.
+  // Shared menu background and shared kit; the only thing still derived from the mockup is the code pill's
+  // soft shadow.
   // Generated kit art (ArtSource/Kit/*.map.csv) is placed at the rects its map rows give, icons at the
   // opacity that gives this mockup's ink colour in the middle of a stroke (the generated icons are pure
-  // black; the map's "mockup ink" averages in the soft stroke edges, which is too light for thin strokes). The older shared
-  // icons and the logo keep their own proportions (rects from ArtSource/Working/CreateRoom/derive/derive.sh
-  // tool fiticon|fitlogo: the sprite's glyph centred on this mockup's glyph at one scale).
+  // black; the map's "mockup ink" averages in the soft stroke edges, which is too light for thin strokes).
+  // The older shared icons and the logo keep their own proportions (rects from
+  // ArtSource/Working/CreateRoom/derive/derive.sh tool fiticon|fitlogo: the sprite's glyph centred on this
+  // mockup's glyph at one scale).
   "name": "PrivateLobby",
   "mockup": "04-private-lobby.png",
   "background": "shared",
@@ -30,10 +32,11 @@
     { "id": "Panel", "shape": "roundrect", "radius": 24.5, "rect": [330.9, 240.0, 1010.9, 606.4],
       "use": "UI/Panels/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
 
-    // Room-code pill and its soft shadow: derived from the mockup (ArtSource/Working/PrivateLobby/derive), the pill
-    // with its contents filled from the columns beside them.
-    { "id": "CodePill", "parent": "Panel", "shape": "roundrect", "radius": 21, "rect": [490.33, 282.32, 375.9, 77.2],
-      "use": "UI_Pill_RoomCode", "shadowUse": "Screens/PrivateLobby/UI_Pill_RoomCode_Shadow.png" },
+    // Kit room-code pill (ArtSource/Kit/Controls.map.csv), 9-sliced: the rect is the outer edge of its outline.
+    // Its soft shadow is derived from the mockup (ArtSource/Working/PrivateLobby/derive): the pill's rect grown
+    // by 10 px on every side.
+    { "id": "CodePill", "parent": "Panel", "shape": "roundrect", "radius": 27, "rect": [490.13, 281.83, 376.15, 77.55],
+      "use": "UI/Controls/UI_Pill_RoomCode.png", "shadowUse": "Screens/PrivateLobby/UI_Pill_RoomCode_Shadow.png", "shadowSpread": 10 },
     { "id": "CodeCaption", "kind": "label", "parent": "CodePill", "text": "Room code", "font": "SansSemiBold", "align": "left", "rect": [512, 305, 134, 34], "key": "ui.private_lobby.room_code" },
     { "id": "Code", "kind": "label", "parent": "CodePill", "text": "AB12CD", "font": "SansBold", "align": "left", "rect": [651, 303, 132, 40] },
     // The faint hairline between the code and the copy button (a shape, not a cut).
@@ -61,10 +64,11 @@
       "use": "UI/Avatars/UI_AvatarRing.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15 },
     { "id": "SeatPicture3", "parent": "SeatAvatar3", "shape": "ellipse", "rect": [1134.5, 405.0, 122.5, 122.5], "use": "UI/Avatars/Avatar_Default.png" },
 
-    { "id": "SeatDot1", "parent": "Panel", "shape": "ellipse", "rect": [752.66, 499.04, 31.2, 31.2], "scale": 2, "out": "UI_ReadyDot" },
-    { "id": "SeatDot2", "parent": "Panel", "shape": "rect", "rect": [990.66, 499.03, 32, 32], "use": "UI_ReadyDot" },
-    { "id": "SeatDot3", "parent": "Panel", "shape": "rect", "rect": [1229.88, 499.02, 32, 32], "use": "UI_ReadyDot" },
-    { "id": "SeatDot0", "parent": "Panel", "shape": "rect", "rect": [511.96, 499.02, 32, 32], "use": "UI_ReadyDot", "hidden": true, "hole": false },
+    // Kit ready dot (Controls.map.csv): the green disc in its white ring, 31.92 square about each dot's centre.
+    { "id": "SeatDot1", "parent": "Panel", "rect": [752.30, 498.78, 31.92, 31.92], "use": "UI/Controls/UI_ReadyDot.png" },
+    { "id": "SeatDot2", "parent": "Panel", "rect": [991.00, 498.77, 31.92, 31.92], "use": "UI/Controls/UI_ReadyDot.png" },
+    { "id": "SeatDot3", "parent": "Panel", "rect": [1230.10, 498.77, 31.92, 31.92], "use": "UI/Controls/UI_ReadyDot.png" },
+    { "id": "SeatDot0", "parent": "Panel", "rect": [512.00, 499.06, 31.92, 31.92], "use": "UI/Controls/UI_ReadyDot.png", "hidden": true, "hole": false },
 
     { "id": "SeatName0", "kind": "label", "parent": "Panel", "text": "You", "font": "SansBold", "rect": [445, 540, 65, 34] },
     { "id": "SeatStatus0", "kind": "label", "parent": "Panel", "text": "Host", "font": "SansSemiBold", "rect": [445, 581, 62, 30] },
@@ -83,8 +87,9 @@
     { "id": "SeatsDivider", "parent": "Panel", "rect": [462.5, 641.4, 747.1, 13.3], "use": "UI/Decor/Deco_LobbyDivider.png" },
     { "id": "Footer", "kind": "label", "parent": "Panel", "text": "4 / 4 players  ·  5 rounds  ·  30 sec per turn", "font": "SansSemiBold", "rect": [598, 672, 476, 34] },
 
-    { "id": "StartButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 37, "rect": [542.3, 729.4, 587.8, 95.3],
-      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    // The inner screens' plain crimson pill (Controls.map.csv), sliced left and right only; the rect is its outer edge.
+    { "id": "StartButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 37, "rect": [542.27, 729.26, 587.77, 95.90],
+      "use": "UI/Controls/UI_Button_Crimson.png", "shadowUse": "UI/Controls/UI_Button_Crimson_Shadow.png", "shadowDrop": 5.5, "shadowOpacity": 0.25 },
     { "id": "StartIcon", "parent": "StartButton", "rect": [669.83, 749.89, 51.23, 55.55], "use": "UI/Icons/Icon_Spade_Gold.png", "hole": false },
     { "id": "StartLabel", "kind": "label", "parent": "StartButton", "text": "Start Game", "font": "SerifSemiBold", "ink": "light", "style": "buttonLabel", "rect": [738, 750, 272, 56], "key": "ui.private_lobby.start" }
   ]

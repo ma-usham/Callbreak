@@ -1,6 +1,7 @@
 {
   // Screen 03 - Join Room (GDD §11). Rects are mockup pixels on 03-join-room.png.
-  // Shared menu background and shared kit; only what is unique here is cut or derived from the mockup.
+  // Shared menu background and shared kit. This screen cuts nothing of its own from the mockup except the
+  // code boxes' soft shadows (the light chevron in UI/Common is still a mockup cut).
   // Generated kit art (ArtSource/Kit/*.map.csv) is placed at the rects its map rows give, icons at the
   // opacity that gives this mockup's ink colour in the middle of a stroke (the generated icons are pure
   // black; the map's "mockup ink" averages in the soft stroke edges, which is too light for thin strokes).
@@ -35,21 +36,22 @@
     { "id": "Title", "kind": "label", "parent": "Panel", "text": "Enter room code", "font": "SerifBold", "rect": [604, 350, 468, 70], "key": "ui.join_room.title" },
     { "id": "Helper", "kind": "label", "parent": "Panel", "text": "Ask your friend for their 6-character code.", "font": "SansMedium", "rect": [538, 424, 596, 40], "key": "ui.join_room.helper" },
 
-    // Six code boxes: one derived box sprite (UI_CodeBox, box 2 with its letter filled from the columns
-    // beside it; ArtSource/Working/JoinRoom/derive) at each box's measured place, each with its own shadow.
+    // Six code boxes: the kit's box (ArtSource/Kit/Controls.map.csv) at the outer edge of each box's brown
+    // outline, each with its own soft shadow solved from the mockup. The customizer gives the CodeInput the
+    // kit's focus and error looks (UI_CodeBox_Focus, UI_CodeBox_Error: the same box, other outline).
     // The letters are dynamic; the customizer gives all six the size fitted on "B" and centres them.
     { "id": "CodeInput", "kind": "group", "parent": "Panel", "rect": [465, 478, 745, 120] },
-    { "id": "CodeBox0", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [469.44, 482.5, 108.1, 109.0], "shadow": 5, "use": "UI_CodeBox" },
+    { "id": "CodeBox0", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [469.30, 482.35, 108.45, 109.44], "shadow": 5, "use": "UI/Controls/UI_CodeBox_Normal.png" },
     { "id": "CodeLetter0", "kind": "label", "parent": "CodeBox0", "text": "A", "font": "SansBold", "rect": [478, 492, 92, 92] },
-    { "id": "CodeBox1", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [594.39, 482.5, 108.1, 109.0], "shadow": 5, "use": "UI_CodeBox" },
+    { "id": "CodeBox1", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [594.24, 482.35, 108.45, 109.44], "shadow": 5, "use": "UI/Controls/UI_CodeBox_Normal.png" },
     { "id": "CodeLetter1", "kind": "label", "parent": "CodeBox1", "text": "B", "font": "SansBold", "rect": [603, 492, 92, 92] },
-    { "id": "CodeBox2", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [719.52, 482.5, 108.1, 109.0], "shadow": 5, "use": "UI_CodeBox" },
+    { "id": "CodeBox2", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [719.38, 482.35, 108.45, 109.44], "shadow": 5, "use": "UI/Controls/UI_CodeBox_Normal.png" },
     { "id": "CodeLetter2", "kind": "label", "parent": "CodeBox2", "text": "1", "font": "SansBold", "rect": [728, 492, 92, 92] },
-    { "id": "CodeBox3", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [844.96, 482.5, 108.1, 109.0], "shadow": 5, "use": "UI_CodeBox" },
+    { "id": "CodeBox3", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [844.81, 482.35, 108.45, 109.44], "shadow": 5, "use": "UI/Controls/UI_CodeBox_Normal.png" },
     { "id": "CodeLetter3", "kind": "label", "parent": "CodeBox3", "text": "2", "font": "SansBold", "rect": [853, 492, 92, 92] },
-    { "id": "CodeBox4", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [970.40, 482.5, 108.1, 109.0], "shadow": 5, "use": "UI_CodeBox" },
+    { "id": "CodeBox4", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [970.25, 482.35, 108.45, 109.44], "shadow": 5, "use": "UI/Controls/UI_CodeBox_Normal.png" },
     { "id": "CodeLetter4", "kind": "label", "parent": "CodeBox4", "text": "C", "font": "SansBold", "rect": [978, 492, 92, 92] },
-    { "id": "CodeBox5", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [1095.37, 482.5, 108.1, 109.0], "shadow": 5, "use": "UI_CodeBox" },
+    { "id": "CodeBox5", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [1095.20, 482.35, 108.45, 109.44], "shadow": 5, "use": "UI/Controls/UI_CodeBox_Normal.png" },
     { "id": "CodeLetter5", "kind": "label", "parent": "CodeBox5", "text": "D", "font": "SansBold", "rect": [1103, 492, 92, 92] },
 
     { "id": "PasteButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [689.54, 612.93, 293.2, 70.31],
@@ -57,12 +59,14 @@
     { "id": "PasteIcon", "parent": "PasteButton", "rect": [740.71, 627.76, 38.18, 40.79], "use": "UI/Icons/Icon_Copy.png", "opacity": 0.995 },
     { "id": "PasteLabel", "kind": "label", "parent": "PasteButton", "text": "Paste Code", "font": "SansSemiBold", "align": "left", "rect": [798, 632, 142, 34], "key": "ui.join_room.paste" },
 
-    { "id": "JoinButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [500.5, 697.6, 670.3, 107.9],
+    // The main menu's gold-rimmed pill, as this mockup draws it (Controls.map.csv: keep), at the rect where it fits best.
+    { "id": "JoinButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [501.10, 698.13, 670.00, 107.85],
       "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
     { "id": "JoinButtonLabel", "kind": "label", "parent": "JoinButton", "text": "Join Room", "font": "SerifSemiBold", "ink": "light", "style": "buttonLabel", "rect": [735, 726, 214, 52], "key": "ui.join_room.cta" },
-    { "id": "JoinChevron", "parent": "JoinButton", "rect": [971.48, 736.64, 20.01, 32.96], "use": "UI/Common/Icon_Chevron_Light.png", "hole": false },
-    // Busy state: the spinner ring made on screen 02, in the chevron's place; hidden by default.
-    { "id": "JoinSpinner", "parent": "JoinButton", "rect": [965.49, 737.12, 32, 32], "use": "Screens/CreateRoom/UI_SpinnerRing.png", "hidden": true, "hole": false },
+    // Kit chevron (Controls.map.csv): the sprite is the chevron's ink box.
+    { "id": "JoinChevron", "parent": "JoinButton", "rect": [971.37, 736.43, 20.09, 33.33], "use": "UI/Icons/Icon_Chevron_Thin.png", "hole": false },
+    // Busy state: the kit's ivory ring in the chevron's place, as on screen 02; hidden by default.
+    { "id": "JoinSpinner", "parent": "JoinButton", "rect": [965.49, 737.12, 32, 32], "use": "UI/Controls/UI_Ring_Spinner.png", "hidden": true, "hole": false },
 
     // Hairlines: drawn as shapes at their measured rectangles and colour, not cut.
     { "id": "FooterLineLeft", "parent": "Panel", "rect": [545.3, 837.45, 83.5, 1.69], "hole": false, "make": { "type": "rect", "fill": "#9F7F62", "out": "Deco_FooterLine" } },

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Placeholder control sprites for screens 02-04, derived from the mockups, that arttool's own cut
 # could not produce: controls whose text must be erased from flat art, and the segmented-control
-# track, whose right half is hidden under the selected pill on the mockup. (The generated UI kit
-# replaces them: see ArtSource/Kit/*.map.csv.)
+# track, whose right half is hidden under the selected pill on the mockup. The generated Controls
+# kit has replaced them on the screens (ArtSource/Kit/Controls.map.csv); the placeholders stay on
+# disk. Still in use: the room-code pill's soft shadow (screen 04), solved here from the mockup.
 #   Usage: ArtSource/Working/CreateRoom/derive/derive.sh [CreateRoom|JoinRoom|PrivateLobby|all]
 #          ArtSource/Working/CreateRoom/derive/derive.sh tool <command> [options]   (run the helper directly)
 # The sprites are written to Assets/_Project/Art/Screens/<Name>/ (and ArtSource/Exports/Screens/<Name>/,
@@ -110,7 +111,9 @@ if [ "$what" = "PrivateLobby" ] || [ "$what" = "all" ]; then
   tool mirrorpill --screen 04 --rect 490.33,282.32,375.9,77.2 --radius 21 --erase "516,300,326,42" --nomirror --scale 2 --out "$(sprite PrivateLobby UI_Pill_RoomCode)"
   # Its soft shadow, solved against this mockup (the shared panel is a little lighter than this
   # mockup, so a shadow solved against the panel would carry a faint box around the pill).
-  tool softshadow --screen 04 --rect 490.33,282.32,375.9,77.2 --radius 21 --pad 10 --scale 2 --out "$(sprite PrivateLobby UI_Pill_RoomCode_Shadow)"
-  publish PrivateLobby UI_Pill_RoomCode 04 "placeholder: room-code pill; contents erased"
-  publish PrivateLobby UI_Pill_RoomCode_Shadow 04 "placeholder: the pill's soft shadow; pad 10 px"
+  # It is solved for the kit pill's own outline (Controls.map.csv: its rect and corner radius 27), which
+  # the screen places with "shadowSpread": 10.
+  tool softshadow --screen 04 --rect 490.13,281.83,376.15,77.55 --radius 27 --pad 10 --scale 2 --out "$(sprite PrivateLobby UI_Pill_RoomCode_Shadow)"
+  publish PrivateLobby UI_Pill_RoomCode 04 "placeholder: room-code pill; contents erased (replaced by UI/Controls/UI_Pill_RoomCode.png)"
+  publish PrivateLobby UI_Pill_RoomCode_Shadow 04 "the kit room-code pill's soft shadow; solved from the mockup; pad 10 px"
 fi

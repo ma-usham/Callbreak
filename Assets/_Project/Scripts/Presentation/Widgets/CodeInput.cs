@@ -3,6 +3,7 @@ using Callbreak.Application.Rooms;
 using LitMotion;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Callbreak.Presentation.Widgets
 {
@@ -10,10 +11,11 @@ namespace Callbreak.Presentation.Widgets
     /// Six-box room-code entry (GDD §11 screen 03). One hidden <see cref="TMP_InputField"/> takes
     /// typing, backspace and paste; each box shows one character. Input is uppercased and anything
     /// outside the <see cref="RoomCode"/> alphabet is dropped. Typing always continues at the end,
-    /// so the boxes fill left to right and backspace steps back. The next box to fill shows a
-    /// stronger rim while the field has focus. An error gives every box its error look
-    /// (<see cref="SetError"/>) and shakes the row (<see cref="Shake"/>, unless
-    /// <see cref="ReduceMotion"/> is on).
+    /// so the boxes fill left to right and backspace steps back. A box is drawn in one of three
+    /// looks of the same size: the next box to fill has the focus look while the field has focus
+    /// (GDD §12: focus = gold outline), all six have the error look while an error shows
+    /// (<see cref="SetError"/>), and the normal look otherwise. An error also shakes the row
+    /// (<see cref="Shake"/>, unless <see cref="ReduceMotion"/> is on).
     /// </summary>
     public sealed class CodeInput : MonoBehaviour
     {
@@ -24,8 +26,10 @@ namespace Callbreak.Presentation.Widgets
 
         [SerializeField] private TMP_InputField _input;
         [SerializeField] private TMP_Text[] _letters;
-        [SerializeField] private GameObject[] _focusLooks;
-        [SerializeField] private GameObject[] _errorLooks;
+        [SerializeField] private Image[] _boxes;
+        [SerializeField] private Sprite _normalBox;
+        [SerializeField] private Sprite _focusBox;
+        [SerializeField] private Sprite _errorBox;
         [SerializeField] private RectTransform _shakeTarget;
         [SerializeField] private float _shakeDistance = 12f;
 
@@ -64,8 +68,8 @@ namespace Callbreak.Presentation.Widgets
         public void Focus() => _input.ActivateInputField();
 
         /// <summary>
-        /// The boxes' error look on or off: a rim in the error colour on all six. While it is on
-        /// it takes the focus rim's place.
+        /// The boxes' error look on or off: all six at once. While it is on, no box shows the
+        /// focus look.
         /// </summary>
         public void SetError(bool on)
         {
@@ -151,19 +155,12 @@ namespace Callbreak.Presentation.Widgets
             }
 
             int active = Mathf.Min(code.Length, Length - 1);
-            for (int i = 0; i < _focusLooks.Length; i++)
+            for (int i = 0; i < _boxes.Length; i++)
             {
-                if (_focusLooks[i] != null)
+                Sprite look = _error ? _errorBox : _focused && i == active ? _focusBox : _normalBox;
+                if (_boxes[i].sprite != look)
                 {
-                    _focusLooks[i].SetActive(_focused && !_error && i == active);
-                }
-            }
-
-            for (int i = 0; i < _errorLooks.Length; i++)
-            {
-                if (_errorLooks[i] != null)
-                {
-                    _errorLooks[i].SetActive(_error);
+                    _boxes[i].sprite = look;
                 }
             }
         }
