@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Ports;
+using Callbreak.Application.Rooms;
 using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
 using Callbreak.Core.Events;
@@ -26,10 +27,16 @@ namespace Callbreak.Presentation.Overlays
     /// Play Again starts what the mode calls for (offline: a new match at the same difficulty;
     /// private room: back to the lobby; Quick Match: search again); Main Menu leaves the match and
     /// goes home. It replaces the last round's results, and waits for a menu or the scorecard the
-    /// player has open to close first.
+    /// player has open to close first. A negative total is burgundy, like every negative score
+    /// (GDD §12). The music ducks under the victory sting (GDD §14). If the private room is gone
+    /// by the time Play Again is pressed (the host left), the player is told so on the way to the
+    /// main menu.
     /// </summary>
     public sealed class MatchResultsPresenter : IStartable, ITickable, IDisposable
     {
+        /// <summary>How long the music stays ducked: the length of the victory sting (SFX_Victory_01, 3 s).</summary>
+        public const double VictoryStingSeconds = 3.0;
+
         private readonly MatchResultsView _view;
         private readonly AvatarLibrary _avatars;
         private readonly PlayedTable _table;
@@ -40,8 +47,15 @@ namespace Callbreak.Presentation.Overlays
         private readonly IAudioService _audio;
         private readonly IHaptics _haptics;
         private readonly IAppFlow _flow;
+        private readonly IRoomService _rooms;
+        private readonly IToast _toast;
+        private readonly IClock _clock;
 
         private IReadOnlyList<Standing> _standings;
+        private IRoomSession _room;
+        private RoomError _roomClosed = RoomError.None;
+        private double _duckUntil;
+        private bool _ducked;
         private bool _started;
         private bool _wanted;
         private bool _shown;
@@ -58,7 +72,10 @@ namespace Callbreak.Presentation.Overlays
             ILocalization localization,
             IAudioService audio,
             IHaptics haptics,
-            IAppFlow flow)
+            IAppFlow flow,
+            IRoomService rooms,
+            IToast toast,
+            IClock clock)
         {
             _view = view;
             _avatars = avatars;
@@ -70,6 +87,9 @@ namespace Callbreak.Presentation.Overlays
             _audio = audio;
             _haptics = haptics;
             _flow = flow;
+            _rooms = rooms;
+            _toast = toast;
+            _clock = clock;
         }
 
         public void Start()
@@ -86,6 +106,13 @@ namespace Callbreak.Presentation.Overlays
             _table.Rebuilt += OnRebuilt;
             _session.SeatsChanged += OnTextChanged;
             _localization.LanguageChanged += OnTextChanged;
+
+            // A private room can close under the results (the host leaves): remember why.
+            _room = _session.Mode == MatchMode.PrivateRoom && _rooms != null ? _rooms.Current : null;
+            if (_room != null)
+            {
+                _room.Closed += OnRoomClosed;
+            }
         }
 
         public void Dispose()
@@ -110,6 +137,13 @@ namespace Callbreak.Presentation.Overlays
                 _table.Rebuilt -= OnRebuilt;
                 _session.SeatsChanged -= OnTextChanged;
                 _localization.LanguageChanged -= OnTextChanged;
+                if (_room != null)
+                {
+                    _room.Closed -= OnRoomClosed;
+                }
+
+                // The music must not stay ducked for the scene that comes next.
+                Unduck();
             }
             catch (Exception e)
             {
@@ -119,7 +153,17 @@ namespace Callbreak.Presentation.Overlays
 
         public void Tick()
         {
-            if (!_started || !_wanted || _shown || !_router.Has(ScreenId.MatchResults))
+            if (!_started)
+            {
+                return;
+            }
+
+            if (_ducked && _clock.Now >= _duckUntil)
+            {
+                Unduck();
+            }
+
+            if (!_wanted || _shown || !_router.Has(ScreenId.MatchResults))
             {
                 return;
             }
@@ -141,9 +185,27 @@ namespace Callbreak.Presentation.Overlays
             _shown = true;
             if (_celebrate && LocalStanding().Rank == 1)
             {
+                // GDD §14: music ducks 3 dB under the victory sting, and comes back when it ends.
+                _audio.Duck(true);
+                _ducked = true;
+                _duckUntil = _clock.Now + VictoryStingSeconds;
                 _audio.Play(SoundCue.Victory);
                 _haptics.Play(HapticPattern.Success);
             }
+        }
+
+        private void Unduck()
+        {
+            if (_ducked)
+            {
+                _ducked = false;
+                _audio.Duck(false);
+            }
+        }
+
+        private void OnRoomClosed(RoomError reason)
+        {
+            _roomClosed = reason;
         }
 
         private void OnPlayed(MatchEvent e)
@@ -214,7 +276,8 @@ namespace Callbreak.Presentation.Overlays
                     standing.Rank.ToString(CultureInfo.InvariantCulture),
                     isLocal ? _localization.Get(ResultsText.YouKey) : seat.Name,
                     ScoreTenths.Format(standing.TotalTenths),
-                    standing.Rank == 1);
+                    standing.Rank == 1,
+                    standing.TotalTenths < 0);
                 Sprite avatar = _avatars != null ? _avatars.Get(seat.AvatarId) : null;
                 if (avatar != null)
                 {
@@ -257,10 +320,23 @@ namespace Callbreak.Presentation.Overlays
                 switch (_session.Mode)
                 {
                     case MatchMode.Offline:
-                        await _flow.StartMatchAsync(new MatchLaunchRequest(MatchMode.Offline, _settings.Difficulty), CancellationToken.None);
+                        // "A new match at the same difficulty": the one just played, which a practice
+                        // or a resumed match did not take from the offline setup's remembered choice.
+                        BotDifficulty difficulty = _session is OfflineMatchSession played ? played.Difficulty : _settings.Difficulty;
+                        await _flow.StartMatchAsync(new MatchLaunchRequest(MatchMode.Offline, difficulty), CancellationToken.None);
                         break;
 
                     case MatchMode.PrivateRoom:
+                        if (_rooms != null && _rooms.Current == null)
+                        {
+                            // The room closed under the results (the host left): there is no lobby
+                            // to go back to. The player is told why this is the main menu (GDD §8).
+                            RoomError why = _roomClosed == RoomError.None ? RoomError.HostLeft : _roomClosed;
+                            _toast.Show(_localization.Get(RoomMessages.KeyFor(why)));
+                            await _flow.GoToMenuAsync(MenuEntry.MainMenu, CancellationToken.None);
+                            break;
+                        }
+
                         // The room is a lobby again after the match: same friends, ready flags reset.
                         await _flow.GoToMenuAsync(MenuEntry.PrivateLobby, CancellationToken.None);
                         break;

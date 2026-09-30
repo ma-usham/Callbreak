@@ -70,6 +70,9 @@ namespace Callbreak.Editor.Screens
                 seat.SetAvatar(skin.Avatar(0));
                 seat.SetTurn(false);
                 seat.HideBubble();
+
+                // The mockups show three players who are there: no chip, no BOT tag.
+                seat.SetChip(null, false);
                 var info = new SeatStatusInfo(false, SeatConnection.Connected, false, playing ? 3 : CallRules.NotCalled, false, playing, playing ? 1 : 0);
                 seat.SetStatus(SeatStatus.Text(info, text), false);
                 seat.Fan.SetBack(skin.Back(Deck));
@@ -80,6 +83,7 @@ namespace Callbreak.Editor.Screens
             you.SetName(text.Get("ui.table.you"));
             you.SetAvatar(skin.Avatar(0));
             you.HideBubble();
+            you.SetChip(null, false);
             var mine = new SeatStatusInfo(true, SeatConnection.Connected, !playing, playing ? 4 : CallRules.NotCalled, false, playing, playing ? 2 : 0);
             you.SetStatus(SeatStatus.Text(mine, text), false);
             you.SetTurn(true);

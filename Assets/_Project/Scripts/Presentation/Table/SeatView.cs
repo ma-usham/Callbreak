@@ -10,7 +10,10 @@ namespace Callbreak.Presentation.Table
     /// One seat at the table (GDD §11 screens 07 and 08): avatar in its ring, name plate, status
     /// pill, and while it is the seat's turn the gold ring with the timer arc and the seconds disc.
     /// Opponents also have the fan of face-down cards behind the avatar. A small bubble over the
-    /// seat shows a call as it is placed and the quick phrases (emotes).
+    /// seat shows a call as it is placed and the quick phrases (emotes). A small chip at the
+    /// avatar says how the player is connected ("Away", "Reconnecting…" with a spinner, "Bot
+    /// playing") or, on an online table, that the seat is a fill-in bot ("BOT"); the mockups do
+    /// not draw it, so it is made of the kit's tag pill and hidden until there is something to say.
     /// </summary>
     public sealed class SeatView : MonoBehaviour
     {
@@ -26,18 +29,24 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private OpponentHandView _fan;
         [SerializeField] private RectTransform _bubble;
         [SerializeField] private TMP_Text _bubbleText;
+        [SerializeField] private RectTransform _chip;
+        [SerializeField] private TMP_Text _chipText;
+        [SerializeField] private GameObject _chipSpinner;
         [SerializeField] private Color _pillColor = Color.white;
         [SerializeField] private Color _pillMetColor = new Color(1f, 0.88f, 0.55f, 1f);
         [SerializeField] private Color _ringColor = new Color(0.976f, 0.647f, 0.11f, 1f);
         [SerializeField] private Color _ringWarningColor = new Color(0.525f, 0.063f, 0.094f, 1f);
         [SerializeField] private float _bubblePadding = 44f;
         [SerializeField] private float _bubbleMinWidth = 76f;
+        [SerializeField] private float _chipPadding = 26f;
+        [SerializeField] private float _chipSpinnerSpace = 26f;
 
         private MotionHandle _bubbleMotion;
         private MotionHandle _pulseMotion;
         private int _shownSeconds = int.MinValue;
         private bool _met;
         private bool _muted;
+        private bool _chipBusy;
 
         /// <summary>The opponent tapped: the presenter mutes or unmutes this seat's emotes.</summary>
         public event Action AvatarClicked;
@@ -70,6 +79,50 @@ namespace Callbreak.Presentation.Table
                 _met = met;
                 _statusPill.color = met ? _pillMetColor : _pillColor;
             }
+        }
+
+        /// <summary>The chip's text while it shows; null while the seat has no chip.</summary>
+        public string Chip => _chip != null && _chip.gameObject.activeSelf ? _chipText.text : null;
+
+        /// <summary>The chip shows its spinner.</summary>
+        public bool ChipIsBusy => _chip != null && _chip.gameObject.activeSelf && _chipSpinner.activeSelf;
+
+        /// <summary>
+        /// The chip at the avatar (GDD §8 "What others see", §9 "a small BOT tag"): "Away",
+        /// "Reconnecting…" (<paramref name="busy"/>: with the spinner), "Bot playing" or "BOT".
+        /// Null or empty hides it. The pill hugs its text.
+        /// </summary>
+        public void SetChip(string text, bool busy)
+        {
+            if (_chip == null)
+            {
+                // A Table prefab built before the chip existed: it has nothing to show it with.
+                return;
+            }
+
+            bool show = !string.IsNullOrEmpty(text);
+            if (_chip.gameObject.activeSelf != show)
+            {
+                _chip.gameObject.SetActive(show);
+            }
+
+            if (!show || (_chipText.text == text && _chipBusy == busy && _chipSpinner.activeSelf == busy))
+            {
+                return;
+            }
+
+            _chipBusy = busy;
+            _chipText.text = text;
+            if (_chipSpinner.activeSelf != busy)
+            {
+                _chipSpinner.SetActive(busy);
+            }
+
+            // The spinner sits at the left end; the text is centred in what is left.
+            float spinner = busy ? _chipSpinnerSpace : 0f;
+            _chipText.rectTransform.offsetMin = new Vector2(spinner, 0f);
+            float width = Mathf.Ceil(_chipText.GetPreferredValues(text).x) + _chipPadding + spinner;
+            _chip.sizeDelta = new Vector2(width, _chip.sizeDelta.y);
         }
 
         /// <summary>The gold ring of the seat whose turn it is; a full ring when no clock is running.</summary>

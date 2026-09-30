@@ -1,16 +1,22 @@
+using System;
 using System.Collections.Generic;
 using Callbreak.Core.Cards;
 using Callbreak.Core.Events;
 using Callbreak.Core.Match;
+using Callbreak.Core.Randomness;
+using Callbreak.Core.Rules;
 using Callbreak.Presentation.Table;
 using Callbreak.Presentation.Table.Playback;
+using Callbreak.Tests.EditMode.Support;
 using NUnit.Framework;
 
 namespace Callbreak.Tests.EditMode.Presentation
 {
     /// <summary>
-    /// GDD §23 event playback: a FIFO queue, one animation at a time, double speed past three
-    /// waiting events, a tap skips anything longer than 0.3 s, and a resync clears everything.
+    /// GDD §23 event playback: a FIFO queue, one animation at a time, double speed for a table
+    /// that is more than three events behind (one move's own events are not a backlog), the pause
+    /// before a card the engine played by itself, a tap skips anything longer than 0.3 s, a resync
+    /// clears everything, and an event whose playback throws ends in a rebuild, not in a stall.
     /// </summary>
     public sealed class MatchEventPlayerTests
     {
@@ -30,10 +36,17 @@ namespace Callbreak.Tests.EditMode.Presentation
 
             public bool Finished { get; private set; }
 
+            public bool FailOnTick { get; set; }
+
             public void Begin() => Began = true;
 
             public bool Tick(float deltaTime)
             {
+                if (FailOnTick)
+                {
+                    throw new InvalidOperationException("the animation failed");
+                }
+
                 Elapsed += deltaTime;
                 return Elapsed >= Duration;
             }
@@ -41,24 +54,41 @@ namespace Callbreak.Tests.EditMode.Presentation
             public void Finish() => Finished = true;
         }
 
-        /// <summary>Gives every CardPlayed an animation of a set length; everything else shows at once.</summary>
+        /// <summary>
+        /// Gives every CardPlayed an animation of a set length, and every TrickCompleted one when
+        /// <see cref="TrickSeconds"/> is set; everything else shows at once. It notes when each
+        /// event began and ended on the test's clock, and can be told to fail.
+        /// </summary>
         private sealed class FakePlayback : IEventPlayback
         {
             public readonly List<string> Log = new List<string>();
             public readonly List<FakeAnimation> Animations = new List<FakeAnimation>();
+            public readonly Dictionary<MatchEvent, float> BeganAt = new Dictionary<MatchEvent, float>();
+            public readonly Dictionary<MatchEvent, float> EndedAt = new Dictionary<MatchEvent, float>();
             public float CardSeconds = 0.26f;
+            public float TrickSeconds;
+            public float Now;
             public MatchEventPlayer Player;
             public MatchEvent EnqueueOnEnd;
+            public MatchEvent FailOnBegin;
+            public MatchEvent FailOnEnd;
 
             public IEventAnimation Begin(MatchEvent e)
             {
                 Log.Add("begin " + Name(e));
-                if (!(e is CardPlayed))
+                BeganAt[e] = Now;
+                if (e == FailOnBegin)
+                {
+                    throw new InvalidOperationException("begin failed");
+                }
+
+                float seconds = e is CardPlayed ? CardSeconds : e is TrickCompleted ? TrickSeconds : 0f;
+                if (seconds <= 0f)
                 {
                     return null;
                 }
 
-                var animation = new FakeAnimation(CardSeconds);
+                var animation = new FakeAnimation(seconds);
                 Animations.Add(animation);
                 return animation;
             }
@@ -66,6 +96,12 @@ namespace Callbreak.Tests.EditMode.Presentation
             public void End(MatchEvent e)
             {
                 Log.Add("end " + Name(e));
+                EndedAt[e] = Now;
+                if (e == FailOnEnd)
+                {
+                    throw new InvalidOperationException("end failed");
+                }
+
                 if (EnqueueOnEnd != null)
                 {
                     MatchEvent next = EnqueueOnEnd;
@@ -87,6 +123,50 @@ namespace Callbreak.Tests.EditMode.Presentation
         }
 
         private static CardPlayed Played(string card) => new CardPlayed(Seat.East, Card.Parse(card), false, false);
+
+        private static PlayTurnStarted Turn(Seat seat, int id) => new PlayTurnStarted(seat, new TurnId(id), null);
+
+        /// <summary>
+        /// What the real engine emits for the last card a seat chooses in a round, the fourth card
+        /// of the twelfth trick: that card, the trick, the four cards of the last trick (which the
+        /// engine plays itself), that trick, the round's score and the three bots' "ready".
+        /// </summary>
+        private static List<MatchEvent> LastMoveOfARound()
+        {
+            var engine = new MatchEngine(RuleSet.NepaliStandard, new Pcg32Random(7UL), TestSetups.With(false, true, true, true));
+            var driver = new MatchDriver(engine, randomPolicy: false);
+            driver.Start();
+            for (int guard = 0; guard < 200; guard++)
+            {
+                if (engine.Phase == Phase.Playing && engine.ViewFor(Seat.South).TrickIndex == 11 && engine.ViewFor(Seat.South).CurrentTrick.Count == 3)
+                {
+                    break;
+                }
+
+                Assert.IsTrue(driver.Step(), "the round ended before its twelfth trick");
+            }
+
+            int before = driver.Events.Count;
+            driver.Step();
+            return driver.Events.GetRange(before, driver.Events.Count - before);
+        }
+
+        /// <summary>Plays everything queued in small frames, keeping the playback's clock; returns the seconds it took.</summary>
+        private static float PlayOut(MatchEventPlayer player, FakePlayback playback, Action eachFrame = null)
+        {
+            const float frame = 0.01f;
+            float now = 0f;
+            for (int i = 0; i < 5000 && !player.IsIdle; i++)
+            {
+                playback.Now = now;
+                player.Tick(frame);
+                eachFrame?.Invoke();
+                now += frame;
+            }
+
+            Assert.IsTrue(player.IsIdle, "the queue did not play out");
+            return now;
+        }
 
         private static MatchEventPlayer NewPlayer(out FakePlayback playback, out List<string> played)
         {
@@ -170,6 +250,99 @@ namespace Callbreak.Tests.EditMode.Presentation
         }
 
         [Test]
+        public void TheEndOfARound_ArrivesAllAtOnce_AndStillPlaysAtNormalSpeed()
+        {
+            List<MatchEvent> burst = LastMoveOfARound();
+            Assert.AreEqual(11, burst.Count, "one command: card, trick, four forced cards, trick, score, three bots ready");
+            Assert.IsInstanceOf<CardPlayed>(burst[0]);
+            Assert.IsFalse(((CardPlayed)burst[0]).IsForced, "the fourth card of trick 12 was chosen");
+            Assert.IsInstanceOf<TrickCompleted>(burst[1]);
+            for (int i = 2; i <= 5; i++)
+            {
+                Assert.IsTrue(burst[i] is CardPlayed forced && forced.IsForced, "the last trick plays itself (GDD 6)");
+            }
+
+            Assert.IsInstanceOf<TrickCompleted>(burst[6]);
+            Assert.IsInstanceOf<RoundScored>(burst[7]);
+
+            // GDD 6 and 14: a card flies for 0.26 s; a finished trick stays 0.9 s and is swept in 0.35 s.
+            MatchEventPlayer player = NewPlayer(out FakePlayback playback, out List<string> played);
+            playback.CardSeconds = 0.26f;
+            playback.TrickSeconds = 0.9f + 0.35f;
+            foreach (MatchEvent e in burst)
+            {
+                player.Enqueue(e);
+            }
+
+            float slowest = float.MaxValue, fastest = 0f;
+            float total = PlayOut(player, playback, () =>
+            {
+                slowest = Math.Min(slowest, player.Speed);
+                fastest = Math.Max(fastest, player.Speed);
+            });
+
+            Assert.AreEqual(1f, fastest, "nothing of a round's own ending is a backlog: no double speed");
+            Assert.AreEqual(1f, slowest);
+            Assert.AreEqual(11, played.Count);
+
+            const float frames = 0.035f;
+            Assert.AreEqual(0.9f + 0.35f, playback.EndedAt[burst[1]] - playback.BeganAt[burst[1]], frames, "the twelfth trick is shown for its 0.9 s and swept in 0.35 s");
+            Assert.AreEqual(0.9f + 0.35f, playback.EndedAt[burst[6]] - playback.BeganAt[burst[6]], frames, "so is the last trick");
+            for (int i = 2; i <= 5; i++)
+            {
+                Assert.AreEqual(0.35f, playback.BeganAt[burst[i]] - playback.EndedAt[burst[i - 1]], frames, "a forced card waits the 0.35 s of a forced move (GDD 9), card " + (i - 1));
+                Assert.AreEqual(0.26f, playback.EndedAt[burst[i]] - playback.BeganAt[burst[i]], frames, "and flies at normal speed");
+            }
+
+            Assert.AreEqual(playback.EndedAt[burst[6]], playback.BeganAt[burst[7]], 0.0001f, "the round is scored once the last trick has been swept");
+            Assert.AreEqual(0.26f + 1.25f + (4 * (0.35f + 0.26f)) + 1.25f, total, 0.15f, "the whole ending takes its 5.2 s");
+        }
+
+        [Test]
+        public void OneMovesOwnEvents_AreNotABacklog_HoweverManyTheyAre()
+        {
+            // The fourth card of a trick brings the trick and the next turn with it: nothing to catch up on.
+            MatchEventPlayer player = NewPlayer(out FakePlayback playback, out _);
+            playback.CardSeconds = 1f;
+            player.Enqueue(Played("9♥"));
+            for (int i = 0; i < 6; i++)
+            {
+                player.Enqueue(new ReadyConfirmed(Seat.North));
+            }
+
+            player.Tick(0.25f);
+            Assert.AreEqual(6, player.Backlog);
+            Assert.AreEqual(1f, player.Speed, "six events wait, all of them part of the move on screen");
+            Assert.AreEqual(0.25f, playback.Animations[0].Elapsed, 1e-5f);
+        }
+
+        [Test]
+        public void ALateTable_CatchesUpAtDoubleSpeed_UntilItIsThreeEventsBehind()
+        {
+            // Three moves arrived while the first was still to be shown (the app was in the background).
+            MatchEventPlayer player = NewPlayer(out FakePlayback playback, out _);
+            playback.CardSeconds = 1f;
+            player.Enqueue(Played("9♥"));
+            player.Enqueue(Turn(Seat.North, 2));
+            player.Enqueue(Played("Q♥"));
+            player.Enqueue(Turn(Seat.West, 3));
+            player.Enqueue(Played("10♥"));
+            player.Enqueue(Turn(Seat.South, 4));
+
+            // 9♥ is on screen; Q♥, its turn, 10♥ and its turn are what the table is behind by.
+            player.Tick(0.25f);
+            Assert.AreEqual(2f, player.Speed);
+            Assert.AreEqual(0.5f, playback.Animations[0].Elapsed, 1e-5f);
+
+            // Q♥ on screen: only 10♥ and its turn are later moves. Normal speed again.
+            player.Tick(0.25f);
+            Assert.AreEqual(2, playback.Animations.Count);
+            Assert.AreEqual(1f, player.Speed);
+            player.Tick(0.25f);
+            Assert.AreEqual(0.25f, playback.Animations[1].Elapsed, 1e-5f);
+        }
+
+        [Test]
         public void ATap_SkipsOnlyAnimationsLongerThan300Milliseconds()
         {
             MatchEventPlayer player = NewPlayer(out FakePlayback playback, out List<string> played);
@@ -188,6 +361,145 @@ namespace Callbreak.Tests.EditMode.Presentation
             CollectionAssert.AreEqual(new[] { "card 9♥", "card Q♥" }, played, "a skipped event still counts as played");
             Assert.AreEqual("end card Q♥", playback.Log[playback.Log.Count - 1]);
             Assert.IsFalse(player.Skip(), "nothing is playing");
+        }
+
+        [Test]
+        public void ATap_CutsShortThePauseBeforeAForcedCard()
+        {
+            MatchEventPlayer player = NewPlayer(out FakePlayback playback, out List<string> played);
+            player.Enqueue(new CardPlayed(Seat.East, Card.Parse("9♥"), true, true));
+            player.Tick(0.1f);
+            Assert.IsNotNull(player.Current, "the forced card's turn has come");
+            Assert.IsFalse(player.IsIdle);
+            CollectionAssert.IsEmpty(playback.Log, "but it waits 0.35 s before it is played");
+
+            Assert.IsTrue(player.Skip(), "0.35 s is longer than 0.3 s: a tap ends the wait");
+            player.Tick(0f);
+            CollectionAssert.AreEqual(new[] { "begin card 9♥" }, playback.Log);
+            Assert.IsFalse(player.Skip(), "the flight itself is too short to skip");
+            player.Tick(0.3f);
+            CollectionAssert.AreEqual(new[] { "card 9♥" }, played);
+        }
+
+        [Test]
+        public void AForcedCard_InALateTable_WaitsHalfAsLong()
+        {
+            // Double speed shortens the pause like everything else.
+            MatchEventPlayer player = NewPlayer(out FakePlayback playback, out _);
+            player.Enqueue(new CardPlayed(Seat.East, Card.Parse("9♥"), true, true));
+            for (int i = 0; i < 4; i++)
+            {
+                player.Enqueue(Played((i + 2) + "♠"));
+            }
+
+            player.Tick(0.1f);
+            Assert.AreEqual(2f, player.Speed);
+            CollectionAssert.IsEmpty(playback.Log);
+            player.Tick(0.1f);
+            CollectionAssert.AreEqual(new[] { "begin card 9♥" }, playback.Log, "0.2 s at double speed is more than the 0.35 s");
+            Assert.AreEqual(0f, playback.Animations[0].Elapsed, "and the card starts on a clean clock");
+        }
+
+        // ------------------------------------------------------------------ a playback that throws
+
+        [Test]
+        public void AnEventThatFailsToBegin_IsReported_AndTheQueueIsDropped_NotStalled()
+        {
+            MatchEventPlayer player = NewPlayer(out FakePlayback playback, out List<string> played);
+            var failing = new ReadyConfirmed(Seat.North);
+            playback.FailOnBegin = failing;
+            var faults = new List<MatchEvent>();
+            Exception reported = null;
+            player.Faulted += (e, error) =>
+            {
+                faults.Add(e);
+                reported = error;
+            };
+            player.Enqueue(Played("9♥"));
+            player.Enqueue(failing);
+            player.Enqueue(Played("Q♥"));
+
+            Assert.DoesNotThrow(() => player.Tick(1f));
+            CollectionAssert.AreEqual(new[] { "card 9♥" }, played, "what played before the failure stays played");
+            Assert.AreEqual(1, faults.Count);
+            Assert.AreSame(failing, faults[0], "the listener is told which event failed");
+            Assert.IsInstanceOf<InvalidOperationException>(reported);
+            Assert.IsTrue(player.IsIdle, "the failed event and everything behind it are dropped: the table is rebuilt from the session's view");
+            Assert.IsNull(player.Current);
+            Assert.AreEqual(0, player.Backlog);
+
+            // Not stalled: later ticks do nothing, and the next event plays as usual.
+            player.Tick(1f);
+            player.Tick(1f);
+            Assert.AreEqual(1, faults.Count, "the failure is reported once");
+            player.Enqueue(Played("K♥"));
+            player.Tick(1f);
+            CollectionAssert.AreEqual(new[] { "card 9♥", "card K♥" }, played);
+            Assert.IsTrue(player.IsIdle);
+        }
+
+        [Test]
+        public void AnAnimationThatThrows_IsStopped_AndReported()
+        {
+            MatchEventPlayer player = NewPlayer(out FakePlayback playback, out List<string> played);
+            var faults = new List<MatchEvent>();
+            player.Faulted += (e, error) => faults.Add(e);
+            playback.CardSeconds = 1f;
+            CardPlayed card = Played("9♥");
+            player.Enqueue(card);
+            player.Enqueue(Played("Q♥"));
+            player.Tick(0.1f);
+
+            playback.Animations[0].FailOnTick = true;
+            Assert.DoesNotThrow(() => player.Tick(0.1f));
+            Assert.AreEqual(1, faults.Count);
+            Assert.AreSame(card, faults[0]);
+            Assert.IsTrue(playback.Animations[0].Finished, "what the animation was moving is settled");
+            Assert.IsTrue(player.IsIdle);
+            CollectionAssert.IsEmpty(played);
+            Assert.AreEqual(1, playback.Animations.Count, "the waiting card never begins");
+        }
+
+        [Test]
+        public void AnEventThatFailsToEnd_IsReported_WhetherItPlayedOutOrWasSkipped()
+        {
+            MatchEventPlayer player = NewPlayer(out FakePlayback playback, out List<string> played);
+            var faults = new List<MatchEvent>();
+            player.Faulted += (e, error) => faults.Add(e);
+            playback.CardSeconds = 1f;
+            CardPlayed first = Played("9♥"), second = Played("Q♥");
+            playback.FailOnEnd = first;
+            player.Enqueue(first);
+            player.Enqueue(new ReadyConfirmed(Seat.North));
+            Assert.DoesNotThrow(() => player.Tick(2f));
+            Assert.AreEqual(1, faults.Count);
+            Assert.AreSame(first, faults[0]);
+            Assert.IsTrue(player.IsIdle);
+            CollectionAssert.IsEmpty(played);
+
+            playback.FailOnEnd = second;
+            player.Enqueue(second);
+            player.Tick(0.1f);
+            Assert.DoesNotThrow(() => player.Skip());
+            Assert.AreEqual(2, faults.Count);
+            Assert.AreSame(second, faults[1]);
+            Assert.IsTrue(player.IsIdle);
+        }
+
+        [Test]
+        public void WithNobodyListening_TheFailureIsThrownOn_AndThePlayerStillDoesNotStall()
+        {
+            MatchEventPlayer player = NewPlayer(out FakePlayback playback, out List<string> played);
+            var failing = new ReadyConfirmed(Seat.North);
+            playback.FailOnBegin = failing;
+            player.Enqueue(failing);
+            player.Enqueue(Played("Q♥"));
+            Assert.Throws<InvalidOperationException>(() => player.Tick(0f), "an error nobody handles is never swallowed");
+            Assert.IsTrue(player.IsIdle);
+
+            player.Enqueue(Played("K♥"));
+            player.Tick(1f);
+            CollectionAssert.AreEqual(new[] { "card K♥" }, played);
         }
 
         [Test]

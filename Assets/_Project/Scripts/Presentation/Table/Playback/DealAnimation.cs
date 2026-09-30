@@ -7,6 +7,62 @@ using UnityEngine;
 namespace Callbreak.Presentation.Table.Playback
 {
     /// <summary>
+    /// The deal with Reduce motion (GDD §14 "Deal … Instant, 200 ms fade"; §6 "0.4 s with Reduce
+    /// motion"): nothing flies. The dealt table is already laid out when this begins; the hand
+    /// and the fans fade in over 200 ms, and the round waits out the rest of its 0.4 s before the
+    /// first call turn.
+    /// </summary>
+    public sealed class DealFade : IEventAnimation
+    {
+        public const float Seconds = 0.4f;
+        public const float FadeSeconds = 0.2f;
+
+        private readonly HandView _hand;
+        private readonly OpponentHandView[] _fans;
+        private float _elapsed;
+
+        /// <param name="hand">The local hand, already showing the dealt cards.</param>
+        /// <param name="fans">The opponents' fans, already showing their backs.</param>
+        public DealFade(HandView hand, OpponentHandView[] fans)
+        {
+            _hand = hand;
+            _fans = fans;
+        }
+
+        public float Duration => Seconds;
+
+        public void Begin()
+        {
+            Apply(0f);
+        }
+
+        public bool Tick(float deltaTime)
+        {
+            _elapsed += deltaTime;
+            Apply(Mathf.Clamp01(_elapsed / FadeSeconds));
+            return _elapsed >= Seconds;
+        }
+
+        public void Finish()
+        {
+            _elapsed = Seconds;
+            Apply(1f);
+        }
+
+        private void Apply(float alpha)
+        {
+            _hand.SetAlpha(alpha);
+            for (int i = 0; i < _fans.Length; i++)
+            {
+                if (_fans[i] != null)
+                {
+                    _fans[i].SetAlpha(alpha);
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// The deal (GDD §6, §14 "Deal: cards fly from the dealer to each seat, one at a time", about
     /// 1.6 s, OutQuad): 52 cards leave the dealer's seat in turn, starting at the dealer's right and
     /// going round in the direction of play. A card for an opponent joins that seat's fan as a back;

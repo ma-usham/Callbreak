@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Table;
+using Callbreak.Presentation.Widgets;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
@@ -17,7 +18,10 @@ namespace Callbreak.Editor.Screens
     /// mockup 08 draws them; a <see cref="SeatView"/> per seat, with the timer ring, seconds disc
     /// and bubble the opponents' seats need (derived from the local seat's); the turn prompt, the
     /// trick counter, the emote picker, the "Reconnecting…" cover and the "I'm back" banner (derived
-    /// from kit pills, panels and buttons).
+    /// from kit pills, panels and buttons); and each seat's chip for "Away", "Reconnecting…", "Bot
+    /// playing" and a fill-in bot's "BOT" (the kit's tag pill, hidden until there is something to
+    /// say). Names get a width: a long one shrinks, then ends in an ellipsis. Controls smaller than
+    /// 88 px answer to touches on 88 px (GDD §16) without being drawn any larger.
     /// All mockup measurements are in mockup pixels (1672 × 941), as in the layout.
     /// </summary>
     public static class TableCustomizer
@@ -50,11 +54,28 @@ namespace Callbreak.Editor.Screens
         private static readonly Vector2 PromptCentre = new Vector2(869.3f, 662f);
         private const float PromptHeight = 38f;
         private static readonly Vector2 TrickLabelCentre = new Vector2(836f, 104f);
-        private static readonly Rect EmotePanel = new Rect(112f, 600f, 448f, 216f);
+        // Six phrases, each an 88 px touch target with 16 px between them (GDD §16): 76.8 and 14 mockup px.
+        private static readonly Rect EmotePanel = new Rect(112f, 521.6f, 448f, 294.4f);
         private const float BubbleHeight = 33f;
         private const float ReconnectingDim = 0.45f;
         private static readonly Vector2 ImBackCentre = new Vector2(836f, 300f);
         private static readonly Vector2 ImBackSize = new Vector2(250f, 66f);
+
+        /// <summary>GDD §16 "Touch targets are ≥ 88 px", in canvas units.</summary>
+        public const float MinTouch = 88f;
+
+        // ---- The seat chip ("Away", "Reconnecting…", "Bot playing", "BOT"): the kit's tag pill on the
+        // top edge of an opponent's avatar; the local seat's sits above its name plate, between the
+        // emote button and the hand.
+        private const float ChipHeight = 24f;
+        private const float ChipTextScale = 0.8f;
+        private const float ChipSpinnerSize = 15f;
+        private static readonly Vector2 LocalChipCentre = new Vector2(160f, 838f);
+
+        // ---- Names: up to 16 characters (GDD §11 screen 14) on a plate that holds about ten. A longer
+        // name shrinks to 60% and then ends in an ellipsis; the width is the plate without its caps.
+        private const float OpponentNameWidth = 108f;
+        private const float LocalNameWidth = 100f;
 
         public static void Customize(ScreenBuildContext ctx)
         {
@@ -96,7 +117,7 @@ namespace Callbreak.Editor.Screens
             BuildTrickArea(ctx);
             for (int seat = 0; seat < TableView.SeatCount; seat++)
             {
-                BuildSeat(ctx, seat, pool, nameStyle);
+                BuildSeat(ctx, seat, pool, nameStyle, statusStyle);
             }
 
             RectTransform handLayer = BuildHand(ctx, pool, centre);
@@ -105,6 +126,18 @@ namespace Callbreak.Editor.Screens
             BuildEmotePicker(ctx, statusStyle);
             BuildImBack(ctx, centre);
             BuildReconnecting(ctx, nameStyle);
+
+            // The emote button is 83 px across; the other HUD buttons are 88 or more already.
+            foreach (string id in new[] { "HomeButton", "ScoresButton", "SettingsButton", "EmoteButton", "SortButton" })
+            {
+                MinimumTouch(ctx.Nodes[id].GetComponent<Button>().targetGraphic, MinTouch, MinTouch);
+            }
+
+            // Last, so that the pieces above that borrow the name's type are not limited with it.
+            for (int seat = 0; seat < TableView.SeatCount; seat++)
+            {
+                ScreenExtras.LimitWidth(ctx, $"SeatName{seat}", seat == 0 ? LocalNameWidth : OpponentNameWidth);
+            }
 
             // Table, hand and HUD rebuild at different rates, so each gets its own canvas (GDD §23).
             NestedCanvas(centre);
@@ -210,7 +243,7 @@ namespace Callbreak.Editor.Screens
             return layer;
         }
 
-        private static void BuildSeat(ScreenBuildContext ctx, int seat, CardViewPool pool, TMP_Text nameStyle)
+        private static void BuildSeat(ScreenBuildContext ctx, int seat, CardViewPool pool, TMP_Text nameStyle, TMP_Text statusStyle)
         {
             RectTransform root = ctx.Nodes[$"Seat{seat}"];
             Vector2 seatCentre = ctx.CentreOf($"Seat{seat}");
@@ -266,6 +299,18 @@ namespace Callbreak.Editor.Screens
             TextMeshProUGUI bubbleText = Label("Text", bubble, nameStyle, "4");
             bubble.gameObject.SetActive(false);
 
+            // The chip: how the seat's player is connected, or a fill-in bot's tag (GDD §8, §9). It
+            // sizes itself to its text; the spinner shows only with "Reconnecting…".
+            Vector2 chipCentre = local ? LocalChipCentre : avatarCentre + new Vector2(0f, 2f - ringNode.rect[3] / 2f);
+            RectTransform chip = UiBuildKit.CreateAt("Chip", root, chipCentre, seatCentre, UiBuildKit.FromMock(56f, ChipHeight));
+            Sliced(chip, LoadTableSprite("UI_Pill_Tag"));
+            TextMeshProUGUI chipText = Label("Text", chip, statusStyle, "BOT");
+            chipText.fontSize = statusStyle.fontSize * ChipTextScale;
+            float spinnerSize = ChipSpinnerSize * UiBuildKit.ScaleX;
+            GameObject chipSpinner = BuildSpinner(chip, spinnerSize, 12f + spinnerSize / 2f, chipText.color);
+            chipSpinner.SetActive(false);
+            chip.gameObject.SetActive(false);
+
             var view = root.gameObject.AddComponent<SeatView>();
             var so = new SerializedObject(view);
             so.FindProperty("_anchor").objectReferenceValue = ring;
@@ -280,6 +325,11 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_bubbleText").objectReferenceValue = bubbleText;
             so.FindProperty("_bubblePadding").floatValue = 40f;
             so.FindProperty("_bubbleMinWidth").floatValue = 64f * UiBuildKit.ScaleX;
+            so.FindProperty("_chip").objectReferenceValue = chip;
+            so.FindProperty("_chipText").objectReferenceValue = chipText;
+            so.FindProperty("_chipSpinner").objectReferenceValue = chipSpinner;
+            so.FindProperty("_chipPadding").floatValue = 26f;
+            so.FindProperty("_chipSpinnerSpace").floatValue = spinnerSize + 6f;
 
             // The kit's ring sprite is orange (#F6960B); the last five seconds multiply it towards
             // crimson (#861018, GDD §12); a met call tints the sand pill gold.
@@ -433,7 +483,7 @@ namespace Callbreak.Editor.Screens
 
             Sprite buttonSprite = UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Buttons/UI_ButtonSecondary_Normal.png", 0f);
             const int columns = 2, rows = 3;
-            const float pad = 18f, gap = 12f;
+            const float pad = 18f, gap = 14f;
             float width = (EmotePanel.width - 2f * pad - gap) / columns, height = (EmotePanel.height - 2f * pad - (rows - 1) * gap) / rows;
             string[] samples = { "Namaste!", "Well played!", "Nice call!", "Oops!", "Thinking…", "Good game!" };
             var buttons = new Button[columns * rows];
@@ -504,6 +554,10 @@ namespace Callbreak.Editor.Screens
             Image face = Sliced(faceRect, UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Buttons/UI_ButtonPrimary_Normal.png", 0f));
             face.raycastTarget = true;
 
+            // 76 px high: it answers to 88. All of the extra is above it, where only the top seat's
+            // pill is; right under it lies the trick area, which answers to taps itself.
+            MinimumTouch(face, 0f, MinTouch, 1f);
+
             var button = rect.gameObject.AddComponent<Button>();
             button.targetGraphic = face;
             ColorBlock colors = button.colors;
@@ -533,7 +587,8 @@ namespace Callbreak.Editor.Screens
 
         /// <summary>
         /// "Reconnecting…" while the session re-joins (GDD §8): a light dim over the whole table, which
-        /// stays visible but takes no input, and the word on the name plate's white pill.
+        /// stays visible but takes no input, and the word on the name plate's white pill, with the
+        /// spinner the GDD gives that chip.
         /// </summary>
         private static void BuildReconnecting(ScreenBuildContext ctx, TMP_Text style)
         {
@@ -546,9 +601,12 @@ namespace Callbreak.Editor.Screens
             var pill = (RectTransform)pillObject.transform;
             pill.SetParent(cover, false);
             pill.anchorMin = pill.anchorMax = pill.pivot = new Vector2(0.5f, 0.5f);
-            pill.sizeDelta = UiBuildKit.FromMock(230f, 46f);
+            pill.sizeDelta = UiBuildKit.FromMock(262f, 46f);
             Sliced(pill, LoadTableSprite("UI_NamePlate"));
             TextMeshProUGUI label = Label("Text", pill, style, "Reconnecting…");
+            float spinnerSize = 22f * UiBuildKit.ScaleX;
+            BuildSpinner(pill, spinnerSize, 26f + spinnerSize / 2f, label.color);
+            label.rectTransform.offsetMin = new Vector2(spinnerSize + 14f, 0f);
             var localized = label.gameObject.AddComponent<LocalizedText>();
             var so = new SerializedObject(localized);
             so.FindProperty("_key").stringValue = "ui.seat.reconnecting";
@@ -559,6 +617,52 @@ namespace Callbreak.Editor.Screens
         }
 
         // ------------------------------------------------------------------ helpers
+
+        /// <summary>
+        /// GDD §16 "Touch targets are ≥ 88 px": grows what a control answers to, not what it draws,
+        /// to at least <paramref name="minWidth"/> by <paramref name="minHeight"/> canvas units.
+        /// Missing width is added equally left and right. Of the missing height,
+        /// <paramref name="upShare"/> goes above the control and the rest below, so a control with
+        /// a close neighbour on one side grows away from it. The art is not touched.
+        /// </summary>
+        public static void MinimumTouch(Graphic target, float minWidth, float minHeight, float upShare = 0.5f)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            target.raycastTarget = true;
+            Vector2 size = target.rectTransform.rect.size;
+            float moreX = Mathf.Max(0f, minWidth - size.x), moreY = Mathf.Max(0f, minHeight - size.y);
+
+            // Padding shrinks the area a graphic answers to; negative padding grows it. Left, bottom, right, top.
+            target.raycastPadding = new Vector4(-moreX / 2f, -moreY * (1f - upShare), -moreX / 2f, -moreY * upShare);
+        }
+
+        /// <summary>
+        /// A busy spinner at the left end of a pill: the kit's ring, tinted like the pill's text,
+        /// drawn as a three-quarter arc that turns while it is shown (as on Create Room).
+        /// </summary>
+        private static GameObject BuildSpinner(RectTransform pill, float size, float centreX, Color color)
+        {
+            var spinner = new GameObject("Spinner", typeof(RectTransform));
+            var rect = (RectTransform)spinner.transform;
+            rect.SetParent(pill, false);
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(size, size);
+            rect.anchoredPosition = new Vector2(centreX, 0f);
+            Image ring = UiBuildKit.AddImage(rect, UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Controls/UI_Ring_Spinner.png", 0f), false);
+            ring.color = color;
+            ring.type = Image.Type.Filled;
+            ring.fillMethod = Image.FillMethod.Radial360;
+            ring.fillOrigin = (int)Image.Origin360.Top;
+            ring.fillClockwise = true;
+            ring.fillAmount = 0.75f;
+            spinner.AddComponent<Spinner>();
+            return spinner;
+        }
 
         /// <summary>
         /// Adds characters to a static font atlas from the font's own file: the tick of a met call

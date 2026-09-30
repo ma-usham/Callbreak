@@ -23,6 +23,32 @@ namespace Callbreak.Presentation.Table
         public const string RoundsCompletedKey = "ui.match_results.footer";
         public const string OneRoundCompletedKey = "ui.match_results.footer_one";
         public const string YouKey = "ui.common.you";
+        public const string NextKey = "ui.round_results.next";
+        public const string NextCountdownKey = "ui.round_results.next_countdown";
+        public const string SeeFinalKey = "ui.round_results.see_final";
+        public const string SeeFinalCountdownKey = "ui.round_results.see_final_countdown";
+
+        /// <summary>
+        /// The round results' button (GDD §11 screen 09): "Next Round", and "See Final Results"
+        /// after the last round. Online the host counts the summary down, after the last round as
+        /// after any other, and the button shows the seconds left: "Next Round (7)".
+        /// </summary>
+        /// <param name="lastRound">The round just scored was the match's last.</param>
+        /// <param name="countdownSeconds">Whole seconds left on the host's countdown; negative when no countdown runs (offline).</param>
+        public static string NextLabel(bool lastRound, int countdownSeconds, ILocalization localization)
+        {
+            if (localization == null)
+            {
+                throw new ArgumentNullException(nameof(localization));
+            }
+
+            if (countdownSeconds < 0)
+            {
+                return localization.Get(lastRound ? SeeFinalKey : NextKey);
+            }
+
+            return localization.Format(lastRound ? SeeFinalCountdownKey : NextCountdownKey, countdownSeconds);
+        }
 
         /// <summary>The match results headline for the local player's place: a win, a shared win, or 2nd to 4th.</summary>
         public static string HeadlineKey(in Standing local)

@@ -33,6 +33,9 @@ namespace Callbreak.Presentation.Table
     /// that says what the rules ask for. It also drives the HUD, the turn prompt, the turn clock,
     /// emotes, the sort button, the peek at the previous trick and the way into the match menu,
     /// scorecard and settings, and pauses an offline match while one of those covers the table.
+    /// While a page covers the table, nothing on the table answers a touch (<see cref="TableInput"/>).
+    /// An event whose playback throws ends like a resync: the error is logged and the table is
+    /// rebuilt from the session's view (GDD §17 principle 9).
     /// </summary>
     public sealed class TablePresenter : IStartable, ITickable, IDisposable, IEventPlayback
     {
@@ -56,7 +59,6 @@ namespace Callbreak.Presentation.Table
         private const float LeadBeatSeconds = 0.4f;
         private const double WarningSeconds = 5.0;
         private const float MaxFrameSeconds = 0.25f;
-        private const int DealSoundEvery = 6;
 
         // A presenter that follows the table (results, scorecard, call panel) and fails must not
         // stall the table: its error is logged and the others still hear of the event.
@@ -89,10 +91,11 @@ namespace Callbreak.Presentation.Table
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private CardFlight _optimistic;
+        private OpponentHandView[] _fans;
         private double _lastNow;
+        private double _dealSoundAt = double.NaN;
         private bool _started;
         private bool _leaving;
-        private int _dealtCards;
         private int _lastTickSecond = -1;
         private bool _warned;
 
@@ -127,6 +130,7 @@ namespace Callbreak.Presentation.Table
             _dialogs = dialogs;
             _flow = flow;
             _player = new MatchEventPlayer(this);
+            _player.Faulted += OnPlaybackFaulted;
             _skin = new TableSkin(cards, avatars);
             _renderer = new TableRenderer(view, _skin, session, settings, localization) { ShowTrickCounter = view.ShowTrickCounter };
         }
@@ -135,6 +139,9 @@ namespace Callbreak.Presentation.Table
         public MatchEventPlayer Player => _player;
 
         private TableState State => _table.State;
+
+        /// <summary>Nothing covers the table: the only time anything on it answers a touch.</summary>
+        private bool TableIsOpen => TableInput.IsOpen(_router.Current);
 
         private Seat Local => _session.LocalSeat;
 
@@ -271,10 +278,47 @@ namespace Callbreak.Presentation.Table
             _player.Enqueue(e);
         }
 
+        /// <summary>Resume, reconnect or a sequence gap: whatever was queued or flying no longer applies.</summary>
         private void OnResynced(PlayerView view)
         {
-            // Resume, reconnect or a sequence gap: whatever was queued or flying no longer applies.
-            _player.Clear();
+            Rebuild(view);
+        }
+
+        /// <summary>
+        /// An event's playback threw. The player has already dropped its queue; everything the
+        /// dropped events would have shown is in the session's view, so the table is rebuilt from
+        /// it, exactly as after a resync (GDD §17 principle 9: a resync, not a stop).
+        /// </summary>
+        private void OnPlaybackFaulted(MatchEvent e, Exception error)
+        {
+            Debug.LogException(error);
+            if (!_started)
+            {
+                return;
+            }
+
+            try
+            {
+                Rebuild(_session.View);
+            }
+            catch (Exception second)
+            {
+                Debug.LogException(second);
+            }
+        }
+
+        private void Rebuild(PlayerView view)
+        {
+            try
+            {
+                _player.Clear();
+            }
+            catch (Exception e)
+            {
+                // The animation that was running could not be finished; the rebuild below corrects what it left.
+                Debug.LogException(e);
+            }
+
             _optimistic = null;
             _playLock.Release();
             EndPeek();
@@ -331,7 +375,8 @@ namespace Callbreak.Presentation.Table
 
         private void OnImBack()
         {
-            // Only an online match can mark a seat Away; offline there is no clock.
+            // Only an online match can mark a seat Away; offline there is no clock. (Not held back
+            // under a page like the table's other controls: whatever the player touches, they are here.)
             if (_session is OnlineMatchSession online)
             {
                 _audio.Play(SoundCue.UiTap);
@@ -340,13 +385,15 @@ namespace Callbreak.Presentation.Table
         }
 
         /// <summary>
-        /// The app went to the background: the match menu opens, which pauses and saves an offline
-        /// match (GDD §8); online the game goes on underneath it.
+        /// The app went to the background. An offline match pauses itself (GDD §8 "Offline matches
+        /// have no timer. The app auto-pauses when it goes to the background"): the match menu
+        /// opens, which pauses and saves it. An online match cannot pause, so nothing opens: the
+        /// player comes back to the table as it is by then.
         /// </summary>
         private void OnAppPaused()
         {
             ScreenId top = _router.Current;
-            if (_leaving || !_router.Has(ScreenId.MatchMenu) || (top != ScreenId.Gameplay && top != ScreenId.RoundResults))
+            if (!_session.CanPause || _leaving || !_router.Has(ScreenId.MatchMenu) || (top != ScreenId.Gameplay && top != ScreenId.RoundResults))
             {
                 return;
             }
@@ -385,13 +432,19 @@ namespace Callbreak.Presentation.Table
         /// </summary>
         private void OnScreenChanged(ScreenId changedTo)
         {
+            // Asked of the router, not the argument: a handler before this one may have moved on.
+            ScreenId top = _router.Current;
+            if (!TableInput.IsOpen(top))
+            {
+                // A page covers the table: the emote picker does not stay open under it.
+                _view.Emotes.Close();
+            }
+
             if (!_session.CanPause)
             {
                 return;
             }
 
-            // Asked of the router, not the argument: a handler before this one may have moved on.
-            ScreenId top = _router.Current;
             bool inMatch = top == ScreenId.Gameplay || top == ScreenId.RoundResults || top == ScreenId.MatchResults || top == ScreenId.None;
             if (inMatch)
             {
@@ -426,7 +479,14 @@ namespace Callbreak.Presentation.Table
                     // The round start has already cleared the table; the deal fills the fans and the hand.
                     State.Apply(e);
                     _audio.Play(SoundCue.CardShuffle);
-                    return ReduceMotion ? null : CreateDeal();
+                    if (!ReduceMotion)
+                    {
+                        return CreateDeal();
+                    }
+
+                    // Nothing flies: the dealt table is there at once and fades in (GDD §14).
+                    RenderAll(false);
+                    return new DealFade(_view.Hand, Fans());
 
                 case CallPlaced placed:
                     State.Apply(e);
@@ -571,7 +631,7 @@ namespace Callbreak.Presentation.Table
             Direction direction = State.Rules.Direction;
             int first = _renderer.RelativeSeat(State.Dealer.Next(direction));
             int step = _renderer.RelativeSeat(Local.Next(direction));
-            _dealtCards = 0;
+            _dealSoundAt = double.NaN;
             return new DealAnimation(
                 _view.Cards,
                 _view.Hand,
@@ -586,10 +646,31 @@ namespace Callbreak.Presentation.Table
 
         private Sprite FaceOf(Card card) => _skin.Face(_renderer.LocalDeck, card);
 
+        /// <summary>The opponents' fans, by relative seat 1 to 3.</summary>
+        private OpponentHandView[] Fans()
+        {
+            if (_fans == null)
+            {
+                _fans = new OpponentHandView[TableView.SeatCount - 1];
+                for (int rel = 1; rel < TableView.SeatCount; rel++)
+                {
+                    _fans[rel - 1] = _view.Seat(rel).Fan;
+                }
+            }
+
+            return _fans;
+        }
+
+        /// <summary>
+        /// GDD §14 "card_deal: each card". Cards that leave the dealer in the same frame (a slow
+        /// frame deals several) share one sound: two started at the same instant are one sound,
+        /// only louder.
+        /// </summary>
         private void OnCardDealt()
         {
-            if (_dealtCards++ % DealSoundEvery == 0)
+            if (_dealSoundAt != _lastNow)
             {
+                _dealSoundAt = _lastNow;
                 _audio.Play(SoundCue.CardDeal);
             }
         }
@@ -710,7 +791,7 @@ namespace Callbreak.Presentation.Table
         {
             TableState state = State;
             double now = _clock.Now;
-            if (!state.IsLocalPlayTurn || !CanTakeInput() || !_playLock.AcceptTap(now))
+            if (!TableIsOpen || !state.IsLocalPlayTurn || !CanTakeInput() || !_playLock.AcceptTap(now))
             {
                 return;
             }
@@ -828,6 +909,11 @@ namespace Callbreak.Presentation.Table
 
         private void OnSort()
         {
+            if (!TableIsOpen)
+            {
+                return;
+            }
+
             _audio.Play(SoundCue.UiTap);
             _settings.SetSortOrder(HandSorter.Toggle(_settings.SortOrder));
             RenderHandOnly(true);
@@ -835,6 +921,11 @@ namespace Callbreak.Presentation.Table
 
         private void OnTableTapped()
         {
+            if (!TableIsOpen)
+            {
+                return;
+            }
+
             if (_view.Emotes.IsOpen)
             {
                 _view.Emotes.Close();
@@ -852,6 +943,11 @@ namespace Callbreak.Presentation.Table
         /// </summary>
         private void OnTrickTapped()
         {
+            if (!TableIsOpen)
+            {
+                return;
+            }
+
             if (_view.Emotes.IsOpen)
             {
                 _view.Emotes.Close();
@@ -950,7 +1046,7 @@ namespace Callbreak.Presentation.Table
 
         private void OnHome()
         {
-            if (_router.Has(ScreenId.MatchMenu) && _router.Current != ScreenId.MatchMenu)
+            if (TableIsOpen && _router.Has(ScreenId.MatchMenu))
             {
                 _audio.Play(SoundCue.UiTap);
                 _view.Emotes.Close();
@@ -960,7 +1056,7 @@ namespace Callbreak.Presentation.Table
 
         private void OnScores()
         {
-            if (_router.Has(ScreenId.Scorecard))
+            if (TableIsOpen && _router.Has(ScreenId.Scorecard))
             {
                 _audio.Play(SoundCue.UiTap);
                 _view.Emotes.Close();
@@ -970,7 +1066,7 @@ namespace Callbreak.Presentation.Table
 
         private void OnSettings()
         {
-            if (_router.Has(ScreenId.Settings))
+            if (TableIsOpen && _router.Has(ScreenId.Settings))
             {
                 _audio.Play(SoundCue.UiTap);
                 _view.Emotes.Close();
@@ -997,6 +1093,11 @@ namespace Callbreak.Presentation.Table
 
         private void OnEmoteButton()
         {
+            if (!TableIsOpen)
+            {
+                return;
+            }
+
             if (_view.Emotes.IsOpen)
             {
                 _view.Emotes.Close();
@@ -1020,7 +1121,7 @@ namespace Callbreak.Presentation.Table
         private void OnEmoteChosen(int emoteId)
         {
             _view.Emotes.Close();
-            if (emoteId < 0 || emoteId >= EmoteKeys.Count || !_emoteLimiter.TrySend(_clock.Now))
+            if (!TableIsOpen || emoteId < 0 || emoteId >= EmoteKeys.Count || !_emoteLimiter.TrySend(_clock.Now))
             {
                 return;
             }
@@ -1056,6 +1157,11 @@ namespace Callbreak.Presentation.Table
         /// <summary>Tapping an opponent mutes or unmutes their quick phrases for the match (GDD §8).</summary>
         private void OnAvatarClicked(int relativeSeat)
         {
+            if (!TableIsOpen)
+            {
+                return;
+            }
+
             Seat seat = _renderer.SeatAt(relativeSeat);
             bool muted = !_muted[(int)seat];
             _muted[(int)seat] = muted;

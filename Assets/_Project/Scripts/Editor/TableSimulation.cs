@@ -11,6 +11,7 @@ using Callbreak.Application.Flow;
 using Callbreak.Application.Online;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
+using Callbreak.Application.Rooms;
 using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
 using Callbreak.Bootstrap;
@@ -52,7 +53,10 @@ namespace Callbreak.Editor
     /// The views' own short tweens (the hand sliding into place, a screen fading in) do not run
     /// outside Play mode, so each is completed at the end of the frame that started it.
     /// A thin wrapper around the session lets it also stage what only an online match has (a turn
-    /// clock, a reconnect, players going away) and refuse or swallow a play.
+    /// clock, a reconnect, players going away, bots filling seats) and refuse a call or refuse or
+    /// swallow a play; real online sessions fed by hand stage the round summary, the last round's
+    /// countdown and a private room's match results. It also checks that every control answers to
+    /// 88 px and that nothing on the table answers a touch while a page covers it.
     /// Run: Tools/Unity/ueval.sh 'return Callbreak.Editor.TableSimulation.Run();'
     /// </summary>
     public static class TableSimulation
@@ -119,8 +123,17 @@ namespace Callbreak.Editor
 
             public void PlayMusic(MusicTrack track) => Music = track;
 
+            public bool Ducked;
+            public int Ducks;
+
             public void Duck(bool ducked)
             {
+                if (ducked && !Ducked)
+                {
+                    Ducks++;
+                }
+
+                Ducked = ducked;
             }
         }
 
@@ -160,6 +173,74 @@ namespace Callbreak.Editor
             }
 
             public bool HandleBack() => false;
+        }
+
+        /// <summary>The estimator's answer for the beginner assist: a fixed call, and how often it was asked.</summary>
+        private sealed class Advisor : ICallAdvisor
+        {
+            public int Call = 3;
+            public int Asked;
+
+            public int SuggestCall(PlayerView view)
+            {
+                Asked++;
+                return Call;
+            }
+        }
+
+        /// <summary>The private room a match is played in, as the presenters see it: there or gone, hosted here or not.</summary>
+        private sealed class Room : IRoomSession
+        {
+            public event Action Changed
+            {
+                add { }
+                remove { }
+            }
+
+            public event Action MatchStarting
+            {
+                add { }
+                remove { }
+            }
+
+            public event Action<RoomError> Closed;
+
+            public string Code => "SIM123";
+
+            public RoomSettings Settings => null;
+
+            public IReadOnlyList<RoomSeat> Seats => Array.Empty<RoomSeat>();
+
+            public bool IsHost { get; set; }
+
+            public int LocalSeatIndex => 0;
+
+            public IMatchSession Match { get; set; }
+
+            public bool HasListeners => Closed != null;
+
+            public void Close(RoomError reason) => Closed?.Invoke(reason);
+
+            public Task SetReadyAsync(bool ready, CancellationToken ct) => Task.CompletedTask;
+
+            public Task<bool> StartAsync(bool fillWithBots, CancellationToken ct) => Task.FromResult(false);
+
+            public Task KickAsync(int seatIndex, CancellationToken ct) => Task.CompletedTask;
+
+            public Task LeaveAsync(CancellationToken ct) => Task.CompletedTask;
+
+            public void Dispose()
+            {
+            }
+        }
+
+        private sealed class Rooms : IRoomService
+        {
+            public IRoomSession Current { get; set; }
+
+            public Task<RoomResult> CreateRoomAsync(RoomSettings settings, CancellationToken ct) => throw new NotSupportedException();
+
+            public Task<RoomResult> JoinRoomAsync(string code, CancellationToken ct) => throw new NotSupportedException();
         }
 
         private sealed class Flow : IAppFlow
@@ -205,7 +286,9 @@ namespace Callbreak.Editor
             public int ReadyCalls;
             public int LastCall;
             public bool RejectNextPlay;
+            public bool RejectNextCall;
             public bool SwallowNextPlay;
+            public MatchMode? ModeOverride;
             public SessionStatus? StatusOverride;
             public TurnTimerState? TimerOverride;
             public SessionSeat[] SeatsOverride;
@@ -231,7 +314,7 @@ namespace Callbreak.Editor
 
             public event Action<Seat, int> EmoteReceived;
 
-            public MatchMode Mode => _inner.Mode;
+            public MatchMode Mode => ModeOverride ?? _inner.Mode;
 
             public Seat LocalSeat => _inner.LocalSeat;
 
@@ -270,6 +353,12 @@ namespace Callbreak.Editor
             {
                 CallCalls++;
                 LastCall = call;
+                if (RejectNextCall)
+                {
+                    RejectNextCall = false;
+                    return Task.FromResult(CommandResult.Rejected(RejectReason.StaleTurn));
+                }
+
                 return _inner.PlaceCallAsync(call, ct);
             }
 
@@ -364,6 +453,8 @@ namespace Callbreak.Editor
             private readonly Toasts _toasts = new Toasts();
             private readonly Dialogs _dialogs = new Dialogs();
             private readonly Flow _flow = new Flow();
+            private readonly Advisor _advisor = new Advisor();
+            private readonly Rooms _rooms = new Rooms();
             private ILocalization _text;
             private Callbreak.Application.Settings.SettingsService _settings;
             private ProfileService _profile;
@@ -398,6 +489,12 @@ namespace Callbreak.Editor
             private bool _leaveMidway;
             private bool _stopAtRoundResults;
             private string _stage = "start";
+            private string _expectedError;
+            private int _assistAsks;
+            private int _dealSounds;
+            private double _dealBeganAt = -1.0;
+            private PlayerView _lastSummaryView;
+            private PlayerView _finalView;
 
             public Runner(bool reduceMotion, bool captures)
             {
@@ -505,6 +602,13 @@ namespace Callbreak.Editor
             {
                 if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert)
                 {
+                    if (_expectedError != null && condition.Contains(_expectedError))
+                    {
+                        // The one error a stage provoked on purpose.
+                        _expectedError = null;
+                        return;
+                    }
+
                     string where = string.IsNullOrEmpty(stackTrace) ? string.Empty : " @ " + stackTrace.Split('\n')[0];
                     Fail("nothing is logged as an error", condition + where);
                 }
@@ -555,6 +659,8 @@ namespace Callbreak.Editor
                 Equal(SessionStatus.Running, _active.Status, "the resumed match is still running at the round results");
                 StageOnlineStates();
                 StageOnlineSession();
+                StageOnlineLastRound();
+                StageOnlineResults();
                 StageTeardown();
             }
 
@@ -634,6 +740,58 @@ namespace Callbreak.Editor
 
                 Wake();
                 Canvas.ForceUpdateCanvases();
+                VerifyTouchTargets();
+            }
+
+            /// <summary>
+            /// GDD §16 "Touch targets are ≥ 88 px": every control of the table, the call panel and
+            /// the match menu answers to at least 88 canvas px each way (the cards in the hand are the
+            /// GDD's one exception and are not buttons), and no two of them answer to the same point.
+            /// The areas that catch every other touch (the table, the trick area, the emote picker's
+            /// outside) lie under the controls and are left out of the second check.
+            /// </summary>
+            private void VerifyTouchTargets()
+            {
+                foreach (Component view in new Component[] { _table, _bidding, _menu })
+                {
+                    if (view == null)
+                    {
+                        continue;
+                    }
+
+                    var areas = new List<(string name, Rect area)>();
+                    foreach (Button button in view.GetComponentsInChildren<Button>(true))
+                    {
+                        Graphic target = button.targetGraphic;
+                        if (target == null)
+                        {
+                            Fail("every control has something to touch", button.name);
+                            continue;
+                        }
+
+                        Rect rect = target.rectTransform.rect;
+                        Vector4 padding = target.raycastPadding;
+                        var area = new Rect(rect.xMin + padding.x, rect.yMin + padding.y, rect.width - padding.x - padding.z, rect.height - padding.y - padding.w);
+                        Vector3 scale = target.rectTransform.lossyScale;
+                        float width = area.width * scale.x, height = area.height * scale.y;
+                        Check(width >= 87.99f && height >= 87.99f, "every control answers to at least 88 px (GDD 16)", $"{view.name}/{button.name}: {width:0.0} x {height:0.0}");
+                        if (button.name == "TableTap" || button.name == "Tap" || button.name == "Dismiss")
+                        {
+                            continue;
+                        }
+
+                        Vector3 min = target.rectTransform.TransformPoint(area.min), max = target.rectTransform.TransformPoint(area.max);
+                        areas.Add((button.name, Rect.MinMaxRect(Mathf.Min(min.x, max.x), Mathf.Min(min.y, max.y), Mathf.Max(min.x, max.x), Mathf.Max(min.y, max.y))));
+                    }
+
+                    for (int i = 0; i < areas.Count; i++)
+                    {
+                        for (int j = i + 1; j < areas.Count; j++)
+                        {
+                            Check(!areas[i].area.Overlaps(areas[j].area), "no two controls answer to the same touch", $"{view.name}: {areas[i].name} and {areas[j].name}");
+                        }
+                    }
+                }
             }
 
             private T Instantiate<T>(string path, Transform parent) where T : Component
@@ -763,8 +921,8 @@ namespace Callbreak.Editor
 
                 _tablePresenter = new TablePresenter(
                     _table, _gameplay, _played, session, _router, _settings, _text, _audio, _haptics, _toasts, _clock, _dialogs, _flow, _cards, _avatars);
-                _biddingPresenter = new BiddingPresenter(_bidding, _played, session, _text, _audio);
-                _menuPresenter = new MatchMenuPresenter(_menu, _router, session, _settings, _text, _dialogs, _flow, _audio);
+                _biddingPresenter = new BiddingPresenter(_bidding, _played, session, _router, _settings, _text, _audio, _advisor);
+                _menuPresenter = new MatchMenuPresenter(_menu, _router, session, _settings, _text, _dialogs, _flow, _audio, _rooms);
                 if (_roundResults != null)
                 {
                     _roundPresenter = new RoundResultsPresenter(_roundResults, _avatars, _played, session, _router, _settings, _text, _audio, _clock);
@@ -772,7 +930,8 @@ namespace Callbreak.Editor
 
                 if (_matchResults != null)
                 {
-                    _matchPresenter = new MatchResultsPresenter(_matchResults, _avatars, _played, session, _router, _settings, _text, _audio, _haptics, _flow);
+                    _matchPresenter = new MatchResultsPresenter(
+                        _matchResults, _avatars, _played, session, _router, _settings, _text, _audio, _haptics, _flow, _rooms, _toasts, _clock);
                 }
 
                 if (_scorecard != null)
@@ -893,6 +1052,7 @@ namespace Callbreak.Editor
                 Settle(_table.Hand, "_arrangeMotion");
                 Settle(_table.Hand, "_shakeMotion");
                 Settle(_table.Prompt, "_motion");
+                Settle(_bidding, "_panelMotion");
                 if (_router == null)
                 {
                     return;
@@ -1071,6 +1231,40 @@ namespace Callbreak.Editor
                 Check(!_table.Hand.Interactable, "the hand takes no plays while calling");
                 Snapshot("Bidding_open");
 
+                // The beginner assist is off by default, and then the estimator is not even asked.
+                Equal(0, _bidding.HintedCall, "without the beginner assist there is no dot");
+                Equal(_assistAsks, _advisor.Asked, "with the assist off the estimator is never asked");
+                if (Once("assist"))
+                {
+                    _settings.SetBeginnerAssist(true);
+                    _assistAsks++;
+                    Equal(_advisor.Call, _bidding.HintedCall, "with the assist on, a dot marks the suggested call");
+                    RectTransform hint = Field<RectTransform>(_bidding, "_hint");
+                    float chipX = ((RectTransform)chips[_advisor.Call - rules.MinCall].transform).anchoredPosition.x;
+                    Check(Mathf.Abs(hint.anchoredPosition.x - chipX) < 0.01f, "the dot sits on the suggested chip", $"dot x {hint.anchoredPosition.x}, chip x {chipX}");
+                    Equal(_assistAsks, _advisor.Asked, "the estimator is asked once for the turn");
+                    Equal(0, _bidding.SelectedCall, "the dot chooses nothing");
+                    Snapshot("Bidding_assist");
+                    _settings.SetBeginnerAssist(false);
+                    Equal(0, _bidding.HintedCall, "switching the assist off takes the dot away");
+                }
+
+                // A page over the table takes every touch; if one got through, the panel does not answer it.
+                if (_scorecard != null && Once("covered panel"))
+                {
+                    Click(chips[1]);
+                    int chosen = _bidding.SelectedCall;
+                    _router.Push(ScreenId.Scorecard);
+                    SettleTweens();
+                    Click(chips[0]);
+                    Equal(chosen, _bidding.SelectedCall, "a chip tapped under the scorecard is not chosen");
+                    Click(confirm);
+                    Equal(calls, _session.CallCalls, "Confirm pressed under the scorecard sends nothing");
+                    _router.Back();
+                    SettleTweens();
+                    Equal(ScreenId.Gameplay, _router.Current, "the scorecard closes back to the call");
+                }
+
                 // Touching a card while calling only looks at it (GDD screen 07, callout 10).
                 if (_table.Hand.Count > 0)
                 {
@@ -1100,6 +1294,23 @@ namespace Callbreak.Editor
                     "the crimson chip sits on the chosen chip");
                 Equal(_text.Format("ui.bidding.confirm_n", _intendedCall), confirmLabel.text, "Confirm follows the choice");
                 Snapshot("Bidding_chosen");
+
+                // The session refuses the call: the panel takes input again and says why (GDD screen 07).
+                if (Once("refused call"))
+                {
+                    _session.RejectNextCall = true;
+                    Check(Click(confirm), "Confirm can be pressed");
+                    Equal(calls + 1, _session.CallCalls, "the refused call was sent once");
+                    Check(_bidding.IsPanelShown, "a refused call leaves the panel open");
+                    Equal(_text.Get(CallRefusal.LateKey), _bidding.Reason, "a refused call says why on the panel");
+                    Check(!Field<GameObject>(_bidding, "_subtitle").activeSelf, "the reason takes the subtitle's place");
+                    Check(confirm.interactable && chips[0].interactable, "after a refusal the panel takes input again");
+                    Drawable(Field<TMP_Text>(_bidding, "_reason"), "every character of the refusal line can be drawn");
+                    Snapshot("Bidding_refused");
+                    Click(chips[_intendedCall - rules.MinCall]);
+                    Check(_bidding.Reason == null && Field<GameObject>(_bidding, "_subtitle").activeSelf, "choosing again brings the subtitle back");
+                    calls = _session.CallCalls;
+                }
 
                 Check(Click(confirm), "Confirm can be pressed");
                 Equal(calls + 1, _session.CallCalls, "Confirm sends one call");
@@ -1165,6 +1376,12 @@ namespace Callbreak.Editor
                 if (Once("prompts"))
                 {
                     StagePrompts();
+                }
+
+                if (_scorecard != null && Once("covered table"))
+                {
+                    StageCoveredTable(FirstOf(legal));
+                    return;
                 }
 
                 // An illegal tap: refused and explained, nothing is sent (GDD screen 08, callout 9).
@@ -1275,6 +1492,43 @@ namespace Callbreak.Editor
                 Check(flying != null && flying.IsFaceUp && flying.Card == card, "the chosen card is on its way to the trick at once", "card " + card);
                 Equal(count - 1, hand.Count, "the chosen card has left the hand");
                 Check(!hand.Interactable, "the hand is locked until the play is settled");
+                _nextTapAt = _clock.Now + 0.2;
+            }
+
+            /// <summary>
+            /// The scorecard over the local turn (online the match runs on under it, GDD §11 screen 16).
+            /// The page takes every touch; the table's own handlers are the second lock: a touch that
+            /// got through plays no card, flips no sort order, opens no emotes, mutes nobody, peeks at
+            /// nothing and opens nothing from the HUD.
+            /// </summary>
+            private void StageCoveredTable(Card legal)
+            {
+                int plays = _session.PlayCalls, held = _table.Hand.Count;
+                HandSortOrder order = _settings.SortOrder;
+                _router.Push(ScreenId.Scorecard);
+                SettleTweens();
+                Equal(ScreenId.Scorecard, _router.Current, "the scorecard opens over the local turn");
+                Tap(HandCard(legal));
+                Equal(plays, _session.PlayCalls, "a card tapped under the scorecard is not played");
+                Equal(held, _table.Hand.Count, "a card tapped under the scorecard stays in the hand");
+                Click(Field<Button>(_table, "_sortButton"));
+                Equal(order, _settings.SortOrder, "the sort button under the scorecard does nothing");
+                Click(Field<Button>(_table, "_emoteButton"));
+                Check(!_table.Emotes.IsOpen, "the emote button under the scorecard does nothing");
+                Click(Field<Button>(_table, "_trickTap"));
+                Check(!_table.Trick.IsPeeking, "the trick area under the scorecard shows no peek");
+                SeatView opponent = _table.Seat(1);
+                Click(Field<Button>(opponent, "_avatarButton"));
+                Check(!Field<bool>(opponent, "_muted"), "an avatar tapped under the scorecard is not muted");
+                Click(Field<Button>(_table, "_homeButton"));
+                Click(Field<Button>(_table, "_settingsButton"));
+                Equal(ScreenId.Scorecard, _router.Current, "the HUD under the scorecard opens nothing");
+                Equal(2, _router.Depth, "nothing was pushed over the scorecard");
+                Snapshot("Table_covered");
+                _router.Back();
+                SettleTweens();
+                Equal(ScreenId.Gameplay, _router.Current, "the scorecard closes back to the table");
+                Check(_table.Hand.Interactable, "back on the table, the hand takes input again");
                 _nextTapAt = _clock.Now + 0.2;
             }
 
@@ -1698,13 +1952,18 @@ namespace Callbreak.Editor
                     Equal(standing.Rank.ToString(CultureInfo.InvariantCulture), ranks[row].text, "a final row's rank");
                     Equal(name, names[row].text, "a final row's name");
                     Equal(ScoreTenths.Format(standing.TotalTenths), totals[row].text, "a final row's total");
+                    Check((totals[row].color == Field<Color>(_matchResults, "_negativeColor")) == (standing.TotalTenths < 0), "a negative final total is burgundy, a positive one is not");
                     DrawableNote(totals[row], "MatchResults RowTotal");
                     Equal(standing.Rank == 1, crowns[row].activeSelf, "a crown marks every winner");
                 }
 
                 Equal(ResultsText.RoundsCompleted(_active.Rules.Rounds, _text), Field<TMP_Text>(_matchResults, "_footer").text, "the match footer");
                 Equal(local.Rank == 1 ? 1 : 0, _audio.Count(SoundCue.Victory), "the victory sound plays for a win only");
+                Equal(local.Rank == 1, _audio.Ducked, "the music is ducked under the victory sting");
+                Equal(local.Rank == 1 ? 1 : 0, _audio.Ducks, "the music ducks once, for a win only");
                 Snapshot("MatchResults");
+                Wait(MatchResultsPresenter.VictoryStingSeconds + 0.2);
+                Check(!_audio.Ducked, "the music comes back when the sting has played");
 
                 _router.Back();
                 Equal(ScreenId.MatchResults, _router.Current, "Android back stays on the match results");
@@ -1762,6 +2021,17 @@ namespace Callbreak.Editor
                 TableState state = State;
                 Check(!hand.Interactable || state.IsLocalPlayTurn, "the hand takes plays only on the local turn that has been played back");
                 Check(_table.Cards.Created <= CardViewPool.DeckSize, "the pool never holds more than 52 cards", "created " + _table.Cards.Created);
+                Check(_bidding.IsPanelShown == Field<GameObject>(_bidding, "_panel").activeSelf, "once its slide has settled, the call panel is up exactly while it is shown");
+                if (_tablePresenter.Player.Current is HandDealt dealt && dealt.Seat == Local && _dealBeganAt < 0.0)
+                {
+                    _dealBeganAt = _clock.Now;
+                    if (_reduceMotion)
+                    {
+                        // GDD §14: with Reduce motion the deal is instant, with a 200 ms fade.
+                        Equal(13, hand.Count, "with Reduce motion the dealt hand is there at once");
+                        Check(hand.Count > 0 && AlphaOf(HandCard(FirstOf(State.Hand))) < 1f, "with Reduce motion the dealt hand fades in");
+                    }
+                }
                 if (_active.CanPause && _active.Status != SessionStatus.Ended)
                 {
                     ScreenId top = _router.Current;
@@ -1777,10 +2047,41 @@ namespace Callbreak.Editor
                 VerifyTable(e.GetType().Name);
                 switch (e)
                 {
+                    case RoundStarted _:
+                        _dealSounds = _audio.Count(SoundCue.CardDeal);
+                        break;
+
                     case HandDealt dealt when dealt.Seat == Local:
+                    {
                         Equal(13, _table.Hand.Count, "the deal puts thirteen cards in the hand");
                         Equal(0, _table.Cards.Free, "after the deal all 52 cards are on the table");
+                        bool opaque = true;
+                        foreach (Card card in state.Hand)
+                        {
+                            opaque &= AlphaOf(HandCard(card)) >= 1f;
+                        }
+
+                        Check(opaque, "after the deal every card of the hand is fully visible");
+                        int sounds = _audio.Count(SoundCue.CardDeal) - _dealSounds;
+                        if (_reduceMotion)
+                        {
+                            Equal(0, sounds, "with Reduce motion no card flies and no deal sound plays");
+                        }
+                        else
+                        {
+                            Check(sounds >= 40 && sounds <= 52, "the deal sounds for each card (two in one frame share one sound)", "sounds " + sounds);
+                        }
+
+                        if (_dealBeganAt >= 0.0)
+                        {
+                            double seconds = _clock.Now - _dealBeganAt;
+                            double expected = _reduceMotion ? 0.4 : 1.6;
+                            Check(Math.Abs(seconds - expected) <= 2.5 * Frame, "the deal takes 1.6 s (0.4 s with Reduce motion)", $"{seconds:0.000} s");
+                        }
+
+                        _dealBeganAt = -1.0;
                         break;
+                    }
 
                     case CallTurnStarted turn:
                         if (turn.Seat == Local)
@@ -1806,6 +2107,7 @@ namespace Callbreak.Editor
                         {
                             Equal(_intendedCall, placed.Call, "the local call is the one confirmed");
                             Check(!_bidding.IsPanelShown, "the call panel closes once the call is placed");
+                            Check(Field<GameObject>(_bidding, "_panel").activeSelf, "the call panel slides away rather than vanishing");
                         }
 
                         break;
@@ -1896,11 +2198,23 @@ namespace Callbreak.Editor
                         break;
                     }
 
-                    case RoundScored _:
+                    case RoundScored scored:
                         Check(!_table.Prompt.IsShowing, "the prompt is hidden once the round is scored");
+                        if (scored.Result.Round == _active.Rules.Rounds && _lastSummaryView == null && _active.View.Phase == Phase.RoundSummary)
+                        {
+                            // For a staged online table in the last round's summary.
+                            _lastSummaryView = _active.View;
+                        }
+
+                        break;
+
+                    case MatchEnded _:
+                        _finalView = _finalView ?? _active.View;
                         break;
                 }
             }
+
+            private static float AlphaOf(CardView card) => card != null ? Field<CanvasGroup>(card, "_group").alpha : 0f;
 
             private string StatusOf(Seat seat) => Field<TMP_Text>(_table.Seat(seat.RelativeTo(Local)), "_status").text;
 
@@ -2096,32 +2410,52 @@ namespace Callbreak.Editor
                 _session.RaiseStatusChanged();
                 Check(!cover.activeSelf, "the cover goes once reconnected");
 
-                // Seat chips (GDD §8).
+                // Seat chips (GDD §8 "What others see"): the pill keeps the seat's line, the chip says the rest.
                 Seat opponent = (Seat)(((int)Local + 1) % SeatExtensions.Count);
+                SeatView opponentView = _table.Seat(1);
+                Image opponentPill = Field<Image>(opponentView, "_statusPill");
+                Color plainPill = Field<Color>(opponentView, "_pillColor");
                 string before = StatusOf(opponent);
                 int toasts = _toasts.Shown.Count;
+                Check(opponentView.Chip == null, "offline, the bots carry no tag (everyone knows)");
                 StageConnection(opponent, SeatConnection.Away);
-                Equal(_text.Get("ui.seat.away"), StatusOf(opponent), "an Away seat shows the Away chip");
+                Equal(before, StatusOf(opponent), "an Away seat keeps its bid line");
+                Equal(_text.Get("ui.seat.away"), opponentView.Chip, "an Away seat shows the Away chip");
+                Check(!opponentView.ChipIsBusy, "the Away chip has no spinner");
+                Check(opponentPill.color == plainPill, "an Away seat's pill is not gold");
                 StageConnection(opponent, SeatConnection.Reconnecting);
-                Equal(_text.Get("ui.seat.reconnecting"), StatusOf(opponent), "a reconnecting seat shows the Reconnecting chip");
+                Equal(before, StatusOf(opponent), "a reconnecting seat keeps its bid line");
+                Equal(_text.Get("ui.seat.reconnecting"), opponentView.Chip, "a reconnecting seat shows the Reconnecting chip");
+                Check(opponentView.ChipIsBusy, "the Reconnecting chip has its spinner");
+                Drawable(Field<TMP_Text>(opponentView, "_chipText"), "every character of a seat chip can be drawn");
                 Equal(toasts, _toasts.Shown.Count, "no toast while a seat is away or reconnecting");
                 StageConnection(opponent, SeatConnection.Connected);
-                Equal(before, StatusOf(opponent), "the chip clears when the player is back");
+                Equal(before, StatusOf(opponent), "the line is the same when the player is back");
+                Check(opponentView.Chip == null, "the chip clears when the player is back");
                 Equal(_text.Get("ui.toast.welcome_back"), LastToast(), "a returning player is welcomed back");
                 StageConnection(opponent, SeatConnection.BotControlled);
-                Equal(_text.Get("ui.seat.bot_playing"), StatusOf(opponent), "a seat a bot took over shows \"Bot playing\"");
+                Equal(before, StatusOf(opponent), "a seat a bot took over keeps its bid line");
+                Equal(_text.Get("ui.seat.bot_playing"), opponentView.Chip, "a seat a bot took over shows \"Bot playing\"");
                 StageConnection(opponent, SeatConnection.Left);
                 Equal(_text.Get("ui.toast.left_table"), LastToast(), "a leaving player is announced");
+                Equal(_text.Get("ui.seat.bot_playing"), opponentView.Chip, "a seat whose player left shows \"Bot playing\"");
                 StageConnection(opponent, SeatConnection.Connected);
 
-                // The local seat marked Away: the banner.
+                // The local seat marked Away: the banner, and the chip everybody sees.
                 StageConnection(Local, SeatConnection.Away);
                 Check(imBack.gameObject.activeSelf, "an Away local seat gets the \"I'm back\" banner");
+                Equal(_text.Get("ui.seat.away"), _table.Seat(0).Chip, "an Away local seat shows the Away chip too");
                 Snapshot("Table_im_back");
                 Click(imBack);
                 StageConnection(Local, SeatConnection.Connected);
                 Check(!imBack.gameObject.activeSelf, "the banner goes once the player is back");
+                Check(_table.Seat(0).Chip == null, "the local chip goes once the player is back");
                 _session.SeatsOverride = null;
+                _session.RaiseSeatsChanged();
+
+                StageBotTags();
+                StageLongNames();
+                StagePlaybackFailure();
 
                 // The room is gone.
                 int menus = _flow.Menus.Count;
@@ -2138,6 +2472,121 @@ namespace Callbreak.Editor
             }
 
             private string LastToast() => _toasts.Shown.Count > 0 ? _toasts.Shown[_toasts.Shown.Count - 1] : null;
+
+            private DialogRequest LastDialog() => _dialogs.Requests.Count > 0 ? _dialogs.Requests[_dialogs.Requests.Count - 1] : null;
+
+            /// <summary>
+            /// GDD §9 "Online fill-ins show a small BOT tag": the same bots, on a table that is not
+            /// offline. The mockups draw no tag, so the picture is made here, with a reconnecting and
+            /// an away seat beside it.
+            /// </summary>
+            private void StageBotTags()
+            {
+                _session.ModeOverride = MatchMode.QuickMatch;
+                _session.RaiseSeatsChanged();
+                for (int rel = 1; rel < TableView.SeatCount; rel++)
+                {
+                    Seat seat = (Seat)(((int)Local + rel) % SeatExtensions.Count);
+                    Check(_active.Seats[(int)seat].IsBot, "the staged seats are bots");
+                    Equal(_text.Get(SeatStatus.BotTagKey), _table.Seat(rel).Chip, "online, a fill-in bot carries the BOT tag");
+                }
+
+                Check(_table.Seat(0).Chip == null, "the local seat has no tag");
+                StageConnection((Seat)(((int)Local + 2) % SeatExtensions.Count), SeatConnection.Reconnecting);
+                StageConnection((Seat)(((int)Local + 3) % SeatExtensions.Count), SeatConnection.Away);
+                Check(_table.Seat(2).ChipIsBusy, "the connection wins over the tag");
+                Snapshot("Table_seat_chips");
+                _session.ModeOverride = null;
+                _session.SeatsOverride = null;
+                _session.RaiseSeatsChanged();
+                Check(_table.Seat(1).Chip == null, "offline again: no tag");
+            }
+
+            /// <summary>
+            /// GDD §11 screen 14: names have up to 16 characters, in any script. On the plates they
+            /// shrink and then end in an ellipsis. The Devanagari name needs the device's font, which
+            /// the game puts behind its own at startup; for the picture it is put there here too.
+            /// </summary>
+            private void StageLongNames()
+            {
+                string[] names = { null, "Pushpa Lamichane", "MMMMMMMMMMMMMMMM", "सुमन श्रेष्ठ" };
+                var fallbacks = new SystemFontFallbacks();
+                try
+                {
+                    fallbacks.Initialize();
+                    if (fallbacks.Added.Count == 0)
+                    {
+                        Note("no system font to draw the Devanagari name with; its picture shows boxes");
+                    }
+
+                    for (int rel = 1; rel < TableView.SeatCount; rel++)
+                    {
+                        StageName((Seat)(((int)Local + rel) % SeatExtensions.Count), names[rel]);
+                    }
+
+                    for (int rel = 1; rel < TableView.SeatCount; rel++)
+                    {
+                        TMP_Text label = Field<TMP_Text>(_table.Seat(rel), "_name");
+                        Equal(names[rel], label.text, "a seat shows the whole name it was given");
+                        label.ForceMeshUpdate(true, true);
+                        float drawn = label.textBounds.size.x, room = label.rectTransform.rect.width;
+                        Check(drawn <= room + 0.5f, "a long name stays within its plate", $"\"{names[rel]}\": {drawn:0.0} of {room:0.0}");
+                    }
+
+                    Snapshot("Table_long_names");
+                }
+                finally
+                {
+                    foreach (TMP_FontAsset font in new List<TMP_FontAsset>(fallbacks.Added))
+                    {
+                        TMP_Settings.fallbackFontAssets?.Remove(font);
+                        if (font == null)
+                        {
+                            continue;
+                        }
+
+                        foreach (Texture2D atlas in font.atlasTextures ?? Array.Empty<Texture2D>())
+                        {
+                            UnityEngine.Object.DestroyImmediate(atlas);
+                        }
+
+                        UnityEngine.Object.DestroyImmediate(font.material);
+                        UnityEngine.Object.DestroyImmediate(font);
+                    }
+
+                    _session.SeatsOverride = null;
+                    _session.RaiseSeatsChanged();
+                }
+            }
+
+            private void StageName(Seat seat, string name)
+            {
+                var seats = new SessionSeat[SeatExtensions.Count];
+                for (int i = 0; i < seats.Length; i++)
+                {
+                    SessionSeat was = _active.Seats[i];
+                    seats[i] = i == (int)seat ? new SessionSeat(was.Seat, name, was.AvatarId, was.DeckThemeId, was.IsBot, was.IsLocal, was.Connection) : was;
+                }
+
+                _session.SeatsOverride = seats;
+                _session.RaiseSeatsChanged();
+            }
+
+            /// <summary>
+            /// GDD §17 principle 9: an event whose playback throws ends like a resync. The event
+            /// queue reports the failure; the table logs it and is rebuilt from the session's view.
+            /// </summary>
+            private void StagePlaybackFailure()
+            {
+                _expectedError = "staged playback failure";
+                Invoke(_tablePresenter, "OnPlaybackFaulted", new ReadyConfirmed(Local), new InvalidOperationException("staged playback failure"));
+                Check(_expectedError == null, "a failed event's error is logged", "nothing was logged");
+                _expectedError = null;
+                Check(_tablePresenter.Player.IsIdle, "after a failed event nothing is left queued");
+                PlayerView view = _active.View;
+                Equal(view.Hand, State.Hand, "after a failed event the table is the session's view");
+                VerifyTable("resume");
+            }
 
             private void StageConnection(Seat seat, SeatConnection connection)
             {
@@ -2197,6 +2646,10 @@ namespace Callbreak.Editor
                     Equal(before + 1, sent.Count, "online, Next Round sends one message");
                     Check(SameBytes(ClientMessages.ReadyNext(), sent[sent.Count - 1]), "the message is ReadyNext (\"I'm ready\")");
                     Check(!next.interactable, "Next Round stays pressed while the others get ready");
+
+                    // GDD §8 asks the app to pause itself offline only: online nothing opens.
+                    Invoke(_table, "OnApplicationPause", true);
+                    Equal(ScreenId.RoundResults, _router.Current, "online, going to the background opens no menu");
                 }
 
                 // Marked Away after two timeouts: the banner, and the tap that takes the seat back.
@@ -2215,12 +2668,21 @@ namespace Callbreak.Editor
                     Equal(_text.Get("ui.match_menu.mode_online"), Field<TMP_Text>(_menu, "_modeLabel").text, "online, the menu says the game continues");
                     Check(!Field<GameObject>(_menu, "_pausedNote").activeSelf, "online, the menu has no \"paused\" note");
                     Check(!online.IsPaused, "online, opening the menu pauses nothing");
+
+                    // The host's device is the room (phase 1): leaving closes it for everybody.
+                    _dialogs.Answer = false;
+                    _rooms.Current = new Room { IsHost = true, Match = online };
+                    Click(Field<Button>(_menu, "_leaveButton"));
+                    Equal(_text.Get("ui.dialog.leave_match.body_host"), LastDialog()?.Body, "the host is told that leaving closes the room for everyone");
+                    Drawable(Field<TMP_Text>(_menu, "_modeLabel"), "every character of the menu's mode tag can be drawn");
+                    _rooms.Current = new Room { IsHost = false, Match = online };
                     _dialogs.Answer = false;
                     int asked = _dialogs.Requests.Count;
                     Click(Field<Button>(_menu, "_leaveButton"));
                     Equal(asked + 1, _dialogs.Requests.Count, "online, Leave Match asks first");
                     Equal(_text.Get("ui.dialog.leave_match.body"), _dialogs.Requests[_dialogs.Requests.Count - 1].Body, "online, the dialog says a bot takes the seat and it counts as a loss");
                     Click(Field<Button>(_menu, "_resumeButton"));
+                    _rooms.Current = null;
                 }
 
                 // The room closes: a dialog gives the reason, and its one button leads to the main menu.
@@ -2247,6 +2709,89 @@ namespace Callbreak.Editor
 
                 Check(!_table.Hand.Interactable, "a failed session takes no more input");
                 StopMatch();
+            }
+
+            /// <summary>
+            /// The last round's summary online (GDD §11 screen 09): the host counts it down like any
+            /// other, and See Final Results shows the seconds.
+            /// </summary>
+            private void StageOnlineLastRound()
+            {
+                if (_lastSummaryView == null || _roundResults == null)
+                {
+                    Note("no last-round summary was reached; the last round's countdown was not staged");
+                    return;
+                }
+
+                _stage = "staged online last round";
+                var status = new TableStatus(_lastSummaryView.Viewer, TableStatus.NoClock, 0, 8000, new SeatConnection[SeatExtensions.Count]);
+                var online = new OnlineMatchSession(MatchMode.PrivateRoom, _lastSummaryView, status, _ => { }, _stats, _settings);
+                StartOn(online);
+                online.Start();
+                online.Tick(_clock.Now);
+                online.OnSync(new TableUpdate(1, null, _lastSummaryView, status));
+                Wait(0.5);
+                Equal(ScreenId.RoundResults, _router.Current, "a table joined during the last round's summary opens it");
+                int seconds = Math.Max(0, (int)Math.Ceiling(online.Timer.Deadline - _clock.Now));
+                Equal(_text.Format("ui.round_results.see_final_countdown", seconds), Field<TMP_Text>(_roundResults, "_nextLabel").text, "online, See Final Results shows the host's countdown");
+                Snapshot("RoundResults_final_countdown");
+                StopMatch();
+            }
+
+            /// <summary>
+            /// The match results of a private room (GDD §11 screen 10): Play Again goes back to the
+            /// lobby, and if the host has gone meanwhile, the player is told so on the way to the
+            /// main menu instead of arriving there without a word.
+            /// </summary>
+            private void StageOnlineResults()
+            {
+                if (_finalView == null || _matchResults == null)
+                {
+                    Note("no finished match to stage the online results with");
+                    return;
+                }
+
+                foreach (bool hostGone in new[] { false, true })
+                {
+                    _stage = hostGone ? "staged online results, host gone" : "staged online results";
+                    var room = new Room { IsHost = false };
+                    _rooms.Current = room;
+                    var status = new TableStatus(_finalView.Viewer, TableStatus.NoClock, 0, TableStatus.NoClock, new SeatConnection[SeatExtensions.Count]);
+                    var online = new OnlineMatchSession(MatchMode.PrivateRoom, _finalView, status, _ => { }, _stats, _settings);
+                    room.Match = online;
+                    StartOn(online);
+                    online.Start();
+                    online.OnSync(new TableUpdate(1, null, _finalView, status));
+                    Wait(0.3);
+                    Equal(ScreenId.MatchResults, _router.Current, "a finished online match opens its results");
+                    Check(room.HasListeners, "the results listen for the room closing");
+                    if (hostGone)
+                    {
+                        room.Close(Callbreak.Application.Rooms.RoomError.HostLeft);
+                        _rooms.Current = null;
+                    }
+
+                    int toasts = _toasts.Shown.Count, menus = _flow.Menus.Count;
+                    Click(Field<Button>(_matchResults, "_playAgainButton"));
+                    Equal(menus + 1, _flow.Menus.Count, "Play Again in a private room leaves for the menu scene");
+                    MenuEntry entry = _flow.Menus.Count > 0 ? _flow.Menus[_flow.Menus.Count - 1] : MenuEntry.OfflineSetup;
+                    if (hostGone)
+                    {
+                        Equal(toasts + 1, _toasts.Shown.Count, "Play Again after the host left says why");
+                        Equal(_text.Get("ui.toast.host_left"), LastToast(), "the player is told the host left");
+                        Equal(MenuEntry.MainMenu, entry, "with the room gone, Play Again goes to the main menu");
+                    }
+                    else
+                    {
+                        Equal(toasts, _toasts.Shown.Count, "Play Again with the room open shows no toast");
+                        Equal(MenuEntry.PrivateLobby, entry, "Play Again in a private room goes back to the lobby");
+                    }
+
+                    StopMatch();
+                    Check(!room.HasListeners, "the results stop listening to the room when the scene goes");
+                }
+
+                _rooms.Current = null;
             }
 
             private static bool SameBytes(byte[] a, byte[] b)

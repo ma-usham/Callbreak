@@ -98,6 +98,10 @@ namespace Callbreak.Bootstrap
             // Bots and online play (GDD §9, §24-27). Rooms and Quick Match live for the whole app,
             // because a room outlasts the Menu and Table scenes.
             builder.Register<BotFactory>(Lifetime.Singleton).As<IBotFactory>();
+
+            // The optional beginner assist asks the bots' estimator for a call (GDD §11 screen 07).
+            builder.Register<BotCallAdvisor>(Lifetime.Singleton);
+            builder.Register<TableCallAdvisor>(Lifetime.Singleton).As<Callbreak.Presentation.Table.ICallAdvisor>();
             if (_roomTransport != null)
             {
                 GenericTransport relay = _roomTransport;

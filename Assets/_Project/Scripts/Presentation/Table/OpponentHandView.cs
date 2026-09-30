@@ -137,6 +137,15 @@ namespace Callbreak.Presentation.Table
             Arrange();
         }
 
+        /// <summary>How visible the fan's cards are, 0 to 1 (the deal fades them in with Reduce motion).</summary>
+        public void SetAlpha(float alpha)
+        {
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                _cards[i].SetAlpha(alpha);
+            }
+        }
+
         /// <summary>Returns every card to the pool.</summary>
         public void Clear()
         {

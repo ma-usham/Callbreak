@@ -22,17 +22,18 @@ namespace Callbreak.Presentation.Overlays
     /// back (after the last trick was swept) and shows exactly what that event says: bid, won, the
     /// round's score and the running total per seat, the local player's row in gold, negatives with
     /// a true minus sign. Rows reveal top to bottom 60 ms apart and the round scores count up (all
-    /// at once with Reduce motion). Next Round tells the session this seat is ready; online the
-    /// button also shows the host's countdown to the next round; after the last round it reads
-    /// "See Final Results". It waits for a menu or the scorecard to close before it opens, and
-    /// the next round (or the final standings) takes it away again.
+    /// at once with Reduce motion). Next Round tells the session this seat is ready; after the
+    /// last round the button reads "See Final Results"; online it also shows the host's countdown,
+    /// after the last round as after any other. It waits for a menu or the scorecard to close
+    /// before it opens, and the next round (or the final standings) takes it away again.
     /// </summary>
     public sealed class RoundResultsPresenter : IStartable, ITickable, IDisposable
     {
         public const string RoundTitleKey = "ui.round_results.round_title";
-        public const string NextKey = "ui.round_results.next";
-        public const string NextCountdownKey = "ui.round_results.next_countdown";
-        public const string SeeFinalKey = "ui.round_results.see_final";
+        public const string NextKey = ResultsText.NextKey;
+        public const string NextCountdownKey = ResultsText.NextCountdownKey;
+        public const string SeeFinalKey = ResultsText.SeeFinalKey;
+        public const string SeeFinalCountdownKey = ResultsText.SeeFinalCountdownKey;
         public const string FooterNextKey = "ui.round_results.footer_next";
 
         private const double RowStagger = 0.06;
@@ -311,12 +312,15 @@ namespace Callbreak.Presentation.Overlays
             _revealing = !done;
         }
 
-        /// <summary>Online the host counts the summary down (GDD screen 09: 10 s); offline there is no clock.</summary>
+        /// <summary>
+        /// Online the host counts the summary down (GDD screen 09: 10 s), the last round's too: when
+        /// it ends the final results open. Offline there is no clock.
+        /// </summary>
         private void TickCountdown()
         {
             int seconds = -1;
             TurnTimerState timer = _session.Timer;
-            if (timer.IsRunning && !IsLastRound && _table.State.Phase == TablePhase.RoundEnded)
+            if (timer.IsRunning && _table.State.Phase == TablePhase.RoundEnded)
             {
                 seconds = Math.Max(0, (int)Math.Ceiling(timer.Deadline - _clock.Now));
             }
@@ -330,10 +334,7 @@ namespace Callbreak.Presentation.Overlays
 
         private void RenderNext()
         {
-            string label = IsLastRound
-                ? _localization.Get(SeeFinalKey)
-                : _countdown >= 0 ? _localization.Format(NextCountdownKey, _countdown) : _localization.Get(NextKey);
-            _view.SetNextLabel(label);
+            _view.SetNextLabel(ResultsText.NextLabel(IsLastRound, _countdown, _localization));
             _view.SetNextInteractable(!_readySent && !_table.State.IsReady(_session.LocalSeat));
         }
 

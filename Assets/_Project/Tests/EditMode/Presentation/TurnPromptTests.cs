@@ -102,6 +102,7 @@ namespace Callbreak.Tests.EditMode.Presentation
                 TurnPrompt.WaitingForKey, TurnPrompt.WinsTrickKey, TurnPrompt.YouWinTrickKey, TurnPrompt.YouLeadKey, TurnPrompt.CallingKey,
                 SeatStatus.WaitingKey, SeatStatus.CallingKey, SeatStatus.ChoosingBidKey, SeatStatus.BidKey, SeatStatus.BidAutoKey,
                 SeatStatus.BidWonKey, SeatStatus.BidWonMetKey, SeatStatus.AwayKey, SeatStatus.ReconnectingKey, SeatStatus.BotPlayingKey,
+                SeatStatus.BotTagKey,
             })
             {
                 Assert.IsTrue(_text.Has(key), key);
@@ -143,20 +144,63 @@ namespace Callbreak.Tests.EditMode.Presentation
             Assert.AreEqual("Bid 3 · Won 5 ✓", SeatStatus.Text(over, _text));
         }
 
-        [Test]
-        public void StatusPill_ShowsTheConnectionChip_WhenTheSeatIsNotPlayingItself()
+        private static readonly SeatConnection[] NotAtTheTable =
         {
-            Assert.AreEqual("Away", Status(false, SeatConnection.Away, false, 3, false, true, 1));
-            Assert.AreEqual("Reconnecting…", Status(false, SeatConnection.Reconnecting, true, CallRules.NotCalled, false, false, 0));
-            Assert.AreEqual("Bot playing", Status(false, SeatConnection.BotControlled, false, 3, false, true, 1));
-            Assert.AreEqual("Bot playing", Status(false, SeatConnection.Left, false, 3, false, true, 1));
+            SeatConnection.Away, SeatConnection.Reconnecting, SeatConnection.BotControlled, SeatConnection.Left,
+        };
+
+        [Test]
+        public void StatusPill_KeepsItsLine_WhenTheSeatIsNotPlayingItself()
+        {
+            // What a seat called and has won decides how the others play (GDD 11 screen 08, callout 3):
+            // the line stays when the player is away, reconnecting or gone, and a bot plays on.
+            foreach (SeatConnection connection in NotAtTheTable)
+            {
+                string seat = connection.ToString();
+                Assert.AreEqual("Waiting", Status(false, connection, false, CallRules.NotCalled, false, false, 0), seat);
+                Assert.AreEqual("Calling…", Status(false, connection, true, CallRules.NotCalled, false, false, 0), seat);
+                Assert.AreEqual("Bid 3", Status(false, connection, false, 3, false, false, 0), seat);
+                Assert.AreEqual("Bid 3 · auto", Status(false, connection, false, 3, true, false, 0), seat);
+                Assert.AreEqual("Bid 3 · Won 1", Status(false, connection, false, 3, false, true, 1), seat);
+                Assert.AreEqual("Bid 3 · Won 4 ✓", Status(false, connection, false, 3, false, true, 4), seat + ": the tick says the call is met, whoever played the cards");
+            }
         }
 
         [Test]
-        public void StatusPill_IsGoldOnlyWhileItShowsTheMetCall()
+        public void ConnectionChip_SaysWhatTheOthersSee()
         {
-            // A seat that met its call and then went away shows the chip, not a gold "Away".
-            foreach (SeatConnection connection in new[] { SeatConnection.Away, SeatConnection.Reconnecting, SeatConnection.BotControlled, SeatConnection.Left })
+            // GDD 8 "What others see": its own short chip beside the pill, not in place of the line.
+            Assert.IsNull(SeatStatus.Chip(SeatConnection.Connected, false, _text), "a player who is there has no chip");
+            Assert.AreEqual("Away", SeatStatus.Chip(SeatConnection.Away, false, _text));
+            Assert.AreEqual("Reconnecting…", SeatStatus.Chip(SeatConnection.Reconnecting, false, _text));
+            Assert.AreEqual("Bot playing", SeatStatus.Chip(SeatConnection.BotControlled, false, _text));
+            Assert.AreEqual("Bot playing", SeatStatus.Chip(SeatConnection.Left, false, _text));
+
+            // Only "Reconnecting…" has the spinner.
+            Assert.IsTrue(SeatStatus.ChipIsBusy(SeatConnection.Reconnecting));
+            foreach (SeatConnection connection in new[] { SeatConnection.Connected, SeatConnection.Away, SeatConnection.BotControlled, SeatConnection.Left })
+            {
+                Assert.IsFalse(SeatStatus.ChipIsBusy(connection), connection.ToString());
+            }
+        }
+
+        [Test]
+        public void FillInBots_CarryTheBotTag()
+        {
+            // GDD 9 "Online fill-ins show a small BOT tag"; the presenter asks for it in the online modes only.
+            Assert.AreEqual("BOT", SeatStatus.Chip(SeatConnection.Connected, true, _text));
+            Assert.IsFalse(SeatStatus.ChipIsBusy(SeatConnection.Connected));
+            foreach (SeatConnection connection in NotAtTheTable)
+            {
+                Assert.AreEqual(SeatStatus.Chip(connection, false, _text), SeatStatus.Chip(connection, true, _text), connection + ": the connection is what matters more");
+            }
+        }
+
+        [Test]
+        public void StatusPill_IsNotGold_WhileTheSeatIsNotPlayingItself()
+        {
+            // A seat that met its call and then went away keeps its line and its tick, but not the gold.
+            foreach (SeatConnection connection in NotAtTheTable)
             {
                 var gone = new SeatStatusInfo(false, connection, false, 3, false, true, 4);
                 Assert.IsFalse(SeatStatus.IsMet(gone), connection.ToString());

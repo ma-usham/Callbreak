@@ -45,7 +45,11 @@ namespace Callbreak.Presentation.Table
 
     /// <summary>
     /// The status pill's copy: Waiting → Calling… → Bid 3 → Bid 3 · Won 1, with a tick once the call
-    /// is met, "· auto" for a call the timer placed, and the connection chips of GDD §8.
+    /// is met and "· auto" for a call the timer placed. The line is about the seat, not about who
+    /// is playing it: it stays when the player is away, reconnecting or gone and a bot plays on,
+    /// because what a seat called and has won decides how the others play. How the player is
+    /// connected has its own short chip beside the pill (GDD §8 "What others see"), which is also
+    /// where a fill-in bot carries its BOT tag (GDD §9).
     /// </summary>
     public static class SeatStatus
     {
@@ -60,22 +64,14 @@ namespace Callbreak.Presentation.Table
         public const string ReconnectingKey = "ui.seat.reconnecting";
         public const string BotPlayingKey = "ui.seat.bot_playing";
 
+        /// <summary>"BOT", as the Quick Match search marks a seat a bot filled.</summary>
+        public const string BotTagKey = "ui.matchmaking.seat_bot";
+
         public static string Text(in SeatStatusInfo seat, ILocalization localization)
         {
             if (localization == null)
             {
                 throw new ArgumentNullException(nameof(localization));
-            }
-
-            switch (seat.Connection)
-            {
-                case SeatConnection.Away:
-                    return localization.Get(AwayKey);
-                case SeatConnection.Reconnecting:
-                    return localization.Get(ReconnectingKey);
-                case SeatConnection.BotControlled:
-                case SeatConnection.Left:
-                    return localization.Get(BotPlayingKey);
             }
 
             if (!seat.HasCalled)
@@ -94,19 +90,52 @@ namespace Callbreak.Presentation.Table
                 return localization.Format(seat.IsAutoCall ? BidAutoKey : BidKey, seat.Call);
             }
 
-            return localization.Format(IsMet(seat) ? BidWonMetKey : BidWonKey, seat.Call, seat.Won);
+            return localization.Format(HasMetItsCall(seat) ? BidWonMetKey : BidWonKey, seat.Call, seat.Won);
         }
 
         /// <summary>
         /// The pill turns gold: the seat has won at least what it called (GDD screen 08, callout 3).
-        /// Only while the pill shows that line; a connection chip ("Away") is never gold.
+        /// Only for a player who is at the table: the line of a seat that is away keeps its tick,
+        /// but the pill stays plain.
         /// </summary>
         public static bool IsMet(in SeatStatusInfo seat)
         {
-            return seat.Connection == SeatConnection.Connected
-                && seat.HasCalled
-                && seat.IsPlaying
-                && ScoreCalculator.IsMet(seat.Call, seat.Won);
+            return seat.Connection == SeatConnection.Connected && HasMetItsCall(seat);
+        }
+
+        /// <summary>
+        /// The chip beside the pill (GDD §8 "What others see"): "Away" after two timeouts,
+        /// "Reconnecting…" while the seat is held, "Bot playing" once a bot has taken it for good;
+        /// for a player who is there, "BOT" when <paramref name="isFillInBot"/> (a bot that fills a
+        /// seat of an online table), and otherwise null: no chip.
+        /// </summary>
+        public static string Chip(SeatConnection connection, bool isFillInBot, ILocalization localization)
+        {
+            if (localization == null)
+            {
+                throw new ArgumentNullException(nameof(localization));
+            }
+
+            switch (connection)
+            {
+                case SeatConnection.Away:
+                    return localization.Get(AwayKey);
+                case SeatConnection.Reconnecting:
+                    return localization.Get(ReconnectingKey);
+                case SeatConnection.BotControlled:
+                case SeatConnection.Left:
+                    return localization.Get(BotPlayingKey);
+                default:
+                    return isFillInBot ? localization.Get(BotTagKey) : null;
+            }
+        }
+
+        /// <summary>The chip shows a spinner: the seat's player is reconnecting (GDD §8).</summary>
+        public static bool ChipIsBusy(SeatConnection connection) => connection == SeatConnection.Reconnecting;
+
+        private static bool HasMetItsCall(in SeatStatusInfo seat)
+        {
+            return seat.HasCalled && seat.IsPlaying && ScoreCalculator.IsMet(seat.Call, seat.Won);
         }
     }
 }

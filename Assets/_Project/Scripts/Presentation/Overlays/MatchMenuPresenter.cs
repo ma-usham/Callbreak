@@ -3,9 +3,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Ports;
+using Callbreak.Application.Rooms;
 using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
 using Callbreak.Presentation.Framework;
+using Callbreak.Presentation.Table;
 using UnityEngine;
 using VContainer.Unity;
 
@@ -17,15 +19,18 @@ namespace Callbreak.Presentation.Overlays
     /// switch mutes music and effects together; Leave Match asks first (the shared dialog), then
     /// leaves the session and returns to the main menu. Offline the match is paused while the menu
     /// is open (the table presenter pauses it for every screen that covers the table) and leaving
-    /// keeps the match for later; online the game goes on and leaving counts as a loss.
+    /// keeps the match for later; online the game goes on and leaving counts as a loss. The host of
+    /// a private room is told that leaving closes the room for everybody (GDD §8: the host's
+    /// device is the room).
     /// </summary>
     public sealed class MatchMenuPresenter : IStartable, IDisposable
     {
         public const string ModeOfflineKey = "ui.match_menu.mode_offline";
         public const string ModeOnlineKey = "ui.match_menu.mode_online";
         public const string LeaveTitleKey = "ui.dialog.leave_match.title";
-        public const string LeaveBodyKey = "ui.dialog.leave_match.body";
-        public const string LeaveBodyOfflineKey = "ui.dialog.leave_match.body_offline";
+        public const string LeaveBodyKey = MatchMenuText.LeaveBodyKey;
+        public const string LeaveBodyOfflineKey = MatchMenuText.LeaveBodyOfflineKey;
+        public const string LeaveBodyHostKey = MatchMenuText.LeaveBodyHostKey;
         public const string LeaveConfirmKey = "ui.dialog.leave_match.confirm";
         public const string LeaveCancelKey = "ui.dialog.leave_match.cancel";
 
@@ -37,6 +42,7 @@ namespace Callbreak.Presentation.Overlays
         private readonly IDialogs _dialogs;
         private readonly IAppFlow _flow;
         private readonly IAudioService _audio;
+        private readonly IRoomService _rooms;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private bool _started;
@@ -50,7 +56,8 @@ namespace Callbreak.Presentation.Overlays
             ILocalization localization,
             IDialogs dialogs,
             IAppFlow flow,
-            IAudioService audio)
+            IAudioService audio,
+            IRoomService rooms)
         {
             _view = view;
             _router = router;
@@ -60,9 +67,20 @@ namespace Callbreak.Presentation.Overlays
             _dialogs = dialogs;
             _flow = flow;
             _audio = audio;
+            _rooms = rooms;
         }
 
         private bool IsOffline => _session.Mode == MatchMode.Offline;
+
+        /// <summary>This device hosts the private room the match is played in (one room at a time).</summary>
+        private bool HostsTheRoom
+        {
+            get
+            {
+                IRoomSession room = _session.Mode == MatchMode.PrivateRoom && _rooms != null ? _rooms.Current : null;
+                return room != null && room.IsHost;
+            }
+        }
 
         public void Start()
         {
@@ -154,7 +172,7 @@ namespace Callbreak.Presentation.Overlays
             {
                 var request = new DialogRequest(
                     _localization.Get(LeaveTitleKey),
-                    _localization.Get(IsOffline ? LeaveBodyOfflineKey : LeaveBodyKey),
+                    _localization.Get(MatchMenuText.LeaveBodyKeyFor(_session.Mode, HostsTheRoom)),
                     _localization.Get(LeaveConfirmKey),
                     _localization.Get(LeaveCancelKey));
                 bool confirmed = await _dialogs.ConfirmAsync(request, _lifetime.Token);

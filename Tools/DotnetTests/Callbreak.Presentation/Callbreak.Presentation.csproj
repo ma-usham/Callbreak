@@ -12,6 +12,8 @@
     <Compile Include="$(UnityScripts)\Presentation\Table\Playback\IEventAnimation.cs" />
     <Compile Include="$(UnityScripts)\Presentation\Table\Playback\MatchEventPlayer.cs" />
     <Compile Include="$(UnityScripts)\Presentation\Table\Playback\TimedAnimations.cs" />
+    <!-- The screen ids alone (a plain enum): the table's input rule is stated in terms of the router's top screen. -->
+    <Compile Include="$(UnityScripts)\Presentation\Framework\ScreenId.cs" />
     <!-- Card Collection: the timing of a deck picture's look at its ace (the view that plays it is left out). -->
     <Compile Include="$(UnityScripts)\Presentation\Screens\CardCollection\DeckPeek.cs" />
     <ProjectReference Include="..\Callbreak.Core\Callbreak.Core.csproj" />

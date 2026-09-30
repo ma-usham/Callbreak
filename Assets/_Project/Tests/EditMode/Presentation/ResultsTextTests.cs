@@ -1,3 +1,4 @@
+using Callbreak.Application.Sessions;
 using Callbreak.Core.Match;
 using Callbreak.Core.Scoring;
 using Callbreak.Presentation.Table;
@@ -124,6 +125,8 @@ namespace Callbreak.Tests.EditMode.Presentation
         [TestCase("ui.dialog.leave_match.title")]
         [TestCase("ui.dialog.leave_match.body")]
         [TestCase("ui.dialog.leave_match.body_offline")]
+        [TestCase("ui.dialog.leave_match.body_host")]
+        [TestCase("ui.round_results.see_final_countdown")]
         [TestCase("ui.dialog.leave_match.confirm")]
         [TestCase("ui.dialog.leave_match.cancel")]
         public void EveryKeyThePresentersUse_IsInTheTable(string key)
@@ -137,6 +140,38 @@ namespace Callbreak.Tests.EditMode.Presentation
             Assert.AreEqual("ROUND 1 OF 5", Strings.Format("ui.round_results.round_title", 1, 5));
             Assert.AreEqual("Round 2 begins next", Strings.Format("ui.round_results.footer_next", 2));
             Assert.AreEqual("Next Round (10)", Strings.Format("ui.round_results.next_countdown", 10));
+        }
+
+        [Test]
+        public void TheNextButton_ShowsTheHostsCountdown_AfterTheLastRoundToo()
+        {
+            // Offline there is no clock.
+            Assert.AreEqual("Next Round", ResultsText.NextLabel(false, -1, Strings));
+            Assert.AreEqual("See Final Results", ResultsText.NextLabel(true, -1, Strings));
+
+            // Online the host counts every summary down, the last round's as well (GDD 11 screen 09).
+            Assert.AreEqual("Next Round (10)", ResultsText.NextLabel(false, 10, Strings));
+            Assert.AreEqual("Next Round (0)", ResultsText.NextLabel(false, 0, Strings));
+            Assert.AreEqual("See Final Results (10)", ResultsText.NextLabel(true, 10, Strings));
+            Assert.AreEqual("See Final Results (1)", ResultsText.NextLabel(true, 1, Strings));
+        }
+
+        [Test]
+        public void LeaveMatch_WarnsTheHost_ThatTheRoomClosesForEveryone()
+        {
+            // GDD 8: offline the match is saved; online a bot takes the seat; the host's device is the room (phase 1).
+            Assert.AreEqual("ui.dialog.leave_match.body_offline", MatchMenuText.LeaveBodyKeyFor(MatchMode.Offline, false));
+            Assert.AreEqual("ui.dialog.leave_match.body", MatchMenuText.LeaveBodyKeyFor(MatchMode.PrivateRoom, false));
+            Assert.AreEqual("ui.dialog.leave_match.body_host", MatchMenuText.LeaveBodyKeyFor(MatchMode.PrivateRoom, true));
+            Assert.AreEqual("ui.dialog.leave_match.body", MatchMenuText.LeaveBodyKeyFor(MatchMode.QuickMatch, false));
+            Assert.AreEqual("ui.dialog.leave_match.body", MatchMenuText.LeaveBodyKeyFor(MatchMode.QuickMatch, true), "a Quick Match table has nobody else to close a room for");
+            Assert.AreEqual("ui.dialog.leave_match.body_offline", MatchMenuText.LeaveBodyKeyFor(MatchMode.Offline, true));
+
+            string host = Strings.Get(MatchMenuText.LeaveBodyHostKey);
+            StringAssert.Contains("close", host);
+            StringAssert.Contains("everyone", host);
+            StringAssert.Contains("loss", host, "leaving on purpose still costs the match");
+            StringAssert.DoesNotContain("bot will take", host, "no bot takes over a room that is gone");
         }
     }
 }

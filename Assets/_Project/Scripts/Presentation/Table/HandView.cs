@@ -21,6 +21,10 @@ namespace Callbreak.Presentation.Table
     {
         private const float MillimetresPerInch = 25.4f;
 
+        // GDD §14 "Sort hand: cards slide into their sorted slots, 250 ms, OutBack 0.8": a slide
+        // runs a little past its slot (2% of the way) and settles back.
+        private const float SlideOvershoot = 0.8f;
+
         [SerializeField] private RectTransform _cardsRoot;
         [SerializeField] private RectTransform _widthReference;
         [SerializeField] private CardViewPool _pool;
@@ -194,6 +198,15 @@ namespace Callbreak.Presentation.Table
             if (!_views.Contains(view))
             {
                 _views.Add(view);
+            }
+        }
+
+        /// <summary>How visible the hand's cards are, 0 to 1 (the deal fades them in with Reduce motion).</summary>
+        public void SetAlpha(float alpha)
+        {
+            for (int i = 0; i < _views.Count; i++)
+            {
+                _views[i].SetAlpha(alpha);
             }
         }
 
@@ -401,16 +414,25 @@ namespace Callbreak.Presentation.Table
                 return;
             }
 
-            _arrangeMotion = LMotion.Create(0f, 1f, _arrangeSeconds).WithEase(Ease.OutCubic).Bind(this, (t, hand) => hand.ApplyBlend(t));
+            // Linear time; ApplyBlend gives it the slide's own easing.
+            _arrangeMotion = LMotion.Create(0f, 1f, _arrangeSeconds).Bind(this, (t, hand) => hand.ApplyBlend(t));
         }
 
         private void ApplyBlend(float t)
         {
             int count = Mathf.Min(_views.Count, _to.Length);
+            float eased = OutBack(t);
             for (int i = 0; i < count; i++)
             {
-                _views[i].Placement = t >= 1f ? _to[i] : CardPlacement.Lerp(_from[i], _to[i], t);
+                _views[i].Placement = t >= 1f ? _to[i] : CardPlacement.Lerp(_from[i], _to[i], eased);
             }
+        }
+
+        /// <summary>OutBack with the GDD's overshoot of 0.8 (the usual 1.70158 would throw a card 10% past its slot).</summary>
+        private static float OutBack(float t)
+        {
+            float u = t - 1f;
+            return 1f + ((SlideOvershoot + 1f) * u * u * u) + (SlideOvershoot * u * u);
         }
 
         private void ApplyShake(float t)

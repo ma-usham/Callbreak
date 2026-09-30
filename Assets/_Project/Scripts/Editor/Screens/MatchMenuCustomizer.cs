@@ -8,8 +8,9 @@ namespace Callbreak.Editor.Screens
 {
     /// <summary>
     /// Screen 13, the match menu: adds the dim between the table and the panel (the whole screen on
-    /// every aspect ratio; it also keeps taps off the table), and turns the Sound switch into a
-    /// <see cref="ToggleSwitch"/> drawn by the Settings screen's ON and OFF looks.
+    /// every aspect ratio; it also keeps taps off the table), turns the Sound switch into a
+    /// <see cref="ToggleSwitch"/> drawn by the Settings screen's ON and OFF looks, and makes every
+    /// control answer to at least 88 px (GDD §16) without drawing it any larger.
     /// </summary>
     public static class MatchMenuCustomizer
     {
@@ -31,6 +32,38 @@ namespace Callbreak.Editor.Screens
             image.raycastTarget = true;
 
             BuildToggle(ctx, ctx.Node("SoundToggle"));
+            GrowTouchAreas(ctx);
+        }
+
+        /// <summary>
+        /// Resume (79 px high) and the Scorecard button (85) grow upwards: above Resume there is only
+        /// the mode tag, and the Scorecard button then keeps 16 px from Resume's area. Leave (74)
+        /// grows downwards, where there is only the "paused" note. The switch (85 × 48) grows more
+        /// down than up, so that it too keeps 16 px from the Scorecard button. The close × is 87.
+        /// </summary>
+        private static void GrowTouchAreas(ScreenBuildContext ctx)
+        {
+            const float min = TableCustomizer.MinTouch;
+            TableCustomizer.MinimumTouch(TargetOf(ctx, "CloseButton"), min, min);
+            TableCustomizer.MinimumTouch(TargetOf(ctx, "ResumeButton"), 0f, min, 1f);
+            TableCustomizer.MinimumTouch(TargetOf(ctx, "ScorecardButton"), 0f, min, 1f);
+            TableCustomizer.MinimumTouch(TargetOf(ctx, "LeaveButton"), 0f, min, 0f);
+            foreach (Image look in ctx.Nodes["SoundToggle"].GetComponentsInChildren<Image>(true))
+            {
+                TableCustomizer.MinimumTouch(look, min, min, 0.38f);
+            }
+        }
+
+        private static Graphic TargetOf(ScreenBuildContext ctx, string buttonId)
+        {
+            Button button = ctx.Nodes[buttonId].GetComponent<Button>();
+            if (button == null || button.targetGraphic == null)
+            {
+                ctx.Warnings.Add($"{buttonId}: no button to give a touch area");
+                return null;
+            }
+
+            return button.targetGraphic;
         }
 
         private static void BuildToggle(ScreenBuildContext ctx, LayoutNode node)
