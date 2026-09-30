@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Callbreak — Complete Screen Gallery</title>
+<style>
+:root{color-scheme:dark;--bg:#211b19;--panel:#2b2320;--cream:#f8edde;--muted:#bfae9d;--line:#4e3e34;--accent:#b8232a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--cream);font-family:Segoe UI,Arial,sans-serif}button,a,select{-webkit-tap-highlight-color:transparent}button,a{touch-action:manipulation}button{cursor:pointer;font:inherit}button:focus-visible,a:focus-visible,select:focus-visible{outline:3px solid #e8b465;outline-offset:3px}
+header{padding:25px 32px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:20px;align-items:center}.brand{font:700 29px Georgia,serif;letter-spacing:1px}.eyebrow{color:#d5aa76;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:3px;margin:0 0 8px}.meta{color:var(--muted);font-size:13px}.layout{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:calc(100vh - 106px)}aside{border-right:1px solid var(--line);padding:18px 12px;height:calc(100vh - 106px);position:sticky;top:0;overflow:auto}.group{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#d5aa76;margin:18px 10px 8px}.screen-button{display:flex;gap:11px;align-items:center;border:1px solid transparent;border-radius:7px;width:100%;color:#d9cbbb;background:transparent;text-align:left;padding:10px;font-size:13px;margin:2px 0}.screen-button:hover{background:#3a2c27}.screen-button[aria-current=true]{background:#5a2022;border-color:#943c3e;color:#fff6e9}.screen-number{font-size:11px;opacity:.6;font-variant-numeric:tabular-nums}main{padding:26px 30px;min-width:0}.heading{display:flex;align-items:start;justify-content:space-between;gap:20px;margin-bottom:19px}h1{font:400 28px Georgia,serif;margin:0 0 8px}.description{font-size:13px;color:var(--muted);margin:0;line-height:1.5;max-width:710px}.counter{font-size:12px;white-space:nowrap;color:#d5aa76;padding-top:8px}.stage{margin:0;background:#161310;border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:200px}.stage img{display:block;width:100%;height:auto;aspect-ratio:1672/941;object-fit:contain}.stage:fullscreen{border:0;border-radius:0;background:#17120f}.stage:fullscreen img{width:100%;height:100%;object-fit:contain}.toolbar{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:15px 0 25px}.actions{display:flex;gap:8px;flex-wrap:wrap}.control{border:1px solid #5a493c;color:var(--cream);background:#322824;padding:10px 15px;text-decoration:none;border-radius:7px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;min-height:38px}.control:hover{background:#49332b}.control.primary{background:#7f1920;border-color:#a42d32}.control:disabled{opacity:.35;cursor:default}.hint{font-size:11px;color:var(--muted);margin:5px 0 20px}.strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px}.thumb{background:#2e2521;border:1px solid var(--line);padding:0;border-radius:7px;overflow:hidden;text-align:left;color:var(--cream)}.thumb img{display:block;width:100%;aspect-ratio:1672/941;object-fit:contain;background:#eee1cc}.thumb span{display:block;font-size:11px;padding:10px}.thumb[aria-current=true]{border:2px solid #d3a05d}.thumb:hover{border-color:#d3a05d}footer{margin-top:25px;padding-top:16px;border-top:1px solid var(--line);font-size:11px;line-height:1.7;color:var(--muted)}footer a{color:#e9c493}.mobile-select{display:none}
+@media(min-width:1750px){main{max-width:1700px;margin:auto;width:100%}}
+@media(max-width:860px){header{padding:20px}.layout{display:block}aside{display:none}main{padding:20px}.mobile-select{display:block;width:100%;margin-bottom:18px;border:1px solid var(--line);padding:12px;border-radius:7px;background:var(--panel);color:var(--cream);font:inherit}.heading{gap:10px}h1{font-size:24px}.strip{grid-template-columns:repeat(2,minmax(0,1fr))}.meta{max-width:140px;text-align:right;line-height:1.5}}
+</style>
+</head>
+<body>
+<header><div><p class="eyebrow">Nepali Callbreak · Visual direction</p><div class="brand">CALLBREAK</div></div><div class="meta">17 screens · 1672 × 941<br>Complete player journey</div></header>
+<div class="layout">
+<aside id="navigation" aria-label="Screen navigation"></aside>
+<main>
+<select class="mobile-select" id="screenSelect" aria-label="Choose screen"></select>
+<div class="heading"><div><h1 id="title">Live gameplay</h1><p class="description" id="description"></p></div><span class="counter" id="counter"></span></div>
+<figure class="stage" id="stage"><img id="mainImage" src="08-gameplay.png" alt="Callbreak live gameplay screen"></figure>
+<div class="toolbar"><div class="actions"><button class="control" id="previous">← Previous</button><button class="control" id="next">Next →</button></div><div class="actions"><button class="control" id="fullscreen">Full screen</button><a class="control" id="openImage" target="_blank" rel="noopener" href="08-gameplay.png">Open PNG</a><a class="control primary" id="download" download href="08-gameplay.png">Save PNG ↓</a></div></div>
+<p class="hint">Use the left and right arrow keys to browse. These are visual screen concepts; the controls inside each image are part of the artwork.</p>
+<div class="strip" id="thumbnails" aria-label="All screen previews"></div>
+<footer>Created with the built-in image editor using the supplied main-menu and room artwork. Original source images are preserved.<br><a href="README.md">Screen inventory and design notes</a> · <a href="generation-prompts.md">Generation prompts</a> · <a href="manifest.json">File manifest</a></footer>
+</main></div>
+<script>
+const screens=[{"file":"00-main-menu.png","title":"Main menu","group":"Start","description":"Existing main menu and visual reference."},{"file":"01-play-with-friends.png","title":"Play with friends","group":"Friends","description":"Larger Create Room and Join Room panels; bottom code and invite strip removed."},{"file":"02-create-room.png","title":"Create room","group":"Friends","description":"Choose a room name and turn timer before opening a private table."},{"file":"03-join-room.png","title":"Join room","group":"Friends","description":"Enter a six-character invitation code."},{"file":"04-private-lobby.png","title":"Private lobby","group":"Friends","description":"A created room with four players, invitation controls, and host start action."},{"file":"05-matchmaking.png","title":"Online matchmaking","group":"Online","description":"Find three opponents for an online match."},{"file":"06-offline-setup.png","title":"Offline setup","group":"Offline","description":"Select a difficulty for a five-round match against bots."},{"file":"07-bidding.png","title":"Make your call","group":"Match","description":"Choose a bid over the updated scenic board, with a bottom-edge 13-card hand and avatar countdown."},{"file":"08-gameplay.png","title":"Live gameplay","group":"Match","description":"13-card hand emerging from the bottom screen edge, lower-left avatar countdown, room for the fourth played card, and the original ivory/daylight Nepal style."},{"file":"09-round-results.png","title":"Round results","group":"Match","description":"Round-one scores with bids, tricks won, and updated totals."},{"file":"10-match-results.png","title":"Match results","group":"Match","description":"Final standings after five rounds, with replay and main-menu actions."},{"file":"11-settings.png","title":"Settings","group":"More","description":"Audio, language, accessibility, and help controls."},{"file":"12-how-to-play.png","title":"How to play","group":"More","description":"A concise overview of the standard five-round rules and scoring."},{"file":"13-match-menu.png","title":"Match menu","group":"Match","description":"A menu over the updated gameplay board and bottom-edge hand, with resume, audio, scorecard, and leave controls."},{"file":"14-profile.png","title":"Player profile","group":"More","description":"An illustrative profile with editable identity and simple play statistics."},{"file":"15-card-styles.png","title":"Card styles","group":"More","description":"A cosmetic collection screen reached from the main menu's shop icon."},{"file":"16-scorecard.png","title":"Full scorecard","group":"Match","description":"A consistent five-round score history matching the final standings."}];
+const navigation=document.getElementById('navigation'),select=document.getElementById('screenSelect'),thumbs=document.getElementById('thumbnails');
+let current=8;const buttons=[],previews=[];
+for(const group of [...new Set(screens.map(s=>s.group))]){
+ const label=document.createElement('div');label.className='group';label.textContent=group;navigation.append(label);
+ screens.forEach((s,i)=>{if(s.group!==group)return;const b=document.createElement('button');b.className='screen-button';b.innerHTML='<span class="screen-number">'+String(i).padStart(2,'0')+'</span><span>'+s.title+'</span>';b.addEventListener('click',()=>show(i));navigation.append(b);buttons[i]=b;});
+}
+screens.forEach((s,i)=>{
+ const option=document.createElement('option');option.value=i;option.textContent=String(i).padStart(2,'0')+' · '+s.title;select.append(option);
+ const b=document.createElement('button');b.className='thumb';b.setAttribute('aria-label','View '+s.title);
+ const img=document.createElement('img');img.src=s.file;img.alt=s.title;img.loading='lazy';img.width=1672;img.height=941;
+ const name=document.createElement('span');name.textContent=String(i).padStart(2,'0')+' · '+s.title;b.append(img,name);b.addEventListener('click',()=>{show(i);document.querySelector('.heading').scrollIntoView({block:'start',behavior:'instant'});});thumbs.append(b);previews[i]=b;
+});
+function show(i,updateHash=true){
+ current=Math.max(0,Math.min(screens.length-1,i));const s=screens[current];
+ document.getElementById('mainImage').src=s.file;document.getElementById('mainImage').alt=s.title+' — '+s.description;
+ document.getElementById('title').textContent=s.title;document.getElementById('description').textContent=s.description;
+ document.getElementById('counter').textContent=String(current+1).padStart(2,'0')+' / '+screens.length;
+ document.getElementById('openImage').href=s.file;document.getElementById('download').href=s.file;document.getElementById('download').download=s.file;
+ document.getElementById('previous').disabled=current===0;document.getElementById('next').disabled=current===screens.length-1;
+ buttons.forEach((b,n)=>b.setAttribute('aria-current',n===current?'true':'false'));previews.forEach((b,n)=>b.setAttribute('aria-current',n===current?'true':'false'));select.value=current;
+ if(updateHash)history.replaceState(null,'','#'+s.file.replace('.png',''));
+}
+select.addEventListener('change',e=>show(Number(e.target.value)));
+document.getElementById('previous').addEventListener('click',()=>show(current-1));
+document.getElementById('next').addEventListener('click',()=>show(current+1));
+document.getElementById('fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.getElementById('stage').requestFullscreen();}catch{window.open(screens[current].file,'_blank','noopener');}});
+document.addEventListener('keydown',e=>{if(e.target.matches('select,input,textarea'))return;if(e.key==='ArrowLeft'){e.preventDefault();show(current-1)}else if(e.key==='ArrowRight'){e.preventDefault();show(current+1)}});
+window.addEventListener('hashchange',()=>{const i=screens.findIndex(s=>'#'+s.file.replace('.png','')===location.hash);if(i>=0)show(i,false)});
+const initial=screens.findIndex(s=>'#'+s.file.replace('.png','')===location.hash);show(initial>=0?initial:8,false);
+</script>
+</body></html>
