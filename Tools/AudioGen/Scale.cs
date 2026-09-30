@@ -1,13 +1,15 @@
 namespace AudioGen;
 
 /// <summary>
-/// Sargam in D, just intonation. Every tonal cue and both loops use the Sa Re Ga Pa Dha pentatonic on
-/// this Sa, so a sting that fires over the music is always in key with it.
+/// Sargam in G, just intonation: Sa = G4, the pitch of the common G-medium bansuri. Every tonal cue and
+/// both loops use the Sa Re Ga Pa Dha pentatonic (G A B D E) on this Sa, so a sting that fires over the
+/// music is always in key with it. G also keeps the melody, the drone and the drums high enough for a
+/// phone speaker, which plays very little below about 300 Hz.
 /// Notation: S R G M P D N; "." lowers an octave, "'" raises one ("D." = the Dha below Sa, "S'" = high Sa).
 /// </summary>
 public static class Scale
 {
-    public const double Sa = 293.66; // D4
+    public const double Sa = 392.00; // G4
 
     static readonly Dictionary<char, double> Ratio = new()
     {

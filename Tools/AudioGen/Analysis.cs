@@ -7,8 +7,8 @@ namespace AudioGen;
 
 /// <summary>What the generator measures on every file it wrote, since nobody listens during a build.</summary>
 public sealed record Stats(
-    double Seconds, int Channels, int Rate, double PeakDb, double RmsDb, double Lufs, double Dc, int Clipped,
-    double CentroidHz, double HighPct, double FirstAbs, double LastAbs,
+    double Seconds, int Channels, int Rate, double PeakDb, double RmsDb, double Lufs, double LoudestDb, double Dc, int Clipped,
+    double CentroidHz, double[] Bands, double PhoneDb, double MonoDb, double FirstAbs, double LastAbs,
     double SeamStep, double StepP999, double SeamCurve, double CurveP999);
 
 public static class Analysis
@@ -41,6 +41,31 @@ public static class Analysis
         if (loud.Count == 0) return double.NegativeInfinity;
         double gate = L(loud.Average()) - 10;
         return L(loud.Where(b => L(b) > gate).Average());
+    }
+
+    /// <summary>
+    /// The loudest 100 ms of a sound, K-weighted, on the LUFS scale: a loudness figure that also works for
+    /// effects too short for an integrated measurement (and is what sets how loud a short cue feels).
+    /// </summary>
+    public static double Loudest(params double[][] ch)
+    {
+        int n = ch[0].Length, window = Math.Min(n, Samples(0.1)), hop = Samples(0.01);
+        var prefix = new double[n + 1];
+        foreach (var c in ch)
+        {
+            var shelf = Biquad.HighShelf(1500, 0.7071, 4.0);
+            var hp = Biquad.HighPass(38, 0.5);
+            double acc = 0;
+            for (int i = 0; i < n; i++)
+            {
+                double v = hp.Run(shelf.Run(c[i]));
+                acc += v * v;
+                prefix[i + 1] += acc;
+            }
+        }
+        double best = 0;
+        for (int s = 0; s + window <= n; s += hop) best = Math.Max(best, prefix[s + window] - prefix[s]);
+        return -0.691 + 10 * Math.Log10(Math.Max(best / Samples(0.1), 1e-20));
     }
 
     /// <summary>Measures a WAV as it sits on disk (after 16-bit rounding).</summary>
@@ -80,9 +105,13 @@ public static class Analysis
 
         var mono = new double[n];
         foreach (var c in ch) for (int i = 0; i < n; i++) mono[i] += c[i] / ch.Length;
-        var (centroid, high) = Spectrum(mono);
+        var (centroid, bands, phone) = Spectrum(mono);
+        // What summing to one speaker costs: 0 dB = nothing, very negative = the channels cancel each other.
+        double monoSq = 0;
+        foreach (double v in mono) monoSq += v * v;
+        double monoDb = 10 * Math.Log10(Math.Max(monoSq / n, 1e-20) / Math.Max(sumSq / (n * ch.Length), 1e-20));
         return new Stats((double)n / rate, ch.Length, rate, ToDb(peak), ToDb(Math.Sqrt(sumSq / (n * ch.Length))), Lufs(ch),
-                         dc, clipped, centroid, high, first, last, seamStep, stepP, seamCurve, curveP);
+                         Loudest(ch), dc, clipped, centroid, bands, phone, monoDb, first, last, seamStep, stepP, seamCurve, curveP);
     }
 
     static double Percentile(int[] hist, int count, double p)
@@ -96,8 +125,18 @@ public static class Analysis
         return hist.Length - 1;
     }
 
-    /// <summary>Averaged power spectrum: the spectral centroid (brightness) and the share of energy above 6 kHz (harshness).</summary>
-    static (double centroidHz, double highPct) Spectrum(double[] x)
+    /// <summary>Upper edges (Hz) of the bands the report splits energy into; the last band is everything above.</summary>
+    public static readonly double[] BandEdges = { 150, 500, 2000, 6000 };
+
+    /// <summary>A phone's loudspeaker, roughly: a fourth-order high-pass at this frequency.</summary>
+    public const double PhoneCornerHz = 400;
+
+    /// <summary>
+    /// Averaged power spectrum: the spectral centroid (brightness); the share of energy (%) in each band
+    /// (below 150 Hz, 150-500, 500-2k, 2k-6k, above 6 kHz); and how many dB of the sound's energy a phone
+    /// speaker loses (0 = all of it survives, -10 = most of the sound lives below what the phone can play).
+    /// </summary>
+    public static (double centroidHz, double[] bands, double phoneDb) Spectrum(double[] x)
     {
         int size = 4096;
         while (size > 256 && size > x.Length) size >>= 1;
@@ -117,16 +156,22 @@ public static class Analysis
             for (int b = 0; b <= size / 2; b++) power[b] += re[b] * re[b] + im[b] * im[b];
             frames++;
         }
-        double total = 0, weighted = 0, high = 0;
+        double total = 0, weighted = 0, phone = 0;
+        var bands = new double[BandEdges.Length + 1];
         for (int b = 1; b <= size / 2; b++)
         {
             double f = b * Fs / size;
             if (f < 20) continue;
             total += power[b];
             weighted += f * power[b];
-            if (f > 6000) high += power[b];
+            phone += power[b] / (1 + Math.Pow(PhoneCornerHz / f, 8));
+            int k = 0;
+            while (k < BandEdges.Length && f > BandEdges[k]) k++;
+            bands[k] += power[b];
         }
-        return total <= 0 ? (0, 0) : (weighted / total, 100 * high / total);
+        if (total <= 0) return (0, bands, 0);
+        for (int k = 0; k < bands.Length; k++) bands[k] *= 100 / total;
+        return (weighted / total, bands, 10 * Math.Log10(Math.Max(phone / total, 1e-12)));
     }
 
     public static void Fft(double[] re, double[] im)
@@ -164,7 +209,7 @@ public static class Analysis
     /// <summary>
     /// Writes a picture of a sound for review without ears: the waveform on top, then a spectrogram
     /// (50 Hz to 16 kHz on a log scale, 80 dB of range) with lines at 100 Hz, 1 kHz and 10 kHz and time
-    /// ticks along the bottom (every 0.1 s for clips up to 4 s, every 10 s for longer ones).
+    /// ticks along the bottom (every 0.1 s for clips up to 4 s, every second up to 30 s, every 10 s beyond).
     /// </summary>
     public static void Picture(string path, double[] x, int width)
     {
@@ -246,7 +291,7 @@ public static class Analysis
             int row = specH - 1 - (int)(specH * Math.Log(f / fLo) / Math.Log(fHi / fLo));
             for (int col = 0; col < width; col += 6) Px(col, waveH + row, 120, 120, 120);
         }
-        double seconds = n / Fs, tick = seconds <= 4 ? 0.1 : 10;
+        double seconds = n / Fs, tick = seconds <= 4 ? 0.1 : seconds <= 30 ? 1 : 10;
         for (int py = waveH + specH; py < height; py++)
             for (int col = 0; col < width; col++) Px(col, py, 24, 24, 30);
         for (double t = 0; t <= seconds + 1e-9; t += tick)

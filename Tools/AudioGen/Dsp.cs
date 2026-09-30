@@ -147,27 +147,12 @@ public sealed class Biquad
         return new(a, 0, -a, 1 + a, -2 * c, 1 - a);
     }
 
-    public static Biquad Peak(double f, double q, double db)
-    {
-        var (c, a) = W(f, q);
-        double A = Math.Pow(10, db / 40);
-        return new(1 + a * A, -2 * c, 1 - a * A, 1 + a / A, -2 * c, 1 - a / A);
-    }
-
     public static Biquad HighShelf(double f, double q, double db)
     {
         var (c, a) = W(f, q);
         double A = Math.Pow(10, db / 40), s = 2 * Math.Sqrt(A) * a;
         return new(A * ((A + 1) + (A - 1) * c + s), -2 * A * ((A - 1) + (A + 1) * c), A * ((A + 1) + (A - 1) * c - s),
                    (A + 1) - (A - 1) * c + s, 2 * ((A - 1) - (A + 1) * c), (A + 1) - (A - 1) * c - s);
-    }
-
-    public static Biquad LowShelf(double f, double q, double db)
-    {
-        var (c, a) = W(f, q);
-        double A = Math.Pow(10, db / 40), s = 2 * Math.Sqrt(A) * a;
-        return new(A * ((A + 1) - (A - 1) * c + s), 2 * A * ((A - 1) - (A + 1) * c), A * ((A + 1) - (A - 1) * c - s),
-                   (A + 1) + (A - 1) * c + s, -2 * ((A - 1) + (A + 1) * c), (A + 1) + (A - 1) * c - s);
     }
 
     public double Run(double x)

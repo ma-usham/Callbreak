@@ -1,0 +1,23 @@
+<Project>
+  <!-- Procedural sound effects and music loops for Callbreak (see README.md). No NuGet packages.
+       Build output goes under the repo's /obj folder, which .gitignore already excludes, so nothing
+       inside Tools/AudioGen needs an ignore rule. These two paths must be set before Sdk.props. -->
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)..\..\obj\AudioGen\obj\</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)..\..\obj\AudioGen\bin\</BaseOutputPath>
+  </PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>audiogen</AssemblyName>
+    <RootNamespace>AudioGen</RootNamespace>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <Optimize>true</Optimize>
+    <TieredPGO>true</TieredPGO>
+  </PropertyGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

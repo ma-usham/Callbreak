@@ -10,7 +10,7 @@ public sealed record Job(string Name, bool Music, Func<double[][]> Render);
 /// <summary>
 /// The sound effects of GDD §14: mono, peak-normalised to -3 dBFS, each seeded from its own file name.
 /// Card sounds are built from paper crackle and soft impacts; every tonal cue is wood, marimba or a
-/// soft bar chime in the game's D pentatonic. Nothing metallic-bright, nothing that rings like a coin.
+/// soft bar chime in the game's G pentatonic. Nothing metallic-bright, nothing that rings like a coin.
 /// </summary>
 public static class Sfx
 {
@@ -20,7 +20,7 @@ public static class Sfx
     {
         yield return Cue("SFX_CardShuffle_01", 0.80, 0.06, CardShuffle);
         for (int v = 1; v <= 3; v++) { int k = v; yield return Cue($"SFX_CardDeal_{k:00}", 0.15, 0.03, (r, n) => CardDeal(r, n, k)); }
-        for (int v = 1; v <= 4; v++) { int k = v; yield return Cue($"SFX_CardPlay_{k:00}", 0.20, 0.04, (r, n) => CardPlay(r, n, k)); }
+        for (int v = 1; v <= 4; v++) { int k = v; yield return Cue($"SFX_CardPlay_{k:00}", 0.20, 0.04, (r, n) => CardPlay(r, n, k), 1.6); }
         yield return Cue("SFX_TrickCollect_01", 0.40, 0.06, TrickCollect);
         yield return Cue("SFX_CallConfirm_01", 0.25, 0.05, CallConfirm);
         yield return Cue("SFX_YourTurn_01", 0.60, 0.10, YourTurn);
@@ -34,10 +34,27 @@ public static class Sfx
         yield return Cue("SFX_Toggle_01", 0.12, 0.025, Toggle);
     }
 
-    static Job Cue(string name, double seconds, double fadeOut, Func<Rng, int, double[]> render) => new(name, false, () =>
+    /// <summary>
+    /// Unity's ADPCM import works in blocks of this many samples, and it does not pad a clip to fit: it
+    /// resamples it (measured: a 3528-sample tick came back 3584 samples long and 27 cents flat). So every
+    /// effect is a whole number of blocks long, and the import is then sample-exact.
+    /// </summary>
+    public const int BlockSamples = 64;
+
+    /// <summary>
+    /// The length is <paramref name="seconds"/> rounded to whole ADPCM blocks (at most 0.7 ms either way).
+    /// drive > 0 rounds the very top of the transient (tanh), so a short percussive cue carries more body
+    /// at the same peak; on a noise-like impact that is inaudible as distortion.
+    /// </summary>
+    static Job Cue(string name, double seconds, double fadeOut, Func<Rng, int, double[]> render, double drive = 0) => new(name, false, () =>
     {
-        var x = render(new Rng(name), Samples(seconds));
-        Biquad.HighPass(40).Run(x);      // no DC, no sub-bass a phone cannot play anyway
+        var x = render(new Rng(name), (int)Math.Round(seconds * Fs / BlockSamples) * BlockSamples);
+        if (drive > 0)
+        {
+            double peak = Peak(x);
+            for (int i = 0; i < x.Length; i++) x[i] = Math.Tanh(drive * x[i] / peak);
+        }
+        Biquad.HighPass(40).Run(x);      // no DC, no sub-bass
         FadeIn(x, 0.0003);
         FadeOut(x, fadeOut);             // ends on an exact zero
         Gain(Db(PeakDb) / Peak(x), x);
@@ -65,11 +82,11 @@ public static class Sfx
             double u = (tf - t0) / (tEnd - t0);
             double e = Ramp(tf - t0, 0.04) * (1 - 0.6 * Smoothstep((u - 0.85) / 0.15)) * r.Range(0.6, 1.0);
             if (r.Next() < 0.8) side = !side;
-            Burst(y, tf, 0.0007, 0.50 * e, r, side ? 3300 : 2500, 1.1);
-            Blip(y, tf + 0.0003, side ? 2200 : 1750, 1.0, 1, 0.0016, 0.10 * e, 0.0002);
+            Burst(y, tf, 0.0007, 0.50 * e, r, side ? 3000 : 2300, 1.1);
+            Blip(y, tf + 0.0003, side ? 2000 : 1600, 1.0, 1, 0.0016, 0.10 * e, 0.0002);
             tf += 0.0092 + 0.0045 * Math.Pow(2 * u - 1, 2) + r.Range(-0.0015, 0.0015);
         }
-        Add(y, Paper(r, dur, t => Ramp(t - t0, 0.05) * (1 - Smoothstep((t - tEnd + 0.05) / 0.08)), 1400, 0.3, 1500, 6000), 0, 0.22);
+        Add(y, Paper(r, dur, t => Ramp(t - t0, 0.05) * (1 - Smoothstep((t - tEnd + 0.05) / 0.08)), 1400, 0.3, 1200, 5500), 0, 0.22);
 
         // The bridge: the interleaved deck cascades flat, a quick falling "frrp".
         var bridge = Paper(r, 0.24, t => Ramp(t, 0.03) * Math.Exp(-Math.Max(0, t - 0.05) / 0.06), 3000, 0.45, 900, 5500);
@@ -77,7 +94,7 @@ public static class Sfx
         Add(y, bridge, Samples(0.54), 0.45);
 
         // Squaring the deck on the table.
-        Thud(y, 0.715, 170, 0.022, 0.30, r, 0.8, 1300);
+        Pat(y, 0.715, 160, 0.010, 0.45, r, 1300);
         Add(y, Paper(r, 0.05, t => Math.Exp(-t / 0.012), 800, 0.2, 1800, 6000), Samples(0.717), 0.12);
         return Reverb.Room(y, 0.12);
     }
@@ -87,29 +104,31 @@ public static class Sfx
     {
         var y = new double[n];
         double slide = 0.070 + 0.012 * v + r.Range(-0.006, 0.006);
-        double centre = 2600 + 300 * v + r.Range(-150, 150);
+        // Kept on the soft, low side of paper: this one plays fifty-two times in a row at every deal.
+        double centre = 1400 + 180 * v + r.Range(-100, 100);
         var s = Paper(r, slide + 0.03, t => Ramp(t, 0.012) * Math.Pow(Math.Sin(Math.PI * Math.Min(1, t / slide)), 0.6),
-                      1500, 0.35, 1400, 7000);
+                      1500, 0.35, 800, 5000);
         Sweep(s, 1.2, 0.55, t => centre * (0.8 + 0.4 * Math.Min(1, t / slide)));
         Add(y, s, 0, 0.6);
-        Burst(y, slide * 0.4, 0.03, 0.10, r, 900, 0.8, Band.BandPass, 0.012);
-        Burst(y, slide, 0.0012, 0.35, r, 3400 + 200 * v, 1.2);
+        Burst(y, slide * 0.4, 0.03, 0.12, r, 900, 0.8, Band.BandPass, 0.012);
+        Burst(y, slide, 0.0012, 0.35, r, 2300 + 150 * v, 1.2);
         return Reverb.Room(y, 0.08);
     }
 
-    /// <summary>A card snapped onto the felt: a paper flick, then the flat slap, the table's low knock and a tiny settle.</summary>
+    /// <summary>A card snapped onto the felt: a quick rising "fwip", then the edge touching, the flat pat and a tiny settle.</summary>
     static double[] CardPlay(Rng r, int n, int v)
     {
         var y = new double[n];
-        Burst(y, 0, 0.0018, 0.45, r, 3200 + 250 * v, 1.0);
-        Burst(y, 0.0004, 0.0025, 0.25, r, 1300, 0.9);
+        var fwip = Paper(r, 0.03, t => Ramp(t, 0.002) * Math.Exp(-t / 0.008), 1200, 0.6, 1400, 7000);
+        Sweep(fwip, 1.0, 0.6, t => (1900 + 150 * v) * Math.Pow(2.2, Math.Min(1, t / 0.02)));
+        Add(y, fwip, 0, 0.9);
+        Burst(y, 0, 0.001, 0.45, r, 3200 + 200 * v, 1.2);
 
-        double land = 0.012 + 0.004 * v + r.Range(-0.002, 0.002);
-        Burst(y, land, 0.006, 0.9, r, 1700, 0.7, Band.LowPass, 0.0006);                         // the slap of air
-        Blip(y, land, 185 * (1 + 0.06 * (v - 2.5)), 1.4, 0.006, 0.028, 0.7, 0.0008);            // felt-covered wood
-        Blip(y, land + 0.0005, 560 + 40 * v, 1.1, 0.004, 0.014, 0.22, 0.0006);                  // the table top
-        Add(y, Paper(r, 0.08, t => Ramp(t, 0.004) * Math.Exp(-t / (0.018 + 0.004 * v)), 900, 0.25, 1800, 6500),
-            Samples(land + 0.004), 0.22);
+        double land = 0.016 + 0.004 * v + r.Range(-0.002, 0.002);
+        Burst(y, land, 0.0009, 0.25, r, 4200, 1.3);
+        Pat(y, land, 170 * (1 + 0.06 * (v - 2.5)), 0.011, 0.9, r, 2000 - 100 * v);
+        Add(y, Paper(r, 0.08, t => Ramp(t, 0.004) * Math.Exp(-t / (0.016 + 0.004 * v)), 1000, 0.25, 1800, 6500),
+            Samples(land + 0.004), 0.25);
         return Reverb.Room(y, 0.10);
     }
 
@@ -117,12 +136,12 @@ public static class Sfx
     static double[] TrickCollect(Rng r, int n)
     {
         var y = new double[n];
-        var sweep = Paper(r, 0.34, t => Ramp(t, 0.05) * (1 - Smoothstep((t - 0.2) / 0.12)), 900, 0.5, 700, 5500);
-        Sweep(sweep, 0.8, 0.6, t => 1500 + 1600 * Smoothstep(t / 0.3));
+        var sweep = Paper(r, 0.34, t => Ramp(t, 0.05) * (1 - Smoothstep((t - 0.2) / 0.12)), 900, 0.5, 600, 5000);
+        Sweep(sweep, 0.8, 0.6, t => 1300 + 1400 * Smoothstep(t / 0.3));
         Add(y, sweep, 0, 0.55);
         foreach (var (t, g) in new[] { (0.13, 0.30), (0.19, 0.38), (0.235, 0.33) })
-            Burst(y, t + r.Range(-0.006, 0.006), 0.0012, g, r, 2700 + r.Range(-300, 300), 1.1);
-        Thud(y, 0.285, 200, 0.018, 0.40, r, 0.9, 1500);
+            Burst(y, t + r.Range(-0.006, 0.006), 0.0012, g, r, 2400 + r.Range(-300, 300), 1.1);
+        Pat(y, 0.285, 190, 0.009, 0.55, r, 1500);
         return Reverb.Room(y, 0.10);
     }
 
@@ -140,11 +159,11 @@ public static class Sfx
 
     // ------------------------------------------------------------------ calls and turns
 
-    /// <summary>A call is placed: one soft wood block on high Sa.</summary>
+    /// <summary>A call is placed: one soft wood block on Pa.</summary>
     static double[] CallConfirm(Rng r, int n)
     {
         var y = new double[n];
-        Strike(y, 0, Hz("S'"), WoodBlock, 0.9, 2500, 0.001);
+        Strike(y, 0, Hz("P"), WoodBlock, 0.9, 2500, 0.001);
         Burst(y, 0, 0.0008, 0.10, r, 3500, 0.7, Band.LowPass);
         return Reverb.Room(y, 0.12);
     }
@@ -163,16 +182,16 @@ public static class Sfx
     {
         var y = new double[n];
         var tick = new[] { new Mode(1.0, 1.0, 0.012), new Mode(2.7, 0.25, 0.005), new Mode(0.55, 0.3, 0.010) };
-        Strike(y, 0, Hz("D'"), tick, 1.0, 2500, 0.0008);
+        Strike(y, 0, Hz("G'"), tick, 1.0, 2500, 0.0008);
         Burst(y, 0, 0.0006, 0.05, r, 3000, 0.7, Band.LowPass);
         return Reverb.Room(y, 0.05);
     }
 
-    /// <summary>Call met: four soft bar chimes rising Pa Sa Ga Pa.</summary>
+    /// <summary>Call met: four soft bar chimes rising Sa Ga Pa Sa.</summary>
     static double[] CallMet(Rng r, int n)
     {
         var y = new double[n];
-        string[] notes = { "P", "S'", "G'", "P'" };
+        string[] notes = { "S", "G", "P", "S'" };
         for (int i = 0; i < notes.Length; i++)
             Strike(y, 0.095 * i, Hz(notes[i]), Vibes, 0.7 + 0.1 * i, 2800, 0.0015, r.Range(-3, 3));
         return Reverb.Room(y, 0.20, 0.6, 0.80, 0.5);
@@ -197,7 +216,7 @@ public static class Sfx
         var bar = Retime(Vibes, 1.2);
         (string note, double t, double v)[] phrase =
         {
-            ("P'", 0.00, 0.75), ("G'", 0.13, 0.80), ("R'", 0.26, 0.80), ("S'", 0.42, 1.00), ("S", 0.42, 0.45),
+            ("P", 0.00, 0.75), ("G", 0.13, 0.80), ("R", 0.26, 0.80), ("S", 0.42, 1.00), ("S.", 0.42, 0.45),
         };
         foreach (var (note, t, v) in phrase) Strike(y, t, Hz(note), bar, v, 2600, 0.0015, r.Range(-3, 3));
         return Reverb.Room(y, 0.20, 0.6, 0.80, 0.5);
@@ -215,15 +234,15 @@ public static class Sfx
             (0.470, Stroke.Ti, 0.60), (0.515, Stroke.Ta, 0.80), (0.600, Stroke.Ghe, 0.90), (0.600, Stroke.Ta, 0.90),
         };
         foreach (var (t, s, v) in roll) Add(y, Madal(s, v, r), Samples(t), 0.8);
-        Add(y, Madal(Stroke.Ghe, 1.0, r, bend: 0.22), Samples(0.70), 0.8);
+        Add(y, Madal(Stroke.Ghe, 1.0, r, bend: 0.125), Samples(0.70), 0.8);
         Add(y, Madal(Stroke.Tin, 1.0, r), Samples(0.70), 0.8);
 
-        // A quiet Sa-Pa drone swells in under the flute.
-        double[] drone = { Hz("S."), Hz("P."), Hz("S") };
-        for (int i = Samples(0.62); i < n; i++)
+        // A quiet Sa-Pa drone swells in under the flute, once the last drum stroke has mostly rung out.
+        double[] drone = { Hz("S.."), Hz("P.."), Hz("S.") };
+        for (int i = Samples(0.9); i < n; i++)
         {
-            double t = i / Fs, e = 0.05 * Ramp(t - 0.62, 0.4);
-            foreach (double f in drone) y[i] += e * (Math.Sin(TwoPi * f * t) + 0.3 * Math.Sin(TwoPi * 2 * f * t) + 0.1 * Math.Sin(TwoPi * 3 * f * t));
+            double t = i / Fs, e = 0.04 * Ramp(t - 0.9, 0.6);
+            foreach (double f in drone) y[i] += e * (Math.Sin(TwoPi * f * t) + 0.5 * Math.Sin(TwoPi * 2 * f * t) + 0.25 * Math.Sin(TwoPi * 3 * f * t));
         }
 
         var phrase = new List<FluteNote>
@@ -240,29 +259,30 @@ public static class Sfx
 
         // A restrained sparkle on the last note (the GDD's trophy has "a restrained warm sparkle").
         var bar = Retime(Vibes, 1.4);
-        Strike(y, 2.16, Hz("S''"), bar, 0.10, 2400, 0.002);
-        Strike(y, 2.16, Hz("P'"), bar, 0.07, 2400, 0.002);
+        Strike(y, 2.16, Hz("S''"), bar, 0.08, 2400, 0.002);
+        Strike(y, 2.16, Hz("P'"), bar, 0.06, 2400, 0.002);
         return Reverb.Room(y, 0.22, 0.8, 0.80, 0.45, 0.010);
     }
 
     // ------------------------------------------------------------------ interface
 
-    /// <summary>Button press: a small rounded wooden "tok" on high Pa.</summary>
+    /// <summary>Button press: a small rounded wooden "tok" on high Sa.</summary>
     static double[] UiTap(Rng r, int n)
     {
         var y = new double[n];
-        double f = Hz("P'");
+        double f = Hz("S'");
         Blip(y, 0, f, 1.18, 0.004, 0.016, 1.0, 0.0006);
         Blip(y, 0, 2 * f, 1.10, 0.003, 0.008, 0.12, 0.0006);
+        Blip(y, 0, 2.7 * f, 1.00, 1, 0.004, 0.10, 0.0004);
         Burst(y, 0, 0.0006, 0.05, r, 4000, 0.7, Band.LowPass);
         return y;
     }
 
-    /// <summary>Back / close: the same family a fifth lower, leaning downward.</summary>
+    /// <summary>Back / close: the same family a fourth lower, leaning downward.</summary>
     static double[] UiBack(Rng r, int n)
     {
         var y = new double[n];
-        double f = Hz("S'");
+        double f = Hz("P");
         Blip(y, 0, f, 1.08, 0.006, 0.022, 1.0, 0.0008, -0.10, 0.04);
         Blip(y, 0, 2 * f, 1.05, 0.004, 0.010, 0.10, 0.0008, -0.10, 0.04);
         Burst(y, 0, 0.0008, 0.04, r, 3000, 0.7, Band.LowPass);
@@ -274,8 +294,8 @@ public static class Sfx
     {
         var y = new double[n];
         var tick = new[] { new Mode(1.0, 1.0, 0.007), new Mode(2.7, 0.2, 0.003) };
-        Strike(y, 0.000, Hz("R''"), tick, 0.7, 3000, 0.0005);
-        Strike(y, 0.036, Hz("D'"), Retime(tick, 1.5), 1.0, 2800, 0.0006);
+        Strike(y, 0.000, Hz("P'"), tick, 0.7, 3000, 0.0005);
+        Strike(y, 0.036, Hz("G'"), Retime(tick, 1.5), 1.0, 2800, 0.0006);
         return y;
     }
 }

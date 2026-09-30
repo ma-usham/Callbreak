@@ -9,15 +9,14 @@ public static class Wav
     /// Writes channels (each in [-1, 1], equal lengths) as 16-bit PCM, rounded to nearest with no dither
     /// (Unity re-encodes to ADPCM or Vorbis, which buries anything dither would fix). A loop also gets a
     /// "smpl" chunk marking the whole file as one forward loop, for tools that read loop points.
-    /// Returns how many samples had to be clamped (should always be 0).
     /// </summary>
-    public static int Write(string path, double[][] ch, bool loop)
+    public static byte[] Encode(double[][] ch, bool loop)
     {
-        int n = ch[0].Length, c = ch.Length, clamped = 0;
+        int n = ch[0].Length, c = ch.Length;
         int dataBytes = n * c * 2;
         const int smplBytes = 36 + 24;
-        using var fs = File.Create(path);
-        using var w = new BinaryWriter(fs);
+        using var ms = new MemoryStream(44 + dataBytes + 68);
+        using var w = new BinaryWriter(ms);
         w.Write(Encoding.ASCII.GetBytes("RIFF"));
         w.Write(4 + (8 + 16) + (8 + dataBytes) + (loop ? 8 + smplBytes : 0));
         w.Write(Encoding.ASCII.GetBytes("WAVE"));
@@ -37,10 +36,7 @@ public static class Wav
         {
             for (int k = 0; k < c; k++)
             {
-                double s = Math.Round(ch[k][i] * 32767.0);
-                if (s > 32767) { s = 32767; clamped++; }
-                else if (s < -32768) { s = -32768; clamped++; }
-                w.Write((short)s);
+                w.Write((short)Math.Clamp(Math.Round(ch[k][i] * 32767.0), -32768, 32767));
             }
         }
 
@@ -57,7 +53,21 @@ public static class Wav
             w.Write(0); w.Write(n - 1);                // first and last sample frame of the loop
             w.Write(0); w.Write(0);                    // fraction, play count 0 = forever
         }
-        return clamped;
+        w.Flush();
+        return ms.ToArray();
+    }
+
+    /// <summary>
+    /// Writes the file only when its bytes differ from what is already there, so an unchanged re-run
+    /// leaves timestamps alone and Unity has nothing to re-import. Returns true if it wrote.
+    /// </summary>
+    public static bool WriteIfChanged(string path, byte[] bytes)
+    {
+        if (File.Exists(path) && new FileInfo(path).Length == bytes.Length && File.ReadAllBytes(path).AsSpan().SequenceEqual(bytes))
+            return false;
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        File.WriteAllBytes(path, bytes);
+        return true;
     }
 
     /// <summary>Reads a 16-bit PCM WAV back as doubles in [-1, 1) plus the raw sample values.</summary>
