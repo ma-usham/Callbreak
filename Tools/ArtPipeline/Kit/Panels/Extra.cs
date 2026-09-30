@@ -59,20 +59,58 @@ namespace KitPanels
             var outside = new float[m.Count];
             for (int i = 0; i < m.Count; i++) outside[i] = m.A[i] < 0.5f ? 1f : 0f;
             float[] near = Inpaint.Dilate(outside, m.W, m.H, px);
-            var hole = new float[m.Count];
-            var valid = new float[m.Count];
+            // A trimmed piece touches the image border: what lies beyond the border is outside too.
+            for (int y = 0; y < m.H; y++)
+            {
+                for (int x = 0; x < m.W; x++)
+                {
+                    if (x < px || y < px || x >= m.W - px || y >= m.H - px) near[y * m.W + x] = 1f;
+                }
+            }
+
+            var isEdge = new bool[m.Count];
+            var done = new bool[m.Count];
             int n = 0;
             for (int i = 0; i < m.Count; i++)
             {
-                bool edge = near[i] > 0.5f && m.A[i] > 0f;
-                hole[i] = edge || m.A[i] <= 0f ? 1f : 0f;
-                valid[i] = !edge && m.A[i] >= 0.99f ? 1f : 0f;
-                if (edge) n++;
+                isEdge[i] = near[i] > 0.5f && m.A[i] > 0f;
+                done[i] = !isEdge[i] && m.A[i] >= 0.99f;      // a clean pixel inside: a colour source
+                if (isEdge[i]) n++;
             }
 
-            float[] alpha = (float[])m.A.Clone();
-            Inpaint.Fill(m, hole, valid, grain: false, relax: 12);
-            Array.Copy(alpha, m.A, alpha.Length);
+            // The colour grows outward from the nearest pixels inside, one ring at a time (not a
+            // smooth fill: around a thin outline that would pull the panel's fill into the edge).
+            for (int pass = 0; pass < px + 6; pass++)
+            {
+                var next = new List<(int i, float r, float g, float b)>();
+                for (int y = 0; y < m.H; y++)
+                {
+                    for (int x = 0; x < m.W; x++)
+                    {
+                        int i = y * m.W + x;
+                        if (done[i] || !isEdge[i]) continue;
+                        float r = 0, g = 0, b = 0, wsum = 0;
+                        for (int dy = -1; dy <= 1; dy++)
+                        {
+                            for (int dx = -1; dx <= 1; dx++)
+                            {
+                                int xx = x + dx, yy = y + dy;
+                                if ((dx == 0 && dy == 0) || xx < 0 || yy < 0 || xx >= m.W || yy >= m.H) continue;
+                                int j = yy * m.W + xx;
+                                if (!done[j]) continue;
+                                float wgt = dx == 0 || dy == 0 ? 1f : 0.5f;
+                                r += m.R[j] * wgt; g += m.G[j] * wgt; b += m.B[j] * wgt; wsum += wgt;
+                            }
+                        }
+
+                        if (wsum > 0f) next.Add((i, r / wsum, g / wsum, b / wsum));
+                    }
+                }
+
+                if (next.Count == 0) break;
+                foreach ((int i, float r, float g, float b) in next) { m.R[i] = r; m.G[i] = g; m.B[i] = b; done[i] = true; }
+            }
+
             for (int i = 0; i < m.Count; i++) if (m.A[i] <= 0f) { m.R[i] = 0; m.G[i] = 0; m.B[i] = 0; }
             return n;
         }
@@ -87,6 +125,7 @@ namespace KitPanels
             Img m = Img.Load(o.Need("in"));
             double thr = o.Num("thr", 8);
             int grow = o.Int("grow", 3);
+            bool any = o.Has("any");   // also recolour the partly transparent edge pixels (plain shapes that get an exact outline afterwards)
             (int r, int g, int b) fill;
             if (o.Has("fill"))
             {
@@ -111,7 +150,7 @@ namespace KitPanels
             var busy = new float[m.Count];
             for (int i = 0; i < m.Count; i++)
             {
-                if (m.A[i] < 0.99f) { busy[i] = 1f; continue; }
+                if (m.A[i] < 0.99f && !any) { busy[i] = 1f; continue; }
                 double d = Math.Max(Math.Abs(S8(m.R[i]) - fill.r), Math.Max(Math.Abs(S8(m.G[i]) - fill.g), Math.Abs(S8(m.B[i]) - fill.b)));
                 busy[i] = d > thr ? 1f : 0f;
             }
@@ -169,7 +208,7 @@ namespace KitPanels
             int flat = 0;
             for (int i = 0; i < m.Count; i++)
             {
-                if (keep[i] > 0.5f || m.A[i] < 0.99f) continue;
+                if (keep[i] > 0.5f || (m.A[i] < 0.99f && !any)) continue;
                 m.R[i] = fr; m.G[i] = fg; m.B[i] = fb; flat++;
             }
 

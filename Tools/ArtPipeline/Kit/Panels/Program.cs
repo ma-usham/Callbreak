@@ -58,6 +58,14 @@ namespace KitPanels
                     case "curve": return Curve(o);
                     case "compose": return Compose(o);
                     case "pad": return PadCmd(o);
+                    case "rowmatch": return RowMatch(o);
+                    case "place": return Place(o);
+                    case "reshape": return Reshape(o);
+                    case "fringe": return Fringe(o);
+                    case "ringprobe": return RingProbe(o);
+                    case "shadowfit": return ShadowFit(o);
+                    case "ringshade": return RingShade(o);
+                    case "radial": return Radial(o);
                     case "export": return Export(o);
                     case "onbg": return OnBg(o);
                     case "sheet": return Sheet(o);
@@ -83,7 +91,7 @@ namespace KitPanels
   mirror  --in a --out b --axis h|v|hv [--from left|right|top|bottom]   copy the better half over the other
   resize  --in a --out b --w W --h H
   shape   --in a --out b --type roundrect|pill|ellipse [--radius r] [--inset i]   exact geometric alpha over bled colour
-  nine    --in a --out b --border L,T,R,B [--mid 32,32]                       compact 9-slice: the middle squeezed to a few plain pixels
+  nine    --in a --out b --border L,T,R,B [--mid 32,32] [--feather 0]         compact 9-slice: the middle squeezed to a few plain pixels
   flatten --in a --out b --border L,T,R,B [--mid 32,32]                       same size, the middle as the game will stretch it
   check   --sprite s --screen 02 --rect x,y,w,h [--nine L,T,R,B] [--unit 2.3] [--view x,y,w,h] [--zoom 3] --out f
   tile    --out f [--bg #808080] [--maxh 160] [--cols 0] <png>...   several images side by side, for looking at them
@@ -92,6 +100,14 @@ namespace KitPanels
   rot180  --in a --out b [--from top|bottom]         point symmetry: one half becomes the other turned by 180 degrees
   curve   --in a --out b --anchors ""#src>#dst;...""   per-channel curve through the anchors (nearest offset outside them)
   pad     --in a --out b --w W --h H                 centre on a transparent canvas
+  place   --screen 09 --view x,y,w,h [--zoom 2] --items ""sprite|L,T,R,B or -|x,y,w,h[|opacity];..."" --out f [--stack]   several sprites placed on one mockup: mockup | composite
+  reshape --in a --out b --type ellipse|pill|roundrect --w W --h H [--radius r] [--sradius r] [--scale s]   redraw a flat piece in exact geometry from its colour-by-distance-from-the-edge
+  fringe  <png>...                                   count visible pixels that still carry the magenta ground (blue well above green)
+  ringprobe --screen 07 --center x,y --r0 a --r1 b [--n 12]   colours of a mockup ring by direction (darkest, mean, brightest)
+  ringshade --in a --out b --rin r --rout r --top #hex --bottom #hex [--side #hex]   give the rim of a round piece a top-to-bottom shading
+  shadowfit --screen 07 --center x,y --size D --shadow s.png --disc 212 [--r0 1 --r1 7]   drop and opacity of a round shadow sprite that best explain the mockup around a disc
+  rowmatch --in a --out b --screen 08 --x 108-112[,230-234] --y0 448 --y1 485 [--sx 0.4-0.6] [--trust 0.1-0.9] [--smooth 0.04]   give each row the colour the mockup has at that height
+  radial  --in a [--out b] [--rmin r --rmax r] [--center x,y]   colour by distance from the centre; with --out, redrawn exactly round from it
   stretch --sprite s --nine L,T,R,B [--unit 2.3] --size W,H --out f [--zoom 1] [--bg #E9DDD0]
   stats   --sprite s --screen 02 --rect x,y,w,h [--nine ..] [--unit 2.3] --sample ""x,y,w,h;...""
   recolor --in a --out b --anchors ""#src>#dst;..."" [--mode affine|offset|gain]
@@ -458,7 +474,11 @@ namespace KitPanels
             string type = o.Get("type", "roundrect");
             double inset = o.Num("inset", 0), radius = o.Num("radius", 0);
             Matte.BleedColor(m, 0.5f);
-            var shape = new Shape(type, inset, inset, m.W - 2 * inset, m.H - 2 * inset, radius);
+            // --square bottom|top: that side runs straight to the image edge (a header band has
+            // rounded top corners only): the shape simply continues past it.
+            string square = o.Get("square", "");
+            double top = square == "top" ? -radius - 4 : inset, bottom = square == "bottom" ? m.H + radius + 4 : m.H - inset;
+            var shape = new Shape(type, inset, top, m.W - 2 * inset, bottom - top, radius);
             for (int y = 0; y < m.H; y++)
             {
                 for (int x = 0; x < m.W; x++) m.A[y * m.W + x] = shape.Coverage(x + 0.5, y + 0.5);
@@ -478,8 +498,10 @@ namespace KitPanels
             int[] b = o.Ints("border", 4);
             int[] mid = o.Ints("mid", 2, new[] { 32, 32 });
             Img n = BuildNine(f, b[0], b[1], b[2], b[3], mid[0], mid[1]);
+            int feather = o.Int("feather", 0);
+            if (feather > 0) Feather(n, b[0] + b[2] > 0 ? b[0] : 0, b[0] + b[2] > 0 ? mid[0] : 0, b[1] + b[3] > 0 ? b[1] : 0, b[1] + b[3] > 0 ? mid[1] : 0, feather);
             n.Save(o.Need("out"));
-            Console.WriteLine($"{o.Need("out")}  {f.W}x{f.H} -> {n.W}x{n.H}  border L{b[0]} T{b[1]} R{b[2]} B{b[3]}");
+            Console.WriteLine($"{o.Need("out")}  {f.W}x{f.H} -> {n.W}x{n.H}  border L{b[0]} T{b[1]} R{b[2]} B{b[3]}{(feather > 0 ? $"  corners feathered into the edges over {feather} px" : "")}");
             return 0;
         }
 
@@ -572,6 +594,57 @@ namespace KitPanels
                             // Alpha and colour of the rim stay as they are; only opaque fill follows the course.
                             float v = c == 3 ? (float)m : (float)(m + (course[c][k] - mean[c]));
                             ch[c][(T + k) * w + x] = Math.Clamp(v, 0f, 1f);
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Lets each corner run into its neighbouring edge strips over its last <paramref name="f"/>
+        /// pixels: a hand-drawn outline is never exactly the same thickness and colour all the way
+        /// round, so without this the corner and the averaged edge meet with a visible notch.
+        /// The ornaments must end before that zone (choose the borders accordingly).
+        /// </summary>
+        private static void Feather(Img n, int L, int midX, int T, int midY, int f)
+        {
+            float[][] ch = { n.R, n.G, n.B, n.A };
+            int w = n.W, h = n.H;
+            if (midX > 0)
+            {
+                for (int y = 0; y < h; y++)
+                {
+                    if (midY > 0 && y >= T && y < T + midY) continue;   // the side strips are plain already
+                    for (int k = 0; k < f; k++)
+                    {
+                        float wgt = Smooth((k + 0.5f) / f);
+                        int xl = L - f + k, xr = L + midX + f - 1 - k;
+                        if (xl < 0 || xr >= w) continue;
+                        for (int c = 0; c < 4; c++)
+                        {
+                            float tl = ch[c][y * w + L], tr = ch[c][y * w + L + midX - 1];
+                            ch[c][y * w + xl] += (tl - ch[c][y * w + xl]) * wgt;
+                            ch[c][y * w + xr] += (tr - ch[c][y * w + xr]) * wgt;
+                        }
+                    }
+                }
+            }
+
+            if (midY > 0)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    if (midX > 0 && x >= L && x < L + midX) continue;
+                    for (int k = 0; k < f; k++)
+                    {
+                        float wgt = Smooth((k + 0.5f) / f);
+                        int yt = T - f + k, yb = T + midY + f - 1 - k;
+                        if (yt < 0 || yb >= h) continue;
+                        for (int c = 0; c < 4; c++)
+                        {
+                            float tt = ch[c][T * w + x], tb = ch[c][(T + midY - 1) * w + x];
+                            ch[c][yt * w + x] += (tt - ch[c][yt * w + x]) * wgt;
+                            ch[c][yb * w + x] += (tb - ch[c][yb * w + x]) * wgt;
                         }
                     }
                 }

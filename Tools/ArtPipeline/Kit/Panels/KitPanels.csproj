@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- kitpanels: turns ChatGPT extractions of panels and controls into kit sprites and checks them
+       against the mockups. Windows only (System.Drawing). Built by ./kp into Temp/KitPanels, so
+       nothing is written next to the sources. Reuses ArtTool's image classes as linked sources. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>kitpanels</AssemblyName>
+    <RootNamespace>KitPanels</RootNamespace>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <Optimize>true</Optimize>
+    <TieredPGO>true</TieredPGO>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\ArtTool\Img.cs" Link="ArtTool\Img.cs" />
+    <Compile Include="..\..\..\ArtTool\Shapes.cs" Link="ArtTool\Shapes.cs" />
+    <Compile Include="..\..\..\ArtTool\Inpaint.cs" Link="ArtTool\Inpaint.cs" />
+    <Compile Include="..\..\..\ArtTool\Matte.cs" Link="ArtTool\Matte.cs" />
+  </ItemGroup>
+</Project>
