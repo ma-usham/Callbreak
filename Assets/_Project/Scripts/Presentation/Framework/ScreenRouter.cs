@@ -57,6 +57,27 @@ namespace Callbreak.Presentation.Framework
             Transition(from, _screens[id], 1, instant: from == null);
         }
 
+        /// <summary>
+        /// Replaces the whole stack at once, showing only its top without a transition: how the Menu
+        /// scene opens straight onto a screen deeper than the main menu (behind the curtain).
+        /// </summary>
+        public void ShowStack(IReadOnlyList<ScreenId> ids)
+        {
+            if (ids == null || ids.Count == 0)
+            {
+                throw new ArgumentException("The stack needs at least one screen.", nameof(ids));
+            }
+
+            UIScreen from = Top();
+            _stack.Clear();
+            foreach (ScreenId id in ids)
+            {
+                _stack.Add(id);
+            }
+
+            Transition(from, _screens[ids[ids.Count - 1]], 1, instant: true);
+        }
+
         public void Push(ScreenId id)
         {
             if (Current == id)
