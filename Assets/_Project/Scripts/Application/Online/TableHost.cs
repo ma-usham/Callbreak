@@ -58,6 +58,7 @@ namespace Callbreak.Application.Online
 
             _timing = setup.Timing;
             _clocks = setup.Clocks;
+            Seed = setup.Seed;
             _engine = new MatchEngine(setup.Rules, new Pcg32Random(setup.Seed), new MatchSetup(setup.MatchId, setup.Seats));
 
             var botSeats = new Dictionary<Seat, IBotStrategy>();
@@ -80,6 +81,9 @@ namespace Callbreak.Application.Online
         public event Action Ended;
 
         public string MatchId => _engine.MatchId;
+
+        /// <summary>The shuffle seed, for tests that prove it stays here: it never leaves the host (GDD §22).</summary>
+        internal ulong Seed { get; }
 
         public bool IsStarted => _started;
 

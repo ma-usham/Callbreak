@@ -26,6 +26,9 @@ namespace Callbreak.Tests.EditMode.Application.Online
         /// <summary>How often a device asked the relay to host a room, whatever the answer was.</summary>
         public int HostAttempts { get; private set; }
 
+        /// <summary>Every payload a host sent to a guest, in order: all that leaves the host's device.</summary>
+        public List<byte[]> HostPayloads { get; } = new List<byte[]>();
+
         public Task<HostLinkResult> HostAsync(string roomCode, CancellationToken ct)
         {
             HostAttempts++;
@@ -133,6 +136,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
                     return;
                 }
 
+                _network.HostPayloads.Add(payload);
                 _network.Enqueue(() => client.Deliver(payload));
             }
 

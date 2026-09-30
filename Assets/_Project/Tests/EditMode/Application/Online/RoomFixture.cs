@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Callbreak.Application.Online;
@@ -27,7 +28,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
         private readonly List<Member> _members = new List<Member>();
 
         /// <param name="clocks">The table's clocks; null runs it as a private room on <paramref name="turnSeconds"/>.</param>
-        public RoomFixture(int turnSeconds = 0, BotTiming timing = null, TableClocks clocks = null)
+        /// <param name="seeds">The host's seed source; null always answers 42.</param>
+        public RoomFixture(int turnSeconds = 0, BotTiming timing = null, TableClocks clocks = null, Func<ulong> seeds = null)
         {
             Network = new InMemoryNetwork();
             HostLink = Network.HostAsync(Code, CancellationToken.None).Result.Link;
@@ -39,7 +41,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 new NameFilter(),
                 new Pcg32Random(5),
                 new[] { "classic-crimson", "himalayan-ivory", "kathmandu-gold" },
-                () => 42UL,
+                seeds ?? (() => 42UL),
                 timing ?? BotTiming.Instant,
                 clocks: clocks);
             HostMember = Add(Host.Local, "player-host", "Hari", Host);

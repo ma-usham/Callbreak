@@ -187,8 +187,11 @@ namespace Callbreak.Application.Online
                 profiles[i] = new SeatProfile(name, _rng.NextInt(SeatRoster.AvatarCount).ToString(), deck, true);
             }
 
+            // The match id goes to every player in every view, and the shuffle seed never leaves the
+            // host (GDD §22: whoever has it can deal all five rounds in advance). So the id is a
+            // draw of its own, never the seed spelled out.
             ulong seed = _seedSource();
-            string matchId = "room-" + _code + "-" + seed.ToString("x16");
+            string matchId = "room-" + _code + "-" + _seedSource().ToString("x16");
             TableClocks clocks = _clocks ?? TableClocks.PrivateRoom(_settings.TurnSeconds);
             var setup = new TableHostSetup(RuleSet.NepaliStandard, matchId, profiles, humans, clocks, seed, _fillLevel, _timing);
             if (_table != null)
