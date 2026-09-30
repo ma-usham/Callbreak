@@ -23,6 +23,7 @@ namespace Callbreak.Presentation.Screens
         private readonly IProfileService _profile;
         private readonly IClipboard _clipboard;
         private readonly ILocalization _localization;
+        private readonly IDeepLinks _deepLinks;
 
         private string _code = string.Empty;
         private bool _busy;
@@ -33,7 +34,8 @@ namespace Callbreak.Presentation.Screens
             IRoomService rooms,
             IProfileService profile,
             IClipboard clipboard,
-            ILocalization localization)
+            ILocalization localization,
+            IDeepLinks deepLinks)
         {
             _view = view;
             _router = router;
@@ -41,6 +43,7 @@ namespace Callbreak.Presentation.Screens
             _profile = profile;
             _clipboard = clipboard;
             _localization = localization;
+            _deepLinks = deepLinks;
         }
 
         public void Start()
@@ -73,6 +76,14 @@ namespace Callbreak.Presentation.Screens
             if (id != ScreenId.JoinRoom || _busy)
             {
                 return;
+            }
+
+            // An invite link fills the boxes (GDD §11 screen 03).
+            string invited = _deepLinks.TakeJoinCode();
+            if (!string.IsNullOrEmpty(invited))
+            {
+                _code = invited;
+                _view.ClearError();
             }
 
             _view.SetCode(_code);

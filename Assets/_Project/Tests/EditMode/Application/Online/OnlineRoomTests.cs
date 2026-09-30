@@ -350,7 +350,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
             room.Step(Protocol.SeatHoldSeconds + 1.0);
 
             Assert.AreEqual(SeatConnection.BotControlled, room.HostMember.Session.Seats[(int)guestSeat].Connection);
-            room.Rejoin(guest);
+            Assert.AreEqual(RoomError.AlreadyStarted, room.Rejoin(guest));
             room.Step();
             Assert.AreEqual(SeatConnection.BotControlled, room.HostMember.Session.Seats[(int)guestSeat].Connection, "too late to come back");
         }

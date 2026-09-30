@@ -41,7 +41,23 @@ namespace Callbreak.Bootstrap
         protected override void Configure(IContainerBuilder builder)
         {
             builder.Register<IMatchSession>(CreateSession, Lifetime.Scoped);
+            builder.Register(CreateAnalytics, Lifetime.Scoped);
             builder.RegisterEntryPoint<MatchSessionDriver>();
+        }
+
+        private static MatchAnalytics CreateAnalytics(IObjectResolver resolver)
+        {
+            return new MatchAnalytics(
+                resolver.Resolve<IMatchSession>(),
+                Launch(resolver),
+                resolver.Resolve<IAnalytics>(),
+                resolver.Resolve<IClock>());
+        }
+
+        private static MatchLaunchRequest Launch(IObjectResolver resolver)
+        {
+            return resolver.Resolve<IAppFlow>().CurrentLaunch
+                ?? new MatchLaunchRequest(MatchMode.Offline, resolver.Resolve<ISettingsService>().Difficulty);
         }
 
         private static bool HasMatch(IObjectResolver services)
@@ -66,8 +82,7 @@ namespace Callbreak.Bootstrap
         private static IMatchSession CreateSession(IObjectResolver resolver)
         {
             var settings = resolver.Resolve<ISettingsService>();
-            MatchLaunchRequest request = resolver.Resolve<IAppFlow>().CurrentLaunch
-                ?? new MatchLaunchRequest(MatchMode.Offline, settings.Difficulty);
+            MatchLaunchRequest request = Launch(resolver);
             switch (request.Mode)
             {
                 case MatchMode.Offline:

@@ -18,6 +18,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
 {
     public sealed class RoomServiceTests
     {
+        private static readonly DateTime Epoch = new DateTime(2026, 9, 30, 12, 0, 0, DateTimeKind.Utc);
+
         private InMemoryNetwork _network;
         private double _now;
         private List<Device> _devices;
@@ -93,6 +95,19 @@ namespace Callbreak.Tests.EditMode.Application.Online
             RoomResult result = guest.Rooms.JoinRoomAsync("ABCDEF", CancellationToken.None).Result;
 
             Assert.AreEqual(RoomError.NotFound, result.Error);
+            CollectionAssert.IsEmpty(guest.Tracked.Names, "a failed join is not reported as joined");
+        }
+
+        [Test]
+        public void CreateAndJoin_Succeed_EachDeviceReportsItsOwn()
+        {
+            Device host = NewDevice("Hari");
+            Device guest = NewDevice("Asha");
+
+            JoinRoom(host, guest);
+
+            CollectionAssert.AreEqual(new[] { "room_created" }, host.Tracked.Names);
+            CollectionAssert.AreEqual(new[] { "room_joined" }, guest.Tracked.Names);
         }
 
         [Test]
@@ -186,6 +201,105 @@ namespace Callbreak.Tests.EditMode.Application.Online
         }
 
         [Test]
+        public void Match_Guest_HoldsARejoinTicketUntilTheMatchEnds()
+        {
+            Device host = NewDevice("Hari");
+            Device guest = NewDevice("Asha");
+            JoinRoom(host, guest);
+            Settle();
+            Assert.IsFalse(guest.Tickets.TryGet(out _), "no ticket in the lobby");
+
+            StartMatch(host, guest);
+
+            Assert.IsTrue(guest.Tickets.TryGet(out string code));
+            Assert.AreEqual(host.Rooms.Current.Code, code);
+            Assert.IsFalse(host.Tickets.TryGet(out _), "the host's room dies with its app: nothing to rejoin");
+
+            PlayToEnd(host, guest);
+            Settle();
+            Assert.IsFalse(guest.Tickets.TryGet(out _), "the match is over");
+        }
+
+        [Test]
+        public void Match_GuestSitsLongerThanTenMinutes_TheTicketStaysFresh()
+        {
+            Device host = NewDevice("Hari");
+            Device guest = NewDevice("Asha");
+            JoinRoom(host, guest);
+            StartMatch(host, guest);
+
+            Settle(RejoinStore.LifetimeSeconds + 30);
+
+            Assert.IsTrue(guest.Tickets.TryGet(out _));
+        }
+
+        [Test]
+        public void Match_GuestLeavesOnPurpose_TheTicketIsGone()
+        {
+            Device host = NewDevice("Hari");
+            Device guest = NewDevice("Asha");
+            JoinRoom(host, guest);
+            StartMatch(host, guest);
+            Assert.IsTrue(guest.Tickets.TryGet(out _));
+
+            guest.Rooms.Current.LeaveAsync(CancellationToken.None);
+            Settle();
+
+            Assert.IsFalse(guest.Tickets.TryGet(out _));
+        }
+
+        [Test]
+        public void AppKilled_GuestComesBackWithItsTicket_TakesTheSeatBackInTheRunningMatch()
+        {
+            Device host = NewDevice("Hari");
+            Device guest = NewDevice("Asha");
+            JoinRoom(host, guest);
+            StartMatch(host, guest);
+            Seat seat = guest.Rooms.Current.Match.LocalSeat;
+            Play(host, guest, 20);
+            Kill(guest);
+            Settle(5);
+            Assert.AreEqual(SeatConnection.Reconnecting, host.Rooms.Current.Match.Seats[(int)seat].Connection);
+
+            Device back = NewDevice("Asha", guest.Saves);
+            Assert.IsTrue(back.Tickets.TryGet(out string code));
+            Task<RoomResult> rejoining = back.Rooms.JoinRoomAsync(code, CancellationToken.None);
+            Settle();
+
+            Assert.IsTrue(rejoining.Result.Succeeded);
+            IMatchSession session = back.Rooms.Current.Match;
+            Assert.IsNotNull(session, "the running match came with the seat");
+            Assert.AreEqual(seat, session.LocalSeat);
+            session.Start();
+            Settle();
+            Assert.AreEqual(SessionStatus.Running, session.Status);
+            Assert.AreEqual(SeatConnection.Connected, host.Rooms.Current.Match.Seats[(int)seat].Connection);
+            PlayToEnd(host, back);
+            Assert.AreEqual(SessionStatus.Ended, session.Status);
+        }
+
+        [Test]
+        public void AppKilled_BackAfterTheSeatHold_IsRefusedAndTheBotKeepsTheSeat()
+        {
+            Device host = NewDevice("Hari");
+            Device guest = NewDevice("Asha");
+            JoinRoom(host, guest);
+            StartMatch(host, guest);
+            Seat seat = guest.Rooms.Current.Match.LocalSeat;
+            Kill(guest);
+            Settle(Protocol.SeatHoldSeconds + 2);
+
+            Device back = NewDevice("Asha", guest.Saves);
+            Assert.IsTrue(back.Tickets.TryGet(out string code), "still inside the ten minutes");
+            Task<RoomResult> rejoining = back.Rooms.JoinRoomAsync(code, CancellationToken.None);
+            Settle();
+
+            Assert.AreEqual(RoomError.AlreadyStarted, rejoining.Result.Error);
+            Assert.IsNull(back.Rooms.Current);
+            Assert.AreEqual(SeatConnection.BotControlled, host.Rooms.Current.Match.Seats[(int)seat].Connection);
+        }
+
+        [Test]
         public void QuickMatch_NobodyElse_FillsWithBotsAtTheDelayAndStarts()
         {
             Device device = NewDevice("Hari");
@@ -269,11 +383,19 @@ namespace Callbreak.Tests.EditMode.Application.Online
             Assert.AreEqual(MatchmakingError.Offline, quick.FindMatchAsync(null, CancellationToken.None).Result.Error);
         }
 
-        private Device NewDevice(string name)
+        /// <param name="saves">The files of an earlier run of the same app, for a device that starts again.</param>
+        private Device NewDevice(string name, InMemorySaveStore saves = null)
         {
-            var device = new Device(_network, name, (ulong)(100 + _devices.Count));
+            var device = new Device(_network, name, (ulong)(100 + _devices.Count), saves ?? new InMemorySaveStore(), () => Epoch.AddSeconds(_now));
             _devices.Add(device);
             return device;
+        }
+
+        /// <summary>The device's process dies: no goodbye, and nothing of it keeps running.</summary>
+        private void Kill(Device device)
+        {
+            _network.Drop(LinkOf(device));
+            _devices.Remove(device);
         }
 
         private void Settle(double seconds = 0.25)
@@ -311,11 +433,13 @@ namespace Callbreak.Tests.EditMode.Application.Online
             Settle();
         }
 
-        private void PlayToEnd(Device host, Device guest)
+        private void PlayToEnd(Device host, Device guest) => Play(host, guest, 20000);
+
+        private void Play(Device host, Device guest, int steps)
         {
             IMatchSession a = host.Rooms.Current.Match;
             IMatchSession b = guest.Rooms.Current.Match;
-            for (int i = 0; i < 20000 && a.Status != SessionStatus.Ended; i++)
+            for (int i = 0; i < steps && a.Status != SessionStatus.Ended; i++)
             {
                 Settle();
                 RoomFixture.Act(a);
@@ -328,9 +452,10 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
         private sealed class Device
         {
-            public Device(InMemoryNetwork network, string name, ulong seed)
+            public Device(InMemoryNetwork network, string name, ulong seed, InMemorySaveStore saves, Func<DateTime> utcNow)
             {
-                var saves = new InMemorySaveStore();
+                Saves = saves;
+                Tickets = new RejoinStore(saves, utcNow);
                 Settings = new SettingsService(saves);
                 Profile = new ProfileService(saves, new NameFilter());
                 Profile.TrySetDisplayName(name);
@@ -340,8 +465,14 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 Auth = new FakeAuth("player-" + name.ToLowerInvariant());
                 ulong next = seed;
                 Rooms = new RoomService(network, Profile, Cosmetics, Auth, new TestBots(), Stats, Settings, Network, new NameFilter(),
-                    () => next++ * 7919UL, BotTiming.Instant);
+                    () => next++ * 7919UL, BotTiming.Instant, Tickets, Tracked);
             }
+
+            public EventNames Tracked { get; } = new EventNames();
+
+            public InMemorySaveStore Saves { get; }
+
+            public RejoinStore Tickets { get; }
 
             public SettingsService Settings { get; }
 
@@ -381,6 +512,13 @@ namespace Callbreak.Tests.EditMode.Application.Online
             public string PlayerId { get; }
 
             public Task<bool> SignInAsync(CancellationToken ct) => Task.FromResult(true);
+        }
+
+        private sealed class EventNames : IAnalytics
+        {
+            public List<string> Names { get; } = new List<string>();
+
+            public void Track(string eventName, params (string key, object value)[] parameters) => Names.Add(eventName);
         }
 
         private sealed class Collector : IProgress<MatchmakingProgress>

@@ -58,6 +58,7 @@ namespace Callbreak.Bootstrap
             builder.Register<StatsService>(Lifetime.Singleton).As<IStatsService>();
             builder.Register<CosmeticsService>(Lifetime.Singleton).As<ICosmeticsService>();
             builder.Register<OfflineMatchStore>(Lifetime.Singleton).As<IOfflineMatchStore>();
+            builder.Register<IRejoinStore>(resolver => new RejoinStore(resolver.Resolve<ISaveStore>(), () => System.DateTime.UtcNow), Lifetime.Singleton);
 
             // Language (GDD §15).
             builder.RegisterInstance(StringTablesFactory.Create(_localization));
@@ -72,6 +73,7 @@ namespace Callbreak.Bootstrap
             builder.Register<LocalAuthService>(Lifetime.Singleton).As<IAuthService>();
             builder.Register<LogAnalytics>(Lifetime.Singleton).As<IAnalytics>();
             builder.Register<AppExit>(Lifetime.Singleton).As<IAppExit>();
+            builder.Register<DeepLinkService>(Lifetime.Singleton).As<IDeepLinks>();
             builder.Register<AudioService>(Lifetime.Singleton).As<IAudioService>()
                 .WithParameter(_audioHost)
                 .WithParameter(_audioLibrary);
@@ -122,7 +124,9 @@ namespace Callbreak.Bootstrap
                 resolver.Resolve<ISettingsService>(),
                 resolver.Resolve<INetworkStatus>(),
                 resolver.Resolve<NameFilter>(),
-                NextSeed);
+                NextSeed,
+                tickets: resolver.Resolve<IRejoinStore>(),
+                analytics: resolver.Resolve<IAnalytics>());
         }
 
         private static QuickMatchService CreateQuickMatch(IObjectResolver resolver)

@@ -459,6 +459,13 @@ namespace Callbreak.Application.Online
 
             // GDD §27 idempotent rejoin: the same player connecting again takes its seat back.
             int known = FindByPlayerId(hello.PlayerId);
+            if (known >= 0 && InMatch && !_table.IsHuman((Seat)known))
+            {
+                // GDD §8: not back within the hold, the seat is a bot for the rest of the match.
+                Refuse(peer, RoomError.AlreadyStarted);
+                return;
+            }
+
             if (known >= 0)
             {
                 Member m = _members[known];

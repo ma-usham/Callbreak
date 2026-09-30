@@ -113,6 +113,14 @@ namespace Callbreak.Presentation.Screens
 
             Bind(current);
             Render();
+
+            // The match is already on (a seat taken back after an app kill, or a host who started
+            // the next match first): its start was announced before this screen could listen.
+            IMatchSession match = current.Match;
+            if (match != null && match.Status != SessionStatus.Ended && match.Status != SessionStatus.Failed)
+            {
+                OnMatchStarting();
+            }
         }
 
         private void Bind(IRoomSession room)

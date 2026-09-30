@@ -24,6 +24,7 @@ namespace Callbreak.Application.Online
         public const int JoinAttemptsPerMinute = 6;
 
         private const double ClosingGraceSeconds = 0.5;
+        private const double TicketRefreshSeconds = 60.0;
         private const int CodeAttempts = 3;
 
         private static readonly double[] RetryPauses = { 1, 2, 4, 8 };
@@ -40,6 +41,8 @@ namespace Callbreak.Application.Online
         private readonly Func<ulong> _seedSource;
         private readonly IRandom _rng;
         private readonly BotTiming _timing;
+        private readonly IRejoinStore _tickets;
+        private readonly IAnalytics _analytics;
         private readonly List<double> _joinAttempts = new List<double>();
         private readonly List<Closing> _closing = new List<Closing>();
         private readonly string _fallbackPlayerId;
@@ -58,8 +61,12 @@ namespace Callbreak.Application.Online
         private Task<ClientLinkResult> _retry;
         private Task<RoomError> _rejoin;
         private CancellationTokenSource _retryCancel;
+        private bool _ticketHeld;
+        private double _nextTicketAt;
 
         /// <param name="seedSource">Draws shuffle seeds and the room code's randomness (a CSPRNG in production).</param>
+        /// <param name="tickets">Where a guest's running match is remembered for "Rejoin match"; null keeps none.</param>
+        /// <param name="analytics">Receives room_created and room_joined (GDD §15); null reports nothing.</param>
         public RoomService(
             IRoomTransport transport,
             IProfileService profile,
@@ -71,7 +78,9 @@ namespace Callbreak.Application.Online
             INetworkStatus network,
             NameFilter names,
             Func<ulong> seedSource,
-            BotTiming timing = null)
+            BotTiming timing = null,
+            IRejoinStore tickets = null,
+            IAnalytics analytics = null)
         {
             _transport = transport ?? throw new ArgumentNullException(nameof(transport));
             _profile = profile;
@@ -85,6 +94,8 @@ namespace Callbreak.Application.Online
             _seedSource = seedSource ?? throw new ArgumentNullException(nameof(seedSource));
             _rng = new Pcg32Random(_seedSource());
             _timing = timing;
+            _tickets = tickets;
+            _analytics = analytics;
             _fallbackPlayerId = "guest-" + _seedSource().ToString("x16");
         }
 
@@ -144,6 +155,7 @@ namespace Callbreak.Application.Online
                 _host = host;
                 _hostLink = hosted.Link;
                 Adopt(client, host.Local);
+                _analytics?.Track("room_created", ("turn_seconds", settings.TurnSeconds));
                 return new RoomResult(client, RoomError.None);
             }
             finally
@@ -201,6 +213,7 @@ namespace Callbreak.Application.Online
                 }
 
                 Adopt(client, linked.Link);
+                _analytics?.Track("room_joined");
                 return new RoomResult(client, RoomError.None);
             }
             finally
@@ -233,6 +246,7 @@ namespace Callbreak.Application.Online
                 Reconnect(now);
             }
 
+            TrackRejoinTicket(now);
             for (int i = _closing.Count - 1; i >= 0; i--)
             {
                 if (now >= _closing[i].At)
@@ -288,6 +302,43 @@ namespace Callbreak.Application.Online
             }
 
             Release();
+            DropRejoinTicket();
+        }
+
+        /// <summary>
+        /// GDD §27 and §29: while this device plays a match as a guest it keeps a fresh ticket, so
+        /// the next launch can offer "Rejoin match" after an app kill. The host keeps none: its
+        /// room dies with its app (Phase 1).
+        /// </summary>
+        private void TrackRejoinTicket(double now)
+        {
+            if (_tickets == null)
+            {
+                return;
+            }
+
+            RoomClient client = _client;
+            if (client == null || client.IsClosed || client.IsHost || !client.InMatch)
+            {
+                DropRejoinTicket();
+                return;
+            }
+
+            if (!_ticketHeld || now >= _nextTicketAt)
+            {
+                _tickets.Remember(client.Code);
+                _ticketHeld = true;
+                _nextTicketAt = now + TicketRefreshSeconds;
+            }
+        }
+
+        private void DropRejoinTicket()
+        {
+            if (_ticketHeld)
+            {
+                _ticketHeld = false;
+                _tickets.Clear();
+            }
         }
 
         private void OnClosed(RoomError reason) => Release();

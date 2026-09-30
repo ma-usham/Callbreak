@@ -35,7 +35,7 @@ run() { $U "$@" 2>&1; }
 # and view code misbehave in Play mode): wait for Play mode to end.
 waited_play=0
 while true; do
-  pm=$(run editor_status | grep -o '"playMode": "[a-z]*"' | sed -E 's/.*: "([a-z]*)"//')
+  pm=$(run editor_status | grep -o '"playMode": "[a-z]*"' | sed -E 's/.*: "([a-z]*)"/\1/')
   if [ -z "$pm" ] || [ "$pm" = "stopped" ]; then break; fi
   if [ $waited_play -ge 900 ]; then echo "the Editor has been in Play mode for 15 minutes; not running"; exit 6; fi
   [ $((waited_play % 60)) -eq 0 ] && echo "waiting: the Editor is in Play mode"

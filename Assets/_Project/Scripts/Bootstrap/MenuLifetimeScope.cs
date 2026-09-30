@@ -43,6 +43,11 @@ namespace Callbreak.Bootstrap
 
             // Last, so every presenter is already listening when the first screen opens.
             builder.RegisterEntryPoint<MenuEntryPoint>();
+
+            // After the first screen is up; an invite link outranks the rejoin offer, which
+            // outranks the offer to resume an offline match.
+            builder.RegisterEntryPoint<RejoinOffer>();
+            builder.RegisterEntryPoint<JoinLinkHandler>();
         }
 
         /// <summary>Registers a screen's presenter only when the scene has that screen.</summary>
