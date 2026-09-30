@@ -350,23 +350,41 @@ namespace Callbreak.Editor
 
     /// <summary>
     /// Play mode always starts from the Boot scene (GDD §21: Boot builds the app scope that the
-    /// Menu and Table scopes need). Toggle it under Callbreak/Play From Boot.
+    /// Menu and Table scopes need). Toggle it under Callbreak/Play From Boot. A PlayMode test run
+    /// is left alone: the Test Framework plays the scene it has just opened, and the tests load
+    /// Boot themselves.
     /// </summary>
     [InitializeOnLoad]
     public static class PlayFromBoot
     {
         private const string PrefKey = "Callbreak.PlayFromBoot";
         private const string MenuPath = "Callbreak/Play From Boot";
+        private const string TestRunnerScenePrefix = "InitTestScene";
 
         static PlayFromBoot()
         {
             EditorApplication.delayCall += Apply;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
         public static void Apply()
         {
             var boot = AssetDatabase.LoadAssetAtPath<SceneAsset>(SceneSetup.BootPath);
-            EditorSceneManager.playModeStartScene = EditorPrefs.GetBool(PrefKey, true) ? boot : null;
+            bool fromBoot = EditorPrefs.GetBool(PrefKey, true) && !IsTestRun();
+            EditorSceneManager.playModeStartScene = fromBoot ? boot : null;
+        }
+
+        private static bool IsTestRun()
+        {
+            return SceneManager.GetActiveScene().name.StartsWith(TestRunnerScenePrefix, System.StringComparison.Ordinal);
+        }
+
+        private static void OnPlayModeStateChanged(PlayModeStateChange change)
+        {
+            if (change == PlayModeStateChange.ExitingEditMode || change == PlayModeStateChange.EnteredEditMode)
+            {
+                Apply();
+            }
         }
 
         [MenuItem(MenuPath)]

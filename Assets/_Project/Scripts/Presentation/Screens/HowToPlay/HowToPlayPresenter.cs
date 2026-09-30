@@ -57,10 +57,13 @@ namespace Callbreak.Presentation.Screens
             _router.Pop();
         }
 
-        /// <summary>The gear leads to Settings, unless that is where the player came from.</summary>
+        /// <summary>
+        /// The gear leads to Settings, unless that is where the player came from. While the primer
+        /// is shown for the first time (at the first launch or on the way into a match) it stays.
+        /// </summary>
         private void OnSettings()
         {
-            if (_launcher.HasPending)
+            if (_launcher.HasPending || !_settings.HowToPlaySeen)
             {
                 return;
             }

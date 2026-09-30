@@ -60,6 +60,8 @@ namespace Callbreak.Application.Settings
 
         public bool BeginnerAssist => _data.beginnerAssist;
 
+        public bool NameNudgeSeen => _data.nameNudgeSeen;
+
         /// <summary>True when the file on disk came from a newer app version, so nothing is saved.</summary>
         public bool IsReadOnly => _readOnly;
 
@@ -196,6 +198,17 @@ namespace Callbreak.Application.Settings
             }
 
             _data.howToPlaySeen = true;
+            Commit();
+        }
+
+        public void MarkNameNudgeSeen()
+        {
+            if (_data.nameNudgeSeen)
+            {
+                return;
+            }
+
+            _data.nameNudgeSeen = true;
             Commit();
         }
 

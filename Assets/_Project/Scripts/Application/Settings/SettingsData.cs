@@ -12,7 +12,7 @@ namespace Callbreak.Application.Settings
     [Serializable]
     public sealed class SettingsData
     {
-        public const int CurrentVersion = 1;
+        public const int CurrentVersion = 2;
 
         public int schemaVersion = CurrentVersion;
         public bool music = true;
@@ -27,5 +27,6 @@ namespace Callbreak.Application.Settings
         public bool howToPlaySeen;
         public int completedMatches;
         public bool beginnerAssist;
+        public bool nameNudgeSeen;
     }
 }

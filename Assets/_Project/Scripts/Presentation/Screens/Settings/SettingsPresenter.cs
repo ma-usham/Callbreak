@@ -127,9 +127,18 @@ namespace Callbreak.Presentation.Screens
             _router.Pop();
         }
 
-        private void OnProfile() => _router.Push(ScreenId.Profile);
+        private void OnProfile() => Open(ScreenId.Profile);
 
-        private void OnHowToPlay() => _router.Push(ScreenId.HowToPlay);
+        private void OnHowToPlay() => Open(ScreenId.HowToPlay);
+
+        /// <summary>Settings also opens over the table, where only the Table scene's screens exist.</summary>
+        private void Open(ScreenId id)
+        {
+            if (_router.Has(id))
+            {
+                _router.Push(id);
+            }
+        }
 
         private void OnVolume(float volume)
         {

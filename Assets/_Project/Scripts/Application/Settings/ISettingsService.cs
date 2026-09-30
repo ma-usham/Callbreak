@@ -42,6 +42,9 @@ namespace Callbreak.Application.Settings
         /// <summary>Optional beginner assist on the call panel (off by default, GDD §11 screen 07).</summary>
         bool BeginnerAssist { get; }
 
+        /// <summary>The nudge to pick a name and avatar is shown once, after the first match (GDD §15).</summary>
+        bool NameNudgeSeen { get; }
+
         void SetMusic(bool on);
 
         void SetSoundEffects(bool on);
@@ -63,6 +66,8 @@ namespace Callbreak.Application.Settings
         void MarkHowToPlaySeen();
 
         void IncrementCompletedMatches();
+
+        void MarkNameNudgeSeen();
 
         void SetBeginnerAssist(bool on);
     }

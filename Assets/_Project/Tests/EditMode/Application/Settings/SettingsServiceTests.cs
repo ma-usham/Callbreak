@@ -215,6 +215,22 @@ namespace Callbreak.Tests.EditMode.Application
         }
 
         [Test]
+        public void MarkNameNudgeSeen_ChangesOnlyTheFirstTimeAndSurvivesARestart()
+        {
+            var settings = new SettingsService(_store);
+            int changed = 0;
+            settings.Changed += () => changed++;
+            Assert.IsFalse(settings.NameNudgeSeen);
+
+            settings.MarkNameNudgeSeen();
+            settings.MarkNameNudgeSeen();
+
+            Assert.IsTrue(settings.NameNudgeSeen);
+            Assert.AreEqual(1, changed);
+            Assert.IsTrue(new SettingsService(_store).NameNudgeSeen);
+        }
+
+        [Test]
         public void IncrementCompletedMatches_CountsEveryCall()
         {
             var settings = new SettingsService(_store);

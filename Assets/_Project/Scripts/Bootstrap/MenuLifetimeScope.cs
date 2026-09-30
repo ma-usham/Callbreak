@@ -48,6 +48,9 @@ namespace Callbreak.Bootstrap
             // outranks the offer to resume an offline match.
             builder.RegisterEntryPoint<RejoinOffer>();
             builder.RegisterEntryPoint<JoinLinkHandler>();
+
+            // Last of all: the first-run guide only acts on a bare main menu.
+            builder.RegisterEntryPoint<FirstRunGuide>();
         }
 
         /// <summary>Registers a screen's presenter only when the scene has that screen.</summary>
