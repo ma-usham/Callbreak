@@ -58,7 +58,7 @@ namespace Callbreak.Bootstrap
             builder.Register<StatsService>(Lifetime.Singleton).As<IStatsService>();
             builder.Register<CosmeticsService>(Lifetime.Singleton).As<ICosmeticsService>();
             builder.Register<OfflineMatchStore>(Lifetime.Singleton).As<IOfflineMatchStore>();
-            builder.Register<IRejoinStore>(resolver => new RejoinStore(resolver.Resolve<ISaveStore>(), () => System.DateTime.UtcNow), Lifetime.Singleton);
+            builder.Register<IRejoinStore>(resolver => new RejoinStore(resolver.Resolve<ISaveStore>(), () => System.DateTime.UtcNow, resolver.Resolve<IStatsService>()), Lifetime.Singleton);
 
             // Language (GDD §15).
             builder.RegisterInstance(StringTablesFactory.Create(_localization));

@@ -158,7 +158,8 @@ namespace Callbreak.Bootstrap
                         resolver.Resolve<IProfileService>(),
                         resolver.Resolve<ICosmeticsService>(),
                         settings,
-                        resolver.Resolve<IStatsService>());
+                        resolver.Resolve<IStatsService>(),
+                        botWorker: BotDriver.ThreadPool);
                 case MatchMode.PrivateRoom:
                     return resolver.Resolve<IRoomService>().Current?.Match
                         ?? throw new InvalidOperationException("The room has no match to play.");

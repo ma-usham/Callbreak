@@ -139,6 +139,39 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
         }
 
         [Test]
+        public void HardBots_ThinkOnTheWorkerGiven_AndPlayTheMatchToTheEnd()
+        {
+            // GDD §20: Hard bots think on a worker thread; the game passes the thread pool.
+            var worker = new CountingWorker();
+            var session = new OfflineMatchSession(
+                new MatchLaunchRequest(MatchMode.Offline, BotDifficulty.Hard),
+                _store, new SmallHardBots(), _profile, _cosmetics, _settings, _stats, BotTiming.Instant, worker);
+            double now = 0;
+
+            session.Start();
+            PlayToEnd(session, ref now);
+
+            Assert.AreEqual(SessionStatus.Ended, session.Status);
+            Assert.GreaterOrEqual(worker.Runs, 3 * 5, "at least every bot's call of every round was decided on the worker");
+        }
+
+        [Test]
+        public void NormalBots_NeverUseTheWorker()
+        {
+            var worker = new CountingWorker();
+            var session = new OfflineMatchSession(
+                new MatchLaunchRequest(MatchMode.Offline, BotDifficulty.Normal),
+                _store, new LowestCardBots(), _profile, _cosmetics, _settings, _stats, BotTiming.Instant, worker);
+            double now = 0;
+
+            session.Start();
+            PlayToEnd(session, ref now);
+
+            Assert.AreEqual(SessionStatus.Ended, session.Status);
+            Assert.AreEqual(0, worker.Runs);
+        }
+
+        [Test]
         public void Tick_BotTurn_WaitsForThinkTimeBeforeActing()
         {
             var timing = new BotTiming(thinkMinSeconds: 1.0, thinkMaxSeconds: 1.0, forcedSeconds: 1.0, trickDisplaySeconds: 0, dealSeconds: 0);
@@ -424,6 +457,24 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
             public int ChooseCall(PlayerView view, IRandom rng) => 2;
 
             public Card ChooseCard(PlayerView view, IRandom rng) => view.LegalCards().Lowest();
+        }
+
+        /// <summary>Real Hard bots on a small sample budget, so a whole match stays quick.</summary>
+        private sealed class SmallHardBots : IBotFactory
+        {
+            public IBotStrategy Create(BotLevel level) => level == BotLevel.Hard ? new HardStrategy(4) : BotStrategies.Create(level);
+        }
+
+        /// <summary>Runs each decision at once, on the calling thread, and counts them.</summary>
+        private sealed class CountingWorker : BotDriver.IWorker
+        {
+            public int Runs { get; private set; }
+
+            public System.Threading.Tasks.Task<T> Run<T>(Func<T> decision)
+            {
+                Runs++;
+                return System.Threading.Tasks.Task.FromResult(decision());
+            }
         }
     }
 }

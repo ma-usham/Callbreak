@@ -27,7 +27,8 @@ namespace Callbreak.Application.Sessions
     /// An offline match against three computer players (GDD §29): the rules engine and the bots run
     /// on the device, with no network and no turn clock. Bots move after a human-looking pause,
     /// the match pauses with the match menu, and a snapshot is saved after every trick, on pause
-    /// and on leave, so an interrupted match can be resumed from the main menu.
+    /// and on leave, so an interrupted match can be resumed from the main menu. Given a bot
+    /// worker (the game passes the thread pool, GDD §20), Hard bots think off the main thread.
     /// </summary>
     public sealed class OfflineMatchSession : IMatchSession
     {
@@ -57,7 +58,8 @@ namespace Callbreak.Application.Sessions
             ICosmeticsService cosmetics,
             ISettingsService settings,
             IStatsService stats,
-            BotTiming timing = null)
+            BotTiming timing = null,
+            BotDriver.IWorker botWorker = null)
         {
             _store = store;
             _stats = stats;
@@ -101,7 +103,7 @@ namespace Callbreak.Application.Sessions
                 _seats[s] = new SessionSeat((Seat)s, p.Name, avatar, p.DeckThemeId, p.IsBot, (Seat)s == LocalSeat, SeatConnection.Connected);
             }
 
-            _bots = new BotDriver(botSeats, botFactory.Create(BotLevel.Normal), new Pcg32Random(_seed, 11), new Pcg32Random(_seed, 13), timing);
+            _bots = new BotDriver(botSeats, botFactory.Create(BotLevel.Normal), new Pcg32Random(_seed, 11), new Pcg32Random(_seed, 13), timing, botWorker);
             View = _engine.ViewFor(LocalSeat);
         }
 

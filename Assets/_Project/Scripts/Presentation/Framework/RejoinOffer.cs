@@ -13,7 +13,10 @@ namespace Callbreak.Presentation.Framework
     /// GDD §27: after an app kill, the next launch offers "Rejoin match" while the match this
     /// device was playing as a guest may still be running. Rejoining takes the seat back through
     /// the lobby, which goes straight on to the table; the host refuses once the seat hold is over
-    /// and a bot has the seat for good. Declining gives the ticket up.
+    /// and a bot has the seat for good, and the match then counts as left (GDD §8). A room that is
+    /// gone records nothing. "Not now", closing the offer, or a connection problem keeps the
+    /// ticket: it is offered again at the next launch while it lasts, and the match counts as left
+    /// once it runs out.
     /// </summary>
     public sealed class RejoinOffer : IStartable, IDisposable
     {
@@ -84,14 +87,8 @@ namespace Callbreak.Presentation.Framework
                         _localization.Get("ui.dialog.rejoin_match.confirm"),
                         _localization.Get("ui.dialog.rejoin_match.cancel")),
                     ct);
-                if (_disposed)
+                if (_disposed || !rejoin)
                 {
-                    return;
-                }
-
-                if (!rejoin)
-                {
-                    _tickets.Clear();
                     return;
                 }
 
@@ -108,7 +105,7 @@ namespace Callbreak.Presentation.Framework
 
                 if (!result.Succeeded)
                 {
-                    _tickets.Clear();
+                    Settle(result.Error);
                     _toast.Show(_localization.Get("ui.error.join_table_failed"));
                     return;
                 }
@@ -120,6 +117,30 @@ namespace Callbreak.Presentation.Framework
             catch (Exception e)
             {
                 Debug.LogException(e);
+            }
+        }
+
+        /// <summary>What a failed rejoin does with the ticket.</summary>
+        private void Settle(RoomError error)
+        {
+            switch (error)
+            {
+                case RoomError.AlreadyStarted:
+                    // The seat hold is over and a bot has the seat for good.
+                    _tickets.Abandon();
+                    break;
+
+                case RoomError.Offline:
+                case RoomError.RateLimited:
+                case RoomError.ConnectionLost:
+                case RoomError.Unknown:
+                    // The match may still be waiting: the next launch asks again.
+                    break;
+
+                default:
+                    // The room is gone (the host left), or this player or build is turned away.
+                    _tickets.Clear();
+                    break;
             }
         }
     }
