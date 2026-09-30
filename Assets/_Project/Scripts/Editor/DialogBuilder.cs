@@ -9,7 +9,7 @@ namespace Callbreak.Editor
 {
     /// <summary>
     /// Builds the shared confirmation dialog (GDD §23 popup layer, sorting order 50) from the UI kit
-    /// only: the 9-sliced large panel, the crimson primary button and the ivory secondary button.
+    /// only: the 9-sliced modal panel, the crimson primary button and the ivory secondary button.
     /// Its proportions and type follow the Game Menu panel of mockup 13 (panel 567 wide, buttons
     /// 448 x 69, serif title, stacked buttons), which is the only modal the mockups show; the dim
     /// behind it is the one measured there (the table drops to 46% brightness).
@@ -95,7 +95,7 @@ namespace Callbreak.Editor
             // The face takes raycasts so a tap on the panel never reaches the backdrop.
             RectTransform panelFace = Child("Face", panel);
             Stretch(panelFace);
-            UiBuildKit.AddImage(panelFace, UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Common/UI_Panel_Large.png", 0f), true);
+            UiBuildKit.AddImage(panelFace, UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Panels/UI_Panel_Modal_Menu.png", 0f), true);
 
             TMP_FontAsset serif = UiBuildKit.LoadFontRole("SerifBold");
             TextMeshProUGUI title = Text("Title", panel, serif, TitleSize, "Leave match?");
