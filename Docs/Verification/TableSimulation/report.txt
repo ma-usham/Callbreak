@@ -1,0 +1,385 @@
+table simulation: 384 kinds of check, 100648 checks, 0 kinds FAILED, 11684 frames, 840 events played
+ok   the Table prefab has a TableView  x1
+ok   the BiddingPanel prefab has a BiddingPanelView  x1
+ok   the GameplayScreen prefab exists  x1
+ok   the MatchMenu prefab has a MatchMenuView  x1
+ok   GameplayScreen has the Gameplay id  x1
+ok   the table is not a router screen  x1
+ok   the call panel is not a router screen  x1
+ok   every control answers to at least 88 px (GDD 16)  x32
+ok   no two controls answer to the same touch  x151
+ok   a new match is dealt  x3
+ok   nothing is logged as an error  x1
+ok   the table starts on the Gameplay screen  x1
+ok   the table music plays  x1
+ok   no Reconnecting cover on a running match  x1
+ok   no I'm back banner on a present player  x1
+ok   the emote picker starts closed  x1
+ok   the hand shows exactly the cards held (after an event)  x840
+ok   an opponent's fan shows the cards they have left  x2532
+ok   the trick area shows the cards played to the trick  x844
+ok   every rented card is in the hand, a fan or the trick  x844
+ok   the HUD shows the round  x844
+ok   the gold ring is on the seat whose turn it is  x3376
+ok   a seat shows its player's name  x3376
+ok   the hand takes plays only on the local turn that has been played back  x11684
+ok   the pool never holds more than 52 cards  x11684
+ok   once its slide has settled, the call panel is up exactly while it is shown  x11684
+ok   offline, the match is paused exactly while a menu covers the table  x11503
+ok   every card held has a face-up view in the hand  x5776
+ok   an opponent's fan holds backs only  x17085
+ok   the deal puts thirteen cards in the hand  x6
+ok   after the deal all 52 cards are on the table  x6
+ok   after the deal every card of the hand is fully visible  x6
+ok   the deal sounds for each card (two in one frame share one sound)  x6
+ok   the deal takes 1.6 s (0.4 s with Reduce motion)  x6
+ok   the call panel is hidden on another seat's call turn  x18
+ok   the centre says who is calling  x18
+ok   "{name} is calling…"  x18
+ok   the caller's pill reads "Calling…"  x18
+ok   the pill shows the call once placed  x24
+ok   a call pops as a bubble over the seat  x24
+ok   the call panel opens on the local call turn  x6
+ok   the local pill reads "Choosing bid"  x6
+ok   a chip shows its call  x48
+ok   chips run from RuleSet.MinCall to RuleSet.MaxCall  x6
+ok   no chip is chosen when the panel opens  x6
+ok   the crimson chip is hidden until a chip is chosen  x6
+ok   Confirm reads "Confirm" before a choice  x6
+ok   Confirm is disabled until a chip is chosen  x6
+ok   a disabled Confirm cannot be pressed  x6
+ok   no call is sent without a choice  x6
+ok   the hand takes no plays while calling  x6
+ok   without the beginner assist there is no dot  x6
+ok   with the assist off the estimator is never asked  x6
+ok   with the assist on, a dot marks the suggested call  x2
+ok   the dot sits on the suggested chip  x2
+ok   the estimator is asked once for the turn  x2
+ok   the dot chooses nothing  x2
+ok   switching the assist off takes the dot away  x2
+ok   a chip tapped under the scorecard is not chosen  x2
+ok   Confirm pressed under the scorecard sends nothing  x2
+ok   the scorecard closes back to the call  x2
+ok   a card touched while calling is enlarged  x6
+ok   the enlarged card settles back on release  x6
+ok   a card cannot be played while calling  x6
+ok   a chip can be tapped  x6
+ok   the tapped chip is chosen  x6
+ok   the crimson chip shows on the chosen chip  x6
+ok   Confirm reads "Confirm {n}"  x6
+ok   Confirm is enabled once a chip is chosen  x6
+ok   choosing another chip moves the choice  x6
+ok   the crimson chip sits on the chosen chip  x6
+ok   Confirm follows the choice  x6
+ok   Confirm can be pressed  x8
+ok   the refused call was sent once  x2
+ok   a refused call leaves the panel open  x2
+ok   a refused call says why on the panel  x2
+ok   the reason takes the subtitle's place  x2
+ok   after a refusal the panel takes input again  x2
+ok   every character of the refusal line can be drawn  x50
+ok   choosing again brings the subtitle back  x2
+ok   Confirm sends one call  x6
+ok   the call sent is the chosen chip  x6
+ok   a confirmed call is final  x6
+ok   the local call is the one confirmed  x6
+ok   the call panel closes once the call is placed  x6
+ok   the call panel slides away rather than vanishing  x6
+ok   a prompt shows during play  x286
+ok   every character of the prompt can be drawn  x5879
+ok   the prompt says who is awaited  x214
+ok   the hand takes no input on another seat's turn  x214
+ok   each trick card lies in the slot of the seat that played it  x1335
+ok   a played card lies face up in its seat's slot  x310
+ok   a played card comes to rest exactly at its slot  x310
+ok   the peek ends when the next card is played  x310
+ok   in the first matches the prompt is the tip for the turn  x52
+ok   a tip reads as a tip  x52
+ok   a tip has no character its label cannot draw  x2052
+ok   the hand takes input on the local turn  x72
+ok   the local turn has an obligation  x72
+ok   legal cards glow  x540
+ok   cards that cannot be played are subdued  x540
+ok   a play turn always has a legal card  x87
+ok   the local ring shows on the local turn  x3
+ok   offline there is no seconds disc  x3
+ok   offline the ring is whole  x3
+ok   a running clock shows the seconds disc  x3
+ok   the seconds left are shown as text  x3
+ok   the ring shows the time left  x3
+ok   no tick before the last five seconds  x3
+ok   the ring turns crimson for the last five seconds  x3
+ok   a tick plays each second of the last five  x3
+ok   one warning nudge in the last five seconds  x3
+ok   the seconds disc goes when the clock stops  x3
+ok   the ring is whole again without a clock  x3
+ok   the ring is gold again without a clock  x3
+ok   the prompt label has the suit sprites  x3
+ok   a "follow" prompt has no character its label cannot draw  x192
+ok   the suit of a "follow" prompt is drawn from the suit sprites  x12
+ok   a suit does not make the prompt's line taller  x12
+ok   the prompt pill is as wide as its text  x12
+ok   a "beat" prompt has no character its label cannot draw  x732
+ok   the suit of a "beat" prompt is drawn from the suit sprites  x48
+ok   a suit stays within the height of the prompt's text  x48
+ok   the scorecard opens over the local turn  x3
+ok   a card tapped under the scorecard is not played  x3
+ok   a card tapped under the scorecard stays in the hand  x3
+ok   the sort button under the scorecard does nothing  x3
+ok   the emote button under the scorecard does nothing  x3
+ok   the trick area under the scorecard shows no peek  x3
+ok   an avatar tapped under the scorecard is not muted  x3
+ok   the HUD under the scorecard opens nothing  x3
+ok   nothing was pushed over the scorecard  x3
+ok   the scorecard closes back to the table  x3
+ok   back on the table, the hand takes input again  x3
+ok   an illegal card is never sent  x3
+ok   an illegal card stays in the hand  x3
+ok   an illegal tap gives a warning nudge  x3
+ok   the prompt that explains the refusal is showing  x3
+ok   an illegal card does not reach the trick  x3
+ok   every legal card has a view in the hand  x78
+ok   the refused play was sent once  x3
+ok   a refused card is back in the hand  x3
+ok   a refused card leaves the trick  x3
+ok   the hand takes input again after a refusal  x3
+ok   the refused card is a legal card in the hand again  x3
+ok   the unanswered play was sent once  x3
+ok   the card left the hand at once  x3
+ok   input is locked while a play is unanswered  x3
+ok   nothing else can be played while locked  x3
+ok   the card waits at the trick while unanswered  x3
+ok   after two seconds without an answer the card is back in the hand  x3
+ok   after two seconds the trick slot is free again  x3
+ok   the hand takes input again after the roll-back  x3
+ok   dragging a legal card up plays it  x3
+ok   the chosen card is on its way to the trick at once  x72
+ok   the chosen card has left the hand  x72
+ok   the hand is locked until the play is settled  x72
+ok   the swept trick has left the table  x78
+ok   the winner's pill counts the trick  x78
+ok   the pill gets its tick exactly when the call is met  x78
+ok   every character of a status pill can be drawn  x2956
+ok   a tap on the table skips the trick sweep  x3
+ok   the trick area can be tapped  x3
+ok   a tap on the trick area shows the previous trick  x3
+ok   the peek shows four cards  x3
+ok   the peek does not change the current trick  x3
+ok   a second tap ends the peek  x3
+ok   the peeked cards go back to the pool  x3
+ok   the peek can be opened again  x3
+ok   sliding to a card and releasing plays that card  x3
+ok   Home can be pressed  x3
+ok   Home opens the match menu  x3
+ok   offline, the match pauses under the menu  x3
+ok   the menu says "Offline match · Paused"  x3
+ok   "Your match is paused." shows offline  x3
+ok   nothing happens in a paused match  x3
+ok   the Sound switch starts on  x3
+ok   the Sound switch turns music and effects off  x3
+ok   the Sound switch turns music and effects on  x3
+ok   Scorecard opens from the menu  x3
+ok   the match stays paused under the scorecard  x3
+ok   a scorecard row's name (rows sorted by rank)  x20
+ok   a scorecard round cell  x100
+ok   a scorecard total is the sum of its rounds  x20
+ok   a scorecard rank  x20
+ok   the scorecard footer  x5
+ok   the scorecard button's label  x5
+ok   the scorecard closes back to the menu  x3
+ok   Resume Game returns to the table  x3
+ok   the match runs again after Resume  x3
+ok   Android back on the table opens the match menu  x3
+ok   the match pauses for Android back too  x3
+ok   the close button returns to the table  x3
+ok   the match runs again after closing the menu  x3
+ok   a double tap sends one card  x66
+ok   the emote button opens the picker  x3
+ok   the picker has six phrases  x3
+ok   a phrase comes from the Emotes table  x18
+ok   a phrase can be tapped  x3
+ok   choosing a phrase closes the picker  x3
+ok   the phrase shows in a bubble over the seat  x3
+ok   the bubble shows the chosen phrase  x3
+ok   a second phrase within three seconds is held back  x3
+ok   a tap outside closes the picker  x3
+ok   a muted opponent's phrase is not shown  x3
+ok   an unmuted opponent's phrase is shown  x3
+ok   the sort button toggles the saved order  x3
+ok   the hand is laid out in the chosen order  x3
+ok   going to the background opens the match menu  x3
+ok   going to the background pauses an offline match  x3
+ok   pausing saves the offline match  x3
+ok   the match runs again after coming back  x3
+ok   a resync drops the running animation and the queue  x2
+ok   a resync takes the hand from the session's view  x2
+ok   a resync takes the tricks played from the session's view  x2
+ok   a resync takes the trick from the session's view  x2
+ok   the hand shows exactly the cards held (after a resume)  x4
+ok   the prompt says it is your turn  x20
+ok   the prompt states the obligation  x20
+ok   the prompt is hidden once the round is scored  x6
+ok   the round title  x5
+ok   a round row's name  x20
+ok   a round row's bid is the event's  x20
+ok   a round row's tricks won are the event's  x20
+ok   a round row's score is the event's, counted up  x20
+ok   a round row's total is the event's  x20
+ok   a missed call is burgundy  x20
+ok   the gold band is on the local player's row  x5
+ok   the Next button's label  x5
+ok   the round footer  x5
+ok   Next Round can be pressed  x5
+ok   the round results do not pause the match  x5
+ok   View Scorecard opens the scorecard  x1
+ok   the scorecard closes back to the round results  x1
+ok   Back on the round results opens the match menu  x1
+ok   the menu closes back to the round results  x1
+ok   Next Round is pressed  x5
+ok   Next Round tells the session this seat is ready  x5
+ok   Next Round is sent once  x5
+ok   the next round returns to the table  x4
+ok   the next round has started  x4
+ok   a negative score uses the true minus sign  x2
+ok   after the last round the match results open  x1
+ok   the match results have four standings  x1
+ok   the headline follows the local player's place  x1
+ok   the trophy shows only for a win  x1
+ok   a final row's rank  x4
+ok   a final row's name  x4
+ok   a final row's total  x4
+ok   a negative final total is burgundy, a positive one is not  x4
+ok   a crown marks every winner  x4
+ok   the match footer  x1
+ok   the victory sound plays for a win only  x1
+ok   the music is ducked under the victory sting  x1
+ok   the music ducks once, for a win only  x1
+ok   the music comes back when the sting has played  x1
+ok   Android back stays on the match results  x1
+ok   View Scorecard opens from the match results  x1
+ok   Back to Results returns to the match results  x1
+ok   Play Again starts one match  x1
+ok   Play Again offline starts an offline match  x1
+ok   Play Again keeps the difficulty  x1
+ok   Play Again deals a new match  x1
+ok   once leaving, the other buttons do nothing  x1
+ok   match 1 finishes  x1
+ok   every card is back in the pool after a match  x7
+ok   tips are still on after one finished match  x1
+ok   tips switch off with three finished matches  x1
+ok   after three finished matches the prompt shows no tip  x12
+ok   a "follow" prompt in play has no character its label cannot draw  x64
+ok   a "follow" prompt in play draws its suit from the suit sprites  x4
+ok   a "beat" prompt in play has no character its label cannot draw  x15
+ok   a "beat" prompt in play draws its suit from the suit sprites  x1
+ok   Leave Match asks first  x1
+ok   the leave dialog's title  x1
+ok   offline, the dialog says the match is saved  x1
+ok   the leave dialog's confirm label  x1
+ok   the leave dialog's cancel label  x1
+ok   cancelling stays in the match  x1
+ok   cancelling stays on the menu  x1
+ok   confirming leaves for the menu scene  x1
+ok   leaving opens the main menu  x1
+ok   the session has been left  x1
+ok   the match left offline is saved for later  x1
+ok   match 2 reaches the point where it is left  x1
+ok   the saved match is resumed  x1
+ok   a resumed match queues no events  x1
+ok   the resumed round  x1
+ok   the resumed hand  x1
+ok   the resumed hand is on the table at once  x1
+ok   the resumed round is played out  x1
+ok   the resumed round ends on its results  x1
+ok   the resumed match is still running at the round results  x1
+ok   Reconnecting shows the cover over the table  x1
+ok   input is locked while reconnecting  x1
+ok   the cover goes once reconnected  x1
+ok   offline, the bots carry no tag (everyone knows)  x1
+ok   an Away seat keeps its bid line  x1
+ok   an Away seat shows the Away chip  x1
+ok   the Away chip has no spinner  x1
+ok   an Away seat's pill is not gold  x1
+ok   a reconnecting seat keeps its bid line  x1
+ok   a reconnecting seat shows the Reconnecting chip  x1
+ok   the Reconnecting chip has its spinner  x1
+ok   every character of a seat chip can be drawn  x13
+ok   no toast while a seat is away or reconnecting  x1
+ok   the line is the same when the player is back  x1
+ok   the chip clears when the player is back  x1
+ok   a returning player is welcomed back  x1
+ok   a seat a bot took over keeps its bid line  x1
+ok   a seat a bot took over shows "Bot playing"  x1
+ok   a leaving player is announced  x1
+ok   a seat whose player left shows "Bot playing"  x1
+ok   an Away local seat gets the "I'm back" banner  x1
+ok   an Away local seat shows the Away chip too  x1
+ok   the banner goes once the player is back  x1
+ok   the local chip goes once the player is back  x1
+ok   the staged seats are bots  x3
+ok   online, a fill-in bot carries the BOT tag  x3
+ok   the local seat has no tag  x1
+ok   the connection wins over the tag  x1
+ok   offline again: no tag  x1
+ok   a seat shows the whole name it was given  x3
+ok   a long name stays within its plate  x3
+ok   a failed event's error is logged  x1
+ok   after a failed event nothing is left queued  x1
+ok   after a failed event the table is the session's view  x1
+ok   a closed room says "Host left"  x1
+ok   a closed room returns to the menu scene  x1
+ok   a closed room returns to the main menu  x1
+ok   the online table is staged from a round summary  x1
+ok   an online table tells its host it is ready  x1
+ok   the first message is TableReady  x1
+ok   the online session runs once the host has sent the table  x1
+ok   a table joined during the round summary opens the round results  x1
+ok   the summary countdown comes from the host  x1
+ok   online, Next Round shows the countdown  x1
+ok   the countdown counts down  x1
+ok   Next Round can be pressed online  x1
+ok   online, Next Round sends one message  x1
+ok   the message is ReadyNext ("I'm ready")  x1
+ok   Next Round stays pressed while the others get ready  x1
+ok   online, going to the background opens no menu  x1
+ok   online, an Away local seat gets the "I'm back" banner  x1
+ok   the "I'm back" banner can be tapped  x1
+ok   "I'm back" sends one message  x1
+ok   the message is Presence  x1
+ok   the match menu opens over the online round results  x1
+ok   online, the menu says the game continues  x1
+ok   online, the menu has no "paused" note  x1
+ok   online, opening the menu pauses nothing  x1
+ok   the host is told that leaving closes the room for everyone  x1
+ok   every character of the menu's mode tag can be drawn  x25
+ok   online, Leave Match asks first  x1
+ok   online, the dialog says a bot takes the seat and it counts as a loss  x1
+ok   a closed room fails the session  x1
+ok   a failed online session explains itself in a dialog  x1
+ok   the failure dialog gives the reason  x1
+ok   the failure dialog has no second line  x1
+ok   the failure dialog's button reads Main Menu  x1
+ok   the failure dialog has one button  x1
+ok   a failed online session shows no toast  x1
+ok   answering the failure dialog leaves for the menu scene  x1
+ok   a failed session returns to the main menu  x1
+ok   a failed session takes no more input  x1
+ok   a table joined during the last round's summary opens it  x1
+ok   online, See Final Results shows the host's countdown  x1
+ok   a finished online match opens its results  x2
+ok   the results listen for the room closing  x2
+ok   Play Again in a private room leaves for the menu scene  x2
+ok   Play Again with the room open shows no toast  x1
+ok   Play Again in a private room goes back to the lobby  x1
+ok   the results stop listening to the room when the scene goes  x2
+ok   Play Again after the host left says why  x1
+ok   the player is told the host left  x1
+ok   with the room gone, Play Again goes to the main menu  x1
+ok   the scene is torn down while an event is being played  x1
+ok   the scene is torn down in the middle of the deal  x1
+ok   the animation is still running when the scene goes  x1
+ok   disposing the presenters after their views are destroyed throws nothing  x1
+ok   every presenter, the router and the session were disposed  x1
+ok   the abandoned queue is empty  x1
+ok   a settings change after the scene is gone reaches no presenter  x1
+ok   nothing is logged while the scene is torn down  x1
