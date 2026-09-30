@@ -8,6 +8,11 @@ using Callbreak.Application.Profile;
 using Callbreak.Application.Rooms;
 using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
+using Callbreak.Presentation.Framework;
+using Callbreak.Presentation.Overlays;
+using Callbreak.Presentation.Screens;
+using Callbreak.Presentation.Table;
+using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
@@ -20,6 +25,10 @@ namespace Callbreak.Bootstrap
     /// </summary>
     public sealed class TableLifetimeScope : LifetimeScope
     {
+        [SerializeField] private TableView _table;
+        [SerializeField] private BiddingPanelView _bidding;
+        [SerializeField] private UIScreen[] _screens = Array.Empty<UIScreen>();
+
         protected override void Awake()
         {
             // The room can close while the table is still loading (the host left). Then there is
@@ -42,7 +51,58 @@ namespace Callbreak.Bootstrap
         {
             builder.Register<IMatchSession>(CreateSession, Lifetime.Scoped);
             builder.Register(CreateAnalytics, Lifetime.Scoped);
+            if (_table != null && _bidding != null)
+            {
+                ConfigureTable(builder);
+            }
+
+            // Its PostStart runs after every presenter's Start: they all listen before the first event.
             builder.RegisterEntryPoint<MatchSessionDriver>();
+        }
+
+        /// <summary>
+        /// The table and its call panel never leave the screen; the router's screens (the empty
+        /// gameplay screen at the bottom, then results, scorecard, match menu, settings and the
+        /// rules primer) open over them (GDD §23).
+        /// </summary>
+        private void ConfigureTable(IContainerBuilder builder)
+        {
+            builder.RegisterComponent(_table);
+            builder.RegisterComponent(_bidding);
+            foreach (UIScreen screen in _screens)
+            {
+                if (screen != null)
+                {
+                    builder.RegisterComponent(screen).AsSelf();
+                }
+            }
+
+            builder.Register<ScreenRouter>(Lifetime.Scoped);
+            builder.Register<MatchLauncher>(Lifetime.Scoped);
+            builder.Register(resolver => new PlayedTable(resolver.Resolve<IMatchSession>()), Lifetime.Scoped);
+
+            builder.RegisterEntryPoint<TablePresenter>();
+            builder.RegisterEntryPoint<BiddingPresenter>();
+            RegisterPresenter<MatchMenuView, MatchMenuPresenter>(builder);
+            RegisterPresenter<RoundResultsView, RoundResultsPresenter>(builder);
+            RegisterPresenter<MatchResultsView, MatchResultsPresenter>(builder);
+            RegisterPresenter<ScorecardView, ScorecardPresenter>(builder);
+            RegisterPresenter<SettingsView, SettingsPresenter>(builder);
+            RegisterPresenter<HowToPlayView, HowToPlayPresenter>(builder);
+        }
+
+        /// <summary>Registers a screen's presenter only when the scene has that screen.</summary>
+        private void RegisterPresenter<TView, TPresenter>(IContainerBuilder builder)
+            where TView : UIScreen
+        {
+            foreach (UIScreen screen in _screens)
+            {
+                if (screen is TView)
+                {
+                    builder.RegisterEntryPoint<TPresenter>();
+                    return;
+                }
+            }
         }
 
         private static MatchAnalytics CreateAnalytics(IObjectResolver resolver)

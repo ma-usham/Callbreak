@@ -41,8 +41,18 @@ namespace Callbreak.Editor
             "OfflineSetup", "Settings", "HowToPlay", "Profile", "CardCollection",
         };
 
+        /// <summary>
+        /// The Table scene's screens over the table (GDD §21: 09, 10, 13, 16, plus Settings and
+        /// the rules primer reached from it), bottom to top. The empty gameplay screen lies below.
+        /// </summary>
+        private static readonly string[] TableOverlays =
+        {
+            "MatchMenu", "RoundResults", "MatchResults", "Scorecard", "Settings", "HowToPlay",
+        };
+
         // GDD §23 canvas layers.
         private const int ScreensLayer = 10;
+        private const int OverlaysLayer = 40;
         private const int CurtainLayer = 70;
 
         [MenuItem("Callbreak/Build/Scenes")]
@@ -54,6 +64,7 @@ namespace Callbreak.Editor
         /// </summary>
         public static string BuildAll(bool discardOpenChanges = false)
         {
+            EnsureSavedSceneOpen();
             var report = new StringBuilder();
             report.AppendLine(BuildBoot(discardOpenChanges));
             report.AppendLine(BuildMenu(discardOpenChanges));
@@ -67,6 +78,20 @@ namespace Callbreak.Editor
             PlayFromBoot.Apply();
             report.Append("build settings: Boot, Menu, Table");
             return report.ToString();
+        }
+
+        /// <summary>
+        /// The scenes are built next to the open one, which Unity refuses while the only open scene
+        /// is an untitled one (a PlayMode test run leaves that behind). An untitled scene without
+        /// changes makes way for the Boot scene; one with changes is somebody's work and stays.
+        /// </summary>
+        private static void EnsureSavedSceneOpen()
+        {
+            Scene active = SceneManager.GetActiveScene();
+            if (SceneManager.sceneCount == 1 && string.IsNullOrEmpty(active.path) && !active.isDirty && System.IO.File.Exists(BootPath))
+            {
+                EditorSceneManager.OpenScene(BootPath, OpenSceneMode.Single);
+            }
         }
 
         public static string BuildBoot(bool discardOpenChanges = false)
@@ -158,18 +183,62 @@ namespace Callbreak.Editor
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
             CreateCamera(scene);
+
+            // The table and its call panel stay on screen for the whole match.
+            var missing = new List<string>();
             GameObject canvas = CreateCanvas(scene, "TableCanvas", ScreensLayer);
+            UIScreen table = InstantiateTableScreen(scene, $"{ScreensFolder}/Table.prefab", canvas.transform, missing);
+            UIScreen bidding = InstantiateTableScreen(scene, $"{ScreensFolder}/BiddingPanel.prefab", canvas.transform, missing);
+
+            // Everything the router opens over them.
+            GameObject overlays = CreateCanvas(scene, "OverlayCanvas", OverlaysLayer);
+            var screens = new List<UIScreen>();
+            UIScreen gameplay = InstantiateTableScreen(scene, TableCardBuilder.GameplayScreenPrefabPath, overlays.transform, missing);
+            if (gameplay != null)
+            {
+                screens.Add(gameplay);
+            }
+
+            foreach (string name in TableOverlays)
+            {
+                UIScreen screen = InstantiateTableScreen(scene, $"{ScreensFolder}/{name}.prefab", overlays.transform, missing);
+                if (screen != null)
+                {
+                    screens.Add(screen);
+                }
+            }
 
             GameObject scopeObject = Create(scene, "TableLifetimeScope", null);
             scopeObject.SetActive(false);
             var scope = scopeObject.AddComponent<TableLifetimeScope>();
             scope.parentReference = ParentReference.Create<ProjectLifetimeScope>();
             var so = new SerializedObject(scope);
-            SetAutoInject(so, canvas);
+            SetAutoInject(so, canvas, overlays);
+            so.FindProperty("_table").objectReferenceValue = table;
+            so.FindProperty("_bidding").objectReferenceValue = bidding;
+            SerializedProperty list = so.FindProperty("_screens");
+            list.arraySize = screens.Count;
+            for (int i = 0; i < screens.Count; i++)
+            {
+                list.GetArrayElementAtIndex(i).objectReferenceValue = screens[i];
+            }
+
             so.ApplyModifiedPropertiesWithoutUndo();
             scopeObject.SetActive(true);
 
-            return Save(scene, TablePath, discardOpenChanges);
+            string result = Save(scene, TablePath, discardOpenChanges) + $" (table, call panel, {screens.Count} screens";
+            return result + (missing.Count > 0 ? "; not built yet: " + string.Join(", ", missing) + ")" : ")");
+        }
+
+        private static UIScreen InstantiateTableScreen(Scene scene, string path, Transform parent, List<string> missing)
+        {
+            UIScreen screen = InstantiateScreen(scene, path, parent);
+            if (screen == null)
+            {
+                missing.Add(System.IO.Path.GetFileNameWithoutExtension(path));
+            }
+
+            return screen;
         }
 
         /// <summary>
@@ -220,11 +289,14 @@ namespace Callbreak.Editor
         }
 
         /// <summary>VContainer injects every component under these objects (LocalizedText and friends).</summary>
-        private static void SetAutoInject(SerializedObject scope, GameObject target)
+        private static void SetAutoInject(SerializedObject scope, params GameObject[] targets)
         {
             SerializedProperty list = scope.FindProperty("autoInjectGameObjects");
-            list.arraySize = 1;
-            list.GetArrayElementAtIndex(0).objectReferenceValue = target;
+            list.arraySize = targets.Length;
+            for (int i = 0; i < targets.Length; i++)
+            {
+                list.GetArrayElementAtIndex(i).objectReferenceValue = targets[i];
+            }
         }
 
         private static LoadingCurtain CreateCurtain(Scene scene, Transform parent)
