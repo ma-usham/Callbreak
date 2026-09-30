@@ -1,0 +1,19 @@
+{
+  // Sheet C1: the Settings controls (11-settings.png). Rects are mockup pixels; each crop is
+  // enlarged by "scale" with "margin" mockup pixels of panel around it. The slider is shown short:
+  // "cutx" takes out plain stretches of its fill and track (it is 9-sliced anyway).
+  "size": [1536, 1024],
+  "ground": "#F8EFE5",
+  "feather": 14,
+  "captionSize": 20,
+  "rows": [
+    { "items": [
+      { "name": "Toggle_On", "screen": "11", "rect": [707.2, 364.0, 81.7, 45.9], "margin": 9, "scale": 5.4, "caption": "1  toggle, on" },
+      { "name": "Toggle_Off", "screen": "11", "rect": [1162.9, 502.9, 81.9, 46.0], "margin": 9, "scale": 5.4, "caption": "2  toggle, off" }
+    ] },
+    { "items": [
+      { "name": "Slider", "screen": "11", "rect": [428.3, 545.3, 360.6, 35.0], "margin": 8, "scale": 4.6, "cutx": [[470, 640], [716, 762]], "caption": "3  slider" },
+      { "name": "Dropdown", "screen": "11", "rect": [1066.9, 362.2, 177.7, 55.1], "margin": 8, "scale": 3.3, "caption": "4  dropdown" }
+    ] }
+  ]
+}

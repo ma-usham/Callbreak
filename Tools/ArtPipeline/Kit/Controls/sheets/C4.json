@@ -1,0 +1,21 @@
+{
+  // Sheet C4: the two selection outlines and the two seat circles of 05-matchmaking.
+  // An outline is hollow and 9-sliced, so only its corners matter: each is shown as a small
+  // rounded square made of its own top-left corner mirrored four ways (attach/R_outline_*_tile.png:
+  // kc crop + kc mirror --axis hv on 06-offline-setup at 702,492 100x100 and on 15-card-styles at
+  // 384,212 80x80).
+  "size": [1536, 1024],
+  "ground": "#F8EFE5",
+  "feather": 12,
+  "captionSize": 20,
+  "rows": [
+    { "items": [
+      { "name": "Outline_06", "screen": "ArtSource/Working/Kit/Controls/attach/R_outline_06_tile.png", "rect": [0, 0, 100, 100], "margin": 0, "scale": 3.6, "caption": "1  selection outline" },
+      { "name": "Outline_15", "screen": "ArtSource/Working/Kit/Controls/attach/R_outline_15_tile.png", "rect": [0, 0, 80, 80], "margin": 0, "scale": 4.5, "caption": "2  selection outline, thin" }
+    ] },
+    { "items": [
+      { "name": "SeatFilled", "screen": "05", "rect": [499.11, 506.71, 119.4, 116.0], "margin": 8, "scale": 2.9, "caption": "3  seat, filled" },
+      { "name": "SeatSearching", "screen": "05", "rect": [1050.0, 504.6, 123.3, 120.0], "margin": 8, "scale": 2.9, "caption": "4  seat, searching" }
+    ] }
+  ]
+}

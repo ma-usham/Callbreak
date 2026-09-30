@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Runs kitcontrols (this folder), building it into Temp/KitControls first if needed.
+# Usage: Tools/ArtPipeline/Kit/Controls/kc <command> [options]   (kc help and kc help2 list the commands)
+here="$(cd "$(dirname "$0")" && pwd)"
+repo="$(cd "$here/../../../.." && pwd)"
+art="$repo/Temp/KitControls"
+dll="$art/bin/KitControls/release/kitcontrols.dll"
+if [ ! -f "$dll" ] || [ -n "$(find "$here" "$repo/Tools/ArtTool" -maxdepth 1 -name '*.cs' -newer "$dll" 2>/dev/null | head -1)" ] || [ "$here/KitControls.csproj" -nt "$dll" ]; then
+  mkdir -p "$repo/Temp"
+  dotnet build "$here/KitControls.csproj" -c Release -nologo -v q --artifacts-path "$art" >"$art.build.log" 2>&1 || { grep -E 'error' "$art.build.log" | sort -u | head -12 >&2; echo "kitcontrols build failed (full log: $art.build.log)" >&2; exit 1; }
+fi
+cd "$repo" && exec dotnet "$dll" "$@"

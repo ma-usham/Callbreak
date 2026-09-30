@@ -42,10 +42,6 @@ Screens/PlayWithFriends/UI_ButtonPrimary_JoinRoom.png,ui,804x182,,01,cut from mo
 Screens/PlayWithFriends/UI_ButtonPrimary_JoinRoom_Shadow.png,ui,430x120,,01,extracted,review,drop shadow solved against the clean background
 Backgrounds/BG_PlayWithFriends.png,bg,2230x1255,,01,inpainted from mockup,review,reference pixels outside the UI; the UI area filled; margins for 21:9 and 4:3
 Screens/Settings/UI_Toggle_On.png,ui,164x92,,11,cut from mockup,review,pill; children erased
-Screens/Settings/UI_SliderTrack.png,ui,824x44,,11,rebuilt,review,type=pill fill=#D9C9BA
-Screens/Settings/UI_SliderFill.png,ui,582x44,,11,rebuilt,review,type=pill fill=#890D25 fill2=#710314
-Screens/Settings/UI_SliderKnob.png,ui,66x66,,11,cut from mockup,review,ellipse; children erased
-Screens/Settings/UI_Dropdown.png,ui,358x112,,11,cut from mockup,review,roundrect; children erased
 Screens/Settings/UI_Toggle_Off.png,ui,162x90,,11,cut from mockup,review,pill; children erased
 UI/Common/UI_Panel_Large.png,ui,775x672,,02,cut from mockup,review,roundrect; children erased
 UI/Common/Icon_Chevron_Light.png,icon,44x66,,02,cut from mockup,review,ink matte
@@ -249,11 +245,9 @@ Screens/JoinRoom/CodeBox4_Shadow.png,ui,117x110,,03,extracted,review,drop shadow
 Screens/JoinRoom/CodeBox5_Shadow.png,ui,120x124,,03,extracted,review,drop shadow solved against the clean background
 Screens/JoinRoom/Icon_Copy.png,icon,41x43,,03,cut from mockup,review,ink matte
 Screens/JoinRoom/Deco_FooterLine.png,ui,192x4,,03,rebuilt,review,type=rect fill=#9F7F62
-Screens/HowToPlay/UI_RuleDisc.png,ui,140x141,,12,rebuilt,review,type=ellipse fill=#840D15 fill2=#7E0C14 stroke=#FBF3EA strokeWidth=1.0
 Screens/HowToPlay/Deco_RuleSeparator_1.png,ui,1342x5,,12,rebuilt,review,type=rect fill=#E8D5C2
 Screens/HowToPlay/Deco_RuleSeparator_2.png,ui,1397x4,,12,rebuilt,review,type=rect fill=#E3CDB8
 Screens/HowToPlay/Deco_RuleSeparator_3.png,ui,1333x5,,12,rebuilt,review,type=rect fill=#E8D3C1
-Screens/HowToPlay/UI_Pill_Highlight.png,ui,1126x104,,12,rebuilt,review,type=pill fill=#F6E6D4 fill2=#F5E4D1 stroke=#CD9B57 strokeWidth=2.1
 Screens/Profile/Icon_Pencil.png,ui,68x68,,14,cut from mockup,review,diff matte
 Screens/Profile/Deco_ProfileDividerVertical.png,ui,34x580,,14,cut from mockup,review,diff matte
 Screens/Profile/Icon_StatGames.png,ui,130x136,,14,cut from mockup,review,diff matte
@@ -308,8 +302,8 @@ Screens/MatchMenu/UI_ModePill.png,ui,584x85,,13,rebuilt,review,type=pill fill=#D
 Screens/MatchMenu/Deco_MenuDivider.png,ui,986x5,,13,rebuilt,review,type=rect fill=#DEC8B6
 Screens/MatchMenu/Icon_Leave.png,icon,82x82,,13,cut from mockup,review,ink matte
 Screens/JoinRoom/UI_CodeBox.png,ui,216x218,,03,derived from mockup,review,placeholder: code box (box 2; letter erased); used for all six
-Screens/PrivateLobby/UI_Pill_RoomCode.png,ui,752x154,,04,derived from mockup,review,placeholder: room-code pill; contents erased
-Screens/PrivateLobby/UI_Pill_RoomCode_Shadow.png,ui,792x194,,04,derived from mockup,review,placeholder: the pill's soft shadow; pad 10 px
+Screens/PrivateLobby/UI_Pill_RoomCode.png,ui,752x154,,04,derived from mockup,review,placeholder: room-code pill; contents erased (replaced by UI/Controls/UI_Pill_RoomCode.png)
+Screens/PrivateLobby/UI_Pill_RoomCode_Shadow.png,ui,792x195,,04,derived from mockup,review,the kit room-code pill's soft shadow; solved from the mockup; pad 10 px
 Screens/JoinRoom/Icon_EnterRoom.png,icon,132x120,,03,cut from mockup,review,ink matte
 Screens/MatchResults/Deco_FooterCap.png,ui,7x7,,10,rebuilt,review,type=ellipse fill=#6A4E36
 UI/UI_Panel_Large.png,ui,864x694,400;370;400;260,01 02 03 04 05 06 09 10 11 12 14 15,UI-1 a3 (magenta ground),review,"Assets: UI/Panels/UI_Panel_Large.png. ChatGPT extraction of the 02 panel; left half mirrored; colours mapped to the mockup; middle squeezed plain for the 9-slice. Replaces the cut UI/Common/UI_Panel_Large.png"
@@ -386,3 +380,33 @@ Icons/Icon_StatGames.png,icon,142x152,,14,Icons_Kit S5 a1 (contact sheet; 1 atte
 Icons/Icon_StatWins.png,icon,132x140,,14,Icons_Kit S5 a1 (contact sheet; 1 attempt),review,"Assets: UI/Icons/Icon_StatWins.png. fitted to 14: outlines 0.16 px apart on average (0.55 px at the 98th percentile), overlap 0.980"
 Icons/Icon_StatWinRate.png,icon,124x128,,14,Icons_Kit S5 a1 (contact sheet; 1 attempt),review,"Assets: UI/Icons/Icon_StatWinRate.png. fitted to 14: outlines 0.10 px apart on average (0.32 px at the 98th percentile), overlap 0.994"
 Icons/Icon_StatBestScore.png,icon,140x138,,14,Icons_Kit S5 a1 (contact sheet; 1 attempt),review,"Assets: UI/Icons/Icon_StatBestScore.png. fitted to 14: outlines 0.14 px apart on average (0.46 px at the 98th percentile), overlap 0.989"
+UI/UI_Toggle_On.png,ui,190x108,,11 13,Controls_Kit C6 a1 (contact sheet; 2 attempts),review,"Assets: UI/Controls/UI_Toggle_On.png. crimson switch, knob right, thin white rim, the knob's soft shadow on the track; fit 9.8-10.4 levels rms on 11, 18.6 on 13 (13 draws it smaller and brighter)"
+UI/UI_Toggle_Off.png,ui,190x108,,11 13,Controls_Kit C6 a1 (contact sheet; 2 attempts),review,"Assets: UI/Controls/UI_Toggle_Off.png. grey switch, knob left, same box as _On; ChatGPT's knob shadow scaled to the mockup's depth; fit 4.3"
+UI/UI_Slider_Track.png,ui,64x44,22;0;22;0,11,Controls_Kit C1 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Slider_Track.png. beige track; sliced left and right (scaled to the node's height); fit 2.0
+UI/UI_Slider_Fill.png,ui,64x50,26;0;26;0,11,Controls_Kit C1 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Slider_Fill.png. crimson fill with the thin white rim; sliced left and right; fit 4.8
+UI/UI_Slider_Knob.png,ui,76x76,,11,Controls_Kit C1 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Slider_Knob.png. white disc (shadow: UI/Buttons/UI_Shadow_Circle.png); fit 4.2
+UI/UI_Dropdown.png,ui,408x126,30;0;98;0,11,Controls_Kit C1 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Dropdown.png. ivory box with brown outline and the chevron inside the right border; empty; fit 7.9
+UI/UI_Field.png,ui,160x140,36;36;36;36,02,Controls_Kit C2 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Field.png. ivory text field with thin brown outline; fit 4.7
+UI/UI_Field_Light.png,ui,160x140,36;36;36;36,14,Controls_Kit C2 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Field_Light.png. the same frame in 14's lighter colours; fit 5.1
+UI/UI_CodeBox_Normal.png,ui,250x252,,03,Controls_Kit C2 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_CodeBox_Normal.png. rounded ivory code box; empty; fit 4.3-5.0
+UI/UI_CodeBox_Focus.png,ui,250x252,,03,derived from UI_CodeBox_Normal,review,Assets: UI/Controls/UI_CodeBox_Focus.png. antique-gold outline #B8914F 3 px (GDD 12); no mockup
+UI/UI_CodeBox_Error.png,ui,250x252,,03,derived from UI_CodeBox_Normal,review,Assets: UI/Controls/UI_CodeBox_Error.png. Heading Burgundy outline #7A1016 3 px; no mockup (the owner's call)
+UI/UI_Segment_Track.png,ui,160x138,70;0;70;0,02,Controls_Kit C2 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Segment_Track.png. ivory pill track with tan outline and bevel; fit 4.6-6.3
+UI/UI_Segment_Selected.png,ui,132x120,61;0;61;0,02,Controls_Kit C2 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Segment_Selected.png. crimson selected pill with its thin bright rim; fit 5.3
+UI/UI_Ring_Spinner.png,ui,66x66,,02 03,Controls_Kit C3 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Ring_Spinner.png. ivory ring for the busy state; no mockup
+UI/UI_Check_Badge.png,ui,96x96,,06,Controls_Kit C3 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Check_Badge.png. crimson disc with white check and white keyline; check thinned 0.7 px; fit 7.7
+UI/UI_Outline_Selected.png,ui,144x144,60;60;60;60,06,Controls_Kit C4 a1 (contact sheet; 1 attempt),review,"Assets: UI/Controls/UI_Outline_Selected.png. hollow crimson line 3.2 px, radius 24; fit 18.2 (the card's own bright edge beside it)"
+UI/UI_Outline_Thin_Selected.png,ui,144x144,64;64;64;64,15,Controls_Kit C4 a1 (contact sheet; 1 attempt),review,"Assets: UI/Controls/UI_Outline_Thin_Selected.png. hollow crimson line 2.6 px, radius 26; fit 12.5"
+UI/UI_Radio_On.png,ui,98x98,,15,Controls_Kit C3 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Radio_On.png. brown ring with crimson dot and white keyline; fit 7.7
+UI/UI_Radio_Off.png,ui,98x98,,15,Controls_Kit C3 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Radio_Off.png. lighter brown ring filled ivory; fit 5.5-6.1
+UI/UI_Pill_RoomCode.png,ui,160x178,68;68;68;68,04,Controls_Kit C5 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Pill_RoomCode.png. ivory pill with beige bevel outline; empty; fit 4.8
+UI/UI_ReadyDot.png,ui,74x74,,04,Controls_Kit C3 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_ReadyDot.png. green disc in a white ring; fit 7.9-9.3
+UI/UI_Seat_Filled.png,ui,274x274,,05,Controls_Kit C4 a1 (contact sheet; 1 attempt),review,"Assets: UI/Controls/UI_Seat_Filled.png. silhouette on the pale disc, white and tan rings; fit 10.0-10.9"
+UI/UI_Seat_Searching.png,ui,272x272,,05,Controls_Kit C4 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Seat_Searching.png. pale silhouette in a dashed circle (36 dashes); fit 7.2
+UI/UI_Pill_Highlight.png,ui,120x104,53;0;53;0,12,Controls_Kit C5 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Pill_Highlight.png. pale pill with gold outline; empty; fit 10.5
+UI/UI_Disc_Number.png,ui,142x142,,12,Controls_Kit C3 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Disc_Number.png. satin crimson disc with white keyline; empty; fit 7.5-11.2
+UI/UI_Button_Crimson.png,ui,336x220,160;0;160;0,01 04 06 07 09 10 11 12 14 15 16,Controls_Kit C7 a1 (contact sheet; 1 attempt),review,"Assets: UI/Controls/UI_Button_Crimson.png. plain crimson call-to-action pill (no gold rim) with a woven cluster at each end; sliced left and right, scaled to the node's height; fit 7.7 (06) to 24.7 (10), 28.1 on 07"
+UI/UI_Button_Crimson_Shadow.png,ui,408x292,196;0;196;0,01 04 06 07 09 10 11 12 14 15 16,rebuilt,review,"Assets: UI/Controls/UI_Button_Crimson_Shadow.png. blurred silhouette of UI_Button_Crimson (sigma 11 px); drop 2-6.5 mockup px and opacity 0.15-0.54 per node (map)"
+UI/UI_Button_Crimson_Box.png,ui,208x180,96;0;96;0,13 dialog,Controls_Kit C7 a1 (contact sheet; 1 attempt),review,"Assets: UI/Controls/UI_Button_Crimson_Box.png. the Game Menu's crimson box: dark edge, two-tone gold keyline, knots; fit 11.2"
+UI/UI_Button_Crimson_Box_Shadow.png,ui,268x240,126;0;126;0,13 dialog,rebuilt,review,"Assets: UI/Controls/UI_Button_Crimson_Box_Shadow.png. blurred silhouette of the box (sigma 9.2 px); offset y 1.5 mockup px, opacity 0.82"
+UI/Icon_Chevron_Thin.png,icon,38x64,,01 02 03 06 09 10 12 16,Controls_Kit C7 a1 (contact sheet; 1 attempt),review,"Assets: UI/Icons/Icon_Chevron_Thin.png. white chevron at the mockups' weight (stroke 0.135 of the height against 0.178 for Icon_Chevron_Light); fit 11.8-17.6 against 37-43"
