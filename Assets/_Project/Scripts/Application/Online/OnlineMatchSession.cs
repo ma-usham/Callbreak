@@ -314,6 +314,9 @@ namespace Callbreak.Application.Online
             _send(ClientMessages.TableReady());
         }
 
+        /// <summary>Why the session failed (the table says so before it returns to the menu); None otherwise.</summary>
+        public RoomError FailureReason { get; private set; }
+
         /// <summary>The room is gone (the host left, this player was removed, or reconnecting failed).</summary>
         public void OnRoomClosed(RoomError reason)
         {
@@ -322,6 +325,7 @@ namespace Callbreak.Application.Online
                 return;
             }
 
+            FailureReason = reason == RoomError.None ? RoomError.Unknown : reason;
             FailPending(RejectReason.WrongPhase);
             SetStatus(SessionStatus.Failed);
         }

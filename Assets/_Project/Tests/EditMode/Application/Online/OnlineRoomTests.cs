@@ -416,6 +416,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
             room.Network.Pump();
 
             Assert.AreEqual(SessionStatus.Failed, guest.Session.Status);
+            Assert.AreEqual(RoomError.HostLeft, guest.Session.FailureReason, "the table can say why");
             Assert.IsTrue(guest.Client.IsClosed);
         }
 

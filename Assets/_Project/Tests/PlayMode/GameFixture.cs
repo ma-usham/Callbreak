@@ -39,6 +39,8 @@ namespace Callbreak.Tests.PlayMode
 
         public ScreenRouter MenuRouter => Menu != null && Menu.Container != null ? Menu.Container.Resolve<ScreenRouter>() : null;
 
+        public ScreenRouter TableRouter => Table != null && Table.Container != null ? Table.Container.Resolve<ScreenRouter>() : null;
+
         public ILoadingCurtain Curtain => Services.Resolve<ILoadingCurtain>();
 
         public IAppFlow Flow => Services.Resolve<IAppFlow>();
@@ -114,6 +116,32 @@ namespace Callbreak.Tests.PlayMode
             UIScreen screen = router.Get<UIScreen>(router.Current);
             Assert.IsNotNull(screen, "a screen is showing");
             Press(screen.transform, buttonName, router.Current.ToString());
+        }
+
+        /// <summary>True when <paramref name="root"/> shows a button of that name that can be tapped now.</summary>
+        public static bool CanPress(Component root, string buttonName)
+        {
+            if (root == null)
+            {
+                return false;
+            }
+
+            foreach (Button button in root.GetComponentsInChildren<Button>(false))
+            {
+                if (button.name == buttonName && button.IsInteractable())
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>The button called <paramref name="buttonName"/> somewhere under <paramref name="root"/>, tapped.</summary>
+        public static void PressIn(Component root, string buttonName)
+        {
+            Assert.IsNotNull(root, "the view with " + buttonName + " exists");
+            Press(root.transform, buttonName, root.name);
         }
 
         /// <summary>The open dialog's primary ("ConfirmButton") or secondary ("CancelButton") button, tapped.</summary>
