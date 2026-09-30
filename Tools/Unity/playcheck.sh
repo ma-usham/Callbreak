@@ -62,7 +62,7 @@ for step in "$@"; do
     wait) sleep "$arg" ;;
     eval) echo "eval> $(run eval --timeout 60 --code "$arg" | grep -E '"result"|"success": false|error|Exception' | cut -c1-3000)" ;;
     shot) mkdir -p "$(dirname "$arg")"; run eval --timeout 60 --code "UnityEngine.ScreenCapture.CaptureScreenshot(\"$arg\"); return \"queued\";" >/dev/null; sleep 1.5; echo "shot> $arg $([ -f "$arg" ] && echo written || echo MISSING)" ;;
-    log) echo "log>"; run console --tail "$arg" | grep -E '"(message|level|type)"' | cut -c1-400 ;;
+    log) echo "log>"; run console --tail "$arg" | tr -d '\r' | grep -E '"(message|level|type|condition|text)"' | cut -c1-500 ;;
     *) echo "unknown step: $step" ;;
   esac
   touch "$lock" 2>/dev/null

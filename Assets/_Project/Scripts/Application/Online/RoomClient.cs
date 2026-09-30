@@ -89,7 +89,7 @@ namespace Callbreak.Application.Online
             FinishJoin(RoomError.Unknown);
             var join = new TaskCompletionSource<RoomError>();
             _join = join;
-            _joinDeadline = _now + JoinTimeoutSeconds;
+            _joinDeadline = double.NaN;
             if (ct.CanBeCanceled)
             {
                 _joinCancellation = ct.Register(() =>
@@ -116,9 +116,17 @@ namespace Callbreak.Application.Online
         public void Tick(double now)
         {
             _now = now;
-            if (_join != null && now >= _joinDeadline)
+            if (_join != null)
             {
-                FinishJoin(RoomError.Unknown);
+                // The wait starts on the first tick after the hello went out.
+                if (double.IsNaN(_joinDeadline))
+                {
+                    _joinDeadline = now + JoinTimeoutSeconds;
+                }
+                else if (now >= _joinDeadline)
+                {
+                    FinishJoin(RoomError.Unknown);
+                }
             }
 
             if (_match != null)

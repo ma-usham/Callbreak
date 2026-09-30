@@ -15,8 +15,10 @@ using Callbreak.Infrastructure.Localization;
 using Callbreak.Infrastructure.Persistence;
 using Callbreak.Infrastructure.Platform;
 using Callbreak.Infrastructure.Services;
+using Callbreak.Networking;
 using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
+using PurrNet.Transports;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -37,6 +39,7 @@ namespace Callbreak.Bootstrap
         [SerializeField] private LoadingCurtain _curtain;
         [SerializeField] private DialogView _dialog;
         [SerializeField] private AvatarLibrary _avatars;
+        [SerializeField] private GenericTransport _roomTransport;
 
         protected override void Awake()
         {
@@ -88,7 +91,16 @@ namespace Callbreak.Bootstrap
             // Bots and online play (GDD §9, §24-27). Rooms and Quick Match live for the whole app,
             // because a room outlasts the Menu and Table scenes.
             builder.Register<BotFactory>(Lifetime.Singleton).As<IBotFactory>();
-            builder.Register<NoRoomTransport>(Lifetime.Singleton).As<IRoomTransport>();
+            if (_roomTransport != null)
+            {
+                GenericTransport relay = _roomTransport;
+                builder.Register(_ => new PurrRoomTransport(relay), Lifetime.Singleton).As<IRoomTransport>();
+            }
+            else
+            {
+                builder.Register<NoRoomTransport>(Lifetime.Singleton).As<IRoomTransport>();
+            }
+
             builder.Register(CreateRoomService, Lifetime.Singleton).As<IRoomService>().AsSelf();
             builder.Register(CreateQuickMatch, Lifetime.Singleton).As<IMatchmakingService>().AsSelf();
             builder.RegisterEntryPoint<OnlineTicker>();

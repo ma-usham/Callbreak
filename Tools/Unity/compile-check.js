@@ -21,8 +21,10 @@ const csc = path.join(unityData, 'DotNetSdkRoslyn', 'csc.dll');
 const scriptAssemblies = path.join(repo, 'Library', 'ScriptAssemblies');
 const quiet = process.argv.includes('--quiet');
 const player = process.argv.includes('--player');
-const out = path.join(repo, 'Temp', player ? 'compile-check-player' : 'compile-check');
+// Each run has its own output folder: several agents run this check at the same time.
+const out = path.join(repo, 'Temp', player ? 'compile-check-player' : 'compile-check', String(process.pid));
 fs.mkdirSync(out, { recursive: true });
+process.on('exit', () => { try { fs.rmSync(out, { recursive: true, force: true }); } catch (e) { /* best effort */ } });
 
 function walk(dir, pred, acc = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
