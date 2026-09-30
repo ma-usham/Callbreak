@@ -27,7 +27,7 @@ namespace Callbreak.Editor
         // Basic Latin plus Latin-1 punctuation and letters: everything the English UI uses.
         private const string LatinCharacters =
             " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~" +
-            "\u00A0\u00A9\u00AB\u00B7\u00BB\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026";
+            "\u00A0\u00A9\u00AB\u00B7\u00BB\u00D7\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026\u2212";
 
         /// <summary>Which corner or edge of the parent a mockup rectangle stays attached to.</summary>
         public enum Attach
@@ -35,6 +35,10 @@ namespace Callbreak.Editor
             TopLeft,
             TopRight,
             Centre,
+            BottomLeft,
+            BottomRight,
+            Top,
+            Bottom,
         }
 
         /// <summary>Centre of the mockup: where a design group's own centre sits.</summary>
@@ -81,6 +85,10 @@ namespace Callbreak.Editor
             {
                 Attach.TopLeft => new Vector2(0f, 1f),
                 Attach.TopRight => new Vector2(1f, 1f),
+                Attach.BottomLeft => new Vector2(0f, 0f),
+                Attach.BottomRight => new Vector2(1f, 0f),
+                Attach.Top => new Vector2(0.5f, 1f),
+                Attach.Bottom => new Vector2(0.5f, 0f),
                 _ => new Vector2(0.5f, 0.5f),
             };
             rect.anchorMin = rect.anchorMax = rect.pivot = anchor;
@@ -146,7 +154,16 @@ namespace Callbreak.Editor
         /// </summary>
         public static Sprite LoadSprite(string relativePath, float pixelsPerUnit, Vector4 border = default)
         {
-            string path = $"{ArtRoot}/{relativePath}";
+            return LoadSpriteAt($"{ArtRoot}/{relativePath}", pixelsPerUnit, border);
+        }
+
+        /// <summary>
+        /// Loads a sprite by asset path, applying the recipe E import settings. A pixels-per-unit
+        /// of zero or less leaves the texture's existing size settings alone (shared sprites that
+        /// are stretched to a rectangle).
+        /// </summary>
+        public static Sprite LoadSpriteAt(string path, float pixelsPerUnit, Vector4 border = default)
+        {
             if (!File.Exists(path))
             {
                 Debug.LogWarning($"[UiBuildKit] Missing art: {path}");
@@ -163,12 +180,16 @@ namespace Callbreak.Editor
             bool changed = false;
             changed |= Set(importer.textureType, TextureImporterType.Sprite, v => importer.textureType = v);
             changed |= Set(importer.spriteImportMode, SpriteImportMode.Single, v => importer.spriteImportMode = v);
-            changed |= Set(importer.spritePixelsPerUnit, pixelsPerUnit, v => importer.spritePixelsPerUnit = v);
+            if (pixelsPerUnit > 0f)
+            {
+                changed |= Set(importer.spritePixelsPerUnit, pixelsPerUnit, v => importer.spritePixelsPerUnit = v);
+                changed |= Set(importer.spriteBorder, border, v => importer.spriteBorder = v);
+            }
+
             changed |= Set(importer.mipmapEnabled, false, v => importer.mipmapEnabled = v);
             changed |= Set(importer.alphaIsTransparency, true, v => importer.alphaIsTransparency = v);
             changed |= Set(importer.wrapMode, TextureWrapMode.Clamp, v => importer.wrapMode = v);
             changed |= Set(importer.maxTextureSize, 4096, v => importer.maxTextureSize = v);
-            changed |= Set(importer.spriteBorder, border, v => importer.spriteBorder = v);
 
             var settings = new TextureImporterSettings();
             importer.ReadTextureSettings(settings);
@@ -227,6 +248,181 @@ namespace Callbreak.Editor
             EditorUtility.SetDirty(fontAsset);
             AssetDatabase.SaveAssets();
             return fontAsset;
+        }
+
+        /// <summary>The font asset for a typography role used in the screen layouts (GDD §12).</summary>
+        public static TMP_FontAsset LoadFontRole(string role)
+        {
+            string file = role switch
+            {
+                "SerifBold" => "SourceSerif4-Bold",
+                "SerifSemiBold" => "SourceSerif4-SemiBold",
+                "SansRegular" => "Inter-Regular",
+                "SansMedium" => "Inter-Medium",
+                "SansSemiBold" => "Inter-SemiBold",
+                "SansBold" => "Inter-Bold",
+                _ => "Inter-Medium",
+            };
+            TMP_FontAsset font = LoadFont(file);
+            EnsureCharacters(font, LatinCharacters);
+            return font;
+        }
+
+        /// <summary>Adds any missing characters to a static font atlas (e.g. the true minus sign).</summary>
+        public static void EnsureCharacters(TMP_FontAsset font, string characters)
+        {
+            if (font == null)
+            {
+                return;
+            }
+
+            bool missing = false;
+            foreach (char c in characters)
+            {
+                if (!font.HasCharacter(c, false, false))
+                {
+                    missing = true;
+                    break;
+                }
+            }
+
+            if (!missing || font.sourceFontFile == null)
+            {
+                return;
+            }
+
+            font.atlasPopulationMode = AtlasPopulationMode.Dynamic;
+            font.TryAddCharacters(characters, out string _);
+            font.atlasPopulationMode = AtlasPopulationMode.Static;
+            EditorUtility.SetDirty(font);
+            AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// Creates a single-line label whose rendered ink box matches <paramref name="inkBox"/>
+        /// (left, top, right, bottom in mockup pixels, measured on the mockup): the font size
+        /// matches the ink height, then either the horizontal scale (lettering drawn narrower than
+        /// the real font) or, for letter-spaced capitals, the character spacing matches the width.
+        /// The label keeps its baseline, and <paramref name="align"/> decides which edge stays put
+        /// when the text changes at runtime.
+        /// </summary>
+        public static TextMeshProUGUI FitLabel(
+            string name,
+            Transform parent,
+            Vector2 parentCentre,
+            string text,
+            TMP_FontAsset font,
+            float[] inkBox,
+            string align,
+            bool tracked,
+            Color top,
+            Color bottom)
+        {
+            float targetW = (inkBox[2] - inkBox[0]) * ScaleX;
+            float targetH = (inkBox[3] - inkBox[1]) * ScaleY;
+            var go = new GameObject(name, typeof(RectTransform));
+            var rect = (RectTransform)go.transform;
+            rect.SetParent(parent, false);
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+            float pivotX = align == "left" ? 0f : align == "right" ? 1f : 0.5f;
+            rect.pivot = new Vector2(pivotX, 0.5f);
+            rect.sizeDelta = new Vector2(Mathf.Max(targetW * 1.8f, 240f), Mathf.Max(targetH * 3f, 60f));
+            rect.anchoredPosition = new Vector2(
+                ((align == "left" ? inkBox[0] : align == "right" ? inkBox[2] : (inkBox[0] + inkBox[2]) / 2f) - parentCentre.x) * ScaleX,
+                -(((inkBox[1] + inkBox[3]) / 2f) - parentCentre.y) * ScaleY);
+
+            var label = go.AddComponent<TextMeshProUGUI>();
+            label.font = font;
+            label.text = text;
+            label.raycastTarget = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.overflowMode = TextOverflowModes.Overflow;
+            label.alignment = align == "left" ? TextAlignmentOptions.BaselineLeft
+                : align == "right" ? TextAlignmentOptions.BaselineRight
+                : TextAlignmentOptions.Baseline;
+            label.fontSize = Mathf.Max(8f, targetH * 1.3f);
+            label.characterHorizontalScale = 1f;
+            label.characterSpacing = 0f;
+            if (top == bottom)
+            {
+                label.color = top;
+            }
+            else
+            {
+                label.color = Color.white;
+                label.enableVertexGradient = true;
+                label.colorGradient = new VertexGradient(top, top, bottom, bottom);
+            }
+
+            for (int pass = 0; pass < 4; pass++)
+            {
+                if (!InkBounds(label, out Rect ink, out int visible))
+                {
+                    break;
+                }
+
+                label.fontSize *= targetH / Mathf.Max(0.01f, ink.height);
+                if (!InkBounds(label, out ink, out visible))
+                {
+                    break;
+                }
+
+                if (tracked && visible > 1)
+                {
+                    float perGap = (targetW - ink.width) / (visible - 1);
+                    label.characterSpacing += perGap / (label.fontSize * 0.01f);
+                }
+                else
+                {
+                    label.characterHorizontalScale = Mathf.Clamp(label.characterHorizontalScale * targetW / Mathf.Max(0.01f, ink.width), 0.3f, 2.5f);
+                }
+            }
+
+            // Move the label so its ink box lands exactly on the measured one.
+            if (InkBounds(label, out Rect final, out _))
+            {
+                var target = new Vector2(
+                    ((inkBox[0] + inkBox[2]) / 2f - parentCentre.x) * ScaleX,
+                    -(((inkBox[1] + inkBox[3]) / 2f) - parentCentre.y) * ScaleY);
+                rect.anchoredPosition += target - (rect.anchoredPosition + final.center);
+            }
+
+            return label;
+        }
+
+        /// <summary>
+        /// The union of the visible glyphs' ink boxes, in the label's local space. TMP's character
+        /// corners are the quad vertices, which include the SDF padding, so each quad is shrunk to
+        /// the glyph's own metrics (the padding is symmetric around the glyph).
+        /// </summary>
+        public static bool InkBounds(TMP_Text label, out Rect ink, out int visible)
+        {
+            label.ForceMeshUpdate(true, true);
+            TMP_TextInfo info = label.textInfo;
+            float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
+            visible = 0;
+            for (int i = 0; i < info.characterCount; i++)
+            {
+                TMP_CharacterInfo c = info.characterInfo[i];
+                if (!c.isVisible || c.textElement == null || c.textElement.glyph == null)
+                {
+                    continue;
+                }
+
+                UnityEngine.TextCore.GlyphMetrics gm = c.textElement.glyph.metrics;
+                float glyphW = gm.width * c.scale * label.characterHorizontalScale;
+                float glyphH = gm.height * c.scale;
+                float padX = Mathf.Max(0f, (c.topRight.x - c.bottomLeft.x - glyphW) / 2f);
+                float padY = Mathf.Max(0f, (c.topRight.y - c.bottomLeft.y - glyphH) / 2f);
+                visible++;
+                minX = Mathf.Min(minX, c.bottomLeft.x + padX);
+                minY = Mathf.Min(minY, c.bottomLeft.y + padY);
+                maxX = Mathf.Max(maxX, c.topRight.x - padX);
+                maxY = Mathf.Max(maxY, c.topRight.y - padY);
+            }
+
+            ink = visible > 0 ? Rect.MinMaxRect(minX, minY, maxX, maxY) : default;
+            return visible > 0;
         }
 
         /// <summary>

@@ -27,6 +27,15 @@ namespace Callbreak.Editor
             Debug.Log($"[ScreenCaptureTool] Captures written to {Path.GetFullPath(OutputFolder)}");
         }
 
+        /// <summary>Captures a layout-built screen (Prefabs/UI/Screens/&lt;Name&gt;.prefab) at 16:9, 21:9 and 4:3.</summary>
+        public static void CaptureScreen(string screenName)
+        {
+            string prefab = Screens.ScreenLayoutBuilder.PrefabPath(screenName);
+            Capture(prefab, 1920, 1080, $"{OutputFolder}/{screenName}_1920x1080.png");
+            Capture(prefab, 2520, 1080, $"{OutputFolder}/{screenName}_2520x1080.png");
+            Capture(prefab, 1920, 1440, $"{OutputFolder}/{screenName}_1920x1440.png");
+        }
+
         public static string Capture(string prefabPath, int width, int height, string outputPath)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);

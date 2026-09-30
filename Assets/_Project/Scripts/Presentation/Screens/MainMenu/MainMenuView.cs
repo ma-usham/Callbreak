@@ -1,4 +1,5 @@
 using System;
+using Callbreak.Presentation.Framework;
 using TMPro;
 using UnityEngine;
 
@@ -8,7 +9,7 @@ namespace Callbreak.Presentation.Screens
     /// GDD §11 screen 00, the home hub. Shows who the player is and raises one event per entry
     /// point; the presenter decides where each one leads.
     /// </summary>
-    public sealed class MainMenuView : MonoBehaviour
+    public sealed class MainMenuView : UIScreen
     {
         [SerializeField] private UnityEngine.UI.Button _profileButton;
         [SerializeField] private UnityEngine.UI.Button _settingsButton;

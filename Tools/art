@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Runs arttool (Tools/ArtTool), building it first if needed. Usage: Tools/art <command> [options]
+here="$(cd "$(dirname "$0")" && pwd)"
+dll="$here/ArtTool/bin/Release/net10.0-windows/arttool.dll"
+if [ ! -f "$dll" ] || [ -n "$(find "$here/ArtTool" -name '*.cs' -newer "$dll" 2>/dev/null | head -1)" ]; then
+  dotnet build "$here/ArtTool/ArtTool.csproj" -c Release -nologo -v q >/dev/null || { echo "arttool build failed" >&2; exit 1; }
+fi
+exec dotnet "$dll" "$@"

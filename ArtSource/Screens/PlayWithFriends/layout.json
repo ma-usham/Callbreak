@@ -1,0 +1,704 @@
+{
+  "name": "PlayWithFriends",
+  "mockup": "01-play-with-friends.png",
+  "mockW": 1672,
+  "mockH": 941,
+  "background": "Assets/_Project/Art/Backgrounds/BG_PlayWithFriends.png",
+  "backgroundRect": [
+    -279,
+    -157,
+    2230,
+    1255
+  ],
+  "backgroundPpu": 87.0833,
+  "nodes": [
+    {
+      "id": "BackButton",
+      "kind": "button",
+      "group": "HeaderLeft",
+      "shape": "ellipse",
+      "rect": [
+        43.1,
+        37.4,
+        82.8,
+        81.9
+      ],
+      "shadow": 12,
+      "scale": 2,
+      "out": "UI_ButtonCircle",
+      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_ButtonCircle.png",
+      "spriteRect": [
+        43,
+        37,
+        83,
+        83
+      ],
+      "spritePpu": 174.1667,
+      "shadowSprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_ButtonCircle_Shadow.png",
+      "shadowRect": [
+        30,
+        24,
+        107,
+        109
+      ],
+      "shadowPpu": 87.0833,
+      "checkError": 1.99
+    },
+    {
+      "id": "BackIcon",
+      "parent": "BackButton",
+      "shape": "ink",
+      "rect": [
+        60,
+        55,
+        50,
+        48
+      ],
+      "scale": 2,
+      "out": "Icon_Back",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/Icon_Back.png",
+      "spriteRect": [
+        60,
+        55,
+        50,
+        48
+      ],
+      "spritePpu": 174.1667,
+      "color": "#0A0A0C",
+      "checkError": 1.02
+    },
+    {
+      "id": "AvatarRing",
+      "kind": "button",
+      "bind": "ProfileButton",
+      "group": "HeaderLeft",
+      "shape": "ellipse",
+      "rect": [
+        167.2,
+        35.8,
+        92,
+        92
+      ],
+      "shadow": 12,
+      "use": "UI/Avatars/UI_AvatarRing.png",
+      "sprite": "Assets/_Project/Art/UI/Avatars/UI_AvatarRing.png",
+      "spriteRect": [
+        167.2,
+        35.8,
+        92,
+        92
+      ],
+      "spritePpu": 0,
+      "shadowSprite": "Assets/_Project/Art/Screens/PlayWithFriends/AvatarRing_Shadow.png",
+      "shadowRect": [
+        155,
+        24,
+        116,
+        116
+      ],
+      "shadowPpu": 87.0833,
+      "checkError": 8.71
+    },
+    {
+      "id": "Avatar",
+      "parent": "AvatarRing",
+      "shape": "ellipse",
+      "rect": [
+        171.3,
+        39.8,
+        83.7,
+        84.2
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        171.3,
+        39.8,
+        83.7,
+        84.2
+      ],
+      "spritePpu": 0,
+      "checkError": 14.41
+    },
+    {
+      "id": "Greeting",
+      "kind": "label",
+      "group": "HeaderLeft",
+      "text": "Namaste,",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        274,
+        46,
+        106,
+        30
+      ],
+      "key": "ui.header.greeting",
+      "inkBox": [
+        281.21,
+        53.11,
+        372.59,
+        71.51
+      ],
+      "capTop": 57,
+      "baseline": 69,
+      "color": "#876447"
+    },
+    {
+      "id": "PlayerName",
+      "kind": "label",
+      "group": "HeaderLeft",
+      "text": "Player",
+      "font": "SansBold",
+      "align": "left",
+      "rect": [
+        274,
+        76,
+        102,
+        36
+      ],
+      "inkBox": [
+        281.24,
+        79.15,
+        369.72,
+        109.21
+      ],
+      "capTop": 80,
+      "baseline": 103,
+      "color": "#222424"
+    },
+    {
+      "id": "SettingsButton",
+      "kind": "button",
+      "group": "HeaderRight",
+      "shape": "ellipse",
+      "rect": [
+        1419.2,
+        37.9,
+        79.6,
+        80.8
+      ],
+      "shadow": 12,
+      "scale": 2,
+      "out": "UI_ButtonCircle_Settings",
+      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_ButtonCircle_Settings.png",
+      "spriteRect": [
+        1419,
+        37,
+        80,
+        82
+      ],
+      "spritePpu": 174.1667,
+      "shadowSprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_ButtonCircle_Settings_Shadow.png",
+      "shadowRect": [
+        1407,
+        26,
+        103,
+        105
+      ],
+      "shadowPpu": 87.0833,
+      "checkError": 1.61
+    },
+    {
+      "id": "SettingsIcon",
+      "parent": "SettingsButton",
+      "shape": "ink",
+      "rect": [
+        1434,
+        53,
+        50,
+        50
+      ],
+      "scale": 2,
+      "out": "Icon_Settings",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/Icon_Settings.png",
+      "spriteRect": [
+        1434,
+        54,
+        50,
+        49
+      ],
+      "spritePpu": 174.1667,
+      "color": "#1D1D1D",
+      "checkError": 1.71
+    },
+    {
+      "id": "HeaderDivider",
+      "group": "HeaderRight",
+      "shape": "ink",
+      "rect": [
+        1521,
+        45,
+        8,
+        68
+      ],
+      "out": "Deco_HeaderDivider",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/Deco_HeaderDivider.png",
+      "spriteRect": [
+        1521,
+        45,
+        8,
+        68
+      ],
+      "spritePpu": 87.0833,
+      "color": "#917864",
+      "checkError": 2.95
+    },
+    {
+      "id": "ShopButton",
+      "kind": "button",
+      "group": "HeaderRight",
+      "shape": "ellipse",
+      "rect": [
+        1551.4,
+        37.8,
+        80.7,
+        81.0
+      ],
+      "shadow": 12,
+      "scale": 2,
+      "out": "UI_ButtonCircle_Shop",
+      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_ButtonCircle_Shop.png",
+      "spriteRect": [
+        1551,
+        37,
+        82,
+        82
+      ],
+      "spritePpu": 174.1667,
+      "shadowSprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_ButtonCircle_Shop_Shadow.png",
+      "shadowRect": [
+        1540,
+        25,
+        105,
+        106
+      ],
+      "shadowPpu": 87.0833,
+      "checkError": 2.07
+    },
+    {
+      "id": "ShopIcon",
+      "parent": "ShopButton",
+      "shape": "ink",
+      "rect": [
+        1567,
+        53,
+        52,
+        50
+      ],
+      "scale": 2,
+      "out": "Icon_Shop",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/Icon_Shop.png",
+      "spriteRect": [
+        1567,
+        53,
+        52,
+        50
+      ],
+      "spritePpu": 174.1667,
+      "color": "#1B1B1A",
+      "checkError": 2.38
+    },
+    {
+      "id": "Title",
+      "kind": "label",
+      "text": "Play with Friends",
+      "font": "SerifBold",
+      "rect": [
+        565,
+        88,
+        545,
+        78
+      ],
+      "key": "ui.friends.title",
+      "inkBox": [
+        572.65,
+        92.76,
+        1101.46,
+        162.23
+      ],
+      "capTop": 96,
+      "baseline": 147,
+      "color": "#830916",
+      "colorTop": "#8E0A17",
+      "colorBottom": "#750A14"
+    },
+    {
+      "id": "Subtitle",
+      "kind": "label",
+      "text": "CREATE A ROOM AND PLAY TOGETHER",
+      "font": "SansSemiBold",
+      "tracked": true,
+      "rect": [
+        480,
+        166,
+        708,
+        28
+      ],
+      "key": "ui.friends.subtitle",
+      "inkBox": [
+        487.4,
+        171.19,
+        1180.71,
+        189.38
+      ],
+      "capTop": 171,
+      "baseline": 189,
+      "color": "#74563F"
+    },
+    {
+      "id": "TitleDivider",
+      "shape": "ink",
+      "rect": [
+        670,
+        202,
+        335,
+        18
+      ],
+      "scale": 2,
+      "out": "Deco_TitleDivider",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/Deco_TitleDivider.png",
+      "spriteRect": [
+        670,
+        202,
+        335,
+        18
+      ],
+      "spritePpu": 174.1667,
+      "color": "#90755B",
+      "checkError": 1.17
+    },
+    {
+      "id": "CreatePanel",
+      "kind": "button",
+      "shape": "roundrect",
+      "radius": 24,
+      "rect": [
+        366.5,
+        235.6,
+        459.5,
+        581.9
+      ],
+      "out": "UI_Panel_CreateRoom",
+      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_Panel_CreateRoom.png",
+      "spriteRect": [
+        366,
+        235,
+        460,
+        583
+      ],
+      "spritePpu": 87.0833,
+      "checkError": 0.17
+    },
+    {
+      "id": "CreateIcon",
+      "parent": "CreatePanel",
+      "shape": "diff",
+      "solid": true,
+      "rect": [
+        500,
+        305,
+        212,
+        165
+      ],
+      "scale": 2,
+      "out": "Icon_CreateRoom",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/Icon_CreateRoom.png",
+      "spriteRect": [
+        503,
+        310,
+        208,
+        156
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 0.11
+    },
+    {
+      "id": "CreateTitle",
+      "kind": "label",
+      "parent": "CreatePanel",
+      "text": "Create Room",
+      "font": "SerifBold",
+      "rect": [
+        428,
+        482,
+        338,
+        60
+      ],
+      "key": "ui.friends.create_title",
+      "inkBox": [
+        434.03,
+        490.57,
+        759.19,
+        533.83
+      ],
+      "capTop": 503,
+      "baseline": 533,
+      "color": "#1C1E1E"
+    },
+    {
+      "id": "CreateLine1",
+      "kind": "label",
+      "parent": "CreatePanel",
+      "text": "Make a room and",
+      "font": "SansRegular",
+      "rect": [
+        470,
+        562,
+        255,
+        36
+      ],
+      "key": "ui.friends.create_line1",
+      "inkBox": [
+        480.08,
+        567.54,
+        714.18,
+        591.58
+      ],
+      "capTop": 574,
+      "baseline": 591,
+      "color": "#7A593F"
+    },
+    {
+      "id": "CreateLine2",
+      "kind": "label",
+      "parent": "CreatePanel",
+      "text": "invite your friends",
+      "font": "SansRegular",
+      "rect": [
+        468,
+        599,
+        258,
+        41
+      ],
+      "key": "ui.friends.create_line2",
+      "inkBox": [
+        476.18,
+        604.37,
+        716.55,
+        633.84
+      ],
+      "capTop": 611,
+      "baseline": 628,
+      "color": "#7A583D"
+    },
+    {
+      "id": "CreateButton",
+      "kind": "button",
+      "parent": "CreatePanel",
+      "shape": "roundrect",
+      "radius": 34,
+      "rect": [
+        396.3,
+        696.0,
+        401.4,
+        90.8
+      ],
+      "scale": 2,
+      "out": "UI_ButtonPrimary_CreateRoom",
+      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_ButtonPrimary_CreateRoom.png",
+      "spriteRect": [
+        396,
+        696,
+        402,
+        91
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 0.6
+    },
+    {
+      "id": "CreateButtonLabel",
+      "kind": "label",
+      "parent": "CreateButton",
+      "text": "Create Room",
+      "font": "SansMedium",
+      "ink": "light",
+      "rect": [
+        498,
+        718,
+        195,
+        44
+      ],
+      "key": "ui.friends.create_cta",
+      "inkBox": [
+        506.28,
+        728.2,
+        684.67,
+        751.41
+      ],
+      "capTop": 734,
+      "baseline": 751,
+      "color": "#FEFCFC"
+    },
+    {
+      "id": "JoinPanel",
+      "kind": "button",
+      "shape": "roundrect",
+      "radius": 24.5,
+      "rect": [
+        846.7,
+        236.1,
+        460.1,
+        581.4
+      ],
+      "out": "UI_Panel_JoinRoom",
+      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_Panel_JoinRoom.png",
+      "spriteRect": [
+        846,
+        236,
+        461,
+        582
+      ],
+      "spritePpu": 87.0833,
+      "checkError": 0.25
+    },
+    {
+      "id": "JoinIcon",
+      "parent": "JoinPanel",
+      "shape": "ink",
+      "rect": [
+        996,
+        306,
+        160,
+        150
+      ],
+      "scale": 2,
+      "out": "Icon_EnterRoom",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/Icon_EnterRoom.png",
+      "spriteRect": [
+        996,
+        306,
+        160,
+        150
+      ],
+      "spritePpu": 174.1667,
+      "color": "#1E1E1D",
+      "checkError": 1.01
+    },
+    {
+      "id": "JoinTitle",
+      "kind": "label",
+      "parent": "JoinPanel",
+      "text": "Join Room",
+      "font": "SerifBold",
+      "rect": [
+        938,
+        482,
+        282,
+        66
+      ],
+      "key": "ui.friends.join_title",
+      "inkBox": [
+        944.49,
+        489.2,
+        1211.63,
+        542.29
+      ],
+      "capTop": 503,
+      "baseline": 533,
+      "color": "#1D1F1F"
+    },
+    {
+      "id": "JoinLine1",
+      "kind": "label",
+      "parent": "JoinPanel",
+      "text": "Enter a room code",
+      "font": "SansRegular",
+      "rect": [
+        948,
+        563,
+        264,
+        35
+      ],
+      "key": "ui.friends.join_line1",
+      "inkBox": [
+        957.24,
+        567.63,
+        1202.94,
+        591.56
+      ],
+      "capTop": 575,
+      "baseline": 591,
+      "color": "#7A593E"
+    },
+    {
+      "id": "JoinLine2",
+      "kind": "label",
+      "parent": "JoinPanel",
+      "text": "to join your friends",
+      "font": "SansRegular",
+      "rect": [
+        948,
+        599,
+        264,
+        41
+      ],
+      "key": "ui.friends.join_line2",
+      "inkBox": [
+        954.83,
+        604.22,
+        1204.18,
+        633.77
+      ],
+      "capTop": 611,
+      "baseline": 628,
+      "color": "#7C5A3F"
+    },
+    {
+      "id": "JoinButton",
+      "kind": "button",
+      "parent": "JoinPanel",
+      "shape": "roundrect",
+      "radius": 33.5,
+      "rect": [
+        875.5,
+        696.0,
+        401.5,
+        90.8
+      ],
+      "scale": 2,
+      "out": "UI_ButtonPrimary_JoinRoom",
+      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_ButtonPrimary_JoinRoom.png",
+      "spriteRect": [
+        875,
+        696,
+        402,
+        91
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 0.61
+    },
+    {
+      "id": "JoinButtonLabel",
+      "kind": "label",
+      "parent": "JoinButton",
+      "text": "Join Room",
+      "font": "SansMedium",
+      "ink": "light",
+      "rect": [
+        995,
+        718,
+        162,
+        44
+      ],
+      "key": "ui.friends.join_cta",
+      "inkBox": [
+        1002.47,
+        727.46,
+        1147.89,
+        751.39
+      ],
+      "capTop": 734,
+      "baseline": 751,
+      "color": "#FEFCFC"
+    }
+  ]
+}

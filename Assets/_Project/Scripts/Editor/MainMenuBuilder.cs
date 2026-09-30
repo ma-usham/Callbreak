@@ -1,4 +1,5 @@
 using System.IO;
+using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Screens;
 using TMPro;
 using UnityEditor;
@@ -162,6 +163,7 @@ namespace Callbreak.Editor
 
             var view = rootObject.AddComponent<MainMenuView>();
             var serialized = new SerializedObject(view);
+            serialized.FindProperty("_screenId").intValue = (int)ScreenId.MainMenu;
             serialized.FindProperty("_profileButton").objectReferenceValue = profile;
             serialized.FindProperty("_settingsButton").objectReferenceValue = settings;
             serialized.FindProperty("_shopButton").objectReferenceValue = shop;
