@@ -17,6 +17,7 @@
     <Compile Include="$(UnityTests)\Match\**\*.cs" />
     <Compile Include="$(UnityTests)\Bots\**\*.cs" />
     <Compile Include="$(UnityTests)\Application\**\*.cs" />
+    <Compile Include="$(UnityTests)\Presentation\**\*.cs" />
     <Compile Include="$(UnityTests)\Support\**\*.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)..\Staging\Tests\**\*.cs" Condition="'$(UseStaging)' == 'true'" />
   </ItemGroup>
@@ -29,5 +30,6 @@
     <ProjectReference Include="..\Callbreak.Core\Callbreak.Core.csproj" />
     <ProjectReference Include="..\Callbreak.Bots\Callbreak.Bots.csproj" />
     <ProjectReference Include="..\Callbreak.Application\Callbreak.Application.csproj" />
+    <ProjectReference Include="..\Callbreak.Presentation\Callbreak.Presentation.csproj" />
   </ItemGroup>
 </Project>

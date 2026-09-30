@@ -1,0 +1,75 @@
+{
+  // Screen 15 - Card Collection (GDD §11). Rects are mockup pixels on 15-card-styles.png.
+  // Shared menu background and UI kit (large panel, deck option panels = UI_Panel_Card, primary
+  // button, header discs). The deck pictures are the real card backs (Art/Cards), shown with their
+  // own proportions inside the mockup's card boxes; the presenter flips them to each deck's ace of
+  // spades. Cut here (placeholders until the generated kit replaces them): the card-stack icon, the
+  // selected outline, the two radio looks, and the soft shadows under the deck pictures.
+  // Footer and button copy: the GDD's copy update wins ("text" below is the GDD's wording, so the
+  // string table gets it). The mockup says "Choose a card back for your next match." and "Use
+  // Selected Style"; CardCollectionCustomizer fits the two labels on that wording, so they keep the
+  // mockup's size, width scale, baseline and centre, and the width follows the new text.
+  "name": "CardCollection",
+  "mockup": "15-card-styles.png",
+  "background": "shared",
+  "nodes": [
+    { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [39.1, 32.1, 91.6, 91.6],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "BackIcon", "parent": "BackButton", "rect": [59.76, 54, 50.96, 48.92], "use": "UI/Common/Icon_Back.png" },
+    { "id": "CollectionButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1542.8, 31.8, 91.4, 91.4],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "CollectionIcon", "parent": "CollectionButton", "shape": "diff", "lo": 0.04, "hi": 0.0401, "solid": true, "rect": [1560, 48, 58, 58], "scale": 2, "out": "Icon_CardStack" },
+
+    { "id": "Title", "kind": "label", "text": "Card Collection", "font": "SerifBold", "rect": [555, 50, 565, 82], "key": "ui.card_collection.title" },
+    { "id": "Subtitle", "kind": "label", "text": "A LITTLE NEPAL IN EVERY HAND", "font": "SansSemiBold", "tracked": true, "rect": [530, 133, 615, 30], "key": "ui.card_collection.subtitle" },
+    { "id": "TitleDivider", "rect": [677.89, 170.23, 318.3, 18.34], "use": "UI/Common/Deco_TitleDivider.png" },
+
+    { "id": "Panel", "shape": "roundrect", "radius": 23, "rect": [367.0, 197.5, 938.7, 558.5],
+      "use": "UI/Common/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
+
+    // Three deck options (SelectableGroup "Decks"): selected look = outline + filled radio,
+    // unselected look = empty radio. Deck 0's selected look and deck 1's radio are cut; the rest reuse them.
+    { "id": "Decks", "kind": "group", "parent": "Panel", "rect": [389, 218, 894, 460] },
+
+    { "id": "DeckOption0", "kind": "button", "parent": "Decks", "shape": "roundrect", "radius": 23, "rect": [393.5, 221.8, 284.9, 451.9],
+      "use": "UI/Common/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "DeckPreview0", "parent": "DeckOption0", "shape": "roundrect", "radius": 11, "rect": [443.5, 245.8, 184.0, 281.0], "shadow": 12, "use": "Cards/ClassicCrimson/Back_ClassicCrimson.png" },
+    { "id": "DeckName0", "kind": "label", "parent": "DeckOption0", "text": "Classic Crimson", "font": "SerifBold", "rect": [420, 548, 235, 40] },
+    { "id": "Selected0", "kind": "group", "parent": "DeckOption0", "rect": [390, 218, 293, 459] },
+    { "id": "SelectedOutline0", "parent": "Selected0", "shape": "ink", "ink": "#820A0A", "rect": [389, 218, 294, 460], "scale": 2, "out": "UI_DeckSelectedOutline",
+      "clip": [ { "shape": "roundrect", "rect": [394.9, 223.1, 282.7, 448.8], "radius": 23, "outside": true },
+                { "shape": "roundrect", "rect": [390.0, 218.2, 292.6, 458.9], "radius": 25 } ] },
+    { "id": "RadioOn0", "parent": "Selected0", "shape": "ellipse", "rect": [456.43, 602.49, 39.82, 39.82], "scale": 2, "out": "UI_RadioOn" },
+    { "id": "Unselected0", "kind": "group", "parent": "DeckOption0", "rect": [456.4, 602.5, 39.8, 39.8], "hidden": true },
+    { "id": "RadioOff0", "parent": "Unselected0", "rect": [456.31, 602.01, 40, 41], "use": "UI_RadioOff" },
+    { "id": "DeckStatus0", "kind": "label", "parent": "DeckOption0", "text": "Equipped", "font": "SansSemiBold", "align": "left", "rect": [508, 605, 118, 36] },
+
+    { "id": "DeckOption1", "kind": "button", "parent": "Decks", "shape": "roundrect", "radius": 23, "rect": [695.1, 221.8, 284.9, 451.9],
+      "use": "UI/Common/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "DeckPreview1", "parent": "DeckOption1", "shape": "roundrect", "radius": 11, "rect": [743.5, 245.8, 186.5, 281.0], "shadow": 12, "use": "Cards/HimalayanIvory/Back_HimalayanIvory.png" },
+    { "id": "DeckName1", "kind": "label", "parent": "DeckOption1", "text": "Himalayan Ivory", "font": "SerifBold", "rect": [720, 548, 235, 40] },
+    { "id": "Selected1", "kind": "group", "parent": "DeckOption1", "rect": [691.6, 218, 293, 459], "hidden": true },
+    { "id": "SelectedOutline1", "parent": "Selected1", "rect": [691.6, 218, 293, 459], "use": "UI_DeckSelectedOutline" },
+    { "id": "RadioOn1", "parent": "Selected1", "rect": [767.69, 601.99, 41, 41], "use": "UI_RadioOn" },
+    { "id": "Unselected1", "kind": "group", "parent": "DeckOption1", "rect": [768.1, 602.5, 39.8, 39.8] },
+    { "id": "RadioOff1", "parent": "Unselected1", "shape": "ellipse", "rect": [768.08, 602.45, 39.89, 39.89], "scale": 2, "out": "UI_RadioOff" },
+    { "id": "DeckStatus1", "kind": "label", "parent": "DeckOption1", "text": "Owned", "font": "SansSemiBold", "align": "left", "rect": [818, 605, 95, 36] },
+
+    { "id": "DeckOption2", "kind": "button", "parent": "Decks", "shape": "roundrect", "radius": 23, "rect": [996.0, 221.8, 284.8, 451.9],
+      "use": "UI/Common/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "DeckPreview2", "parent": "DeckOption2", "shape": "roundrect", "radius": 11, "rect": [1045.8, 246.6, 185.0, 280.0], "shadow": 12, "use": "Cards/KathmanduGold/Back_KathmanduGold.png" },
+    { "id": "DeckName2", "kind": "label", "parent": "DeckOption2", "text": "Kathmandu Gold", "font": "SerifBold", "rect": [1015, 548, 245, 40] },
+    { "id": "Selected2", "kind": "group", "parent": "DeckOption2", "rect": [992.5, 218, 292.9, 459], "hidden": true },
+    { "id": "SelectedOutline2", "parent": "Selected2", "rect": [992.5, 218, 292.9, 459], "use": "UI_DeckSelectedOutline" },
+    { "id": "RadioOn2", "parent": "Selected2", "rect": [1067.49, 602.01, 41, 41], "use": "UI_RadioOn" },
+    { "id": "Unselected2", "kind": "group", "parent": "DeckOption2", "rect": [1067.9, 602.5, 39.8, 39.8] },
+    { "id": "RadioOff2", "parent": "Unselected2", "rect": [1067.8, 602.02, 40, 41], "use": "UI_RadioOff" },
+    { "id": "DeckStatus2", "kind": "label", "parent": "DeckOption2", "text": "Owned", "font": "SansSemiBold", "align": "left", "rect": [1118, 605, 95, 36] },
+
+    { "id": "Footer", "kind": "label", "parent": "Panel", "text": "Choose a deck for your next match.", "font": "SansMedium", "rect": [572, 697, 528, 36], "key": "ui.card_collection.footer" },
+
+    { "id": "UseButton", "kind": "button", "shape": "roundrect", "radius": 34.5, "rect": [563.9, 772.1, 545.2, 93.2],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "UseLabel", "kind": "label", "parent": "UseButton", "text": "Use Selected Deck", "font": "SerifSemiBold", "ink": "light", "style": "buttonLabel", "rect": [675, 795, 320, 50], "key": "ui.card_collection.use" }
+  ]
+}

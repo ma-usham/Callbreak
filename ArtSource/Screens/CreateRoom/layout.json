@@ -1,0 +1,953 @@
+{
+  "name": "CreateRoom",
+  "mockup": "02-create-room.png",
+  "mockW": 1672,
+  "mockH": 941,
+  "background": "Assets/_Project/Art/Backgrounds/BG_Menu_Wide.png",
+  "backgroundRect": [
+    -279,
+    -157,
+    2230,
+    1255
+  ],
+  "backgroundPpu": 0,
+  "nodes": [
+    {
+      "id": "BackButton",
+      "kind": "button",
+      "group": "HeaderLeft",
+      "shape": "ellipse",
+      "rect": [
+        57.5,
+        45.1,
+        82.7,
+        82.7
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        57.5,
+        45.1,
+        82.7,
+        82.7
+      ],
+      "spritePpu": 0,
+      "checkError": 5.92
+    },
+    {
+      "id": "BackIcon",
+      "parent": "BackButton",
+      "rect": [
+        76.04,
+        64.47,
+        47.10,
+        45.21
+      ],
+      "use": "UI/Common/Icon_Back.png",
+      "hole": false,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Back.png",
+      "spriteRect": [
+        76.04,
+        64.47,
+        47.1,
+        45.21
+      ],
+      "spritePpu": 0,
+      "checkError": 11.02
+    },
+    {
+      "id": "AvatarRing",
+      "kind": "button",
+      "bind": "ProfileButton",
+      "group": "HeaderLeft",
+      "shape": "ellipse",
+      "rect": [
+        168.5,
+        35.3,
+        94.2,
+        94.2
+      ],
+      "use": "UI/Avatars/UI_AvatarRing.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 5,
+      "shadowOpacity": 0.15,
+      "sprite": "Assets/_Project/Art/UI/Avatars/UI_AvatarRing.png",
+      "spriteRect": [
+        168.5,
+        35.3,
+        94.2,
+        94.2
+      ],
+      "spritePpu": 0,
+      "checkError": 11.79
+    },
+    {
+      "id": "Avatar",
+      "parent": "AvatarRing",
+      "shape": "ellipse",
+      "rect": [
+        174.1,
+        40.7,
+        83.2,
+        83.2
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        174.1,
+        40.7,
+        83.2,
+        83.2
+      ],
+      "spritePpu": 0,
+      "checkError": 13.72
+    },
+    {
+      "id": "Greeting",
+      "kind": "label",
+      "group": "HeaderLeft",
+      "text": "Namaste,",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        276,
+        48,
+        106,
+        28
+      ],
+      "key": "ui.header.greeting",
+      "inkBox": [
+        282.12,
+        53.83,
+        375.51,
+        72.59
+      ],
+      "capTop": 58,
+      "baseline": 70,
+      "color": "#8F6647"
+    },
+    {
+      "id": "PlayerName",
+      "kind": "label",
+      "group": "HeaderLeft",
+      "text": "Player",
+      "font": "SansBold",
+      "align": "left",
+      "rect": [
+        276,
+        77,
+        102,
+        36
+      ],
+      "inkBox": [
+        282.12,
+        79.44,
+        371.79,
+        109.69
+      ],
+      "capTop": 81,
+      "baseline": 103,
+      "color": "#232424"
+    },
+    {
+      "id": "SettingsButton",
+      "kind": "button",
+      "group": "HeaderRight",
+      "shape": "ellipse",
+      "rect": [
+        1410.4,
+        39.0,
+        85.7,
+        85.7
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        1410.4,
+        39,
+        85.7,
+        85.7
+      ],
+      "spritePpu": 0,
+      "checkError": 8.23
+    },
+    {
+      "id": "SettingsIcon",
+      "parent": "SettingsButton",
+      "rect": [
+        1431.04,
+        59.99,
+        44.32,
+        43.50
+      ],
+      "use": "UI/Icons/Icon_Settings.png",
+      "hole": false,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Settings.png",
+      "spriteRect": [
+        1431.04,
+        59.99,
+        44.32,
+        43.5
+      ],
+      "spritePpu": 0,
+      "checkError": 20.55
+    },
+    {
+      "id": "HeaderDivider",
+      "group": "HeaderRight",
+      "rect": [
+        1517.88,
+        53.4,
+        1.59,
+        60.2
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#816049",
+        "out": "Deco_HeaderDivider"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/CreateRoom/Deco_HeaderDivider.png",
+      "spriteRect": [
+        1517.88,
+        53.4,
+        1.59,
+        60.2
+      ],
+      "spritePpu": 200,
+      "checkError": 9.77
+    },
+    {
+      "id": "ShopButton",
+      "kind": "button",
+      "group": "HeaderRight",
+      "shape": "ellipse",
+      "rect": [
+        1539.3,
+        42.4,
+        81.9,
+        81.9
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        1539.3,
+        42.4,
+        81.9,
+        81.9
+      ],
+      "spritePpu": 0,
+      "checkError": 20.8
+    },
+    {
+      "id": "ShopIcon",
+      "parent": "ShopButton",
+      "rect": [
+        1558.47,
+        65.96,
+        43.21,
+        36.01
+      ],
+      "use": "UI/Icons/Icon_Shop.png",
+      "hole": false,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Shop.png",
+      "spriteRect": [
+        1558.47,
+        65.96,
+        43.21,
+        36.01
+      ],
+      "spritePpu": 0,
+      "checkError": 68.9
+    },
+    {
+      "id": "Logo",
+      "rect": [
+        628.93,
+        24.65,
+        411.24,
+        163.26
+      ],
+      "use": "UI/Ornaments/Logo_Callbreak.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Ornaments/Logo_Callbreak.png",
+      "spriteRect": [
+        628.93,
+        24.65,
+        411.24,
+        163.26
+      ],
+      "spritePpu": 0,
+      "checkError": 15.7
+    },
+    {
+      "id": "Panel",
+      "shape": "roundrect",
+      "radius": 25.5,
+      "rect": [
+        449,
+        214,
+        775,
+        672
+      ],
+      "use": "UI/Common/UI_Panel_Large.png",
+      "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
+      "shadowSpread": 24,
+      "shadowDrop": 3,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
+      "spriteRect": [
+        449,
+        214,
+        775,
+        672
+      ],
+      "spritePpu": 0,
+      "checkError": 3.92
+    },
+    {
+      "id": "Title",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Your table",
+      "font": "SerifBold",
+      "rect": [
+        705,
+        240,
+        265,
+        64
+      ],
+      "key": "ui.create_room.title",
+      "inkBox": [
+        715.75,
+        248.46,
+        959.9,
+        291.8
+      ],
+      "capTop": 261,
+      "baseline": 291,
+      "color": "#6A0F13",
+      "colorTop": "#870C14",
+      "colorBottom": "#581113"
+    },
+    {
+      "id": "Subtitle",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "SET UP A TABLE FOR YOUR FRIENDS",
+      "font": "SansSemiBold",
+      "tracked": true,
+      "rect": [
+        612,
+        303,
+        450,
+        25
+      ],
+      "key": "ui.create_room.subtitle",
+      "inkBox": [
+        621.62,
+        309.33,
+        1051.81,
+        322.49
+      ],
+      "capTop": 309,
+      "baseline": 322,
+      "color": "#684B35"
+    },
+    {
+      "id": "TitleDivider",
+      "parent": "Panel",
+      "rect": [
+        727.48,
+        333.46,
+        223.39,
+        21.79
+      ],
+      "use": "UI/Common/Deco_TitleDivider.png",
+      "hole": false,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Deco_TitleDivider.png",
+      "spriteRect": [
+        727.48,
+        333.46,
+        223.39,
+        21.79
+      ],
+      "spritePpu": 0,
+      "checkError": 7.6
+    },
+    {
+      "id": "RoomNameCaption",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Room name",
+      "font": "SansBold",
+      "align": "left",
+      "rect": [
+        557,
+        363,
+        134,
+        33
+      ],
+      "key": "ui.create_room.room_name",
+      "inkBox": [
+        565.09,
+        370.47,
+        683.72,
+        387.27
+      ],
+      "capTop": 375,
+      "baseline": 387,
+      "color": "#242524"
+    },
+    {
+      "id": "RoomNameField",
+      "kind": "input",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 14.3,
+      "rect": [
+        562.0,
+        398.9,
+        548.8,
+        63.2
+      ],
+      "use": "UI_Field_RoomName",
+      "sprite": "Assets/_Project/Art/Screens/CreateRoom/UI_Field_RoomName.png",
+      "spriteRect": [
+        562,
+        398.9,
+        548.8,
+        63.2
+      ],
+      "spritePpu": 0,
+      "checkError": 2.13
+    },
+    {
+      "id": "RoomNameText",
+      "kind": "label",
+      "parent": "RoomNameField",
+      "text": "Friends\u0027 Table",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        582,
+        412,
+        182,
+        40
+      ],
+      "inkBox": [
+        591.04,
+        420.12,
+        754.45,
+        440.93
+      ],
+      "capTop": 421,
+      "baseline": 441,
+      "color": "#262727"
+    },
+    {
+      "id": "PlayersTile",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 15,
+      "rect": [
+        555.4,
+        483.8,
+        270.7,
+        98.1
+      ],
+      "use": "UI/Common/UI_Panel_Card.png",
+      "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
+      "shadowSpread": 12,
+      "shadowDrop": 2,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Card.png",
+      "spriteRect": [
+        555.4,
+        483.8,
+        270.7,
+        98.1
+      ],
+      "spritePpu": 0,
+      "checkError": 6.99
+    },
+    {
+      "id": "PlayersIcon",
+      "parent": "PlayersTile",
+      "rect": [
+        576.75,
+        508.94,
+        67.37,
+        46.56
+      ],
+      "use": "UI/Icons/Icon_Friends.png",
+      "hole": false,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Friends.png",
+      "spriteRect": [
+        576.75,
+        508.94,
+        67.37,
+        46.56
+      ],
+      "spritePpu": 0,
+      "checkError": 29.82
+    },
+    {
+      "id": "PlayersCaption",
+      "kind": "label",
+      "parent": "PlayersTile",
+      "text": "Players",
+      "font": "SansBold",
+      "align": "left",
+      "rect": [
+        659,
+        503,
+        78,
+        26
+      ],
+      "key": "ui.create_room.players",
+      "inkBox": [
+        666.64,
+        508.13,
+        730.57,
+        528.23
+      ],
+      "capTop": 512,
+      "baseline": 524,
+      "color": "#2B2B2A"
+    },
+    {
+      "id": "PlayersValue",
+      "kind": "label",
+      "parent": "PlayersTile",
+      "text": "4 players",
+      "font": "SansBold",
+      "align": "left",
+      "rect": [
+        659,
+        530,
+        120,
+        32
+      ],
+      "inkBox": [
+        666.04,
+        535.69,
+        771.68,
+        561.74
+      ],
+      "capTop": 541,
+      "baseline": 556,
+      "color": "#292929"
+    },
+    {
+      "id": "MatchTile",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 15,
+      "rect": [
+        846.3,
+        483.8,
+        270.8,
+        98.2
+      ],
+      "use": "UI/Common/UI_Panel_Card.png",
+      "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
+      "shadowSpread": 12,
+      "shadowDrop": 2,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Card.png",
+      "spriteRect": [
+        846.3,
+        483.8,
+        270.8,
+        98.2
+      ],
+      "spritePpu": 0,
+      "checkError": 3.46
+    },
+    {
+      "id": "MatchIcon",
+      "parent": "MatchTile",
+      "shape": "ink",
+      "rect": [
+        871,
+        505,
+        62,
+        58
+      ],
+      "out": "Icon_Cards",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/CreateRoom/Icon_Cards.png",
+      "spriteRect": [
+        871,
+        505,
+        62,
+        58
+      ],
+      "spritePpu": 87.0833,
+      "color": "#131313",
+      "checkError": 2.97
+    },
+    {
+      "id": "MatchCaption",
+      "kind": "label",
+      "parent": "MatchTile",
+      "text": "Match length",
+      "font": "SansBold",
+      "align": "left",
+      "rect": [
+        949,
+        503,
+        133,
+        25
+      ],
+      "key": "ui.create_room.match_length",
+      "inkBox": [
+        956.14,
+        508.07,
+        1073.95,
+        528
+      ],
+      "capTop": 512,
+      "baseline": 524,
+      "color": "#292928"
+    },
+    {
+      "id": "MatchValue",
+      "kind": "label",
+      "parent": "MatchTile",
+      "text": "5 rounds",
+      "font": "SansBold",
+      "align": "left",
+      "rect": [
+        949,
+        530,
+        110,
+        32
+      ],
+      "inkBox": [
+        956.15,
+        536.09,
+        1053.88,
+        556.36
+      ],
+      "capTop": 542,
+      "baseline": 556,
+      "color": "#262626"
+    },
+    {
+      "id": "TimeCaption",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Time per turn",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        599,
+        597,
+        138,
+        31
+      ],
+      "key": "ui.create_room.time_per_turn",
+      "inkBox": [
+        604.74,
+        604.11,
+        729.89,
+        624.51
+      ],
+      "capTop": 609,
+      "baseline": 620,
+      "color": "#262626"
+    },
+    {
+      "id": "TurnTrack",
+      "parent": "Panel",
+      "shape": "pill",
+      "rect": [
+        602.1,
+        634.4,
+        469.05,
+        59.6
+      ],
+      "shadow": 6,
+      "use": "UI_SegmentTrack",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/CreateRoom/UI_SegmentTrack.png",
+      "spriteRect": [
+        602.1,
+        634.4,
+        469.05,
+        59.6
+      ],
+      "spritePpu": 0,
+      "shadowSprite": "Assets/_Project/Art/Screens/CreateRoom/TurnTrack_Shadow.png",
+      "shadowRect": [
+        595,
+        626,
+        484,
+        76
+      ],
+      "shadowPpu": 87.0833,
+      "checkError": 2.67
+    },
+    {
+      "id": "TurnSelected30",
+      "parent": "TurnTrack",
+      "shape": "pill",
+      "rect": [
+        832.8,
+        638.0,
+        234.25,
+        52.15
+      ],
+      "use": "UI_SegmentSelected",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/CreateRoom/UI_SegmentSelected.png",
+      "spriteRect": [
+        832.8,
+        638,
+        234.25,
+        52.15
+      ],
+      "spritePpu": 0,
+      "checkError": 4.3
+    },
+    {
+      "id": "TurnOption15",
+      "kind": "button",
+      "parent": "TurnTrack",
+      "rect": [
+        602.1,
+        634.4,
+        234.5,
+        59.6
+      ],
+      "hole": false,
+      "checkError": 1.39
+    },
+    {
+      "id": "TurnOption30",
+      "kind": "button",
+      "parent": "TurnTrack",
+      "rect": [
+        836.6,
+        634.4,
+        234.5,
+        59.6
+      ],
+      "hole": false,
+      "checkError": 4.49
+    },
+    {
+      "id": "TurnLabel15",
+      "kind": "label",
+      "parent": "TurnTrack",
+      "text": "15 sec",
+      "font": "SansSemiBold",
+      "rect": [
+        686,
+        648,
+        78,
+        31
+      ],
+      "key": "ui.create_room.turn_15",
+      "hole": false,
+      "inkBox": [
+        692.69,
+        656.02,
+        756.95,
+        673.27
+      ],
+      "capTop": 656,
+      "baseline": 673,
+      "color": "#292928"
+    },
+    {
+      "id": "TurnLabel30",
+      "kind": "label",
+      "parent": "TurnTrack",
+      "text": "30 sec",
+      "font": "SansSemiBold",
+      "ink": "light",
+      "rect": [
+        911,
+        648,
+        82,
+        31
+      ],
+      "key": "ui.create_room.turn_30",
+      "hole": false,
+      "inkBox": [
+        918.22,
+        655.78,
+        985.89,
+        672.74
+      ],
+      "capTop": 656,
+      "baseline": 672,
+      "color": "#FEFCFC"
+    },
+    {
+      "id": "LockIcon",
+      "parent": "Panel",
+      "shape": "ink",
+      "rect": [
+        658,
+        708,
+        36,
+        41
+      ],
+      "out": "Icon_Lock",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/CreateRoom/Icon_Lock.png",
+      "spriteRect": [
+        658,
+        708,
+        36,
+        41
+      ],
+      "spritePpu": 87.0833,
+      "color": "#121313",
+      "checkError": 2.44
+    },
+    {
+      "id": "PrivateNote",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Private room \u00B7 Invite with a code",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        697,
+        714,
+        318,
+        34
+      ],
+      "key": "ui.create_room.private_note",
+      "inkBox": [
+        703.82,
+        722.35,
+        1007.23,
+        739.19
+      ],
+      "capTop": 727,
+      "baseline": 739,
+      "color": "#6B4C34"
+    },
+    {
+      "id": "CreateButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "pill",
+      "rect": [
+        544.3,
+        761.9,
+        583.9,
+        98.0
+      ],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Primary.png",
+      "shadowDrop": 6,
+      "shadowOpacity": 0.45,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "spriteRect": [
+        544.3,
+        761.9,
+        583.9,
+        98
+      ],
+      "spritePpu": 0,
+      "checkError": 17.21
+    },
+    {
+      "id": "CreateButtonLabel",
+      "kind": "label",
+      "parent": "CreateButton",
+      "text": "Create Room",
+      "font": "SerifSemiBold",
+      "ink": "light",
+      "style": "buttonLabel",
+      "rect": [
+        704,
+        786,
+        242,
+        46
+      ],
+      "key": "ui.create_room.cta",
+      "inkBox": [
+        711.68,
+        795.33,
+        938.27,
+        824.28
+      ],
+      "capTop": 803,
+      "baseline": 824,
+      "color": "#FDFBF8"
+    },
+    {
+      "id": "CreateChevron",
+      "parent": "CreateButton",
+      "rect": [
+        1040.20,
+        797.62,
+        17.79,
+        29.31
+      ],
+      "use": "UI/Common/Icon_Chevron_Light.png",
+      "hole": false,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Chevron_Light.png",
+      "spriteRect": [
+        1040.2,
+        797.62,
+        17.79,
+        29.31
+      ],
+      "spritePpu": 0,
+      "checkError": 72.45
+    },
+    {
+      "id": "CreateSpinner",
+      "parent": "CreateButton",
+      "rect": [
+        1035.1,
+        798.28,
+        28,
+        28
+      ],
+      "hidden": true,
+      "hole": false,
+      "make": {
+        "type": "ring",
+        "stroke": "#FEFAF6",
+        "strokeWidth": 4.5,
+        "out": "UI_SpinnerRing"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/CreateRoom/UI_SpinnerRing.png",
+      "spriteRect": [
+        1035.1,
+        798.28,
+        28,
+        28
+      ],
+      "spritePpu": 200,
+      "checkError": 64.71
+    }
+  ]
+}

@@ -2,15 +2,20 @@ using Callbreak.Application.Config;
 using Callbreak.Application.Cosmetics;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Localization;
+using Callbreak.Application.Matchmaking;
+using Callbreak.Application.Online;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
+using Callbreak.Application.Rooms;
 using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
+using Callbreak.Core.Randomness;
 using Callbreak.Infrastructure.Audio;
 using Callbreak.Infrastructure.Localization;
 using Callbreak.Infrastructure.Persistence;
 using Callbreak.Infrastructure.Platform;
 using Callbreak.Infrastructure.Services;
+using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
 using UnityEngine;
 using VContainer;
@@ -30,6 +35,8 @@ namespace Callbreak.Bootstrap
         [SerializeField] private GameObject _audioHost;
         [SerializeField] private ToastView _toast;
         [SerializeField] private LoadingCurtain _curtain;
+        [SerializeField] private DialogView _dialog;
+        [SerializeField] private AvatarLibrary _avatars;
 
         protected override void Awake()
         {
@@ -65,7 +72,11 @@ namespace Callbreak.Bootstrap
                 .WithParameter(_audioHost)
                 .WithParameter(_audioLibrary);
 
-            // Layers above every scene: toasts and the loading curtain (GDD §23).
+            builder.RegisterInstance(_avatars);
+
+            // Layers above every scene: dialogs, toasts and the loading curtain (GDD §23).
+            builder.RegisterComponent(_dialog);
+            builder.Register<DialogService>(Lifetime.Singleton).As<IDialogs>();
             builder.RegisterComponent(_toast);
             builder.Register<ToastService>(Lifetime.Singleton).As<IToast>();
             builder.RegisterComponent(_curtain).As<ILoadingCurtain>();
@@ -74,7 +85,48 @@ namespace Callbreak.Bootstrap
             builder.Register<SceneLoader>(Lifetime.Singleton).As<ISceneLoader>();
             builder.Register<AppFlow>(Lifetime.Singleton).As<IAppFlow>();
 
+            // Bots and online play (GDD §9, §24-27). Rooms and Quick Match live for the whole app,
+            // because a room outlasts the Menu and Table scenes.
+            builder.Register<BotFactory>(Lifetime.Singleton).As<IBotFactory>();
+            builder.Register<NoRoomTransport>(Lifetime.Singleton).As<IRoomTransport>();
+            builder.Register(CreateRoomService, Lifetime.Singleton).As<IRoomService>().AsSelf();
+            builder.Register(CreateQuickMatch, Lifetime.Singleton).As<IMatchmakingService>().AsSelf();
+            builder.RegisterEntryPoint<OnlineTicker>();
+
             builder.RegisterEntryPoint<GameEntryPoint>();
         }
+
+        private static RoomService CreateRoomService(IObjectResolver resolver)
+        {
+            return new RoomService(
+                resolver.Resolve<IRoomTransport>(),
+                resolver.Resolve<IProfileService>(),
+                resolver.Resolve<ICosmeticsService>(),
+                resolver.Resolve<IAuthService>(),
+                resolver.Resolve<IBotFactory>(),
+                resolver.Resolve<IStatsService>(),
+                resolver.Resolve<ISettingsService>(),
+                resolver.Resolve<INetworkStatus>(),
+                resolver.Resolve<NameFilter>(),
+                NextSeed);
+        }
+
+        private static QuickMatchService CreateQuickMatch(IObjectResolver resolver)
+        {
+            return new QuickMatchService(
+                new QuickMatchConfig(),
+                resolver.Resolve<IProfileService>(),
+                resolver.Resolve<ICosmeticsService>(),
+                resolver.Resolve<IAuthService>(),
+                resolver.Resolve<IBotFactory>(),
+                resolver.Resolve<IStatsService>(),
+                resolver.Resolve<ISettingsService>(),
+                resolver.Resolve<INetworkStatus>(),
+                resolver.Resolve<NameFilter>(),
+                NextSeed);
+        }
+
+        /// <summary>GDD §22: shuffle seeds come from the OS's secure random source.</summary>
+        private static ulong NextSeed() => new CryptoRandom().NextSeed();
     }
 }

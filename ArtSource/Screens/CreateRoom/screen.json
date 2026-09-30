@@ -1,0 +1,77 @@
+{
+  // Screen 02 - Create Room (GDD §11). Rects are mockup pixels on 02-create-room.png.
+  // Shared menu background and shared kit (panels, buttons, header discs, avatar, divider, logo,
+  // common icons); only what is unique to this screen is cut from the mockup.
+  // Shared icons and logos keep their own proportions: their rects come from
+  // `ArtSource/Working/CreateRoom/derive/derive.sh tool fiticon|fitlogo`, which centres the sprite's glyph on
+  // this mockup's glyph at one scale (the mockups redraw the same icon a little differently per screen).
+  "name": "CreateRoom",
+  "mockup": "02-create-room.png",
+  "background": "shared",
+  "nodes": [
+    { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [57.5, 45.1, 82.7, 82.7],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "BackIcon", "parent": "BackButton", "rect": [76.04, 64.47, 47.10, 45.21], "use": "UI/Common/Icon_Back.png", "hole": false },
+    { "id": "AvatarRing", "kind": "button", "bind": "ProfileButton", "group": "HeaderLeft", "shape": "ellipse", "rect": [168.5, 35.3, 94.2, 94.2],
+      "use": "UI/Avatars/UI_AvatarRing.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15 },
+    { "id": "Avatar", "parent": "AvatarRing", "shape": "ellipse", "rect": [174.1, 40.7, 83.2, 83.2], "use": "UI/Avatars/Avatar_Default.png" },
+    { "id": "Greeting", "kind": "label", "group": "HeaderLeft", "text": "Namaste,", "font": "SansSemiBold", "align": "left", "rect": [276, 48, 106, 28], "key": "ui.header.greeting" },
+    { "id": "PlayerName", "kind": "label", "group": "HeaderLeft", "text": "Player", "font": "SansBold", "align": "left", "rect": [276, 77, 102, 36] },
+
+    { "id": "SettingsButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1410.4, 39.0, 85.7, 85.7],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "SettingsIcon", "parent": "SettingsButton", "rect": [1431.04, 59.99, 44.32, 43.50], "use": "UI/Icons/Icon_Settings.png", "hole": false },
+    // A hairline: drawn as a shape at its measured rectangle and colour, not cut.
+    { "id": "HeaderDivider", "group": "HeaderRight", "rect": [1517.88, 53.4, 1.59, 60.2], "make": { "type": "rect", "fill": "#816049", "out": "Deco_HeaderDivider" } },
+    { "id": "ShopButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1539.3, 42.4, 81.9, 81.9],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "ShopIcon", "parent": "ShopButton", "rect": [1558.47, 65.96, 43.21, 36.01], "use": "UI/Icons/Icon_Shop.png", "hole": false },
+
+    { "id": "Logo", "rect": [628.93, 24.65, 411.24, 163.26], "use": "UI/Ornaments/Logo_Callbreak.png" },
+
+    // The shared panel was cut from this mockup: its pixel box is used as the rect, so it lands pixel for pixel.
+    { "id": "Panel", "shape": "roundrect", "radius": 25.5, "rect": [449, 214, 775, 672],
+      "use": "UI/Common/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
+    { "id": "Title", "kind": "label", "parent": "Panel", "text": "Your table", "font": "SerifBold", "rect": [705, 240, 265, 64], "key": "ui.create_room.title" },
+    { "id": "Subtitle", "kind": "label", "parent": "Panel", "text": "SET UP A TABLE FOR YOUR FRIENDS", "font": "SansSemiBold", "tracked": true, "rect": [612, 303, 450, 25], "key": "ui.create_room.subtitle" },
+    { "id": "TitleDivider", "parent": "Panel", "rect": [727.48, 333.46, 223.39, 21.79], "use": "UI/Common/Deco_TitleDivider.png", "hole": false },
+
+    { "id": "RoomNameCaption", "kind": "label", "parent": "Panel", "text": "Room name", "font": "SansBold", "align": "left", "rect": [557, 363, 134, 33], "key": "ui.create_room.room_name" },
+    { "id": "RoomNameField", "kind": "input", "parent": "Panel", "shape": "roundrect", "radius": 14.3, "rect": [562.0, 398.9, 548.8, 63.2], "use": "UI_Field_RoomName" },
+    { "id": "RoomNameText", "kind": "label", "parent": "RoomNameField", "text": "Friends' Table", "font": "SansSemiBold", "align": "left", "rect": [582, 412, 182, 40] },
+
+    { "id": "PlayersTile", "parent": "Panel", "shape": "roundrect", "radius": 15, "rect": [555.4, 483.8, 270.7, 98.1],
+      "use": "UI/Common/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "PlayersIcon", "parent": "PlayersTile", "rect": [576.75, 508.94, 67.37, 46.56], "use": "UI/Icons/Icon_Friends.png", "hole": false },
+    { "id": "PlayersCaption", "kind": "label", "parent": "PlayersTile", "text": "Players", "font": "SansBold", "align": "left", "rect": [659, 503, 78, 26], "key": "ui.create_room.players" },
+    { "id": "PlayersValue", "kind": "label", "parent": "PlayersTile", "text": "4 players", "font": "SansBold", "align": "left", "rect": [659, 530, 120, 32] },
+    { "id": "MatchTile", "parent": "Panel", "shape": "roundrect", "radius": 15, "rect": [846.3, 483.8, 270.8, 98.2],
+      "use": "UI/Common/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "MatchIcon", "parent": "MatchTile", "shape": "ink", "rect": [871, 505, 62, 58], "out": "Icon_Cards" },
+    { "id": "MatchCaption", "kind": "label", "parent": "MatchTile", "text": "Match length", "font": "SansBold", "align": "left", "rect": [949, 503, 133, 25], "key": "ui.create_room.match_length" },
+    { "id": "MatchValue", "kind": "label", "parent": "MatchTile", "text": "5 rounds", "font": "SansBold", "align": "left", "rect": [949, 530, 110, 32] },
+
+    { "id": "TimeCaption", "kind": "label", "parent": "Panel", "text": "Time per turn", "font": "SansSemiBold", "align": "left", "rect": [599, 597, 138, 31], "key": "ui.create_room.time_per_turn" },
+    // Derived sprites (ArtSource/Working/CreateRoom/derive): the track is its left half mirrored onto the right, so
+    // either option can be selected; field and selected pill have their text filled from the columns beside it. The
+    // customizer adds TurnSelected15, a copy of TurnSelected30 at the mirrored position.
+    { "id": "TurnTrack", "parent": "Panel", "shape": "pill", "rect": [602.1, 634.4, 469.05, 59.6], "shadow": 6, "use": "UI_SegmentTrack" },
+    { "id": "TurnSelected30", "parent": "TurnTrack", "shape": "pill", "rect": [832.8, 638.0, 234.25, 52.15], "use": "UI_SegmentSelected" },
+    { "id": "TurnOption15", "kind": "button", "parent": "TurnTrack", "rect": [602.1, 634.4, 234.5, 59.6], "hole": false },
+    { "id": "TurnOption30", "kind": "button", "parent": "TurnTrack", "rect": [836.6, 634.4, 234.5, 59.6], "hole": false },
+    { "id": "TurnLabel15", "kind": "label", "parent": "TurnTrack", "text": "15 sec", "font": "SansSemiBold", "rect": [686, 648, 78, 31], "key": "ui.create_room.turn_15", "hole": false },
+    { "id": "TurnLabel30", "kind": "label", "parent": "TurnTrack", "text": "30 sec", "font": "SansSemiBold", "ink": "light", "rect": [911, 648, 82, 31], "key": "ui.create_room.turn_30", "hole": false },
+
+    { "id": "LockIcon", "parent": "Panel", "shape": "ink", "rect": [658, 708, 36, 41], "out": "Icon_Lock" },
+    { "id": "PrivateNote", "kind": "label", "parent": "Panel", "text": "Private room · Invite with a code", "font": "SansSemiBold", "align": "left", "rect": [697, 714, 318, 34], "key": "ui.create_room.private_note" },
+
+    { "id": "CreateButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [544.3, 761.9, 583.9, 98.0],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "CreateButtonLabel", "kind": "label", "parent": "CreateButton", "text": "Create Room", "font": "SerifSemiBold", "ink": "light", "style": "buttonLabel", "rect": [704, 786, 242, 46], "key": "ui.create_room.cta" },
+    { "id": "CreateChevron", "parent": "CreateButton", "rect": [1040.20, 797.62, 17.79, 29.31], "use": "UI/Common/Icon_Chevron_Light.png", "hole": false },
+    // Busy state (GDD: "Create shows a spinner on the button"): a white ring in the chevron's place and colour,
+    // drawn as a turning three-quarter arc by the customizer. Not on the mockup, so it is hidden by default.
+    { "id": "CreateSpinner", "parent": "CreateButton", "rect": [1035.1, 798.28, 28, 28], "hidden": true, "hole": false,
+      "make": { "type": "ring", "stroke": "#FEFAF6", "strokeWidth": 4.5, "out": "UI_SpinnerRing" } }
+  ]
+}

@@ -80,6 +80,15 @@ namespace Callbreak.Editor
                 var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
                 instance.transform.SetParent(canvasRect, false);
 
+                // Optional design-time state. A screen whose content is built at runtime (the
+                // table's cards, an overlay that sits on the table) has a class
+                // Callbreak.Editor.Screens.<PrefabName>Preview with
+                // public static void Prepare(GameObject instance), which puts the mockup's state on
+                // the instance before it is rendered. Screens without one are captured as built.
+                System.Type preview = Screens.ScreenLayoutBuilder.FindType($"Callbreak.Editor.Screens.{prefab.name}Preview");
+                preview?.GetMethod("Prepare", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                    ?.Invoke(null, new object[] { instance });
+
                 Canvas.ForceUpdateCanvases();
                 foreach (TMP_Text text in instance.GetComponentsInChildren<TMP_Text>(true))
                 {

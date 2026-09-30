@@ -1,0 +1,98 @@
+{
+  // Screen 08 - Gameplay, the table (GDD §11 T rules + screen 08). Rects are mockup pixels on 08-gameplay.png.
+  // Shared kit: header discs and their shadows, the logo, the home / scorecard / settings icons, avatar ring
+  // and avatar. Cut here (unique to the table): the name plate and the status pill (one of each, 9-sliced and
+  // reused by every seat), the timer disc, the round ornaments, the trump spade, the header divider and the
+  // emote and sort icons. The timer ring is a vector (it is a radial fill at runtime).
+  // Cards are never nodes: the hand, the trick and the opponents' fans are built at runtime from the deck
+  // sprites. Their areas are plain rects here so the plate is cleared under them and the view gets a
+  // container at the measured place (SeatFan*, TrickArea, HandArea).
+  // Seats are numbered by relative position (GDD T rules): 0 bottom (you), 1 right, 2 top, 3 left.
+  "name": "Table",
+  "mockup": "08-gameplay.png",
+  "plate": {
+    "generated": "ArtSource/Working/Table/BG_Table_Plate_16x9.png",
+    "generatedWide": "ArtSource/Working/Table/BG_Table_Plate_Wide.png"
+  },
+  "nodes": [
+    // ---- Plate only: along the four edges the plate fades into the wide painting (see ArtSource/Working/Table/README.md),
+    // so 21:9 and 4:3 screens show no seam. The customizer removes these four objects from the prefab.
+    { "id": "EdgeTop", "rect": [0, 0, 1672, 48], "grow": 0 },
+    { "id": "EdgeBottom", "rect": [0, 893, 1672, 48], "grow": 0 },
+    { "id": "EdgeLeft", "rect": [0, 0, 48, 941], "grow": 0 },
+    { "id": "EdgeRight", "rect": [1624, 0, 48, 941], "grow": 0 },
+
+    // ---- Centre: the three opponents and the trick (they stay with the table oval)
+    { "id": "Seat3", "kind": "group", "rect": [96, 334, 226, 154] },
+    { "id": "SeatFan3", "parent": "Seat3", "rect": [196, 334, 126, 104] },
+    { "id": "SeatRing3", "parent": "Seat3", "shape": "ellipse", "rect": [121.9, 343.0, 87.1, 87.1], "use": "UI/Avatars/UI_AvatarRing.png" },
+    { "id": "SeatAvatar3", "parent": "SeatRing3", "shape": "ellipse", "rect": [129.1, 350.8, 72.9, 72.9], "use": "UI/Avatars/Avatar_Default.png" },
+    { "id": "SeatPlate3", "parent": "Seat3", "shape": "pill", "rect": [104.8, 415.8, 133.3, 33.0], "scale": 2, "slice": [17, 0, 17, 0], "grain": false, "out": "UI_NamePlate" },
+    { "id": "SeatName3", "kind": "label", "parent": "SeatPlate3", "text": "Bikash", "font": "SansSemiBold", "rect": [134, 420, 76, 25] },
+    { "id": "SeatPill3", "parent": "Seat3", "shape": "pill", "rect": [96.5, 448.6, 150.3, 37.8], "scale": 2, "slice": [19, 0, 19, 0], "grain": false, "out": "UI_StatusPill" },
+    { "id": "SeatStatus3", "kind": "label", "parent": "SeatPill3", "text": "Bid 3 • Won 1", "font": "SansMedium", "rect": [111, 455, 120, 24] },
+
+    { "id": "Seat1", "kind": "group", "rect": [1352, 334, 226, 154] },
+    { "id": "SeatFan1", "parent": "Seat1", "rect": [1353, 334, 124, 104] },
+    { "id": "SeatRing1", "parent": "Seat1", "shape": "ellipse", "rect": [1461.4, 344.2, 85.4, 85.4], "use": "UI/Avatars/UI_AvatarRing.png" },
+    { "id": "SeatAvatar1", "parent": "SeatRing1", "shape": "ellipse", "rect": [1468.3, 350.7, 72.6, 72.6], "use": "UI/Avatars/Avatar_Default.png" },
+    { "id": "SeatPlate1", "parent": "Seat1", "shape": "pill", "rect": [1432.9, 415.8, 133.2, 32.9], "use": "UI_NamePlate" },
+    { "id": "SeatName1", "kind": "label", "parent": "SeatPlate1", "text": "Suman", "font": "SansSemiBold", "rect": [1460, 420, 80, 25] },
+    { "id": "SeatPill1", "parent": "Seat1", "shape": "pill", "rect": [1424.3, 448.6, 149.7, 37.8], "use": "UI_StatusPill" },
+    { "id": "SeatStatus1", "kind": "label", "parent": "SeatPill1", "text": "Bid 3 • Won 1", "font": "SansMedium", "rect": [1440, 455, 120, 24] },
+
+    { "id": "Seat2", "kind": "group", "rect": [711, 119, 250, 146] },
+    { "id": "SeatFan2", "parent": "Seat2", "rect": [711, 119, 250, 98] },
+    { "id": "SeatRing2", "parent": "Seat2", "shape": "ellipse", "rect": [793.9, 125.1, 83.2, 83.2], "use": "UI/Avatars/UI_AvatarRing.png" },
+    { "id": "SeatAvatar2", "parent": "SeatRing2", "shape": "ellipse", "rect": [800.7, 132.0, 70.2, 70.2], "use": "UI/Avatars/Avatar_Default.png" },
+    { "id": "SeatPlate2", "parent": "Seat2", "shape": "pill", "rect": [770.1, 194.9, 131.5, 32.9], "use": "UI_NamePlate" },
+    { "id": "SeatName2", "kind": "label", "parent": "SeatPlate2", "text": "Asha", "font": "SansSemiBold", "rect": [805, 200, 62, 24] },
+    { "id": "SeatPill2", "parent": "Seat2", "shape": "pill", "rect": [761.5, 227.8, 148.0, 35.4], "use": "UI_StatusPill" },
+    { "id": "SeatStatus2", "kind": "label", "parent": "SeatPill2", "text": "Bid 3 • Won 1", "font": "SansMedium", "rect": [776, 234, 118, 23] },
+
+    { "id": "TrickArea", "rect": [620, 334, 434, 220] },
+    { "id": "HandArea", "rect": [214, 696, 1312, 245] },
+
+    // ---- HUD, pinned to the safe-area corners and the top edge
+    { "id": "HomeButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [45.3, 29.2, 80.2, 79.9], "grow": 9,
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "HomeIcon", "parent": "HomeButton", "shape": "ink", "rect": [62, 44, 48, 49], "use": "UI/Common/Icon_Home.png" },
+    { "id": "Logo", "group": "HeaderLeft", "rect": [184, 37.5, 330.5, 75.5], "grow": 5, "use": "UI/Common/Logo_Callbreak_NoFlag.png" },
+
+    { "id": "RoundOrnamentLeft", "group": "Top", "shape": "ink", "rect": [646, 31, 80, 15], "scale": 2, "out": "Deco_RoundOrnament_Left" },
+    { "id": "RoundLabel", "kind": "label", "group": "Top", "text": "ROUND 1 / 5", "font": "SansBold", "tracked": true, "rect": [742, 22, 188, 28] },
+    { "id": "RoundOrnamentRight", "group": "Top", "shape": "ink", "rect": [947, 31, 78, 15], "scale": 2, "out": "Deco_RoundOrnament_Right" },
+    { "id": "TrumpLabel", "kind": "label", "group": "Top", "text": "Trump", "font": "SansSemiBold", "rect": [775, 59, 88, 33], "key": "ui.table.trump" },
+    { "id": "TrumpSuit", "group": "Top", "shape": "ink", "rect": [868, 59, 29, 33], "scale": 2, "out": "Icon_Trump" },
+
+    { "id": "ScoresButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1425.5, 28.0, 77.4, 78.5], "grow": 9,
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "ScoresIcon", "parent": "ScoresButton", "shape": "ink", "rect": [1445, 39, 42, 53], "use": "UI/Common/Icon_Scorecard.png" },
+    { "id": "ScoresLabel", "kind": "label", "group": "HeaderRight", "text": "Scores", "font": "SansMedium", "rect": [1433, 109.5, 64, 19.5], "key": "ui.table.scores" },
+    { "id": "HeaderDivider", "group": "HeaderRight", "rect": [1527.8, 39.2, 2.3, 59.5], "make": { "type": "rect", "fill": "#1D1F1F", "out": "Deco_HeaderDivider" } },
+    { "id": "SettingsButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1554.2, 28.0, 77.8, 78.5], "grow": 9,
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "SettingsIcon", "parent": "SettingsButton", "shape": "ink", "rect": [1568, 42, 50, 51], "use": "UI/Icons/Icon_Settings.png" },
+    { "id": "SettingsLabel", "kind": "label", "group": "HeaderRight", "text": "Settings", "font": "SansMedium", "rect": [1556, 109.5, 74, 23.5], "key": "ui.table.settings" },
+
+    { "id": "EmoteButton", "kind": "button", "group": "BottomLeft", "shape": "ellipse", "rect": [28.5, 743.8, 72.2, 71.8], "grow": 9,
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "EmoteIcon", "parent": "EmoteButton", "shape": "ink", "rect": [44, 759, 42, 42], "scale": 2, "out": "Icon_Emote" },
+
+    { "id": "Seat0", "kind": "group", "group": "BottomLeft", "rect": [18, 828, 224, 106] },
+    { "id": "SeatPlate0", "parent": "Seat0", "shape": "pill", "rect": [66, 853.3, 166.1, 32.8], "use": "UI_NamePlate" },
+    { "id": "SeatName0", "kind": "label", "parent": "SeatPlate0", "text": "You", "font": "SansSemiBold", "rect": [144, 858, 44, 24], "key": "ui.table.you" },
+    { "id": "SeatPill0", "parent": "Seat0", "shape": "pill", "rect": [66, 886.1, 172.5, 36.8], "use": "UI_StatusPill" },
+    { "id": "SeatStatus0", "kind": "label", "parent": "SeatPill0", "text": "Bid 4 • Won 2", "font": "SansMedium", "rect": [112, 894, 118, 22] },
+    { "id": "SeatTimerRing0", "parent": "Seat0", "shape": "ellipse", "rect": [18.9, 828.7, 92.6, 92.6],
+      "make": { "type": "ring", "stroke": "#F9A51C", "strokeWidth": 7.2, "out": "UI_TimerRing" } },
+    { "id": "SeatRing0", "parent": "Seat0", "shape": "ellipse", "rect": [26.1, 835.9, 78.2, 78.2], "use": "UI/Avatars/UI_AvatarRing.png" },
+    { "id": "SeatAvatar0", "parent": "SeatRing0", "shape": "ellipse", "rect": [30.0, 839.8, 70.4, 70.4], "use": "UI/Avatars/Avatar_Default.png" },
+    { "id": "SeatTimerDisc0", "parent": "Seat0", "shape": "ellipse", "rect": [44, 890, 42, 42], "scale": 2, "grain": false, "out": "UI_TimerDisc" },
+    { "id": "SeatTimerText0", "kind": "label", "parent": "SeatTimerDisc0", "text": "18", "font": "SansBold", "ink": "light", "rect": [52, 899, 26, 21] },
+
+    { "id": "SortButton", "kind": "button", "group": "BottomRight", "shape": "ellipse", "rect": [1562.7, 832.3, 83.0, 83.2], "grow": 9,
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "SortIcon", "parent": "SortButton", "shape": "ink", "rect": [1580, 849, 48, 50], "scale": 2, "out": "Icon_Sort" }
+  ]
+}

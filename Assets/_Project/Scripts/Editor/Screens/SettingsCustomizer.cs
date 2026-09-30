@@ -22,6 +22,10 @@ namespace Callbreak.Editor.Screens
             }
 
             BuildSlider(ctx);
+            ScreenLabelRefit.Apply(ctx);
+
+            // The language's own name must stay left of the dropdown's chevron.
+            ScreenLabelRefit.LimitWidth(ctx, "LanguageValue", 114f);
         }
 
         private static void BuildToggle(ScreenBuildContext ctx, LayoutNode node)
@@ -43,7 +47,10 @@ namespace Callbreak.Editor.Screens
                 return;
             }
 
-            // The other look sits exactly where the drawn one is, at the same size.
+            // The other look is centred where the drawn one is, scaled the way the drawn one is (the
+            // two cuts differ slightly in size: the ON look keeps its thin light rim).
+            Vector2 faceNative = UiBuildKit.NativeSize(faceImage.sprite);
+            var factor = new Vector2(face.sizeDelta.x / faceNative.x, face.sizeDelta.y / faceNative.y);
             var otherObject = new GameObject(faceIsOn ? "Off" : "On", typeof(RectTransform));
             var otherRect = (RectTransform)otherObject.transform;
             otherRect.SetParent(root, false);
@@ -51,7 +58,7 @@ namespace Callbreak.Editor.Screens
             otherRect.anchorMax = face.anchorMax;
             otherRect.pivot = face.pivot;
             otherRect.anchoredPosition = face.anchoredPosition;
-            otherRect.sizeDelta = face.sizeDelta;
+            otherRect.sizeDelta = Vector2.Scale(UiBuildKit.NativeSize(other), factor);
             UiBuildKit.AddImage(otherRect, other, true);
             faceImage.raycastTarget = true;
             face.name = faceIsOn ? "On" : "Off";
@@ -67,6 +74,9 @@ namespace Callbreak.Editor.Screens
             feedbackSo.FindProperty("_selectable").objectReferenceValue = button;
             feedbackSo.ApplyModifiedPropertiesWithoutUndo();
 
+            // Added while the node is inactive, so the switch is wired before it is first enabled
+            // (when someone has the Editor in Play mode, AddComponent enables it at once).
+            root.gameObject.SetActive(false);
             var toggle = root.gameObject.AddComponent<ToggleSwitch>();
             var so = new SerializedObject(toggle);
             so.FindProperty("_button").objectReferenceValue = button;
@@ -75,6 +85,7 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_isOn").boolValue = faceIsOn;
             so.ApplyModifiedPropertiesWithoutUndo();
             otherObject.SetActive(false);       // the prefab shows the state the mockup draws
+            root.gameObject.SetActive(true);
         }
 
         /// <summary>

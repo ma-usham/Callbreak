@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text;
 using Callbreak.Application.Config;
 using Callbreak.Bootstrap;
+using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -46,12 +47,16 @@ namespace Callbreak.Editor
         [MenuItem("Callbreak/Build/Scenes")]
         private static void BuildFromMenu() => Debug.Log(BuildAll());
 
-        public static string BuildAll()
+        /// <summary>
+        /// Rebuilds the three scenes. A scene the Editor has open with unsaved changes is left alone
+        /// unless <paramref name="discardOpenChanges"/> is set (check what the changes are first).
+        /// </summary>
+        public static string BuildAll(bool discardOpenChanges = false)
         {
             var report = new StringBuilder();
-            report.AppendLine(BuildBoot());
-            report.AppendLine(BuildMenu());
-            report.AppendLine(BuildTable());
+            report.AppendLine(BuildBoot(discardOpenChanges));
+            report.AppendLine(BuildMenu(discardOpenChanges));
+            report.AppendLine(BuildTable(discardOpenChanges));
             EditorBuildSettings.scenes = new[]
             {
                 new EditorBuildSettingsScene(BootPath, true),
@@ -63,7 +68,7 @@ namespace Callbreak.Editor
             return report.ToString();
         }
 
-        public static string BuildBoot()
+        public static string BuildBoot(bool discardOpenChanges = false)
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
             CreateCamera(scene);
@@ -79,6 +84,10 @@ namespace Callbreak.Editor
             var toastObject = (GameObject)PrefabUtility.InstantiatePrefab(toastPrefab, scene);
             toastObject.transform.SetParent(root.transform, false);
 
+            var dialogPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(DialogBuilder.PrefabPath);
+            var dialogObject = (GameObject)PrefabUtility.InstantiatePrefab(dialogPrefab, scene);
+            dialogObject.transform.SetParent(root.transform, false);
+
             LoadingCurtain curtain = CreateCurtain(scene, root.transform);
 
             var scope = root.AddComponent<ProjectLifetimeScope>();
@@ -90,12 +99,15 @@ namespace Callbreak.Editor
             so.FindProperty("_audioHost").objectReferenceValue = audio;
             so.FindProperty("_toast").objectReferenceValue = toastObject.GetComponentInChildren<ToastView>(true);
             so.FindProperty("_curtain").objectReferenceValue = curtain;
+            so.FindProperty("_dialog").objectReferenceValue = dialogObject.GetComponentInChildren<DialogView>(true);
+            so.FindProperty("_avatars").objectReferenceValue = EnsureAvatarLibrary();
+            SetAutoInject(so, root);
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            return Save(scene, BootPath);
+            return Save(scene, BootPath, discardOpenChanges);
         }
 
-        public static string BuildMenu()
+        public static string BuildMenu(bool discardOpenChanges = false)
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
             CreateCamera(scene);
@@ -132,11 +144,11 @@ namespace Callbreak.Editor
             so.ApplyModifiedPropertiesWithoutUndo();
             scopeObject.SetActive(true);
 
-            string result = Save(scene, MenuPath) + $" ({screens.Count} screens";
+            string result = Save(scene, MenuPath, discardOpenChanges) + $" ({screens.Count} screens";
             return result + (missing.Count > 0 ? "; not built yet: " + string.Join(", ", missing) + ")" : ")");
         }
 
-        public static string BuildTable()
+        public static string BuildTable(bool discardOpenChanges = false)
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
             CreateCamera(scene);
@@ -151,7 +163,54 @@ namespace Callbreak.Editor
             so.ApplyModifiedPropertiesWithoutUndo();
             scopeObject.SetActive(true);
 
-            return Save(scene, TablePath);
+            return Save(scene, TablePath, discardOpenChanges);
+        }
+
+        /// <summary>
+        /// The avatar presets: <c>Avatar_Default</c> is preset 0, then <c>Avatar_01</c>, <c>Avatar_02</c>...
+        /// as far as they exist in the avatar folder.
+        /// </summary>
+        private static AvatarLibrary EnsureAvatarLibrary()
+        {
+            const string path = "Assets/_Project/Config/UI/AvatarLibrary.asset";
+            var library = AssetDatabase.LoadAssetAtPath<AvatarLibrary>(path);
+            if (library == null)
+            {
+                UiBuildKit.EnsureFolder("Assets/_Project/Config/UI");
+                library = ScriptableObject.CreateInstance<AvatarLibrary>();
+                AssetDatabase.CreateAsset(library, path);
+            }
+
+            var sprites = new List<Sprite>();
+            Sprite first = AssetDatabase.LoadAssetAtPath<Sprite>($"{UiBuildKit.ArtRoot}/UI/Avatars/Avatar_Default.png");
+            if (first != null)
+            {
+                sprites.Add(first);
+            }
+
+            for (int i = 1; i < 32; i++)
+            {
+                Sprite next = AssetDatabase.LoadAssetAtPath<Sprite>($"{UiBuildKit.ArtRoot}/UI/Avatars/Avatar_{i:00}.png");
+                if (next == null)
+                {
+                    break;
+                }
+
+                sprites.Add(next);
+            }
+
+            var so = new SerializedObject(library);
+            SerializedProperty list = so.FindProperty("_avatars");
+            list.arraySize = sprites.Count;
+            for (int i = 0; i < sprites.Count; i++)
+            {
+                list.GetArrayElementAtIndex(i).objectReferenceValue = sprites[i];
+            }
+
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(library);
+            AssetDatabase.SaveAssets();
+            return library;
         }
 
         /// <summary>VContainer injects every component under these objects (LocalizedText and friends).</summary>
@@ -257,13 +316,13 @@ namespace Callbreak.Editor
         /// Editor has the old copy of that scene open, the new one takes its place (unless the open
         /// copy has unsaved changes, which are never thrown away).
         /// </summary>
-        private static string Save(Scene scene, string path)
+        private static string Save(Scene scene, string path, bool discardOpenChanges)
         {
             Scene open = SceneManager.GetSceneByPath(path);
             bool replacesOpen = open.IsValid() && open.isLoaded && open != scene;
             if (replacesOpen)
             {
-                if (open.isDirty)
+                if (open.isDirty && !discardOpenChanges)
                 {
                     EditorSceneManager.CloseScene(scene, true);
                     return $"skipped {path}: it is open in the Editor with unsaved changes";

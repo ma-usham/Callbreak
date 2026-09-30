@@ -86,6 +86,8 @@ Node fields:
 | `grow` | How far beyond the shape the element is erased from its parent (default 1.5, or the shadow pad). |
 | `hole` | `false` = do not erase it from the parent (rarely needed). |
 | `erase` | Extra `[x,y,w,h]` rects to erase inside this element (e.g. a baked number that becomes dynamic but is drawn by a label elsewhere). |
+| `grain` | `false` = fill what is erased from this cut element smoothly, without the grain borrowed from its surroundings. For small flat elements whose label changes at runtime (status pills, number discs): borrowed grain shows as speckles beside a shorter text. Default `true`. |
+| `clip` | `ink`/`diff` only: `{ "shape": "roundrect", "rect": [x,y,w,h], "radius": r, "outside": true }` (or an array of them) keeps only the part of the matte inside the shape, or outside it with `"outside": true`: a selection outline without the card it surrounds, a ring without the icon inside it. `"feather": px` softens the clip's edge. |
 | `ink` | Labels / ink icons: `dark` (default) or `light` (white text on crimson), or an exact `#RRGGBB`. |
 | `text`, `font`, `align`, `tracked`, `style`, `key` | Labels, §3. |
 | `hidden` | Build the node inactive (an alternate state the view switches on). |

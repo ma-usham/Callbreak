@@ -1,0 +1,893 @@
+{
+  "name": "JoinRoom",
+  "mockup": "03-join-room.png",
+  "mockW": 1672,
+  "mockH": 941,
+  "background": "Assets/_Project/Art/Backgrounds/BG_Menu_Wide.png",
+  "backgroundRect": [
+    -279,
+    -157,
+    2230,
+    1255
+  ],
+  "backgroundPpu": 0,
+  "nodes": [
+    {
+      "id": "BackButton",
+      "kind": "button",
+      "group": "HeaderLeft",
+      "shape": "ellipse",
+      "rect": [
+        44.8,
+        41.2,
+        87.3,
+        87.3
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        44.8,
+        41.2,
+        87.3,
+        87.3
+      ],
+      "spritePpu": 0,
+      "checkError": 6.2
+    },
+    {
+      "id": "BackIcon",
+      "parent": "BackButton",
+      "rect": [
+        64.47,
+        61.64,
+        49.12,
+        47.16
+      ],
+      "use": "UI/Common/Icon_Back.png",
+      "hole": false,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Back.png",
+      "spriteRect": [
+        64.47,
+        61.64,
+        49.12,
+        47.16
+      ],
+      "spritePpu": 0,
+      "checkError": 10.34
+    },
+    {
+      "id": "AvatarRing",
+      "kind": "button",
+      "bind": "ProfileButton",
+      "group": "HeaderLeft",
+      "shape": "ellipse",
+      "rect": [
+        163.9,
+        38.0,
+        95.6,
+        95.6
+      ],
+      "use": "UI/Avatars/UI_AvatarRing.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 5,
+      "shadowOpacity": 0.15,
+      "sprite": "Assets/_Project/Art/UI/Avatars/UI_AvatarRing.png",
+      "spriteRect": [
+        163.9,
+        38,
+        95.6,
+        95.6
+      ],
+      "spritePpu": 0,
+      "checkError": 11.76
+    },
+    {
+      "id": "Avatar",
+      "parent": "AvatarRing",
+      "shape": "ellipse",
+      "rect": [
+        169.1,
+        43.1,
+        85.0,
+        85.0
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        169.1,
+        43.1,
+        85,
+        85
+      ],
+      "spritePpu": 0,
+      "checkError": 13.55
+    },
+    {
+      "id": "Greeting",
+      "kind": "label",
+      "group": "HeaderLeft",
+      "text": "Namaste,",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        272,
+        51,
+        108,
+        28
+      ],
+      "key": "ui.header.greeting",
+      "inkBox": [
+        279.08,
+        57.25,
+        372.79,
+        76.37
+      ],
+      "capTop": 61,
+      "baseline": 73,
+      "color": "#8A6449"
+    },
+    {
+      "id": "PlayerName",
+      "kind": "label",
+      "group": "HeaderLeft",
+      "text": "Player",
+      "font": "SansBold",
+      "align": "left",
+      "rect": [
+        272,
+        80,
+        102,
+        36
+      ],
+      "inkBox": [
+        278.8,
+        83.51,
+        368.58,
+        113.72
+      ],
+      "capTop": 85,
+      "baseline": 107,
+      "color": "#262625"
+    },
+    {
+      "id": "SettingsButton",
+      "kind": "button",
+      "group": "HeaderRight",
+      "shape": "ellipse",
+      "rect": [
+        1531.1,
+        42.2,
+        88.3,
+        88.3
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        1531.1,
+        42.2,
+        88.3,
+        88.3
+      ],
+      "spritePpu": 0,
+      "checkError": 9.03
+    },
+    {
+      "id": "SettingsIcon",
+      "parent": "SettingsButton",
+      "rect": [
+        1553.59,
+        66.17,
+        43.52,
+        42.71
+      ],
+      "use": "UI/Icons/Icon_Settings.png",
+      "hole": false,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Settings.png",
+      "spriteRect": [
+        1553.59,
+        66.17,
+        43.52,
+        42.71
+      ],
+      "spritePpu": 0,
+      "checkError": 21.22
+    },
+    {
+      "id": "Logo",
+      "rect": [
+        539.69,
+        42.11,
+        576.16,
+        131.63
+      ],
+      "use": "UI/Common/Logo_Callbreak_NoFlag.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Logo_Callbreak_NoFlag.png",
+      "spriteRect": [
+        539.69,
+        42.11,
+        576.16,
+        131.63
+      ],
+      "spritePpu": 0,
+      "checkError": 32
+    },
+    {
+      "id": "Panel",
+      "shape": "roundrect",
+      "radius": 24.5,
+      "rect": [
+        423.3,
+        202.6,
+        825.9,
+        672.3
+      ],
+      "use": "UI/Common/UI_Panel_Large.png",
+      "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
+      "shadowSpread": 24,
+      "shadowDrop": 3,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
+      "spriteRect": [
+        423.3,
+        202.6,
+        825.9,
+        672.3
+      ],
+      "spritePpu": 0,
+      "checkError": 5.77
+    },
+    {
+      "id": "EnterIcon",
+      "parent": "Panel",
+      "rect": [
+        761.18,
+        222.14,
+        137.79,
+        129.18
+      ],
+      "use": "Screens/PlayWithFriends/Icon_EnterRoom.png",
+      "hole": false,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/Icon_EnterRoom.png",
+      "spriteRect": [
+        761.18,
+        222.14,
+        137.79,
+        129.18
+      ],
+      "spritePpu": 0,
+      "checkError": 20.29
+    },
+    {
+      "id": "Title",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Enter room code",
+      "font": "SerifBold",
+      "rect": [
+        604,
+        350,
+        468,
+        70
+      ],
+      "key": "ui.join_room.title",
+      "inkBox": [
+        611.84,
+        357.7,
+        1063.95,
+        410.23
+      ],
+      "capTop": 374,
+      "baseline": 410,
+      "color": "#7A0D11",
+      "colorTop": "#930A11",
+      "colorBottom": "#641012"
+    },
+    {
+      "id": "Helper",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Ask your friend for their 6-character code.",
+      "font": "SansMedium",
+      "rect": [
+        538,
+        424,
+        596,
+        40
+      ],
+      "key": "ui.join_room.helper",
+      "inkBox": [
+        546.3,
+        429.54,
+        1126.16,
+        459.19
+      ],
+      "capTop": 436,
+      "baseline": 453,
+      "color": "#775840"
+    },
+    {
+      "id": "CodeInput",
+      "kind": "group",
+      "parent": "Panel",
+      "rect": [
+        465,
+        478,
+        745,
+        120
+      ]
+    },
+    {
+      "id": "CodeBox0",
+      "parent": "CodeInput",
+      "shape": "roundrect",
+      "radius": 13,
+      "rect": [
+        469.44,
+        482.5,
+        108.1,
+        109.0
+      ],
+      "shadow": 5,
+      "use": "UI_CodeBox",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/JoinRoom/UI_CodeBox.png",
+      "spriteRect": [
+        469.44,
+        482.5,
+        108.1,
+        109
+      ],
+      "spritePpu": 0,
+      "shadowSprite": "Assets/_Project/Art/Screens/JoinRoom/CodeBox0_Shadow.png",
+      "shadowRect": [
+        465,
+        479,
+        118,
+        120
+      ],
+      "shadowPpu": 87.0833,
+      "checkError": 4.67
+    },
+    {
+      "id": "CodeLetter0",
+      "kind": "label",
+      "parent": "CodeBox0",
+      "text": "A",
+      "font": "SansBold",
+      "rect": [
+        478,
+        492,
+        92,
+        92
+      ],
+      "inkBox": [
+        503.21,
+        515.65,
+        541.82,
+        558.41
+      ],
+      "capTop": 516,
+      "baseline": 558,
+      "color": "#212120"
+    },
+    {
+      "id": "CodeBox1",
+      "parent": "CodeInput",
+      "shape": "roundrect",
+      "radius": 13,
+      "rect": [
+        594.39,
+        482.5,
+        108.1,
+        109.0
+      ],
+      "shadow": 5,
+      "use": "UI_CodeBox",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/JoinRoom/UI_CodeBox.png",
+      "spriteRect": [
+        594.39,
+        482.5,
+        108.1,
+        109
+      ],
+      "spritePpu": 0,
+      "shadowSprite": "Assets/_Project/Art/Screens/JoinRoom/CodeBox1_Shadow.png",
+      "shadowRect": [
+        590,
+        493,
+        118,
+        106
+      ],
+      "shadowPpu": 87.0833,
+      "checkError": 4.23
+    },
+    {
+      "id": "CodeLetter1",
+      "kind": "label",
+      "parent": "CodeBox1",
+      "text": "B",
+      "font": "SansBold",
+      "rect": [
+        603,
+        492,
+        92,
+        92
+      ],
+      "inkBox": [
+        633.02,
+        516.11,
+        665.75,
+        560.57
+      ],
+      "capTop": 516,
+      "baseline": 560,
+      "color": "#181817"
+    },
+    {
+      "id": "CodeBox2",
+      "parent": "CodeInput",
+      "shape": "roundrect",
+      "radius": 13,
+      "rect": [
+        719.52,
+        482.5,
+        108.1,
+        109.0
+      ],
+      "shadow": 5,
+      "use": "UI_CodeBox",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/JoinRoom/UI_CodeBox.png",
+      "spriteRect": [
+        719.52,
+        482.5,
+        108.1,
+        109
+      ],
+      "spritePpu": 0,
+      "shadowSprite": "Assets/_Project/Art/Screens/JoinRoom/CodeBox2_Shadow.png",
+      "shadowRect": [
+        714,
+        492,
+        119,
+        107
+      ],
+      "shadowPpu": 87.0833,
+      "checkError": 4.79
+    },
+    {
+      "id": "CodeLetter2",
+      "kind": "label",
+      "parent": "CodeBox2",
+      "text": "1",
+      "font": "SansBold",
+      "rect": [
+        728,
+        492,
+        92,
+        92
+      ],
+      "inkBox": [
+        761.35,
+        516.09,
+        780.29,
+        560.48
+      ],
+      "capTop": 516,
+      "baseline": 533,
+      "color": "#1B1B1A"
+    },
+    {
+      "id": "CodeBox3",
+      "parent": "CodeInput",
+      "shape": "roundrect",
+      "radius": 13,
+      "rect": [
+        844.96,
+        482.5,
+        108.1,
+        109.0
+      ],
+      "shadow": 5,
+      "use": "UI_CodeBox",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/JoinRoom/UI_CodeBox.png",
+      "spriteRect": [
+        844.96,
+        482.5,
+        108.1,
+        109
+      ],
+      "spritePpu": 0,
+      "shadowSprite": "Assets/_Project/Art/Screens/JoinRoom/CodeBox3_Shadow.png",
+      "shadowRect": [
+        841,
+        497,
+        119,
+        102
+      ],
+      "shadowPpu": 87.0833,
+      "checkError": 4.42
+    },
+    {
+      "id": "CodeLetter3",
+      "kind": "label",
+      "parent": "CodeBox3",
+      "text": "2",
+      "font": "SansBold",
+      "rect": [
+        853,
+        492,
+        92,
+        92
+      ],
+      "inkBox": [
+        883.06,
+        515.25,
+        913.16,
+        560.56
+      ],
+      "capTop": 516,
+      "baseline": 561,
+      "color": "#171716"
+    },
+    {
+      "id": "CodeBox4",
+      "parent": "CodeInput",
+      "shape": "roundrect",
+      "radius": 13,
+      "rect": [
+        970.40,
+        482.5,
+        108.1,
+        109.0
+      ],
+      "shadow": 5,
+      "use": "UI_CodeBox",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/JoinRoom/UI_CodeBox.png",
+      "spriteRect": [
+        970.4,
+        482.5,
+        108.1,
+        109
+      ],
+      "spritePpu": 0,
+      "shadowSprite": "Assets/_Project/Art/Screens/JoinRoom/CodeBox4_Shadow.png",
+      "shadowRect": [
+        966,
+        489,
+        117,
+        110
+      ],
+      "shadowPpu": 87.0833,
+      "checkError": 4.74
+    },
+    {
+      "id": "CodeLetter4",
+      "kind": "label",
+      "parent": "CodeBox4",
+      "text": "C",
+      "font": "SansBold",
+      "rect": [
+        978,
+        492,
+        92,
+        92
+      ],
+      "inkBox": [
+        1005.83,
+        515.34,
+        1041.68,
+        561.15
+      ],
+      "capTop": 516,
+      "baseline": 560,
+      "color": "#151514"
+    },
+    {
+      "id": "CodeBox5",
+      "parent": "CodeInput",
+      "shape": "roundrect",
+      "radius": 13,
+      "rect": [
+        1095.37,
+        482.5,
+        108.1,
+        109.0
+      ],
+      "shadow": 5,
+      "use": "UI_CodeBox",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/JoinRoom/UI_CodeBox.png",
+      "spriteRect": [
+        1095.37,
+        482.5,
+        108.1,
+        109
+      ],
+      "spritePpu": 0,
+      "shadowSprite": "Assets/_Project/Art/Screens/JoinRoom/CodeBox5_Shadow.png",
+      "shadowRect": [
+        1091,
+        496,
+        115,
+        103
+      ],
+      "shadowPpu": 87.0833,
+      "checkError": 4.59
+    },
+    {
+      "id": "CodeLetter5",
+      "kind": "label",
+      "parent": "CodeBox5",
+      "text": "D",
+      "font": "SansBold",
+      "rect": [
+        1103,
+        492,
+        92,
+        92
+      ],
+      "inkBox": [
+        1132.4,
+        516.1,
+        1168.75,
+        560.55
+      ],
+      "capTop": 516,
+      "baseline": 560,
+      "color": "#111110"
+    },
+    {
+      "id": "PasteButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "pill",
+      "rect": [
+        689.54,
+        612.93,
+        293.2,
+        70.31
+      ],
+      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png",
+      "shadowDrop": 2,
+      "shadowOpacity": 0.4,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "spriteRect": [
+        689.54,
+        612.93,
+        293.2,
+        70.31
+      ],
+      "spritePpu": 0,
+      "checkError": 10.42
+    },
+    {
+      "id": "PasteIcon",
+      "parent": "PasteButton",
+      "shape": "ink",
+      "rect": [
+        737,
+        626,
+        47,
+        45
+      ],
+      "out": "Icon_Copy",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/JoinRoom/Icon_Copy.png",
+      "spriteRect": [
+        737,
+        626,
+        47,
+        45
+      ],
+      "spritePpu": 87.0833,
+      "color": "#0C0C0C",
+      "checkError": 6.72
+    },
+    {
+      "id": "PasteLabel",
+      "kind": "label",
+      "parent": "PasteButton",
+      "text": "Paste Code",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        798,
+        632,
+        142,
+        34
+      ],
+      "key": "ui.join_room.paste",
+      "inkBox": [
+        806.18,
+        638.84,
+        931.79,
+        659.2
+      ],
+      "capTop": 641,
+      "baseline": 659,
+      "color": "#201F1E"
+    },
+    {
+      "id": "JoinButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "pill",
+      "rect": [
+        500.5,
+        697.6,
+        670.3,
+        107.9
+      ],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Primary.png",
+      "shadowDrop": 6,
+      "shadowOpacity": 0.45,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "spriteRect": [
+        500.5,
+        697.6,
+        670.3,
+        107.9
+      ],
+      "spritePpu": 0,
+      "checkError": 13.82
+    },
+    {
+      "id": "JoinButtonLabel",
+      "kind": "label",
+      "parent": "JoinButton",
+      "text": "Join Room",
+      "font": "SerifSemiBold",
+      "ink": "light",
+      "style": "buttonLabel",
+      "rect": [
+        735,
+        726,
+        214,
+        52
+      ],
+      "key": "ui.join_room.cta",
+      "inkBox": [
+        742.72,
+        733.44,
+        940.21,
+        768.8
+      ],
+      "capTop": 743,
+      "baseline": 767,
+      "color": "#FDFBFB"
+    },
+    {
+      "id": "JoinChevron",
+      "parent": "JoinButton",
+      "rect": [
+        971.48,
+        736.64,
+        20.01,
+        32.96
+      ],
+      "use": "UI/Common/Icon_Chevron_Light.png",
+      "hole": false,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Chevron_Light.png",
+      "spriteRect": [
+        971.48,
+        736.64,
+        20.01,
+        32.96
+      ],
+      "spritePpu": 0,
+      "checkError": 73.6
+    },
+    {
+      "id": "JoinSpinner",
+      "parent": "JoinButton",
+      "rect": [
+        965.49,
+        737.12,
+        32,
+        32
+      ],
+      "use": "Screens/CreateRoom/UI_SpinnerRing.png",
+      "hidden": true,
+      "hole": false,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/CreateRoom/UI_SpinnerRing.png",
+      "spriteRect": [
+        965.49,
+        737.12,
+        32,
+        32
+      ],
+      "spritePpu": 0,
+      "checkError": 66.39
+    },
+    {
+      "id": "FooterLineLeft",
+      "parent": "Panel",
+      "rect": [
+        545.3,
+        837.45,
+        83.5,
+        1.69
+      ],
+      "hole": false,
+      "make": {
+        "type": "rect",
+        "fill": "#9F7F62",
+        "out": "Deco_FooterLine"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/JoinRoom/Deco_FooterLine.png",
+      "spriteRect": [
+        545.3,
+        837.45,
+        83.5,
+        1.69
+      ],
+      "spritePpu": 200,
+      "checkError": 14.08
+    },
+    {
+      "id": "FooterLineRight",
+      "parent": "Panel",
+      "rect": [
+        1043.8,
+        837.45,
+        83.55,
+        1.69
+      ],
+      "hole": false,
+      "use": "Deco_FooterLine",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/JoinRoom/Deco_FooterLine.png",
+      "spriteRect": [
+        1043.8,
+        837.45,
+        83.55,
+        1.69
+      ],
+      "spritePpu": 0,
+      "checkError": 14.17
+    },
+    {
+      "id": "Footer",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Room codes are not case-sensitive.",
+      "font": "SansMedium",
+      "rect": [
+        642,
+        822,
+        388,
+        32
+      ],
+      "key": "ui.join_room.footer",
+      "inkBox": [
+        649.15,
+        827.65,
+        1023.58,
+        845.88
+      ],
+      "capTop": 833,
+      "baseline": 846,
+      "color": "#846145"
+    }
+  ]
+}

@@ -1,0 +1,1437 @@
+{
+  "name": "RoundResults",
+  "mockup": "09-round-results.png",
+  "mockW": 1672,
+  "mockH": 941,
+  "background": "Assets/_Project/Art/Backgrounds/BG_Menu_Wide.png",
+  "backgroundRect": [
+    -279,
+    -157,
+    2230,
+    1255
+  ],
+  "backgroundPpu": 0,
+  "nodes": [
+    {
+      "id": "BackButton",
+      "kind": "button",
+      "group": "HeaderLeft",
+      "shape": "ellipse",
+      "rect": [
+        42.5,
+        27.5,
+        85,
+        85
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        42.5,
+        27.5,
+        85,
+        85
+      ],
+      "spritePpu": 0,
+      "checkError": 6.1
+    },
+    {
+      "id": "BackIcon",
+      "parent": "BackButton",
+      "rect": [
+        60.9,
+        48.02,
+        48.93,
+        46.44
+      ],
+      "use": "UI/Common/Icon_Back.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Back.png",
+      "spriteRect": [
+        60.9,
+        48.02,
+        48.93,
+        46.44
+      ],
+      "spritePpu": 0,
+      "checkError": 9.43
+    },
+    {
+      "id": "Logo",
+      "group": "HeaderLeft",
+      "rect": [
+        183.87,
+        33.88,
+        333.4,
+        75.54
+      ],
+      "use": "UI/Common/Logo_Callbreak_NoFlag.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Logo_Callbreak_NoFlag.png",
+      "spriteRect": [
+        183.87,
+        33.88,
+        333.4,
+        75.54
+      ],
+      "spritePpu": 0,
+      "checkError": 41.65
+    },
+    {
+      "id": "SettingsButton",
+      "kind": "button",
+      "group": "HeaderRight",
+      "shape": "ellipse",
+      "rect": [
+        1545.7,
+        27.5,
+        86.1,
+        85.5
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        1545.7,
+        27.5,
+        86.1,
+        85.5
+      ],
+      "spritePpu": 0,
+      "checkError": 8.46
+    },
+    {
+      "id": "SettingsIcon",
+      "parent": "SettingsButton",
+      "rect": [
+        1567.53,
+        48.67,
+        43.45,
+        43.9
+      ],
+      "use": "UI/Icons/Icon_Settings.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Settings.png",
+      "spriteRect": [
+        1567.53,
+        48.67,
+        43.45,
+        43.9
+      ],
+      "spritePpu": 0,
+      "checkError": 19.98
+    },
+    {
+      "id": "Panel",
+      "shape": "roundrect",
+      "radius": 25.5,
+      "rect": [
+        351.8,
+        119,
+        968.4,
+        775.8
+      ],
+      "use": "UI/Common/UI_Panel_Large.png",
+      "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
+      "shadowSpread": 24,
+      "shadowDrop": 3,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
+      "spriteRect": [
+        351.8,
+        119,
+        968.4,
+        775.8
+      ],
+      "spritePpu": 0,
+      "checkError": 5.26
+    },
+    {
+      "id": "Title",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Round Complete",
+      "font": "SerifBold",
+      "rect": [
+        565,
+        136,
+        542,
+        80.9
+      ],
+      "capFit": [
+        145.9,
+        202.3
+      ],
+      "lineGradient": [
+        "#980516",
+        "#500408"
+      ],
+      "key": "ui.round_results.title",
+      "inkBox": [
+        570.84,
+        143.54,
+        1101.35,
+        216.9
+      ],
+      "capTop": 162,
+      "baseline": 201,
+      "color": "#710810",
+      "colorTop": "#870712",
+      "colorBottom": "#580B0E"
+    },
+    {
+      "id": "MedalLineLeft",
+      "parent": "Panel",
+      "rect": [
+        630,
+        243.3,
+        123,
+        2
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#644327",
+        "out": "Deco_MedalLine"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_MedalLine.png",
+      "spriteRect": [
+        630,
+        243.3,
+        123,
+        2
+      ],
+      "spritePpu": 200,
+      "checkError": 28.04
+    },
+    {
+      "id": "MedalDiamondLeft",
+      "parent": "Panel",
+      "shape": "diff",
+      "rect": [
+        752.8,
+        236.9,
+        14.9,
+        14.4
+      ],
+      "scale": 2,
+      "out": "Deco_Diamond",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_Diamond.png",
+      "spriteRect": [
+        752,
+        237,
+        16,
+        15
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 2.86
+    },
+    {
+      "id": "Medal",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        796.6,
+        203,
+        78.2,
+        78
+      ],
+      "scale": 2,
+      "out": "Deco_SpadeMedal",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowSpread": 8,
+      "shadowDrop": 3,
+      "shadowOpacity": 0.35,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_SpadeMedal.png",
+      "spriteRect": [
+        796,
+        203,
+        79,
+        78
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 2.49
+    },
+    {
+      "id": "MedalDiamondRight",
+      "parent": "Panel",
+      "rect": [
+        904.4,
+        236.9,
+        14.9,
+        14.4
+      ],
+      "use": "Deco_Diamond",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_Diamond.png",
+      "spriteRect": [
+        904.4,
+        236.9,
+        14.9,
+        14.4
+      ],
+      "spritePpu": 0,
+      "checkError": 16.66
+    },
+    {
+      "id": "MedalLineRight",
+      "parent": "Panel",
+      "rect": [
+        919.3,
+        243.3,
+        116,
+        2
+      ],
+      "use": "Deco_MedalLine",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_MedalLine.png",
+      "spriteRect": [
+        919.3,
+        243.3,
+        116,
+        2
+      ],
+      "spritePpu": 0,
+      "checkError": 28.1
+    },
+    {
+      "id": "RoundTitle",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "ROUND 1 OF 5",
+      "font": "SansSemiBold",
+      "tracked": true,
+      "rect": [
+        706,
+        284,
+        262,
+        25
+      ],
+      "inkBox": [
+        714.19,
+        285.06,
+        958.81,
+        304.78
+      ],
+      "capTop": 285,
+      "baseline": 304,
+      "color": "#5F432B"
+    },
+    {
+      "id": "TableBody",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 10.5,
+      "rect": [
+        385.9,
+        322.8,
+        900,
+        311.3
+      ],
+      "sliceScale": 2,
+      "use": "UI/Common/UI_Panel_Card.png",
+      "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
+      "shadowSpread": 12,
+      "shadowDrop": 2,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Card.png",
+      "spriteRect": [
+        385.9,
+        322.8,
+        900,
+        311.3
+      ],
+      "spritePpu": 0,
+      "checkError": 2.98
+    },
+    {
+      "id": "RowSeparator1",
+      "parent": "TableBody",
+      "rect": [
+        385.8,
+        503.98,
+        900.7,
+        1.5
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#DDCDBC",
+        "out": "Deco_RowSeparator"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_RowSeparator.png",
+      "spriteRect": [
+        385.8,
+        503.98,
+        900.7,
+        1.5
+      ],
+      "spritePpu": 200,
+      "checkError": 4.38
+    },
+    {
+      "id": "RowSeparator0",
+      "parent": "TableBody",
+      "rect": [
+        385.8,
+        439.36,
+        900.7,
+        1.5
+      ],
+      "use": "Deco_RowSeparator",
+      "hidden": true,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_RowSeparator.png",
+      "spriteRect": [
+        385.8,
+        439.36,
+        900.7,
+        1.5
+      ],
+      "spritePpu": 0,
+      "checkError": 13.41
+    },
+    {
+      "id": "RowSeparator2",
+      "parent": "TableBody",
+      "rect": [
+        385.8,
+        568.6,
+        900.7,
+        1.5
+      ],
+      "use": "Deco_RowSeparator",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_RowSeparator.png",
+      "spriteRect": [
+        385.8,
+        568.6,
+        900.7,
+        1.5
+      ],
+      "spritePpu": 0,
+      "checkError": 7.17
+    },
+    {
+      "id": "HighlightBand",
+      "parent": "TableBody",
+      "rect": [
+        384.9,
+        378.1,
+        902.2,
+        61.9
+      ],
+      "make": {
+        "type": "roundrect",
+        "radius": 14,
+        "fill": "#FCEBC6",
+        "fill2": "#FCE7BF",
+        "stroke": "#E3B268",
+        "strokeWidth": 1.9,
+        "out": "UI_RowHighlight"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/RoundResults/UI_RowHighlight.png",
+      "spriteRect": [
+        384.9,
+        378.1,
+        902.2,
+        61.9
+      ],
+      "spritePpu": 200,
+      "checkError": 3.82
+    },
+    {
+      "id": "Row0",
+      "kind": "group",
+      "parent": "TableBody",
+      "rect": [
+        384.9,
+        378.35,
+        902.2,
+        61.9
+      ]
+    },
+    {
+      "id": "RowAvatar0",
+      "parent": "Row0",
+      "shape": "ellipse",
+      "rect": [
+        429,
+        386.1,
+        47,
+        46.8
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        429,
+        386.1,
+        47,
+        46.8
+      ],
+      "spritePpu": 0,
+      "checkError": 22.05
+    },
+    {
+      "id": "RowName0",
+      "kind": "label",
+      "parent": "Row0",
+      "text": "You",
+      "font": "SansBold",
+      "rect": [
+        498,
+        393,
+        100,
+        33
+      ],
+      "align": "left",
+      "inkBox": [
+        505.45,
+        399.09,
+        549.89,
+        420.58
+      ],
+      "capTop": 400,
+      "baseline": 420,
+      "color": "#1E1C15"
+    },
+    {
+      "id": "RowBid0",
+      "kind": "label",
+      "parent": "Row0",
+      "text": "4",
+      "font": "SansBold",
+      "rect": [
+        728,
+        393,
+        30,
+        33
+      ],
+      "inkBox": [
+        735.16,
+        399.24,
+        750.93,
+        420.89
+      ],
+      "capTop": 400,
+      "baseline": 416,
+      "color": "#1B1B15"
+    },
+    {
+      "id": "RowWon0",
+      "kind": "label",
+      "parent": "Row0",
+      "text": "5",
+      "font": "SansBold",
+      "rect": [
+        862,
+        393,
+        30,
+        33
+      ],
+      "inkBox": [
+        869.39,
+        399.28,
+        883.86,
+        421.19
+      ],
+      "capTop": 399,
+      "baseline": 421,
+      "color": "#1B1B14"
+    },
+    {
+      "id": "RowDelta0",
+      "kind": "label",
+      "parent": "Row0",
+      "text": "\u002B4.1",
+      "font": "SansBold",
+      "rect": [
+        994,
+        393,
+        72,
+        33
+      ],
+      "inkBox": [
+        1000.45,
+        399.26,
+        1058.92,
+        420.96
+      ],
+      "capTop": 400,
+      "baseline": 421,
+      "color": "#181711"
+    },
+    {
+      "id": "RowTotal0",
+      "kind": "label",
+      "parent": "Row0",
+      "text": "4.1",
+      "font": "SansBold",
+      "rect": [
+        1160,
+        393,
+        70,
+        33
+      ],
+      "inkBox": [
+        1178.19,
+        399.26,
+        1217.98,
+        420.95
+      ],
+      "capTop": 400,
+      "baseline": 421,
+      "color": "#181711"
+    },
+    {
+      "id": "Row1",
+      "kind": "group",
+      "parent": "TableBody",
+      "rect": [
+        384.9,
+        441.25,
+        902.2,
+        61.9
+      ]
+    },
+    {
+      "id": "RowAvatar1",
+      "parent": "Row1",
+      "shape": "ellipse",
+      "rect": [
+        429,
+        449,
+        47,
+        46.4
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        429,
+        449,
+        47,
+        46.4
+      ],
+      "spritePpu": 0,
+      "checkError": 20.77
+    },
+    {
+      "id": "RowName1",
+      "kind": "label",
+      "parent": "Row1",
+      "text": "Asha",
+      "font": "SansBold",
+      "rect": [
+        498,
+        456,
+        100,
+        33
+      ],
+      "align": "left",
+      "inkBox": [
+        505.37,
+        460.72,
+        567.88,
+        483.8
+      ],
+      "capTop": 467,
+      "baseline": 483,
+      "color": "#232322"
+    },
+    {
+      "id": "RowBid1",
+      "kind": "label",
+      "parent": "Row1",
+      "text": "3",
+      "font": "SansBold",
+      "rect": [
+        728,
+        456,
+        30,
+        33
+      ],
+      "inkBox": [
+        736.19,
+        462.13,
+        750.72,
+        484.4
+      ],
+      "capTop": 462,
+      "baseline": 484,
+      "color": "#1C1C1B"
+    },
+    {
+      "id": "RowWon1",
+      "kind": "label",
+      "parent": "Row1",
+      "text": "3",
+      "font": "SansBold",
+      "rect": [
+        862,
+        456,
+        30,
+        33
+      ],
+      "inkBox": [
+        869.41,
+        462.13,
+        883.79,
+        484.4
+      ],
+      "capTop": 462,
+      "baseline": 484,
+      "color": "#181817"
+    },
+    {
+      "id": "RowDelta1",
+      "kind": "label",
+      "parent": "Row1",
+      "text": "\u002B3.0",
+      "font": "SansBold",
+      "rect": [
+        994,
+        456,
+        72,
+        33
+      ],
+      "inkBox": [
+        1001.38,
+        462.09,
+        1059.29,
+        484.32
+      ],
+      "capTop": 462,
+      "baseline": 484,
+      "color": "#1C1D1B"
+    },
+    {
+      "id": "RowTotal1",
+      "kind": "label",
+      "parent": "Row1",
+      "text": "3.0",
+      "font": "SansBold",
+      "rect": [
+        1160,
+        456,
+        70,
+        33
+      ],
+      "inkBox": [
+        1178.24,
+        462.11,
+        1217.97,
+        484.42
+      ],
+      "capTop": 462,
+      "baseline": 484,
+      "color": "#1D1D1C"
+    },
+    {
+      "id": "Row2",
+      "kind": "group",
+      "parent": "TableBody",
+      "rect": [
+        384.9,
+        505.6,
+        902.2,
+        61.9
+      ]
+    },
+    {
+      "id": "RowAvatar2",
+      "parent": "Row2",
+      "shape": "ellipse",
+      "rect": [
+        429,
+        513.1,
+        47,
+        46.9
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        429,
+        513.1,
+        47,
+        46.9
+      ],
+      "spritePpu": 0,
+      "checkError": 20.95
+    },
+    {
+      "id": "RowName2",
+      "kind": "label",
+      "parent": "Row2",
+      "text": "Bikash",
+      "font": "SansBold",
+      "rect": [
+        498,
+        521,
+        100,
+        33
+      ],
+      "align": "left",
+      "inkBox": [
+        506.61,
+        525.08,
+        586.92,
+        547.92
+      ],
+      "capTop": 526,
+      "baseline": 548,
+      "color": "#1C1C1B"
+    },
+    {
+      "id": "RowBid2",
+      "kind": "label",
+      "parent": "Row2",
+      "text": "3",
+      "font": "SansBold",
+      "rect": [
+        728,
+        521,
+        30,
+        33
+      ],
+      "inkBox": [
+        736.16,
+        526.5,
+        750.68,
+        548.71
+      ],
+      "capTop": 527,
+      "baseline": 548,
+      "color": "#20201F"
+    },
+    {
+      "id": "RowWon2",
+      "kind": "label",
+      "parent": "Row2",
+      "text": "2",
+      "font": "SansBold",
+      "rect": [
+        862,
+        521,
+        30,
+        33
+      ],
+      "inkBox": [
+        869.44,
+        526.56,
+        883.8,
+        548.58
+      ],
+      "capTop": 527,
+      "baseline": 549,
+      "color": "#20201E"
+    },
+    {
+      "id": "RowDelta2",
+      "kind": "label",
+      "parent": "Row2",
+      "text": "\u22123.0",
+      "font": "SansBold",
+      "rect": [
+        994,
+        521,
+        72,
+        33
+      ],
+      "inkBox": [
+        1001.72,
+        526.46,
+        1056.92,
+        548.72
+      ],
+      "capTop": 527,
+      "baseline": 548,
+      "color": "#831216"
+    },
+    {
+      "id": "RowTotal2",
+      "kind": "label",
+      "parent": "Row2",
+      "text": "\u22123.0",
+      "font": "SansBold",
+      "rect": [
+        1160,
+        521,
+        70,
+        33
+      ],
+      "inkBox": [
+        1168.11,
+        526.48,
+        1222.9,
+        548.74
+      ],
+      "capTop": 527,
+      "baseline": 548,
+      "color": "#811315"
+    },
+    {
+      "id": "Row3",
+      "kind": "group",
+      "parent": "TableBody",
+      "rect": [
+        384.9,
+        569.7,
+        902.2,
+        61.9
+      ]
+    },
+    {
+      "id": "RowAvatar3",
+      "parent": "Row3",
+      "shape": "ellipse",
+      "rect": [
+        429,
+        577.1,
+        47,
+        47.1
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        429,
+        577.1,
+        47,
+        47.1
+      ],
+      "spritePpu": 0,
+      "checkError": 21.36
+    },
+    {
+      "id": "RowName3",
+      "kind": "label",
+      "parent": "Row3",
+      "text": "Suman",
+      "font": "SansBold",
+      "rect": [
+        498,
+        585,
+        100,
+        33
+      ],
+      "align": "left",
+      "inkBox": [
+        506.11,
+        590.19,
+        590.38,
+        612.34
+      ],
+      "capTop": 596,
+      "baseline": 612,
+      "color": "#21211F"
+    },
+    {
+      "id": "RowBid3",
+      "kind": "label",
+      "parent": "Row3",
+      "text": "3",
+      "font": "SansBold",
+      "rect": [
+        728,
+        585,
+        30,
+        33
+      ],
+      "inkBox": [
+        736.19,
+        590.82,
+        750.73,
+        612.89
+      ],
+      "capTop": 591,
+      "baseline": 613,
+      "color": "#1B1B19"
+    },
+    {
+      "id": "RowWon3",
+      "kind": "label",
+      "parent": "Row3",
+      "text": "3",
+      "font": "SansBold",
+      "rect": [
+        862,
+        585,
+        30,
+        33
+      ],
+      "inkBox": [
+        869.33,
+        591.03,
+        883.77,
+        612.89
+      ],
+      "capTop": 591,
+      "baseline": 613,
+      "color": "#1F1E1D"
+    },
+    {
+      "id": "RowDelta3",
+      "kind": "label",
+      "parent": "Row3",
+      "text": "\u002B3.0",
+      "font": "SansBold",
+      "rect": [
+        994,
+        585,
+        72,
+        33
+      ],
+      "inkBox": [
+        1001.36,
+        590.76,
+        1059.2,
+        612.89
+      ],
+      "capTop": 591,
+      "baseline": 612,
+      "color": "#161615"
+    },
+    {
+      "id": "RowTotal3",
+      "kind": "label",
+      "parent": "Row3",
+      "text": "3.0",
+      "font": "SansBold",
+      "rect": [
+        1160,
+        585,
+        70,
+        33
+      ],
+      "inkBox": [
+        1178.22,
+        590.83,
+        1217.96,
+        612.89
+      ],
+      "capTop": 591,
+      "baseline": 613,
+      "color": "#1D1D1B"
+    },
+    {
+      "id": "TableHeader",
+      "parent": "Panel",
+      "rect": [
+        386,
+        322.8,
+        900,
+        51.1
+      ],
+      "out": "UI_TableHeader",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/RoundResults/UI_TableHeader.png",
+      "spriteRect": [
+        386,
+        322,
+        900,
+        52
+      ],
+      "spritePpu": 87.0833,
+      "checkError": 0.28
+    },
+    {
+      "id": "CaptionPlayer",
+      "kind": "label",
+      "parent": "TableHeader",
+      "text": "Player",
+      "font": "SansBold",
+      "rect": [
+        436,
+        333,
+        86,
+        37
+      ],
+      "key": "ui.round_results.col_player",
+      "align": "left",
+      "inkBox": [
+        442.17,
+        338.77,
+        515.86,
+        365.73
+      ],
+      "capTop": 341,
+      "baseline": 360,
+      "color": "#352418"
+    },
+    {
+      "id": "CaptionBid",
+      "kind": "label",
+      "parent": "TableHeader",
+      "text": "Bid",
+      "font": "SansBold",
+      "rect": [
+        721,
+        333,
+        48,
+        32
+      ],
+      "key": "ui.round_results.col_bid",
+      "inkBox": [
+        727.11,
+        338.64,
+        762.7,
+        359.96
+      ],
+      "capTop": 340,
+      "baseline": 360,
+      "color": "#3A2819"
+    },
+    {
+      "id": "CaptionWon",
+      "kind": "label",
+      "parent": "TableHeader",
+      "text": "Won",
+      "font": "SansBold",
+      "rect": [
+        849,
+        333,
+        62,
+        32
+      ],
+      "key": "ui.round_results.col_won",
+      "inkBox": [
+        854.49,
+        339.84,
+        906.28,
+        359.94
+      ],
+      "capTop": 340,
+      "baseline": 360,
+      "color": "#392719"
+    },
+    {
+      "id": "CaptionRound",
+      "kind": "label",
+      "parent": "TableHeader",
+      "text": "Round",
+      "font": "SansBold",
+      "rect": [
+        989,
+        333,
+        86,
+        32
+      ],
+      "key": "ui.round_results.col_round",
+      "inkBox": [
+        994.65,
+        338.6,
+        1068.75,
+        359.95
+      ],
+      "capTop": 341,
+      "baseline": 360,
+      "color": "#382617"
+    },
+    {
+      "id": "CaptionTotal",
+      "kind": "label",
+      "parent": "TableHeader",
+      "text": "Total",
+      "font": "SansBold",
+      "rect": [
+        1163,
+        333,
+        70,
+        32
+      ],
+      "key": "ui.round_results.col_total",
+      "inkBox": [
+        1168.64,
+        338.69,
+        1226.83,
+        359.95
+      ],
+      "capTop": 340,
+      "baseline": 360,
+      "color": "#372415"
+    },
+    {
+      "id": "RuleLabel",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Call met: bid \u002B 0.1 per extra trick. Call missed: \u2212bid.",
+      "font": "SansMedium",
+      "rect": [
+        603,
+        643,
+        464,
+        31
+      ],
+      "key": "ui.round_results.rule",
+      "inkBox": [
+        610.24,
+        649.43,
+        1060.86,
+        669.46
+      ],
+      "capTop": 654,
+      "baseline": 665,
+      "color": "#694932"
+    },
+    {
+      "id": "NextButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 24.5,
+      "rect": [
+        563.9,
+        685.1,
+        544.3,
+        74.5
+      ],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Primary.png",
+      "shadowDrop": 6,
+      "shadowOpacity": 0.45,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "spriteRect": [
+        563.9,
+        685.1,
+        544.3,
+        74.5
+      ],
+      "spritePpu": 0,
+      "checkError": 24.13
+    },
+    {
+      "id": "NextLabel",
+      "kind": "label",
+      "parent": "NextButton",
+      "text": "Next Round",
+      "font": "SerifBold",
+      "ink": "light",
+      "style": "buttonLabel",
+      "rect": [
+        726,
+        698,
+        222,
+        50
+      ],
+      "inkBox": [
+        734.17,
+        705.54,
+        938.87,
+        736.32
+      ],
+      "capTop": 708,
+      "baseline": 736,
+      "color": "#FCFAFA"
+    },
+    {
+      "id": "NextChevron",
+      "parent": "NextButton",
+      "rect": [
+        1039.68,
+        709.16,
+        15.67,
+        26.64
+      ],
+      "use": "UI/Common/Icon_Chevron_Light.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Chevron_Light.png",
+      "spriteRect": [
+        1039.68,
+        709.16,
+        15.67,
+        26.64
+      ],
+      "spritePpu": 0,
+      "checkError": 24.78
+    },
+    {
+      "id": "ScorecardButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "pill",
+      "rect": [
+        686.6,
+        772.6,
+        298.1,
+        56
+      ],
+      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png",
+      "shadowDrop": 2,
+      "shadowOpacity": 0.4,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "spriteRect": [
+        686.6,
+        772.6,
+        298.1,
+        56
+      ],
+      "spritePpu": 0,
+      "checkError": 9.09
+    },
+    {
+      "id": "ScorecardIcon",
+      "parent": "ScorecardButton",
+      "rect": [
+        728.32,
+        780.99,
+        33.55,
+        38.34
+      ],
+      "use": "UI/Common/Icon_Scorecard.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Scorecard.png",
+      "spriteRect": [
+        728.32,
+        780.99,
+        33.55,
+        38.34
+      ],
+      "spritePpu": 0,
+      "checkError": 22.23
+    },
+    {
+      "id": "ScorecardLabel",
+      "kind": "label",
+      "parent": "ScorecardButton",
+      "text": "View Scorecard",
+      "font": "SansBold",
+      "rect": [
+        772,
+        784,
+        182,
+        36
+      ],
+      "key": "ui.round_results.view_scorecard",
+      "inkBox": [
+        779.81,
+        790.38,
+        947.39,
+        810.25
+      ],
+      "capTop": 796,
+      "baseline": 810,
+      "color": "#222220"
+    },
+    {
+      "id": "FooterLineLeft",
+      "parent": "Panel",
+      "rect": [
+        628,
+        857,
+        75,
+        2
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#957559",
+        "out": "Deco_FooterLine"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_FooterLine.png",
+      "spriteRect": [
+        628,
+        857,
+        75,
+        2
+      ],
+      "spritePpu": 200,
+      "checkError": 13.08
+    },
+    {
+      "id": "FooterHeadLeft",
+      "parent": "Panel",
+      "rect": [
+        702.4,
+        854.1,
+        8,
+        7.9
+      ],
+      "use": "Deco_Diamond",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_Diamond.png",
+      "spriteRect": [
+        702.4,
+        854.1,
+        8,
+        7.9
+      ],
+      "spritePpu": 0,
+      "checkError": 14.05
+    },
+    {
+      "id": "Footer",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Round 2 begins next",
+      "font": "SansMedium",
+      "rect": [
+        722,
+        840,
+        228,
+        36
+      ],
+      "inkBox": [
+        731.23,
+        848.4,
+        940.83,
+        872.52
+      ],
+      "capTop": 854,
+      "baseline": 867,
+      "color": "#715239"
+    },
+    {
+      "id": "FooterHeadRight",
+      "parent": "Panel",
+      "rect": [
+        960.3,
+        854.2,
+        8,
+        7.9
+      ],
+      "use": "Deco_Diamond",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_Diamond.png",
+      "spriteRect": [
+        960.3,
+        854.2,
+        8,
+        7.9
+      ],
+      "spritePpu": 0,
+      "checkError": 12.73
+    },
+    {
+      "id": "FooterLineRight",
+      "parent": "Panel",
+      "rect": [
+        968,
+        857,
+        75,
+        2
+      ],
+      "use": "Deco_FooterLine",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/RoundResults/Deco_FooterLine.png",
+      "spriteRect": [
+        968,
+        857,
+        75,
+        2
+      ],
+      "spritePpu": 0,
+      "checkError": 13.88
+    }
+  ]
+}

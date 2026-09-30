@@ -1,0 +1,88 @@
+{
+  // Screen 04 - Private lobby (GDD §11). Rects are mockup pixels on 04-private-lobby.png.
+  // Shared menu background and shared kit; only what is unique here is cut or derived from the mockup.
+  // Shared icons and the logo keep their own proportions (rects from ArtSource/Working/CreateRoom/derive/derive.sh
+  // tool fiticon|fitlogo: the sprite's glyph centred on this mockup's glyph at one scale).
+  "name": "PrivateLobby",
+  "mockup": "04-private-lobby.png",
+  "background": "shared",
+  "nodes": [
+    { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [40.6, 34.8, 87.4, 87.4],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "BackIcon", "parent": "BackButton", "rect": [59.63, 55.23, 49.96, 47.96], "use": "UI/Common/Icon_Back.png", "hole": false },
+    // The small logo sits beside the back button, so it travels with the header on wide screens.
+    { "id": "Logo", "group": "HeaderLeft", "rect": [155.43, 32.31, 303.88, 120.64], "use": "UI/Ornaments/Logo_Callbreak.png" },
+
+    { "id": "SettingsButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1544.5, 34.7, 87.6, 87.6],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "SettingsIcon", "parent": "SettingsButton", "rect": [1565.86, 57.05, 44.52, 43.70], "use": "UI/Icons/Icon_Settings.png", "hole": false },
+
+    // Title = the room name, subtitle = the lobby state: both dynamic.
+    { "id": "Title", "kind": "label", "text": "Friends’ Table", "font": "SerifBold", "rect": [610, 96, 456, 76] },
+    { "id": "Subtitle", "kind": "label", "text": "EVERYONE IS HERE", "font": "SansSemiBold", "tracked": true, "rect": [650, 178, 374, 30] },
+    { "id": "TitleDivider", "rect": [699.23, 212.39, 276.21, 18.54], "use": "UI/Common/Deco_TitleDivider.png", "hole": false },
+
+    { "id": "Panel", "shape": "roundrect", "radius": 24.5, "rect": [330.9, 240.0, 1010.9, 606.4],
+      "use": "UI/Common/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
+
+    // Room-code pill and its soft shadow: derived from the mockup (ArtSource/Working/PrivateLobby/derive), the pill
+    // with its contents filled from the columns beside them; the copy glyph is the one cut on screen 03.
+    { "id": "CodePill", "parent": "Panel", "shape": "roundrect", "radius": 21, "rect": [490.33, 282.32, 375.9, 77.2],
+      "use": "UI_Pill_RoomCode", "shadowUse": "Screens/PrivateLobby/UI_Pill_RoomCode_Shadow.png" },
+    { "id": "CodeCaption", "kind": "label", "parent": "CodePill", "text": "Room code", "font": "SansSemiBold", "align": "left", "rect": [512, 305, 134, 34], "key": "ui.private_lobby.room_code" },
+    { "id": "Code", "kind": "label", "parent": "CodePill", "text": "AB12CD", "font": "SansBold", "align": "left", "rect": [651, 303, 132, 40] },
+    // The faint hairline between the code and the copy button (a shape, not a cut).
+    { "id": "CodeSeparator", "parent": "CodePill", "rect": [789.67, 309.5, 1.66, 16.3], "hole": false, "make": { "type": "rect", "fill": "#ECE0D6", "out": "Deco_CodeSeparator" } },
+    { "id": "CopyButton", "kind": "button", "parent": "CodePill", "rect": [780, 285, 82, 72], "hole": false },
+    { "id": "CopyIcon", "parent": "CopyButton", "rect": [801.84, 302.74, 39.68, 37.99], "use": "Screens/JoinRoom/Icon_Copy.png", "hole": false },
+
+    { "id": "InviteButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [897.49, 282.31, 284.79, 76.99],
+      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png", "shadowDrop": 2, "shadowOpacity": 0.4 },
+    { "id": "InviteIcon", "parent": "InviteButton", "rect": [925.48, 302.62, 50.61, 34.98], "use": "UI/Icons/Icon_Friends.png", "hole": false },
+    { "id": "InviteLabel", "kind": "label", "parent": "InviteButton", "text": "Invite Friends", "font": "SansBold", "align": "left", "rect": [990, 302, 174, 40], "key": "ui.private_lobby.invite" },
+
+    // Four seats. Seat 0 is the host; its ready dot is seat 1's dot at the same place relative to
+    // its avatar, hidden (the mockup shows none there).
+    { "id": "SeatAvatar0", "parent": "Panel", "shape": "ellipse", "rect": [409.9, 399.1, 134.7, 134.7],
+      "use": "UI/Avatars/UI_AvatarRing.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15 },
+    { "id": "SeatPicture0", "parent": "SeatAvatar0", "shape": "ellipse", "rect": [415.8, 404.9, 122.6, 122.6], "use": "UI/Avatars/Avatar_Default.png" },
+    { "id": "SeatAvatar1", "parent": "Panel", "shape": "ellipse", "rect": [650.0, 399.1, 134.7, 134.7],
+      "use": "UI/Avatars/UI_AvatarRing.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15 },
+    { "id": "SeatPicture1", "parent": "SeatAvatar1", "shape": "ellipse", "rect": [656.0, 405.0, 122.6, 122.6], "use": "UI/Avatars/Avatar_Default.png" },
+    { "id": "SeatAvatar2", "parent": "Panel", "shape": "ellipse", "rect": [888.8, 399.1, 134.6, 134.6],
+      "use": "UI/Avatars/UI_AvatarRing.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15 },
+    { "id": "SeatPicture2", "parent": "SeatAvatar2", "shape": "ellipse", "rect": [895.1, 405.0, 122.5, 122.5], "use": "UI/Avatars/Avatar_Default.png" },
+    { "id": "SeatAvatar3", "parent": "Panel", "shape": "ellipse", "rect": [1128.4, 399.2, 134.6, 134.6],
+      "use": "UI/Avatars/UI_AvatarRing.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15 },
+    { "id": "SeatPicture3", "parent": "SeatAvatar3", "shape": "ellipse", "rect": [1134.5, 405.0, 122.5, 122.5], "use": "UI/Avatars/Avatar_Default.png" },
+
+    { "id": "SeatDot1", "parent": "Panel", "shape": "ellipse", "rect": [752.66, 499.04, 31.2, 31.2], "scale": 2, "out": "UI_ReadyDot" },
+    { "id": "SeatDot2", "parent": "Panel", "shape": "rect", "rect": [990.66, 499.03, 32, 32], "use": "UI_ReadyDot" },
+    { "id": "SeatDot3", "parent": "Panel", "shape": "rect", "rect": [1229.88, 499.02, 32, 32], "use": "UI_ReadyDot" },
+    { "id": "SeatDot0", "parent": "Panel", "shape": "rect", "rect": [511.96, 499.02, 32, 32], "use": "UI_ReadyDot", "hidden": true, "hole": false },
+
+    { "id": "SeatName0", "kind": "label", "parent": "Panel", "text": "You", "font": "SansBold", "rect": [445, 540, 65, 34] },
+    { "id": "SeatStatus0", "kind": "label", "parent": "Panel", "text": "Host", "font": "SansSemiBold", "rect": [445, 581, 62, 30] },
+    { "id": "SeatName1", "kind": "label", "parent": "Panel", "text": "Asha", "font": "SansBold", "rect": [676, 540, 80, 34] },
+    { "id": "SeatStatus1", "kind": "label", "parent": "Panel", "text": "Ready", "font": "SansSemiBold", "rect": [676, 581, 82, 34] },
+    { "id": "SeatName2", "kind": "label", "parent": "Panel", "text": "Bikash", "font": "SansBold", "rect": [905, 540, 102, 34] },
+    { "id": "SeatStatus2", "kind": "label", "parent": "Panel", "text": "Ready", "font": "SansSemiBold", "rect": [915, 581, 84, 34] },
+    { "id": "SeatName3", "kind": "label", "parent": "Panel", "text": "Suman", "font": "SansBold", "rect": [1142, 540, 106, 34] },
+    { "id": "SeatStatus3", "kind": "label", "parent": "Panel", "text": "Ready", "font": "SansSemiBold", "rect": [1155, 581, 84, 34] },
+
+    // Hairlines between the seats: drawn as shapes at their measured rectangles and colour, not cut.
+    { "id": "SeatSeparator0", "parent": "Panel", "rect": [595.7, 405, 1.3, 201], "hole": false, "make": { "type": "rect", "fill": "#DCCCBE", "out": "Deco_SeatSeparator" } },
+    { "id": "SeatSeparator1", "parent": "Panel", "rect": [836.0, 405, 1.3, 201], "hole": false, "use": "Deco_SeatSeparator" },
+    { "id": "SeatSeparator2", "parent": "Panel", "rect": [1075.9, 405, 1.3, 201], "hole": false, "use": "Deco_SeatSeparator" },
+
+    // The divider with the diamond is an ornament, so it stays a cut until the kit has one: by its difference
+    // to the panel with a floor ("diff"), because an ink matte of so pale a line picks up the panel's grain.
+    { "id": "SeatsDivider", "parent": "Panel", "shape": "diff", "lo": 0.06, "hi": 0.2, "rect": [458, 638, 756, 18], "out": "Deco_LobbyDivider" },
+    { "id": "Footer", "kind": "label", "parent": "Panel", "text": "4 / 4 players  ·  5 rounds  ·  30 sec per turn", "font": "SansSemiBold", "rect": [598, 672, 476, 34] },
+
+    { "id": "StartButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 37, "rect": [542.3, 729.4, 587.8, 95.3],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "StartIcon", "parent": "StartButton", "rect": [669.83, 749.89, 51.23, 55.55], "use": "UI/Icons/Icon_Spade_Gold.png", "hole": false },
+    { "id": "StartLabel", "kind": "label", "parent": "StartButton", "text": "Start Game", "font": "SerifSemiBold", "ink": "light", "style": "buttonLabel", "rect": [738, 750, 272, 56], "key": "ui.private_lobby.start" }
+  ]
+}

@@ -8,7 +8,8 @@ The projects here compile the very same files Unity compiles:
 | `Callbreak.Core` | `Assets/_Project/Scripts/Core/**` |
 | `Callbreak.Bots` | `Assets/_Project/Scripts/Bots/**` |
 | `Callbreak.Application` | `Assets/_Project/Scripts/Application/**`, without `Config/` and any `Unity/` folder |
-| `Callbreak.Tests` | `Assets/_Project/Tests/EditMode/{Cards,Rules,Scoring,Match,Bots,Application,Support}/**` |
+| `Callbreak.Presentation` | `Assets/_Project/Scripts/Presentation/Table/Logic/**` and the event queue (`Table/Playback/MatchEventPlayer.cs`, `IEventAnimation.cs`): the table code that needs no UnityEngine |
+| `Callbreak.Tests` | `Assets/_Project/Tests/EditMode/{Cards,Rules,Scoring,Match,Bots,Application,Presentation,Support}/**` |
 
 ```bash
 dotnet test Tools/DotnetTests/Callbreak.Tests

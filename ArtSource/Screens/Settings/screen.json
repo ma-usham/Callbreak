@@ -1,0 +1,77 @@
+{
+  // Screen 11 - Settings (GDD §11). Rects are mockup pixels on 11-settings.png.
+  // Shared kit for the background, header discs, avatar, divider, panel, buttons and common icons
+  // (their rects put each kit sprite's own ink on this mockup's); cut here (placeholders until the
+  // generated kit art arrives): the speaker, book and info icons, the toggles (one ON and one OFF
+  // look), the slider knob and the language dropdown.
+  // Thin lines and the slider's track and fill (which must stretch) are vectors in their measured colours.
+  "name": "Settings",
+  "mockup": "11-settings.png",
+  "background": "shared",
+  "nodes": [
+    { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [40.4, 34.4, 89.2, 88.2],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "BackIcon", "parent": "BackButton", "rect": [60.32, 55.47, 50.60, 47.54], "use": "UI/Common/Icon_Back.png" },
+    { "id": "AvatarRing", "kind": "button", "bind": "ProfileButton", "group": "HeaderLeft", "shape": "ellipse", "rect": [167.6, 35.0, 91.6, 93.0],
+      "use": "UI/Avatars/UI_AvatarRing.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15 },
+    { "id": "Avatar", "parent": "AvatarRing", "shape": "ellipse", "rect": [171.8, 39.0, 84.0, 85.6], "use": "UI/Avatars/Avatar_Default.png" },
+    { "id": "Greeting", "kind": "label", "group": "HeaderLeft", "text": "Namaste,", "font": "SansSemiBold", "align": "left", "rect": [276, 47, 102, 29], "key": "ui.header.greeting" },
+    { "id": "PlayerName", "kind": "label", "group": "HeaderLeft", "text": "Player", "font": "SansBold", "align": "left", "rect": [276, 75, 100, 38] },
+
+    { "id": "SettingsButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1546.7, 34.4, 87.9, 88.2],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "SettingsIcon", "parent": "SettingsButton", "rect": [1568.17, 56.78, 43.43, 43.82], "use": "UI/Icons/Icon_Settings.png" },
+
+    { "id": "Title", "kind": "label", "text": "Settings", "font": "SerifBold", "rect": [668, 62, 338, 98], "xFit": [90.9, 137.5], "lineGradient": ["#AF071C", "#5C030E"], "key": "ui.settings.title" },
+    { "id": "Subtitle", "kind": "label", "text": "MAKE YOURSELF AT HOME", "font": "SansSemiBold", "tracked": true, "rect": [590, 160, 495, 30], "key": "ui.settings.subtitle" },
+    { "id": "TitleDivider", "rect": [687.15, 196.56, 300.58, 17.36], "use": "UI/Common/Deco_TitleDivider.png" },
+
+    { "id": "Panel", "shape": "roundrect", "radius": 25, "rect": [349.1, 225.2, 974.9, 630.7],
+      "use": "UI/Common/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
+    { "id": "ColumnDivider", "parent": "Panel", "rect": [835.56, 266.0, 1.44, 316.6], "make": { "type": "rect", "fill": "#D6C4B5", "out": "Deco_ColumnDivider" } },
+    { "id": "ButtonsDivider", "parent": "Panel", "rect": [429.62, 609.36, 813.78, 1.81], "make": { "type": "rect", "fill": "#D3C0B0", "out": "Deco_ButtonsDivider" } },
+
+    { "id": "SoundIcon", "parent": "Panel", "shape": "ink", "rect": [434, 276, 62, 54], "scale": 2, "out": "Icon_Sound" },
+    { "id": "SoundHeading", "kind": "label", "parent": "Panel", "text": "Sound", "font": "SerifBold", "align": "left", "rect": [508, 272, 128, 50], "key": "ui.settings.sound" },
+    { "id": "SoundAccent", "parent": "Panel", "rect": [514.56, 328.45, 19.86, 2.18], "make": { "type": "rect", "fill": "#46240C", "out": "Deco_HeadingAccent" } },
+    { "id": "SoundRule", "parent": "Panel", "rect": [538.0, 335.36, 249.7, 1.64], "make": { "type": "rect", "fill": "#D0BEAE", "out": "Deco_HeadingRule_Sound" } },
+    { "id": "MusicLabel", "kind": "label", "parent": "Panel", "text": "Music", "font": "SansSemiBold", "align": "left", "rect": [424, 368, 82, 38], "key": "ui.settings.music" },
+    { "id": "MusicToggle", "kind": "toggle", "parent": "Panel", "shape": "pill", "rect": [707.2, 364.0, 81.7, 45.9], "scale": 2, "out": "UI_Toggle_On", "on": "UI_Toggle_On", "off": "UI_Toggle_Off" },
+    { "id": "SoundEffectsLabel", "kind": "label", "parent": "Panel", "text": "Sound effects", "font": "SansSemiBold", "align": "left", "rect": [424, 434, 170, 38], "key": "ui.settings.sound_effects" },
+    { "id": "SoundEffectsToggle", "kind": "toggle", "parent": "Panel", "shape": "pill", "rect": [707.2, 429.8, 81.7, 45.8], "use": "UI_Toggle_On", "on": "UI_Toggle_On", "off": "UI_Toggle_Off" },
+    { "id": "VolumeLabel", "kind": "label", "parent": "Panel", "text": "Volume", "font": "SansSemiBold", "align": "left", "rect": [424, 500, 100, 40], "key": "ui.settings.volume" },
+    { "id": "VolumeValue", "kind": "label", "parent": "Panel", "text": "70%", "font": "SansSemiBold", "align": "right", "rect": [730, 501, 64, 38] },
+    { "id": "VolumeSlider", "kind": "slider", "parent": "Panel", "rect": [429.3, 546.3, 361.9, 32.6], "hole": false },
+    { "id": "VolumeTrack", "parent": "VolumeSlider", "rect": [429.3, 553.5, 358.6, 18.9], "raycast": true, "make": { "type": "pill", "fill": "#D9C9BA", "out": "UI_SliderTrack" } },
+    { "id": "VolumeFill", "parent": "VolumeSlider", "rect": [429.3, 553.45, 253.35, 18.9], "slice": [10, 0, 10, 0], "make": { "type": "pill", "fill": "#890D25", "fill2": "#710314", "out": "UI_SliderFill" } },
+    { "id": "VolumeKnob", "parent": "VolumeSlider", "shape": "ellipse", "rect": [666.4, 546.3, 32.5, 32.6], "scale": 2, "raycast": true, "out": "UI_SliderKnob",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowSpread": 5, "shadowDrop": 2, "shadowOpacity": 0.28 },
+
+    { "id": "PrefsIcon", "parent": "Panel", "rect": [892.19, 276.23, 49.17, 49.50], "use": "UI/Icons/Icon_Settings.png" },
+    { "id": "PrefsHeading", "kind": "label", "parent": "Panel", "text": "Preferences", "font": "SerifBold", "align": "left", "rect": [960, 274, 226, 50], "capFit": [284.7, 314.1], "key": "ui.settings.preferences" },
+    { "id": "PrefsAccent", "parent": "Panel", "rect": [966.1, 328.45, 17.7, 2.18], "use": "Deco_HeadingAccent" },
+    { "id": "PrefsRule", "parent": "Panel", "rect": [988.0, 335.36, 255.2, 1.64], "make": { "type": "rect", "fill": "#CFBCAC", "out": "Deco_HeadingRule_Prefs" } },
+    { "id": "LanguageLabel", "kind": "label", "parent": "Panel", "text": "Language", "font": "SansSemiBold", "align": "left", "rect": [880, 368, 124, 40], "key": "ui.settings.language" },
+    { "id": "LanguageButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 10, "rect": [1066.9, 362.2, 177.7, 55.1], "scale": 2, "out": "UI_Dropdown" },
+    { "id": "LanguageValue", "kind": "label", "parent": "LanguageButton", "text": "English", "font": "SansSemiBold", "align": "left", "rect": [1082, 370, 94, 40] },
+    { "id": "VibrationLabel", "kind": "label", "parent": "Panel", "text": "Vibration", "font": "SansSemiBold", "align": "left", "rect": [880, 438, 118, 38], "key": "ui.settings.vibration" },
+    { "id": "VibrationToggle", "kind": "toggle", "parent": "Panel", "shape": "pill", "rect": [1162.9, 434.6, 81.7, 45.9], "use": "UI_Toggle_On", "on": "UI_Toggle_On", "off": "UI_Toggle_Off" },
+    { "id": "ReduceMotionLabel", "kind": "label", "parent": "Panel", "text": "Reduce motion", "font": "SansSemiBold", "align": "left", "rect": [880, 506, 184, 40], "key": "ui.settings.reduce_motion" },
+    { "id": "ReduceMotionToggle", "kind": "toggle", "parent": "Panel", "shape": "pill", "rect": [1163.7, 503.8, 80.1, 44.0], "scale": 2, "out": "UI_Toggle_Off", "on": "UI_Toggle_On", "off": "UI_Toggle_Off" },
+
+    { "id": "HowToPlayButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 31, "rect": [474.8, 634.8, 352.8, 84.8],
+      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png", "shadowDrop": 2, "shadowOpacity": 0.4 },
+    { "id": "HowToPlayIcon", "parent": "HowToPlayButton", "shape": "diff", "solid": true, "rect": [514, 648, 58, 58], "scale": 2, "out": "Icon_HowToPlay" },
+    { "id": "HowToPlayLabel", "kind": "label", "parent": "HowToPlayButton", "text": "How to Play", "font": "SansBold", "rect": [585, 656, 154, 42], "key": "ui.settings.how_to_play" },
+    { "id": "HowToPlayChevron", "parent": "HowToPlayButton", "rect": [784.03, 666.31, 12.07, 21.11], "use": "UI/Icons/Icon_Chevron.png" },
+    { "id": "AboutButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 31, "rect": [844.3, 634.8, 353.0, 84.8],
+      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png", "shadowDrop": 2, "shadowOpacity": 0.4 },
+    { "id": "AboutIcon", "parent": "AboutButton", "shape": "ink", "rect": [902, 648, 60, 60], "scale": 2, "out": "Icon_About" },
+    { "id": "AboutLabel", "kind": "label", "parent": "AboutButton", "text": "About", "font": "SansBold", "rect": [977, 658, 84, 40], "key": "ui.settings.about" },
+    { "id": "AboutChevron", "parent": "AboutButton", "rect": [1157.98, 666.89, 12.56, 20.78], "use": "UI/Icons/Icon_Chevron.png" },
+
+    { "id": "DoneButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 36, "rect": [587.1, 746.6, 498.5, 90.0],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "DoneLabel", "kind": "label", "parent": "DoneButton", "text": "Done", "font": "SerifBold", "ink": "light", "style": "buttonLabel", "rect": [782, 766, 110, 48], "key": "ui.settings.done" }
+  ]
+}

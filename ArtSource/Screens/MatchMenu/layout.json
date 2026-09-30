@@ -1,0 +1,479 @@
+{
+  "name": "MatchMenu",
+  "mockup": "13-match-menu.png",
+  "mockW": 1672,
+  "mockH": 941,
+  "background": "",
+  "backgroundRect": [
+    -279,
+    -157,
+    2230,
+    1255
+  ],
+  "backgroundPpu": 87.0833,
+  "nodes": [
+    {
+      "id": "Panel",
+      "shape": "roundrect",
+      "radius": 27.5,
+      "rect": [
+        550.0,
+        218.2,
+        567.2,
+        512.5
+      ],
+      "raycast": true,
+      "use": "UI/Common/UI_Panel_Large.png",
+      "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
+      "shadowSpread": 24,
+      "shadowDrop": 3,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
+      "spriteRect": [
+        550,
+        218.2,
+        567.2,
+        512.5
+      ],
+      "spritePpu": 0,
+      "checkError": 12.52
+    },
+    {
+      "id": "Title",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Game Menu",
+      "font": "SerifBold",
+      "rect": [
+        690,
+        242,
+        292,
+        54
+      ],
+      "key": "ui.match_menu.title",
+      "inkBox": [
+        696.55,
+        249.18,
+        975.89,
+        288.83
+      ],
+      "capTop": 260,
+      "baseline": 288,
+      "color": "#750D12",
+      "colorTop": "#900611",
+      "colorBottom": "#631113"
+    },
+    {
+      "id": "CloseButton",
+      "kind": "button",
+      "parent": "Panel",
+      "rect": [
+        1041,
+        220,
+        76,
+        76
+      ],
+      "hole": false,
+      "checkError": 17.25
+    },
+    {
+      "id": "CloseIcon",
+      "parent": "CloseButton",
+      "shape": "ink",
+      "rect": [
+        1061,
+        241,
+        37,
+        35
+      ],
+      "use": "UI/Common/Icon_Close.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Close.png",
+      "spriteRect": [
+        1061,
+        241,
+        37,
+        35
+      ],
+      "spritePpu": 0,
+      "color": "#070809",
+      "checkError": 10.16
+    },
+    {
+      "id": "ModePill",
+      "parent": "Panel",
+      "shape": "pill",
+      "rect": [
+        708.8,
+        304.3,
+        254.1,
+        36.9
+      ],
+      "make": {
+        "type": "pill",
+        "fill": "#DFC6AF",
+        "out": "UI_ModePill"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchMenu/UI_ModePill.png",
+      "spriteRect": [
+        708.8,
+        304.3,
+        254.1,
+        36.9
+      ],
+      "spritePpu": 200,
+      "checkError": 2.81
+    },
+    {
+      "id": "ModeLabel",
+      "kind": "label",
+      "parent": "ModePill",
+      "text": "Offline match \u00B7 Paused",
+      "font": "SansMedium",
+      "rect": [
+        726,
+        310,
+        220,
+        26
+      ],
+      "inkBox": [
+        731.21,
+        314.42,
+        939.85,
+        330.92
+      ],
+      "capTop": 316,
+      "baseline": 331,
+      "color": "#2E1A13"
+    },
+    {
+      "id": "ResumeButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 14,
+      "rect": [
+        612.1,
+        363.1,
+        447.9,
+        68.8
+      ],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Primary.png",
+      "shadowDrop": 6,
+      "shadowOpacity": 0.45,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "spriteRect": [
+        612.1,
+        363.1,
+        447.9,
+        68.8
+      ],
+      "spritePpu": 0,
+      "checkError": 29.36
+    },
+    {
+      "id": "ResumeLabel",
+      "kind": "label",
+      "parent": "ResumeButton",
+      "text": "Resume Game",
+      "font": "SerifBold",
+      "ink": "light",
+      "style": "buttonLabel",
+      "rect": [
+        722,
+        378,
+        230,
+        40
+      ],
+      "key": "ui.match_menu.resume",
+      "inkBox": [
+        727.59,
+        384.46,
+        945.54,
+        410.4
+      ],
+      "capTop": 392,
+      "baseline": 410,
+      "color": "#FDFBFB"
+    },
+    {
+      "id": "ScorecardButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 17.5,
+      "rect": [
+        614.3,
+        450.2,
+        442.8,
+        70.6
+      ],
+      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png",
+      "shadowDrop": 2,
+      "shadowOpacity": 0.4,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "spriteRect": [
+        614.3,
+        450.2,
+        442.8,
+        70.6
+      ],
+      "spritePpu": 0,
+      "checkError": 16.1
+    },
+    {
+      "id": "ScorecardIcon",
+      "parent": "ScorecardButton",
+      "shape": "ink",
+      "rect": [
+        716,
+        461,
+        44,
+        48
+      ],
+      "use": "UI/Common/Icon_Scorecard.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Scorecard.png",
+      "spriteRect": [
+        716,
+        461,
+        44,
+        48
+      ],
+      "spritePpu": 0,
+      "color": "#1C130F",
+      "checkError": 50.48
+    },
+    {
+      "id": "ScorecardLabel",
+      "kind": "label",
+      "parent": "ScorecardButton",
+      "text": "Scorecard",
+      "font": "SansMedium",
+      "rect": [
+        774,
+        470,
+        140,
+        34
+      ],
+      "key": "ui.match_menu.scorecard",
+      "inkBox": [
+        779.59,
+        475.12,
+        907.9,
+        497.53
+      ],
+      "capTop": 481,
+      "baseline": 497,
+      "color": "#391913"
+    },
+    {
+      "id": "SoundRow",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 14,
+      "rect": [
+        614.0,
+        539.8,
+        444.1,
+        62.3
+      ],
+      "use": "UI/Common/UI_Panel_Card.png",
+      "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
+      "shadowSpread": 12,
+      "shadowDrop": 2,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Card.png",
+      "spriteRect": [
+        614,
+        539.8,
+        444.1,
+        62.3
+      ],
+      "spritePpu": 0,
+      "checkError": 10.32
+    },
+    {
+      "id": "SoundIcon",
+      "parent": "SoundRow",
+      "shape": "ink",
+      "rect": [
+        636,
+        552,
+        46,
+        40
+      ],
+      "use": "Screens/Settings/Icon_Sound.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Settings/Icon_Sound.png",
+      "spriteRect": [
+        636,
+        552,
+        46,
+        40
+      ],
+      "spritePpu": 0,
+      "color": "#0E0E0F",
+      "checkError": 39.78
+    },
+    {
+      "id": "SoundLabel",
+      "kind": "label",
+      "parent": "SoundRow",
+      "text": "Sound",
+      "font": "SansMedium",
+      "align": "left",
+      "rect": [
+        700,
+        557,
+        80,
+        28
+      ],
+      "key": "ui.match_menu.sound",
+      "inkBox": [
+        704.56,
+        561.37,
+        773.65,
+        580.87
+      ],
+      "capTop": 567,
+      "baseline": 580,
+      "color": "#351E1A"
+    },
+    {
+      "id": "SoundToggle",
+      "kind": "toggle",
+      "parent": "SoundRow",
+      "shape": "pill",
+      "rect": [
+        967.2,
+        550.2,
+        73.9,
+        41.8
+      ],
+      "use": "Screens/Settings/UI_Toggle_On.png",
+      "on": "Screens/Settings/UI_Toggle_On",
+      "off": "Screens/Settings/UI_Toggle_Off",
+      "sprite": "Assets/_Project/Art/Screens/Settings/UI_Toggle_On.png",
+      "spriteRect": [
+        967.2,
+        550.2,
+        73.9,
+        41.8
+      ],
+      "spritePpu": 0,
+      "checkError": 32.19
+    },
+    {
+      "id": "Divider",
+      "parent": "Panel",
+      "rect": [
+        626,
+        618.6,
+        429,
+        1.8
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#DEC8B6",
+        "out": "Deco_MenuDivider"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchMenu/Deco_MenuDivider.png",
+      "spriteRect": [
+        626,
+        618.6,
+        429,
+        1.8
+      ],
+      "spritePpu": 200,
+      "checkError": 6.18
+    },
+    {
+      "id": "LeaveButton",
+      "kind": "button",
+      "parent": "Panel",
+      "rect": [
+        700,
+        624,
+        272,
+        64
+      ],
+      "hole": false,
+      "checkError": 1.99
+    },
+    {
+      "id": "LeaveIcon",
+      "parent": "LeaveButton",
+      "shape": "ink",
+      "rect": [
+        733,
+        635,
+        41,
+        41
+      ],
+      "scale": 2,
+      "out": "Icon_Leave",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchMenu/Icon_Leave.png",
+      "spriteRect": [
+        733,
+        635,
+        41,
+        41
+      ],
+      "spritePpu": 174.1667,
+      "color": "#A9020D",
+      "checkError": 6.91
+    },
+    {
+      "id": "LeaveLabel",
+      "kind": "label",
+      "parent": "LeaveButton",
+      "text": "Leave Match",
+      "font": "SansSemiBold",
+      "rect": [
+        790,
+        642,
+        150,
+        28
+      ],
+      "key": "ui.match_menu.leave",
+      "inkBox": [
+        794.23,
+        646.32,
+        934.78,
+        665.89
+      ],
+      "capTop": 651,
+      "baseline": 665,
+      "color": "#960F14"
+    },
+    {
+      "id": "PausedNote",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Your match is paused.",
+      "font": "SansRegular",
+      "rect": [
+        738,
+        691,
+        196,
+        26
+      ],
+      "key": "ui.match_menu.paused_note",
+      "inkBox": [
+        743.68,
+        695.5,
+        927.32,
+        713.84
+      ],
+      "capTop": 700,
+      "baseline": 710,
+      "color": "#693C20"
+    }
+  ]
+}

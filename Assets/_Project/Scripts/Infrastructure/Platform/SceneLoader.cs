@@ -29,9 +29,10 @@ namespace Callbreak.Infrastructure.Platform
 
         public async Task LoadAsync(GameScene scene, CancellationToken ct)
         {
-            if (_loading)
+            // A load asked for while another is still finishing waits its turn.
+            while (_loading)
             {
-                throw new InvalidOperationException("A scene is already loading.");
+                await Awaitable.NextFrameAsync(ct);
             }
 
             _loading = true;

@@ -33,6 +33,9 @@ namespace Callbreak.Application.Flow
 
         AppState State { get; }
 
+        /// <summary>The state before the current one: Boot when the Menu scene opens for the first time.</summary>
+        AppState PreviousState { get; }
+
         /// <summary>The request the Table scene is starting (or last started).</summary>
         MatchLaunchRequest CurrentLaunch { get; }
 

@@ -61,7 +61,7 @@ namespace ArtTool
             public string Id, Kind, ParentId, Shape, Out, Use, Ink;
             public double X, Y, W, H, Radius, ShadowPad, Grow;
             public int Scale = 1, Pad = 3;
-            public bool Hole = true, Solid;
+            public bool Hole = true, Solid, Grain = true;
             public float Lo = 0.03f, Hi = 0.09f;
             public JsonObject Make;
             public List<double[]> Erase = new List<double[]>();
@@ -164,6 +164,7 @@ namespace ArtTool
                 n.Pad = (int)Num(o, "pad", n.IsLabel ? 3 : 2);
                 n.Hole = o["hole"] == null || (bool)o["hole"];
                 n.Solid = o["solid"] != null && (bool)o["solid"];
+                n.Grain = o["grain"] == null || (bool)o["grain"];
                 n.Lo = (float)Num(o, "lo", 0.03);
                 n.Hi = (float)Num(o, "hi", 0.09);
                 if (o["erase"] is JsonArray ea)
@@ -191,6 +192,36 @@ namespace ArtTool
         private static double Num(JsonObject o, string key, double fallback) => o[key] is JsonValue v ? (double)v : fallback;
 
         private static double[] Arr(JsonObject o, string key) => o[key] is JsonArray a ? a.Select(v => (double)v).ToArray() : null;
+
+        /// <summary>
+        /// Optional "clip" on a matte (ink/diff) node: keeps only the part of its alpha inside a
+        /// shape, or with "outside": true only the part outside it - e.g. a selection outline
+        /// without the card content it surrounds, or a ring without the icon it encloses. One
+        /// { "shape", "rect", "radius", "outside", "feather" } object or an array of them;
+        /// "feather" (px, default 1) softens the clip edge.
+        /// </summary>
+        private static void ApplyClip(Node n)
+        {
+            JsonNode clip = n.Raw["clip"];
+            if (clip == null || n.Alpha == null) return;
+            IEnumerable<JsonNode> shapes = clip is JsonArray many ? many : new[] { clip };
+            foreach (JsonNode c in shapes)
+            {
+                JsonObject o = c.AsObject();
+                double[] r = Arr(o, "rect") ?? new[] { n.X, n.Y, n.W, n.H };
+                var s = new Shape(Str(o, "shape") ?? "rect", r[0], r[1], r[2], r[3], Num(o, "radius", 0));
+                bool outside = o["outside"] is JsonValue v && (bool)v;
+                double feather = Math.Max(1, Num(o, "feather", 1));
+                for (int y = 0; y < n.Region.H; y++)
+                {
+                    for (int x = 0; x < n.Region.W; x++)
+                    {
+                        float k = s.Coverage(n.Region.X + x + 0.5, n.Region.Y + y + 0.5, feather);
+                        n.Alpha[y * n.Region.W + x] *= outside ? 1f - k : k;
+                    }
+                }
+            }
+        }
 
         // ------------------------------------------------------------------ phase A: footprints
 
@@ -220,6 +251,7 @@ namespace ArtTool
                     for (int i = 0; i < n.Alpha.Length; i++) n.Alpha[i] *= inside[i];
                 }
 
+                ApplyClip(n);
                 var hard = new float[n.Alpha.Length];
                 for (int i = 0; i < hard.Length; i++) hard[i] = n.Alpha[i] > 0.08f ? 1f : 0f;
                 n.Footprint = Inpaint.Dilate(hard, n.Region.W, n.Region.H, n.Pad);
@@ -548,7 +580,9 @@ namespace ArtTool
             {
                 var valid = new float[alpha.Length];
                 for (int i = 0; i < valid.Length; i++) valid[i] = alpha[i] >= 0.99f && childHole[i] < 0.001f ? 1f : 0f;
-                Inpaint.Fill(own, childHole, valid, grain: true, relax: 300, seed: n.Id.GetHashCode());
+                // "grain": false fills smoothly - for pills and discs whose text changes at runtime,
+                // where grain borrowed from beside the erased glyphs would show next to shorter text.
+                Inpaint.Fill(own, childHole, valid, grain: n.Grain, relax: 300, seed: n.Id.GetHashCode());
             }
 
             // Colour at the edges without the background's contribution.

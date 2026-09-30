@@ -356,7 +356,10 @@ namespace Callbreak.Editor.Screens
         /// </summary>
         private static void AttachView(ScreenBuildContext ctx)
         {
-            Type viewType = FindType($"Callbreak.Presentation.Screens.{ctx.Layout.name}View");
+            // Screens first; the in-match table and its overlays live in their own folders (GDD §20).
+            Type viewType = FindType($"Callbreak.Presentation.Screens.{ctx.Layout.name}View")
+                ?? FindType($"Callbreak.Presentation.Table.{ctx.Layout.name}View")
+                ?? FindType($"Callbreak.Presentation.Overlays.{ctx.Layout.name}View");
             if (viewType == null)
             {
                 ctx.Warnings.Add($"no view type Callbreak.Presentation.Screens.{ctx.Layout.name}View; prefab has no view");

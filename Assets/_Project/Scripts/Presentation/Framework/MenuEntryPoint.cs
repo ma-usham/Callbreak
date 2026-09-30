@@ -11,7 +11,7 @@ namespace Callbreak.Presentation.Framework
     /// Starts the Menu scene (GDD §21): opens the screen <see cref="IAppFlow.PendingMenuEntry"/>
     /// asks for (Play Again returns to the lobby or the search, GDD §11 screen 10), starts the menu
     /// theme, keeps the router's Reduce motion in step with Settings, and routes Android back
-    /// (Escape in the Input System) to the top screen.
+    /// (Escape in the Input System) to an open dialog first, then to the top screen.
     /// </summary>
     public sealed class MenuEntryPoint : IStartable, ITickable, IDisposable
     {
@@ -19,13 +19,15 @@ namespace Callbreak.Presentation.Framework
         private readonly IAppFlow _flow;
         private readonly ISettingsService _settings;
         private readonly IAudioService _audio;
+        private readonly IDialogs _dialogs;
 
-        public MenuEntryPoint(ScreenRouter router, IAppFlow flow, ISettingsService settings, IAudioService audio)
+        public MenuEntryPoint(ScreenRouter router, IAppFlow flow, ISettingsService settings, IAudioService audio, IDialogs dialogs)
         {
             _router = router;
             _flow = flow;
             _settings = settings;
             _audio = audio;
+            _dialogs = dialogs;
         }
 
         public void Start()
@@ -39,7 +41,7 @@ namespace Callbreak.Presentation.Framework
         public void Tick()
         {
             Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
+            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame && !_dialogs.HandleBack())
             {
                 _router.Back();
             }

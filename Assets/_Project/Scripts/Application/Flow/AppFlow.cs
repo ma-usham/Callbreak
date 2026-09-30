@@ -25,6 +25,8 @@ namespace Callbreak.Application.Flow
 
         public AppState State { get; private set; } = AppState.Boot;
 
+        public AppState PreviousState { get; private set; } = AppState.Boot;
+
         public MatchLaunchRequest CurrentLaunch { get; private set; }
 
         public MenuEntry PendingMenuEntry { get; private set; } = MenuEntry.MainMenu;
@@ -50,6 +52,7 @@ namespace Callbreak.Application.Flow
                 return;
             }
 
+            PreviousState = State;
             State = state;
             StateChanged?.Invoke(state);
         }

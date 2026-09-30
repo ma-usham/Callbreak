@@ -163,6 +163,8 @@ namespace Callbreak.Application.Sessions
                 return;
             }
 
+            // A new match replaces whatever was left unfinished (GDD §11 screen 06).
+            _store.Clear();
             _engine.Start();
             Flush();
         }

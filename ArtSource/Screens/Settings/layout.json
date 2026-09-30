@@ -1,0 +1,1196 @@
+{
+  "name": "Settings",
+  "mockup": "11-settings.png",
+  "mockW": 1672,
+  "mockH": 941,
+  "background": "Assets/_Project/Art/Backgrounds/BG_Menu_Wide.png",
+  "backgroundRect": [
+    -279,
+    -157,
+    2230,
+    1255
+  ],
+  "backgroundPpu": 0,
+  "nodes": [
+    {
+      "id": "BackButton",
+      "kind": "button",
+      "group": "HeaderLeft",
+      "shape": "ellipse",
+      "rect": [
+        40.4,
+        34.4,
+        89.2,
+        88.2
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        40.4,
+        34.4,
+        89.2,
+        88.2
+      ],
+      "spritePpu": 0,
+      "checkError": 5.02
+    },
+    {
+      "id": "BackIcon",
+      "parent": "BackButton",
+      "rect": [
+        60.32,
+        55.47,
+        50.60,
+        47.54
+      ],
+      "use": "UI/Common/Icon_Back.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Back.png",
+      "spriteRect": [
+        60.32,
+        55.47,
+        50.6,
+        47.54
+      ],
+      "spritePpu": 0,
+      "checkError": 7.34
+    },
+    {
+      "id": "AvatarRing",
+      "kind": "button",
+      "bind": "ProfileButton",
+      "group": "HeaderLeft",
+      "shape": "ellipse",
+      "rect": [
+        167.6,
+        35.0,
+        91.6,
+        93.0
+      ],
+      "use": "UI/Avatars/UI_AvatarRing.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 5,
+      "shadowOpacity": 0.15,
+      "sprite": "Assets/_Project/Art/UI/Avatars/UI_AvatarRing.png",
+      "spriteRect": [
+        167.6,
+        35,
+        91.6,
+        93
+      ],
+      "spritePpu": 0,
+      "checkError": 8.87
+    },
+    {
+      "id": "Avatar",
+      "parent": "AvatarRing",
+      "shape": "ellipse",
+      "rect": [
+        171.8,
+        39.0,
+        84.0,
+        85.6
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        171.8,
+        39,
+        84,
+        85.6
+      ],
+      "spritePpu": 0,
+      "checkError": 10.1
+    },
+    {
+      "id": "Greeting",
+      "kind": "label",
+      "group": "HeaderLeft",
+      "text": "Namaste,",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        276,
+        47,
+        102,
+        29
+      ],
+      "key": "ui.header.greeting",
+      "inkBox": [
+        281.32,
+        52.75,
+        372.83,
+        71.56
+      ],
+      "capTop": 57,
+      "baseline": 69,
+      "color": "#8C6444"
+    },
+    {
+      "id": "PlayerName",
+      "kind": "label",
+      "group": "HeaderLeft",
+      "text": "Player",
+      "font": "SansBold",
+      "align": "left",
+      "rect": [
+        276,
+        75,
+        100,
+        38
+      ],
+      "inkBox": [
+        281.36,
+        79.13,
+        369.97,
+        109.31
+      ],
+      "capTop": 80,
+      "baseline": 103,
+      "color": "#202427"
+    },
+    {
+      "id": "SettingsButton",
+      "kind": "button",
+      "group": "HeaderRight",
+      "shape": "ellipse",
+      "rect": [
+        1546.7,
+        34.4,
+        87.9,
+        88.2
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        1546.7,
+        34.4,
+        87.9,
+        88.2
+      ],
+      "spritePpu": 0,
+      "checkError": 8.21
+    },
+    {
+      "id": "SettingsIcon",
+      "parent": "SettingsButton",
+      "rect": [
+        1568.17,
+        56.78,
+        43.43,
+        43.82
+      ],
+      "use": "UI/Icons/Icon_Settings.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Settings.png",
+      "spriteRect": [
+        1568.17,
+        56.78,
+        43.43,
+        43.82
+      ],
+      "spritePpu": 0,
+      "checkError": 20.18
+    },
+    {
+      "id": "Title",
+      "kind": "label",
+      "text": "Settings",
+      "font": "SerifBold",
+      "rect": [
+        668,
+        62,
+        338,
+        98
+      ],
+      "xFit": [
+        90.9,
+        137.5
+      ],
+      "lineGradient": [
+        "#AF071C",
+        "#5C030E"
+      ],
+      "key": "ui.settings.title",
+      "inkBox": [
+        679.07,
+        67.74,
+        994.66,
+        155.68
+      ],
+      "capTop": 90,
+      "baseline": 138,
+      "color": "#7B0614",
+      "colorTop": "#930516",
+      "colorBottom": "#610811"
+    },
+    {
+      "id": "Subtitle",
+      "kind": "label",
+      "text": "MAKE YOURSELF AT HOME",
+      "font": "SansSemiBold",
+      "tracked": true,
+      "rect": [
+        590,
+        160,
+        495,
+        30
+      ],
+      "key": "ui.settings.subtitle",
+      "inkBox": [
+        598.71,
+        165.2,
+        1073.91,
+        183.44
+      ],
+      "capTop": 165,
+      "baseline": 183,
+      "color": "#79593F"
+    },
+    {
+      "id": "TitleDivider",
+      "rect": [
+        687.15,
+        196.56,
+        300.58,
+        17.36
+      ],
+      "use": "UI/Common/Deco_TitleDivider.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Deco_TitleDivider.png",
+      "spriteRect": [
+        687.15,
+        196.56,
+        300.58,
+        17.36
+      ],
+      "spritePpu": 0,
+      "checkError": 7.66
+    },
+    {
+      "id": "Panel",
+      "shape": "roundrect",
+      "radius": 25,
+      "rect": [
+        349.1,
+        225.2,
+        974.9,
+        630.7
+      ],
+      "use": "UI/Common/UI_Panel_Large.png",
+      "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
+      "shadowSpread": 24,
+      "shadowDrop": 3,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
+      "spriteRect": [
+        349.1,
+        225.2,
+        974.9,
+        630.7
+      ],
+      "spritePpu": 0,
+      "checkError": 4.99
+    },
+    {
+      "id": "ColumnDivider",
+      "parent": "Panel",
+      "rect": [
+        835.56,
+        266.0,
+        1.44,
+        316.6
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#D6C4B5",
+        "out": "Deco_ColumnDivider"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Settings/Deco_ColumnDivider.png",
+      "spriteRect": [
+        835.56,
+        266,
+        1.44,
+        316.6
+      ],
+      "spritePpu": 200,
+      "checkError": 4.56
+    },
+    {
+      "id": "ButtonsDivider",
+      "parent": "Panel",
+      "rect": [
+        429.62,
+        609.36,
+        813.78,
+        1.81
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#D3C0B0",
+        "out": "Deco_ButtonsDivider"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Settings/Deco_ButtonsDivider.png",
+      "spriteRect": [
+        429.62,
+        609.36,
+        813.78,
+        1.81
+      ],
+      "spritePpu": 200,
+      "checkError": 7.08
+    },
+    {
+      "id": "SoundIcon",
+      "parent": "Panel",
+      "shape": "ink",
+      "rect": [
+        434,
+        276,
+        62,
+        54
+      ],
+      "scale": 2,
+      "out": "Icon_Sound",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Settings/Icon_Sound.png",
+      "spriteRect": [
+        434,
+        276,
+        62,
+        54
+      ],
+      "spritePpu": 174.1667,
+      "color": "#111617",
+      "checkError": 5.02
+    },
+    {
+      "id": "SoundHeading",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Sound",
+      "font": "SerifBold",
+      "align": "left",
+      "rect": [
+        508,
+        272,
+        128,
+        50
+      ],
+      "key": "ui.settings.sound",
+      "inkBox": [
+        515.11,
+        280.08,
+        630.4,
+        313.39
+      ],
+      "capTop": 291,
+      "baseline": 313,
+      "color": "#1B1F21"
+    },
+    {
+      "id": "SoundAccent",
+      "parent": "Panel",
+      "rect": [
+        514.56,
+        328.45,
+        19.86,
+        2.18
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#46240C",
+        "out": "Deco_HeadingAccent"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Settings/Deco_HeadingAccent.png",
+      "spriteRect": [
+        514.56,
+        328.45,
+        19.86,
+        2.18
+      ],
+      "spritePpu": 200,
+      "checkError": 44.41
+    },
+    {
+      "id": "SoundRule",
+      "parent": "Panel",
+      "rect": [
+        538.0,
+        335.36,
+        249.7,
+        1.64
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#D0BEAE",
+        "out": "Deco_HeadingRule_Sound"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Settings/Deco_HeadingRule_Sound.png",
+      "spriteRect": [
+        538,
+        335.36,
+        249.7,
+        1.64
+      ],
+      "spritePpu": 200,
+      "checkError": 5.49
+    },
+    {
+      "id": "MusicLabel",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Music",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        424,
+        368,
+        82,
+        38
+      ],
+      "key": "ui.settings.music",
+      "inkBox": [
+        431.06,
+        376.36,
+        497.69,
+        397.63
+      ],
+      "capTop": 378,
+      "baseline": 397,
+      "color": "#272929"
+    },
+    {
+      "id": "MusicToggle",
+      "kind": "toggle",
+      "parent": "Panel",
+      "shape": "pill",
+      "rect": [
+        707.2,
+        364.0,
+        81.7,
+        45.9
+      ],
+      "scale": 2,
+      "out": "UI_Toggle_On",
+      "on": "UI_Toggle_On",
+      "off": "UI_Toggle_Off",
+      "sprite": "Assets/_Project/Art/Screens/Settings/UI_Toggle_On.png",
+      "spriteRect": [
+        707,
+        364,
+        82,
+        46
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 0.58
+    },
+    {
+      "id": "SoundEffectsLabel",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Sound effects",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        424,
+        434,
+        170,
+        38
+      ],
+      "key": "ui.settings.sound_effects",
+      "inkBox": [
+        430.09,
+        442.04,
+        586.48,
+        463.26
+      ],
+      "capTop": 448,
+      "baseline": 463,
+      "color": "#252828"
+    },
+    {
+      "id": "SoundEffectsToggle",
+      "kind": "toggle",
+      "parent": "Panel",
+      "shape": "pill",
+      "rect": [
+        707.2,
+        429.8,
+        81.7,
+        45.8
+      ],
+      "use": "UI_Toggle_On",
+      "on": "UI_Toggle_On",
+      "off": "UI_Toggle_Off",
+      "sprite": "Assets/_Project/Art/Screens/Settings/UI_Toggle_On.png",
+      "spriteRect": [
+        707.2,
+        429.8,
+        81.7,
+        45.8
+      ],
+      "spritePpu": 0,
+      "checkError": 6.31
+    },
+    {
+      "id": "VolumeLabel",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Volume",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        424,
+        500,
+        100,
+        40
+      ],
+      "key": "ui.settings.volume",
+      "inkBox": [
+        429.45,
+        509.19,
+        516.62,
+        530.55
+      ],
+      "capTop": 515,
+      "baseline": 530,
+      "color": "#1F2223"
+    },
+    {
+      "id": "VolumeValue",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "70%",
+      "font": "SansSemiBold",
+      "align": "right",
+      "rect": [
+        730,
+        501,
+        64,
+        38
+      ],
+      "inkBox": [
+        737.12,
+        509.58,
+        786.88,
+        529.82
+      ],
+      "capTop": 510,
+      "baseline": 529,
+      "color": "#7A563C"
+    },
+    {
+      "id": "VolumeSlider",
+      "kind": "slider",
+      "parent": "Panel",
+      "rect": [
+        429.3,
+        546.3,
+        361.9,
+        32.6
+      ],
+      "hole": false,
+      "checkError": 6.88
+    },
+    {
+      "id": "VolumeTrack",
+      "parent": "VolumeSlider",
+      "rect": [
+        429.3,
+        553.5,
+        358.6,
+        18.9
+      ],
+      "raycast": true,
+      "make": {
+        "type": "pill",
+        "fill": "#D9C9BA",
+        "out": "UI_SliderTrack"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Settings/UI_SliderTrack.png",
+      "spriteRect": [
+        429.3,
+        553.5,
+        358.6,
+        18.9
+      ],
+      "spritePpu": 200,
+      "checkError": 9.29
+    },
+    {
+      "id": "VolumeFill",
+      "parent": "VolumeSlider",
+      "rect": [
+        429.3,
+        553.45,
+        253.35,
+        18.9
+      ],
+      "slice": [
+        10,
+        0,
+        10,
+        0
+      ],
+      "make": {
+        "type": "pill",
+        "fill": "#890D25",
+        "fill2": "#710314",
+        "out": "UI_SliderFill"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Settings/UI_SliderFill.png",
+      "spriteRect": [
+        429.3,
+        553.45,
+        253.35,
+        18.9
+      ],
+      "spritePpu": 200,
+      "checkError": 11.86
+    },
+    {
+      "id": "VolumeKnob",
+      "parent": "VolumeSlider",
+      "shape": "ellipse",
+      "rect": [
+        666.4,
+        546.3,
+        32.5,
+        32.6
+      ],
+      "scale": 2,
+      "raycast": true,
+      "out": "UI_SliderKnob",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowSpread": 5,
+      "shadowDrop": 2,
+      "shadowOpacity": 0.28,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Settings/UI_SliderKnob.png",
+      "spriteRect": [
+        666,
+        546,
+        33,
+        33
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 5.82
+    },
+    {
+      "id": "PrefsIcon",
+      "parent": "Panel",
+      "rect": [
+        892.19,
+        276.23,
+        49.17,
+        49.50
+      ],
+      "use": "UI/Icons/Icon_Settings.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Settings.png",
+      "spriteRect": [
+        892.19,
+        276.23,
+        49.17,
+        49.5
+      ],
+      "spritePpu": 0,
+      "checkError": 21
+    },
+    {
+      "id": "PrefsHeading",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Preferences",
+      "font": "SerifBold",
+      "align": "left",
+      "rect": [
+        960,
+        274,
+        226,
+        50
+      ],
+      "capFit": [
+        284.7,
+        314.1
+      ],
+      "key": "ui.settings.preferences",
+      "inkBox": [
+        966.09,
+        281.69,
+        1180.3,
+        314.84
+      ],
+      "capTop": 292,
+      "baseline": 314,
+      "color": "#1B1F21"
+    },
+    {
+      "id": "PrefsAccent",
+      "parent": "Panel",
+      "rect": [
+        966.1,
+        328.45,
+        17.7,
+        2.18
+      ],
+      "use": "Deco_HeadingAccent",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Settings/Deco_HeadingAccent.png",
+      "spriteRect": [
+        966.1,
+        328.45,
+        17.7,
+        2.18
+      ],
+      "spritePpu": 0,
+      "checkError": 44.12
+    },
+    {
+      "id": "PrefsRule",
+      "parent": "Panel",
+      "rect": [
+        988.0,
+        335.36,
+        255.2,
+        1.64
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#CFBCAC",
+        "out": "Deco_HeadingRule_Prefs"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Settings/Deco_HeadingRule_Prefs.png",
+      "spriteRect": [
+        988,
+        335.36,
+        255.2,
+        1.64
+      ],
+      "spritePpu": 200,
+      "checkError": 5.61
+    },
+    {
+      "id": "LanguageLabel",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Language",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        880,
+        368,
+        124,
+        40
+      ],
+      "key": "ui.settings.language",
+      "inkBox": [
+        887.5,
+        377.35,
+        996.19,
+        402.94
+      ],
+      "capTop": 383,
+      "baseline": 398,
+      "color": "#272929"
+    },
+    {
+      "id": "LanguageButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 10,
+      "rect": [
+        1066.9,
+        362.2,
+        177.7,
+        55.1
+      ],
+      "scale": 2,
+      "out": "UI_Dropdown",
+      "sprite": "Assets/_Project/Art/Screens/Settings/UI_Dropdown.png",
+      "spriteRect": [
+        1066,
+        362,
+        179,
+        56
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 0.31
+    },
+    {
+      "id": "LanguageValue",
+      "kind": "label",
+      "parent": "LanguageButton",
+      "text": "English",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        1082,
+        370,
+        94,
+        40
+      ],
+      "inkBox": [
+        1088.05,
+        379.07,
+        1166.91,
+        404.92
+      ],
+      "capTop": 380,
+      "baseline": 400,
+      "color": "#262B2F"
+    },
+    {
+      "id": "VibrationLabel",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Vibration",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        880,
+        438,
+        118,
+        38
+      ],
+      "key": "ui.settings.vibration",
+      "inkBox": [
+        886.23,
+        446.14,
+        989.92,
+        467.36
+      ],
+      "capTop": 452,
+      "baseline": 467,
+      "color": "#222425"
+    },
+    {
+      "id": "VibrationToggle",
+      "kind": "toggle",
+      "parent": "Panel",
+      "shape": "pill",
+      "rect": [
+        1162.9,
+        434.6,
+        81.7,
+        45.9
+      ],
+      "use": "UI_Toggle_On",
+      "on": "UI_Toggle_On",
+      "off": "UI_Toggle_Off",
+      "sprite": "Assets/_Project/Art/Screens/Settings/UI_Toggle_On.png",
+      "spriteRect": [
+        1162.9,
+        434.6,
+        81.7,
+        45.9
+      ],
+      "spritePpu": 0,
+      "checkError": 8.55
+    },
+    {
+      "id": "ReduceMotionLabel",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Reduce motion",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        880,
+        506,
+        184,
+        40
+      ],
+      "key": "ui.settings.reduce_motion",
+      "inkBox": [
+        888.06,
+        514.31,
+        1056.74,
+        535.55
+      ],
+      "capTop": 520,
+      "baseline": 535,
+      "color": "#212425"
+    },
+    {
+      "id": "ReduceMotionToggle",
+      "kind": "toggle",
+      "parent": "Panel",
+      "shape": "pill",
+      "rect": [
+        1163.7,
+        503.8,
+        80.1,
+        44.0
+      ],
+      "scale": 2,
+      "out": "UI_Toggle_Off",
+      "on": "UI_Toggle_On",
+      "off": "UI_Toggle_Off",
+      "sprite": "Assets/_Project/Art/Screens/Settings/UI_Toggle_Off.png",
+      "spriteRect": [
+        1163,
+        503,
+        81,
+        45
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 1.24
+    },
+    {
+      "id": "HowToPlayButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 31,
+      "rect": [
+        474.8,
+        634.8,
+        352.8,
+        84.8
+      ],
+      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png",
+      "shadowDrop": 2,
+      "shadowOpacity": 0.4,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "spriteRect": [
+        474.8,
+        634.8,
+        352.8,
+        84.8
+      ],
+      "spritePpu": 0,
+      "checkError": 7.3
+    },
+    {
+      "id": "HowToPlayIcon",
+      "parent": "HowToPlayButton",
+      "shape": "diff",
+      "solid": true,
+      "rect": [
+        514,
+        648,
+        58,
+        58
+      ],
+      "scale": 2,
+      "out": "Icon_HowToPlay",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Settings/Icon_HowToPlay.png",
+      "spriteRect": [
+        515,
+        649,
+        56,
+        56
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 2.19
+    },
+    {
+      "id": "HowToPlayLabel",
+      "kind": "label",
+      "parent": "HowToPlayButton",
+      "text": "How to Play",
+      "font": "SansBold",
+      "rect": [
+        585,
+        656,
+        154,
+        42
+      ],
+      "key": "ui.settings.how_to_play",
+      "inkBox": [
+        593.01,
+        664.67,
+        731.88,
+        691.73
+      ],
+      "capTop": 666,
+      "baseline": 686,
+      "color": "#1E2122"
+    },
+    {
+      "id": "HowToPlayChevron",
+      "parent": "HowToPlayButton",
+      "rect": [
+        784.03,
+        666.31,
+        12.07,
+        21.11
+      ],
+      "use": "UI/Icons/Icon_Chevron.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Chevron.png",
+      "spriteRect": [
+        784.03,
+        666.31,
+        12.07,
+        21.11
+      ],
+      "spritePpu": 0,
+      "checkError": 14.36
+    },
+    {
+      "id": "AboutButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 31,
+      "rect": [
+        844.3,
+        634.8,
+        353.0,
+        84.8
+      ],
+      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png",
+      "shadowDrop": 2,
+      "shadowOpacity": 0.4,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "spriteRect": [
+        844.3,
+        634.8,
+        353,
+        84.8
+      ],
+      "spritePpu": 0,
+      "checkError": 8.06
+    },
+    {
+      "id": "AboutIcon",
+      "parent": "AboutButton",
+      "shape": "ink",
+      "rect": [
+        902,
+        648,
+        60,
+        60
+      ],
+      "scale": 2,
+      "out": "Icon_About",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Settings/Icon_About.png",
+      "spriteRect": [
+        902,
+        648,
+        60,
+        60
+      ],
+      "spritePpu": 174.1667,
+      "color": "#0B0E10",
+      "checkError": 8.37
+    },
+    {
+      "id": "AboutLabel",
+      "kind": "label",
+      "parent": "AboutButton",
+      "text": "About",
+      "font": "SansBold",
+      "rect": [
+        977,
+        658,
+        84,
+        40
+      ],
+      "key": "ui.settings.about",
+      "inkBox": [
+        983.73,
+        667.02,
+        1055.29,
+        688.29
+      ],
+      "capTop": 670,
+      "baseline": 688,
+      "color": "#1D2123"
+    },
+    {
+      "id": "AboutChevron",
+      "parent": "AboutButton",
+      "rect": [
+        1157.98,
+        666.89,
+        12.56,
+        20.78
+      ],
+      "use": "UI/Icons/Icon_Chevron.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Chevron.png",
+      "spriteRect": [
+        1157.98,
+        666.89,
+        12.56,
+        20.78
+      ],
+      "spritePpu": 0,
+      "checkError": 14.44
+    },
+    {
+      "id": "DoneButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 36,
+      "rect": [
+        587.1,
+        746.6,
+        498.5,
+        90.0
+      ],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Primary.png",
+      "shadowDrop": 6,
+      "shadowOpacity": 0.45,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "spriteRect": [
+        587.1,
+        746.6,
+        498.5,
+        90
+      ],
+      "spritePpu": 0,
+      "checkError": 22.13
+    },
+    {
+      "id": "DoneLabel",
+      "kind": "label",
+      "parent": "DoneButton",
+      "text": "Done",
+      "font": "SerifBold",
+      "ink": "light",
+      "style": "buttonLabel",
+      "rect": [
+        782,
+        766,
+        110,
+        48
+      ],
+      "key": "ui.settings.done",
+      "inkBox": [
+        790.6,
+        776.8,
+        883.76,
+        805.68
+      ],
+      "capTop": 777,
+      "baseline": 805,
+      "color": "#FCFAFB"
+    }
+  ]
+}

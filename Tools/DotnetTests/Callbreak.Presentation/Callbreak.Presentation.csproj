@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The engine-free part of Callbreak.Presentation: the table's logic (hand layout, prompt and status
+       copy, the played-events state, the input lock) and the event queue. Views, animations and
+       presenters need UnityEngine and are left out. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>Callbreak.Presentation</AssemblyName>
+    <RootNamespace>Callbreak.Presentation</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(UnityScripts)\Presentation\Table\Logic\**\*.cs" />
+    <Compile Include="$(UnityScripts)\Presentation\Table\Playback\IEventAnimation.cs" />
+    <Compile Include="$(UnityScripts)\Presentation\Table\Playback\MatchEventPlayer.cs" />
+    <ProjectReference Include="..\Callbreak.Core\Callbreak.Core.csproj" />
+    <ProjectReference Include="..\Callbreak.Bots\Callbreak.Bots.csproj" />
+    <ProjectReference Include="..\Callbreak.Application\Callbreak.Application.csproj" />
+  </ItemGroup>
+</Project>

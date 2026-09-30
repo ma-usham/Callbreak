@@ -1,0 +1,74 @@
+{
+  // Screen 14 - Player Profile (GDD §11). Rects are mockup pixels on 14-profile.png.
+  // Shared menu background and UI kit (large panel, stat tiles = UI_Panel_Card, primary button, back
+  // disc, avatar). Cut here (placeholders until the generated kit replaces them): the pencil icon, the
+  // four stat icons, the divider diamond, the name field. Hairlines are "make" shapes.
+  "name": "Profile",
+  "mockup": "14-profile.png",
+  "background": "shared",
+  "nodes": [
+    { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [41.6, 34.1, 88.4, 88.4],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "BackIcon", "parent": "BackButton", "rect": [60.99, 54.79, 50.84, 48.81], "use": "UI/Common/Icon_Back.png" },
+
+    { "id": "Title", "kind": "label", "text": "Your Profile", "font": "SerifBold", "rect": [615, 55, 445, 74], "key": "ui.profile.title" },
+    { "id": "TitleDivider", "rect": [717.2, 128.24, 239.37, 15.75], "use": "UI/Common/Deco_TitleDivider.png" },
+    { "id": "Subtitle", "kind": "label", "text": "EVERY HAND TELLS A STORY", "font": "SansBold", "tracked": true, "rect": [555, 145, 570, 30], "key": "ui.profile.subtitle" },
+
+    { "id": "Panel", "shape": "roundrect", "radius": 28.5, "rect": [383.7, 195.0, 904.2, 675.6],
+      "use": "UI/Common/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
+
+    // The player's avatar (the shared avatar sprites, scaled to this rect) and the edit pencil.
+    { "id": "AvatarRing", "kind": "button", "bind": "AvatarButton", "parent": "Panel", "shape": "ellipse", "rect": [477.31, 255.06, 215.6, 215.6],
+      "use": "UI/Avatars/UI_AvatarRing.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15 },
+    { "id": "Avatar", "parent": "AvatarRing", "shape": "ellipse", "rect": [481.24, 258.88, 208.3, 208.3], "use": "UI/Avatars/Avatar_Default.png" },
+    { "id": "EditAvatarButton", "kind": "button", "parent": "Panel", "shape": "ellipse", "rect": [639.7, 399.7, 67.0, 67.0],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "EditAvatarIcon", "parent": "EditAvatarButton", "shape": "diff", "lo": 0.04, "hi": 0.0401, "solid": true, "rect": [656, 416, 34, 34], "scale": 2, "out": "Icon_Pencil" },
+    { "id": "PlayerName", "kind": "label", "parent": "Panel", "text": "Player", "font": "SerifBold", "rect": [505, 475, 160, 55] },
+    { "id": "Tagline", "kind": "label", "parent": "Panel", "text": "Callbreak enthusiast", "font": "SansSemiBold", "rect": [458, 532, 255, 34], "key": "ui.profile.tagline" },
+
+    { "id": "StatsLineTop", "parent": "Panel", "rect": [752.65, 260.8, 1.35, 143.7], "make": { "type": "rect", "fill": "#E7DBCE", "fill2": "#D4C1AD", "out": "Deco_StatsLineTop" } },
+    { "id": "StatsDiamond", "parent": "Panel", "shape": "diff", "lo": 0.04, "hi": 0.0401, "solid": true, "rect": [744, 408, 18, 20], "scale": 2, "out": "Deco_DividerDiamond" },
+    { "id": "StatsLineBottom", "parent": "Panel", "rect": [752.65, 431.6, 1.35, 120.0], "make": { "type": "rect", "fill": "#D6C2AF", "fill2": "#EEE3D7", "out": "Deco_StatsLineBottom" } },
+
+    // Stat tiles: icon, caption (fixed copy), value (dynamic).
+    { "id": "Tile0", "parent": "Panel", "shape": "roundrect", "radius": 19.5, "rect": [787.1, 260.4, 235.0, 120.1],
+      "use": "UI/Common/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "Tile0Icon", "parent": "Tile0", "shape": "diff", "lo": 0.04, "hi": 0.0401, "solid": true, "rect": [800, 280, 68, 70], "scale": 2, "out": "Icon_StatGames" },
+    { "id": "Tile0Caption", "kind": "label", "parent": "Tile0", "text": "Games played", "font": "SansSemiBold", "align": "left", "rect": [875, 282, 140, 26], "key": "ui.profile.games_played" },
+    { "id": "Stat0", "kind": "label", "parent": "Tile0", "text": "48", "font": "SansBold", "align": "left", "rect": [875, 316, 70, 44] },
+
+    { "id": "Tile1", "parent": "Panel", "shape": "roundrect", "radius": 17, "rect": [1040.7, 260.9, 220.2, 119.5],
+      "use": "UI/Common/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "Tile1Icon", "parent": "Tile1", "shape": "diff", "lo": 0.04, "hi": 0.0401, "solid": true, "rect": [1060, 282, 66, 68], "scale": 2, "out": "Icon_StatWins" },
+    { "id": "Tile1Caption", "kind": "label", "parent": "Tile1", "text": "Wins", "font": "SansSemiBold", "align": "left", "rect": [1135, 282, 60, 26], "key": "ui.profile.wins" },
+    { "id": "Stat1", "kind": "label", "parent": "Tile1", "text": "19", "font": "SansBold", "align": "left", "rect": [1135, 316, 60, 44] },
+
+    { "id": "Tile2", "parent": "Panel", "shape": "roundrect", "radius": 17.5, "rect": [787.1, 400.8, 235.0, 120.3],
+      "use": "UI/Common/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "Tile2Icon", "parent": "Tile2", "shape": "diff", "lo": 0.04, "hi": 0.0401, "solid": true, "rect": [805, 425, 62, 66], "scale": 2, "out": "Icon_StatWinRate" },
+    { "id": "Tile2Caption", "kind": "label", "parent": "Tile2", "text": "Win rate", "font": "SansSemiBold", "align": "left", "rect": [875, 423, 95, 26], "key": "ui.profile.win_rate" },
+    { "id": "Stat2", "kind": "label", "parent": "Tile2", "text": "40%", "font": "SansBold", "align": "left", "rect": [875, 456, 95, 46] },
+
+    { "id": "Tile3", "parent": "Panel", "shape": "roundrect", "radius": 17, "rect": [1040.8, 401.1, 219.4, 119.9],
+      "use": "UI/Common/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "Tile3Icon", "parent": "Tile3", "shape": "diff", "lo": 0.04, "hi": 0.0401, "solid": true, "rect": [1058, 423, 70, 68], "scale": 2, "out": "Icon_StatBestScore" },
+    { "id": "Tile3Caption", "kind": "label", "parent": "Tile3", "text": "Best score", "font": "SansSemiBold", "align": "left", "rect": [1135, 423, 110, 26], "key": "ui.profile.best_score" },
+    { "id": "Stat3", "kind": "label", "parent": "Tile3", "text": "26.4", "font": "SansBold", "align": "left", "rect": [1135, 456, 95, 46] },
+
+    { "id": "NameLineLeft", "parent": "Panel", "rect": [451.8, 594.0, 365.6, 1.4], "make": { "type": "rect", "fill": "#CAB099", "out": "Deco_NameLineLeft" } },
+    { "id": "NameDiamond", "parent": "Panel", "rect": [826.4, 584.6, 19.2, 19.4], "use": "Deco_DividerDiamond" },
+    { "id": "NameLineRight", "parent": "Panel", "rect": [853.7, 594.0, 366.0, 1.4], "make": { "type": "rect", "fill": "#CAB099", "out": "Deco_NameLineRight" } },
+
+    { "id": "DisplayNameCaption", "kind": "label", "parent": "Panel", "text": "Display name", "font": "SansSemiBold", "align": "left", "rect": [510, 615, 150, 30], "key": "ui.profile.display_name" },
+    // The name field art; the customizer builds a TMP_InputField over it with FieldText as its text.
+    { "id": "NameField", "kind": "input", "parent": "Panel", "shape": "roundrect", "radius": 12, "rect": [508.2, 647.2, 655.4, 60.3], "scale": 2, "out": "UI_NameField" },
+    { "id": "FieldText", "kind": "label", "parent": "NameField", "text": "Player", "font": "SansBold", "align": "left", "rect": [525, 660, 90, 34] },
+
+    { "id": "SaveButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 27.5, "rect": [508.1, 733.4, 655.8, 78.9],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "SaveLabel", "kind": "label", "parent": "SaveButton", "text": "Save Changes", "font": "SerifSemiBold", "ink": "light", "style": "buttonLabel", "rect": [725, 752, 220, 42], "key": "ui.profile.save" },
+    { "id": "NameMessage", "kind": "label", "parent": "Panel", "text": "Your name is visible at the table.", "font": "SansMedium", "rect": [680, 822, 315, 30], "key": "ui.profile.name_note" }
+  ]
+}

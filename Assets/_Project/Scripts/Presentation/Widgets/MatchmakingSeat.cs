@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 
@@ -6,8 +7,9 @@ namespace Callbreak.Presentation.Widgets
     /// <summary>
     /// One seat circle of the matchmaking screen (GDD §11 screen 05). It has both looks: filled (the
     /// avatar disc on its ivory ring) and searching (the dashed circle with a faint silhouette), and
-    /// shows one of them. The name and status colours follow the look ("Ready" green, "Searching"
-    /// muted), with the colours measured on the mockup.
+    /// shows one of them. The name and status follow the look: the mockup sets a filled seat's name
+    /// heavier and its status in green ("Ready"), a searching seat's name lighter and its status in a
+    /// muted brown ("Searching"). Each look's text style is taken from a mockup label that shows it.
     /// </summary>
     public sealed class MatchmakingSeat : MonoBehaviour
     {
@@ -15,10 +17,10 @@ namespace Callbreak.Presentation.Widgets
         [SerializeField] private GameObject _searchingLook;
         [SerializeField] private TMP_Text _name;
         [SerializeField] private TMP_Text _status;
-        [SerializeField] private Color _filledNameColor = Color.black;
-        [SerializeField] private Color _filledStatusColor = Color.black;
-        [SerializeField] private Color _searchingNameColor = Color.black;
-        [SerializeField] private Color _searchingStatusColor = Color.black;
+        [SerializeField] private TextStyle _filledName;
+        [SerializeField] private TextStyle _filledStatus;
+        [SerializeField] private TextStyle _searchingName;
+        [SerializeField] private TextStyle _searchingStatus;
 
         public void Show(bool filled, string playerName, string status)
         {
@@ -32,6 +34,8 @@ namespace Callbreak.Presentation.Widgets
                 _searchingLook.SetActive(!filled);
             }
 
+            (filled ? _filledName : _searchingName).ApplyTo(_name);
+            (filled ? _filledStatus : _searchingStatus).ApplyTo(_status);
             if (_name.text != playerName)
             {
                 _name.text = playerName;
@@ -41,9 +45,43 @@ namespace Callbreak.Presentation.Widgets
             {
                 _status.text = status;
             }
+        }
 
-            _name.color = filled ? _filledNameColor : _searchingNameColor;
-            _status.color = filled ? _filledStatusColor : _searchingStatusColor;
+        /// <summary>How one label looks in one state: typeface, size, width and colour.</summary>
+        [Serializable]
+        public struct TextStyle
+        {
+            public TMP_FontAsset Font;
+            public Material Material;
+            public float Size;
+            public float HorizontalScale;
+            public Color Color;
+
+            public void ApplyTo(TMP_Text label)
+            {
+                if (Font != null && label.font != Font)
+                {
+                    label.font = Font;
+                }
+
+                if (Material != null && label.fontSharedMaterial != Material)
+                {
+                    label.fontSharedMaterial = Material;
+                }
+
+                if (Size > 0f)
+                {
+                    label.fontSize = Size;
+                    label.fontSizeMax = Size;   // a name that shrinks to fit starts from this size
+                }
+
+                if (HorizontalScale > 0f)
+                {
+                    label.characterHorizontalScale = HorizontalScale;
+                }
+
+                label.color = Color;
+            }
         }
     }
 }

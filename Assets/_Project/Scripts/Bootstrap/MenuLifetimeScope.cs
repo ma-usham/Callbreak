@@ -27,10 +27,21 @@ namespace Callbreak.Bootstrap
             }
 
             builder.Register<ScreenRouter>(Lifetime.Scoped);
-            builder.RegisterEntryPoint<MenuEntryPoint>();
+            builder.Register<MatchLauncher>(Lifetime.Scoped);
 
             RegisterPresenter<MainMenuView, MainMenuPresenter>(builder);
             RegisterPresenter<PlayWithFriendsView, PlayWithFriendsPresenter>(builder);
+            RegisterPresenter<CreateRoomView, CreateRoomPresenter>(builder);
+            RegisterPresenter<JoinRoomView, JoinRoomPresenter>(builder);
+            RegisterPresenter<PrivateLobbyView, PrivateLobbyPresenter>(builder);
+            RegisterPresenter<MatchmakingView, MatchmakingPresenter>(builder);
+            RegisterPresenter<OfflineSetupView, OfflineSetupPresenter>(builder);
+            RegisterPresenter<SettingsView, SettingsPresenter>(builder);
+            RegisterPresenter<HowToPlayView, HowToPlayPresenter>(builder);
+            RegisterPresenter<ProfileView, ProfilePresenter>(builder);
+
+            // Last, so every presenter is already listening when the first screen opens.
+            builder.RegisterEntryPoint<MenuEntryPoint>();
         }
 
         /// <summary>Registers a screen's presenter only when the scene has that screen.</summary>

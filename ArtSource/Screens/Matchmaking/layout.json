@@ -1,0 +1,1084 @@
+{
+  "name": "Matchmaking",
+  "mockup": "05-matchmaking.png",
+  "mockW": 1672,
+  "mockH": 941,
+  "background": "Assets/_Project/Art/Backgrounds/BG_Menu_Wide.png",
+  "backgroundRect": [
+    -279,
+    -157,
+    2230,
+    1255
+  ],
+  "backgroundPpu": 0,
+  "nodes": [
+    {
+      "id": "BackButton",
+      "kind": "button",
+      "group": "HeaderLeft",
+      "shape": "ellipse",
+      "rect": [
+        40.5,
+        33.9,
+        88.0,
+        88.0
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        40.5,
+        33.9,
+        88,
+        88
+      ],
+      "spritePpu": 0,
+      "checkError": 5.58
+    },
+    {
+      "id": "BackIcon",
+      "parent": "BackButton",
+      "rect": [
+        59.44,
+        53.94,
+        51.63,
+        49.56
+      ],
+      "use": "UI/Common/Icon_Back.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Back.png",
+      "spriteRect": [
+        59.44,
+        53.94,
+        51.63,
+        49.56
+      ],
+      "spritePpu": 0,
+      "checkError": 8.1
+    },
+    {
+      "id": "AvatarRing",
+      "kind": "button",
+      "bind": "ProfileButton",
+      "group": "HeaderLeft",
+      "shape": "ellipse",
+      "rect": [
+        166.98,
+        35.58,
+        92.6,
+        92.6
+      ],
+      "use": "UI/Avatars/UI_AvatarRing.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 5,
+      "shadowOpacity": 0.15,
+      "sprite": "Assets/_Project/Art/UI/Avatars/UI_AvatarRing.png",
+      "spriteRect": [
+        166.98,
+        35.58,
+        92.6,
+        92.6
+      ],
+      "spritePpu": 0,
+      "checkError": 9.39
+    },
+    {
+      "id": "Avatar",
+      "parent": "AvatarRing",
+      "shape": "ellipse",
+      "rect": [
+        170.67,
+        39.3,
+        85.2,
+        85.2
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        170.67,
+        39.3,
+        85.2,
+        85.2
+      ],
+      "spritePpu": 0,
+      "checkError": 10.63
+    },
+    {
+      "id": "Greeting",
+      "kind": "label",
+      "group": "HeaderLeft",
+      "text": "Namaste,",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        274,
+        46,
+        106,
+        30
+      ],
+      "key": "ui.header.greeting",
+      "inkBox": [
+        281.17,
+        52.5,
+        371.84,
+        71.16
+      ],
+      "capTop": 57,
+      "baseline": 68,
+      "color": "#8C6648"
+    },
+    {
+      "id": "PlayerName",
+      "kind": "label",
+      "group": "HeaderLeft",
+      "text": "Player",
+      "font": "SansBold",
+      "align": "left",
+      "rect": [
+        274,
+        76,
+        102,
+        36
+      ],
+      "inkBox": [
+        281.19,
+        79.01,
+        370.22,
+        109.38
+      ],
+      "capTop": 80,
+      "baseline": 103,
+      "color": "#232526"
+    },
+    {
+      "id": "SettingsButton",
+      "kind": "button",
+      "group": "HeaderRight",
+      "shape": "ellipse",
+      "rect": [
+        1416.4,
+        35.5,
+        85.5,
+        85.5
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        1416.4,
+        35.5,
+        85.5,
+        85.5
+      ],
+      "spritePpu": 0,
+      "checkError": 8.69
+    },
+    {
+      "id": "SettingsIcon",
+      "parent": "SettingsButton",
+      "rect": [
+        1437.52,
+        57.1,
+        42.84,
+        42.05
+      ],
+      "use": "UI/Icons/Icon_Settings.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Settings.png",
+      "spriteRect": [
+        1437.52,
+        57.1,
+        42.84,
+        42.05
+      ],
+      "spritePpu": 0,
+      "checkError": 22.29
+    },
+    {
+      "id": "HeaderDivider",
+      "group": "HeaderRight",
+      "rect": [
+        1524.0,
+        48.3,
+        2.1,
+        61.3
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#8B6D58",
+        "out": "Deco_HeaderDivider"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Matchmaking/Deco_HeaderDivider.png",
+      "spriteRect": [
+        1524,
+        48.3,
+        2.1,
+        61.3
+      ],
+      "spritePpu": 200,
+      "checkError": 9.36
+    },
+    {
+      "id": "ShopButton",
+      "kind": "button",
+      "group": "HeaderRight",
+      "shape": "ellipse",
+      "rect": [
+        1549.3,
+        34.9,
+        86.3,
+        86.3
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        1549.3,
+        34.9,
+        86.3,
+        86.3
+      ],
+      "spritePpu": 0,
+      "checkError": 18.93
+    },
+    {
+      "id": "ShopIcon",
+      "parent": "ShopButton",
+      "rect": [
+        1570.16,
+        60.83,
+        44.13,
+        36.78
+      ],
+      "use": "UI/Icons/Icon_Shop.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Shop.png",
+      "spriteRect": [
+        1570.16,
+        60.83,
+        44.13,
+        36.78
+      ],
+      "spritePpu": 0,
+      "checkError": 68.02
+    },
+    {
+      "id": "Title",
+      "kind": "label",
+      "text": "Play Online",
+      "font": "SerifBold",
+      "rect": [
+        598,
+        48,
+        475,
+        92
+      ],
+      "key": "ui.matchmaking.title",
+      "inkBox": [
+        609,
+        57.2,
+        1061.92,
+        138.64
+      ],
+      "capTop": 61,
+      "baseline": 122,
+      "color": "#800B14",
+      "colorTop": "#8B0914",
+      "colorBottom": "#6F0F15"
+    },
+    {
+      "id": "Subtitle",
+      "kind": "label",
+      "text": "FINDING YOUR TABLE",
+      "font": "SansSemiBold",
+      "tracked": true,
+      "rect": [
+        622,
+        140,
+        430,
+        30
+      ],
+      "key": "ui.matchmaking.subtitle",
+      "inkBox": [
+        631.19,
+        144.4,
+        1040.93,
+        163.49
+      ],
+      "capTop": 145,
+      "baseline": 163,
+      "color": "#7A583E"
+    },
+    {
+      "id": "TitleDivider",
+      "rect": [
+        700.58,
+        173.56,
+        271.63,
+        19.67
+      ],
+      "use": "UI/Common/Deco_TitleDivider.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Deco_TitleDivider.png",
+      "spriteRect": [
+        700.58,
+        173.56,
+        271.63,
+        19.67
+      ],
+      "spritePpu": 0,
+      "checkError": 8.02
+    },
+    {
+      "id": "Panel",
+      "shape": "roundrect",
+      "radius": 25.5,
+      "rect": [
+        421.6,
+        206.1,
+        829.3,
+        660.9
+      ],
+      "use": "UI/Common/UI_Panel_Large.png",
+      "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
+      "shadowSpread": 24,
+      "shadowDrop": 3,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
+      "spriteRect": [
+        421.6,
+        206.1,
+        829.3,
+        660.9
+      ],
+      "spritePpu": 0,
+      "checkError": 3.72
+    },
+    {
+      "id": "SearchArc",
+      "parent": "Panel",
+      "shape": "diff",
+      "lo": 0.04,
+      "hi": 0.0401,
+      "rect": [
+        740.8,
+        220.3,
+        188,
+        164
+      ],
+      "scale": 2,
+      "out": "Deco_SearchArc",
+      "clip": [
+        {
+          "shape": "ellipse",
+          "rect": [
+            797.2,
+            258.5,
+            76,
+            90
+          ],
+          "outside": true
+        },
+        {
+          "shape": "ellipse",
+          "rect": [
+            742.8,
+            210.3,
+            184,
+            184
+          ]
+        }
+      ],
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Matchmaking/Deco_SearchArc.png",
+      "spriteRect": [
+        745,
+        224,
+        179,
+        156
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 1.27
+    },
+    {
+      "id": "SearchSpade",
+      "parent": "Panel",
+      "shape": "diff",
+      "lo": 0.04,
+      "hi": 0.0401,
+      "solid": true,
+      "rect": [
+        799,
+        262,
+        73,
+        82
+      ],
+      "scale": 2,
+      "out": "Icon_SearchSpade",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Matchmaking/Icon_SearchSpade.png",
+      "spriteRect": [
+        800,
+        263,
+        72,
+        81
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 1.19
+    },
+    {
+      "id": "StatusTitle",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Finding players...",
+      "font": "SerifBold",
+      "rect": [
+        595,
+        380,
+        485,
+        65
+      ],
+      "inkBox": [
+        602.7,
+        388.17,
+        1069.5,
+        445
+      ],
+      "capTop": 404,
+      "baseline": 435,
+      "color": "#1B1C1C"
+    },
+    {
+      "id": "StatusSubtitle",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "3 of 4 players connected",
+      "font": "SansSemiBold",
+      "rect": [
+        655,
+        450,
+        365,
+        40
+      ],
+      "inkBox": [
+        662.22,
+        457.6,
+        1011.45,
+        489.74
+      ],
+      "capTop": 465,
+      "baseline": 483,
+      "color": "#735136"
+    },
+    {
+      "id": "Seat0",
+      "kind": "group",
+      "parent": "Panel",
+      "rect": [
+        499.11,
+        506.71,
+        119.4,
+        116.0
+      ]
+    },
+    {
+      "id": "SeatSearching0",
+      "parent": "Seat0",
+      "rect": [
+        497.18,
+        505.1,
+        124,
+        121
+      ],
+      "use": "UI_SeatSearching",
+      "hidden": true,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Matchmaking/UI_SeatSearching.png",
+      "spriteRect": [
+        497.18,
+        505.1,
+        124,
+        121
+      ],
+      "spritePpu": 0,
+      "checkError": 0.81
+    },
+    {
+      "id": "SeatFilled0",
+      "parent": "Seat0",
+      "shape": "ellipse",
+      "rect": [
+        499.11,
+        506.71,
+        119.4,
+        116.0
+      ],
+      "scale": 2,
+      "out": "UI_SeatFilled",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Matchmaking/UI_SeatFilled.png",
+      "spriteRect": [
+        499,
+        506,
+        120,
+        117
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 0.67
+    },
+    {
+      "id": "SeatName0",
+      "kind": "label",
+      "parent": "Seat0",
+      "text": "You",
+      "font": "SansBold",
+      "rect": [
+        530,
+        625,
+        60,
+        32
+      ],
+      "inkBox": [
+        536.47,
+        632.42,
+        579.38,
+        651.67
+      ],
+      "capTop": 633,
+      "baseline": 651,
+      "color": "#212424"
+    },
+    {
+      "id": "SeatStatus0",
+      "kind": "label",
+      "parent": "Seat0",
+      "text": "Ready",
+      "font": "SansSemiBold",
+      "rect": [
+        522,
+        657,
+        75,
+        32
+      ],
+      "inkBox": [
+        528.81,
+        663.28,
+        588.65,
+        685.51
+      ],
+      "capTop": 665,
+      "baseline": 681,
+      "color": "#477037"
+    },
+    {
+      "id": "Seat1",
+      "kind": "group",
+      "parent": "Panel",
+      "rect": [
+        682.45,
+        506.69,
+        119.4,
+        116.0
+      ]
+    },
+    {
+      "id": "SeatSearching1",
+      "parent": "Seat1",
+      "rect": [
+        680.52,
+        505.08,
+        124,
+        121
+      ],
+      "use": "UI_SeatSearching",
+      "hidden": true,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Matchmaking/UI_SeatSearching.png",
+      "spriteRect": [
+        680.52,
+        505.08,
+        124,
+        121
+      ],
+      "spritePpu": 0,
+      "checkError": 3.98
+    },
+    {
+      "id": "SeatFilled1",
+      "parent": "Seat1",
+      "rect": [
+        682.34,
+        505.98,
+        120,
+        117
+      ],
+      "use": "UI_SeatFilled",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Matchmaking/UI_SeatFilled.png",
+      "spriteRect": [
+        682.34,
+        505.98,
+        120,
+        117
+      ],
+      "spritePpu": 0,
+      "checkError": 4.1
+    },
+    {
+      "id": "SeatName1",
+      "kind": "label",
+      "parent": "Seat1",
+      "text": "Asha",
+      "font": "SansBold",
+      "rect": [
+        705,
+        625,
+        75,
+        32
+      ],
+      "inkBox": [
+        713.14,
+        631.61,
+        768.75,
+        651.57
+      ],
+      "capTop": 637,
+      "baseline": 651,
+      "color": "#252726"
+    },
+    {
+      "id": "SeatStatus1",
+      "kind": "label",
+      "parent": "Seat1",
+      "text": "Ready",
+      "font": "SansSemiBold",
+      "rect": [
+        705,
+        657,
+        75,
+        32
+      ],
+      "inkBox": [
+        711.34,
+        663.21,
+        772.67,
+        685.55
+      ],
+      "capTop": 665,
+      "baseline": 681,
+      "color": "#21631F"
+    },
+    {
+      "id": "Seat2",
+      "kind": "group",
+      "parent": "Panel",
+      "rect": [
+        866.76,
+        506.76,
+        119.4,
+        116.0
+      ]
+    },
+    {
+      "id": "SeatSearching2",
+      "parent": "Seat2",
+      "rect": [
+        864.83,
+        505.15,
+        124,
+        121
+      ],
+      "use": "UI_SeatSearching",
+      "hidden": true,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Matchmaking/UI_SeatSearching.png",
+      "spriteRect": [
+        864.83,
+        505.15,
+        124,
+        121
+      ],
+      "spritePpu": 0,
+      "checkError": 4.49
+    },
+    {
+      "id": "SeatFilled2",
+      "parent": "Seat2",
+      "rect": [
+        866.65,
+        506.05,
+        120,
+        117
+      ],
+      "use": "UI_SeatFilled",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Matchmaking/UI_SeatFilled.png",
+      "spriteRect": [
+        866.65,
+        506.05,
+        120,
+        117
+      ],
+      "spritePpu": 0,
+      "checkError": 4.66
+    },
+    {
+      "id": "SeatName2",
+      "kind": "label",
+      "parent": "Seat2",
+      "text": "Bikash",
+      "font": "SansBold",
+      "rect": [
+        880,
+        625,
+        95,
+        32
+      ],
+      "inkBox": [
+        889.16,
+        631.48,
+        962.68,
+        651.63
+      ],
+      "capTop": 633,
+      "baseline": 651,
+      "color": "#1D1E1E"
+    },
+    {
+      "id": "SeatStatus2",
+      "kind": "label",
+      "parent": "Seat2",
+      "text": "Ready",
+      "font": "SansSemiBold",
+      "rect": [
+        888,
+        657,
+        80,
+        32
+      ],
+      "inkBox": [
+        895.36,
+        663.22,
+        957.39,
+        685.56
+      ],
+      "capTop": 665,
+      "baseline": 681,
+      "color": "#226823"
+    },
+    {
+      "id": "Seat3",
+      "kind": "group",
+      "parent": "Panel",
+      "rect": [
+        1051.93,
+        506.61,
+        119.4,
+        116.0
+      ]
+    },
+    {
+      "id": "SeatSearching3",
+      "parent": "Seat3",
+      "shape": "diff",
+      "lo": 0.04,
+      "hi": 0.0401,
+      "rect": [
+        1046,
+        500,
+        132,
+        129
+      ],
+      "scale": 2,
+      "out": "UI_SeatSearching",
+      "clip": {
+        "shape": "ellipse",
+        "rect": [
+          1050.0,
+          504.6,
+          123.3,
+          120.0
+        ],
+        "feather": 3
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Matchmaking/UI_SeatSearching.png",
+      "spriteRect": [
+        1050,
+        505,
+        124,
+        121
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 40.05
+    },
+    {
+      "id": "SeatFilled3",
+      "parent": "Seat3",
+      "rect": [
+        1051.82,
+        505.9,
+        120,
+        117
+      ],
+      "use": "UI_SeatFilled",
+      "hidden": true,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Matchmaking/UI_SeatFilled.png",
+      "spriteRect": [
+        1051.82,
+        505.9,
+        120,
+        117
+      ],
+      "spritePpu": 0,
+      "checkError": 47.2
+    },
+    {
+      "id": "SeatName3",
+      "kind": "label",
+      "parent": "Seat3",
+      "text": "Suman",
+      "font": "SansSemiBold",
+      "rect": [
+        1068,
+        625,
+        90,
+        32
+      ],
+      "inkBox": [
+        1075.14,
+        632.45,
+        1149.24,
+        651.31
+      ],
+      "capTop": 637,
+      "baseline": 651,
+      "color": "#3D3A37"
+    },
+    {
+      "id": "SeatStatus3",
+      "kind": "label",
+      "parent": "Seat3",
+      "text": "Searching",
+      "font": "SansMedium",
+      "rect": [
+        1058,
+        657,
+        110,
+        32
+      ],
+      "inkBox": [
+        1065.12,
+        663.29,
+        1160.25,
+        685.38
+      ],
+      "capTop": 668,
+      "baseline": 681,
+      "color": "#937156"
+    },
+    {
+      "id": "RuleLineLeft",
+      "parent": "Panel",
+      "rect": [
+        534.7,
+        727.0,
+        115.2,
+        2.0
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#CFB9A4",
+        "fill2": "#C4A994",
+        "out": "Deco_RuleLineLeft"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Matchmaking/Deco_RuleLineLeft.png",
+      "spriteRect": [
+        534.7,
+        727,
+        115.2,
+        2
+      ],
+      "spritePpu": 200,
+      "checkError": 7.53
+    },
+    {
+      "id": "Rules",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "5 rounds \u00B7 Spades are trump",
+      "font": "SansMedium",
+      "rect": [
+        670,
+        712,
+        335,
+        30
+      ],
+      "key": "ui.matchmaking.rules",
+      "inkBox": [
+        677.45,
+        718.05,
+        995.36,
+        739.85
+      ],
+      "capTop": 723,
+      "baseline": 735,
+      "color": "#845F42"
+    },
+    {
+      "id": "RuleLineRight",
+      "parent": "Panel",
+      "rect": [
+        1023.4,
+        727.0,
+        117.1,
+        2.0
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#CFB9A4",
+        "fill2": "#C4A994",
+        "out": "Deco_RuleLineRight"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Matchmaking/Deco_RuleLineRight.png",
+      "spriteRect": [
+        1023.4,
+        727,
+        117.1,
+        2
+      ],
+      "spritePpu": 200,
+      "checkError": 7.45
+    },
+    {
+      "id": "CancelButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "pill",
+      "rect": [
+        664.3,
+        768.8,
+        343.4,
+        75.5
+      ],
+      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png",
+      "shadowDrop": 2,
+      "shadowOpacity": 0.4,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "spriteRect": [
+        664.3,
+        768.8,
+        343.4,
+        75.5
+      ],
+      "spritePpu": 0,
+      "checkError": 7.7
+    },
+    {
+      "id": "CancelLabel",
+      "kind": "label",
+      "parent": "CancelButton",
+      "text": "Cancel",
+      "font": "SansBold",
+      "rect": [
+        780,
+        785,
+        110,
+        42
+      ],
+      "key": "ui.matchmaking.cancel",
+      "inkBox": [
+        787.53,
+        794.04,
+        884.16,
+        819.33
+      ],
+      "capTop": 801,
+      "baseline": 819,
+      "color": "#1E1F1F"
+    },
+    {
+      "id": "ElapsedPill",
+      "parent": "Panel",
+      "shape": "pill",
+      "rect": [
+        1041.8,
+        780.8,
+        122.6,
+        52.6
+      ],
+      "scale": 2,
+      "out": "UI_ElapsedPill",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Matchmaking/UI_ElapsedPill.png",
+      "spriteRect": [
+        1041,
+        780,
+        124,
+        54
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 0.4
+    },
+    {
+      "id": "ElapsedClock",
+      "parent": "ElapsedPill",
+      "shape": "diff",
+      "lo": 0.04,
+      "hi": 0.0401,
+      "solid": true,
+      "rect": [
+        1051,
+        790,
+        35,
+        35
+      ],
+      "scale": 2,
+      "out": "Icon_Clock",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Matchmaking/Icon_Clock.png",
+      "spriteRect": [
+        1053,
+        793,
+        31,
+        30
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 0.38
+    },
+    {
+      "id": "Elapsed",
+      "kind": "label",
+      "parent": "ElapsedPill",
+      "text": "00:12",
+      "font": "SansSemiBold",
+      "rect": [
+        1088,
+        792,
+        62,
+        30
+      ],
+      "inkBox": [
+        1092.08,
+        799.07,
+        1144.46,
+        815.42
+      ],
+      "capTop": 799,
+      "baseline": 815,
+      "color": "#2E2823"
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  // Screen 03 - Join Room (GDD §11). Rects are mockup pixels on 03-join-room.png.
+  // Shared menu background and shared kit; only what is unique here is cut or derived from the mockup.
+  // Shared icons and the logo keep their own proportions (rects from ArtSource/Working/CreateRoom/derive/derive.sh
+  // tool fiticon|fitlogo: the sprite's glyph centred on this mockup's glyph at one scale).
+  "name": "JoinRoom",
+  "mockup": "03-join-room.png",
+  "background": "shared",
+  "nodes": [
+    { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [44.8, 41.2, 87.3, 87.3],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "BackIcon", "parent": "BackButton", "rect": [64.47, 61.64, 49.12, 47.16], "use": "UI/Common/Icon_Back.png", "hole": false },
+    { "id": "AvatarRing", "kind": "button", "bind": "ProfileButton", "group": "HeaderLeft", "shape": "ellipse", "rect": [163.9, 38.0, 95.6, 95.6],
+      "use": "UI/Avatars/UI_AvatarRing.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15 },
+    { "id": "Avatar", "parent": "AvatarRing", "shape": "ellipse", "rect": [169.1, 43.1, 85.0, 85.0], "use": "UI/Avatars/Avatar_Default.png" },
+    { "id": "Greeting", "kind": "label", "group": "HeaderLeft", "text": "Namaste,", "font": "SansSemiBold", "align": "left", "rect": [272, 51, 108, 28], "key": "ui.header.greeting" },
+    { "id": "PlayerName", "kind": "label", "group": "HeaderLeft", "text": "Player", "font": "SansBold", "align": "left", "rect": [272, 80, 102, 36] },
+
+    { "id": "SettingsButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1531.1, 42.2, 88.3, 88.3],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "SettingsIcon", "parent": "SettingsButton", "rect": [1553.59, 66.17, 43.52, 42.71], "use": "UI/Icons/Icon_Settings.png", "hole": false },
+
+    { "id": "Logo", "rect": [539.69, 42.11, 576.16, 131.63], "use": "UI/Common/Logo_Callbreak_NoFlag.png" },
+
+    { "id": "Panel", "shape": "roundrect", "radius": 24.5, "rect": [423.3, 202.6, 825.9, 672.3],
+      "use": "UI/Common/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
+    // The enter-room icon is the one screen 01 cut (the kit has no copy yet).
+    { "id": "EnterIcon", "parent": "Panel", "rect": [761.18, 222.14, 137.79, 129.18], "use": "Screens/PlayWithFriends/Icon_EnterRoom.png", "hole": false },
+    { "id": "Title", "kind": "label", "parent": "Panel", "text": "Enter room code", "font": "SerifBold", "rect": [604, 350, 468, 70], "key": "ui.join_room.title" },
+    { "id": "Helper", "kind": "label", "parent": "Panel", "text": "Ask your friend for their 6-character code.", "font": "SansMedium", "rect": [538, 424, 596, 40], "key": "ui.join_room.helper" },
+
+    // Six code boxes: one derived box sprite (UI_CodeBox, box 2 with its letter filled from the columns
+    // beside it; ArtSource/Working/JoinRoom/derive) at each box's measured place, each with its own shadow.
+    // The letters are dynamic; the customizer gives all six the size fitted on "B" and centres them.
+    { "id": "CodeInput", "kind": "group", "parent": "Panel", "rect": [465, 478, 745, 120] },
+    { "id": "CodeBox0", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [469.44, 482.5, 108.1, 109.0], "shadow": 5, "use": "UI_CodeBox" },
+    { "id": "CodeLetter0", "kind": "label", "parent": "CodeBox0", "text": "A", "font": "SansBold", "rect": [478, 492, 92, 92] },
+    { "id": "CodeBox1", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [594.39, 482.5, 108.1, 109.0], "shadow": 5, "use": "UI_CodeBox" },
+    { "id": "CodeLetter1", "kind": "label", "parent": "CodeBox1", "text": "B", "font": "SansBold", "rect": [603, 492, 92, 92] },
+    { "id": "CodeBox2", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [719.52, 482.5, 108.1, 109.0], "shadow": 5, "use": "UI_CodeBox" },
+    { "id": "CodeLetter2", "kind": "label", "parent": "CodeBox2", "text": "1", "font": "SansBold", "rect": [728, 492, 92, 92] },
+    { "id": "CodeBox3", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [844.96, 482.5, 108.1, 109.0], "shadow": 5, "use": "UI_CodeBox" },
+    { "id": "CodeLetter3", "kind": "label", "parent": "CodeBox3", "text": "2", "font": "SansBold", "rect": [853, 492, 92, 92] },
+    { "id": "CodeBox4", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [970.40, 482.5, 108.1, 109.0], "shadow": 5, "use": "UI_CodeBox" },
+    { "id": "CodeLetter4", "kind": "label", "parent": "CodeBox4", "text": "C", "font": "SansBold", "rect": [978, 492, 92, 92] },
+    { "id": "CodeBox5", "parent": "CodeInput", "shape": "roundrect", "radius": 13, "rect": [1095.37, 482.5, 108.1, 109.0], "shadow": 5, "use": "UI_CodeBox" },
+    { "id": "CodeLetter5", "kind": "label", "parent": "CodeBox5", "text": "D", "font": "SansBold", "rect": [1103, 492, 92, 92] },
+
+    { "id": "PasteButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [689.54, 612.93, 293.2, 70.31],
+      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png", "shadowDrop": 2, "shadowOpacity": 0.4 },
+    // The copy/paste glyph is cut here once; screen 04 reuses it for its copy button.
+    { "id": "PasteIcon", "parent": "PasteButton", "shape": "ink", "rect": [737, 626, 47, 45], "out": "Icon_Copy" },
+    { "id": "PasteLabel", "kind": "label", "parent": "PasteButton", "text": "Paste Code", "font": "SansSemiBold", "align": "left", "rect": [798, 632, 142, 34], "key": "ui.join_room.paste" },
+
+    { "id": "JoinButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [500.5, 697.6, 670.3, 107.9],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "JoinButtonLabel", "kind": "label", "parent": "JoinButton", "text": "Join Room", "font": "SerifSemiBold", "ink": "light", "style": "buttonLabel", "rect": [735, 726, 214, 52], "key": "ui.join_room.cta" },
+    { "id": "JoinChevron", "parent": "JoinButton", "rect": [971.48, 736.64, 20.01, 32.96], "use": "UI/Common/Icon_Chevron_Light.png", "hole": false },
+    // Busy state: the spinner ring made on screen 02, in the chevron's place; hidden by default.
+    { "id": "JoinSpinner", "parent": "JoinButton", "rect": [965.49, 737.12, 32, 32], "use": "Screens/CreateRoom/UI_SpinnerRing.png", "hidden": true, "hole": false },
+
+    // Hairlines: drawn as shapes at their measured rectangles and colour, not cut.
+    { "id": "FooterLineLeft", "parent": "Panel", "rect": [545.3, 837.45, 83.5, 1.69], "hole": false, "make": { "type": "rect", "fill": "#9F7F62", "out": "Deco_FooterLine" } },
+    { "id": "FooterLineRight", "parent": "Panel", "rect": [1043.8, 837.45, 83.55, 1.69], "hole": false, "use": "Deco_FooterLine" },
+    { "id": "Footer", "kind": "label", "parent": "Panel", "text": "Room codes are not case-sensitive.", "font": "SansMedium", "rect": [642, 822, 388, 32], "key": "ui.join_room.footer" }
+  ]
+}

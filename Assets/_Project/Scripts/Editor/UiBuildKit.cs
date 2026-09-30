@@ -170,6 +170,13 @@ namespace Callbreak.Editor
                 return null;
             }
 
+            // Card art (Art/Cards) is imported by the card sprite library builder, which keeps mip
+            // maps for the small table cards; a screen that shows a card uses it as it is.
+            if (path.StartsWith($"{ArtRoot}/Cards/", System.StringComparison.Ordinal))
+            {
+                return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            }
+
             var importer = (TextureImporter)AssetImporter.GetAtPath(path);
             if (importer == null)
             {

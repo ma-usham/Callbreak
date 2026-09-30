@@ -1,0 +1,1453 @@
+{
+  "name": "MatchResults",
+  "mockup": "10-match-results.png",
+  "mockW": 1672,
+  "mockH": 941,
+  "background": "Assets/_Project/Art/Backgrounds/BG_Menu_Wide.png",
+  "backgroundRect": [
+    -279,
+    -157,
+    2230,
+    1255
+  ],
+  "backgroundPpu": 0,
+  "nodes": [
+    {
+      "id": "HomeButton",
+      "kind": "button",
+      "group": "HeaderLeft",
+      "shape": "ellipse",
+      "rect": [
+        42.4,
+        26.4,
+        86.2,
+        85.7
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        42.4,
+        26.4,
+        86.2,
+        85.7
+      ],
+      "spritePpu": 0,
+      "checkError": 10.22
+    },
+    {
+      "id": "HomeIcon",
+      "parent": "HomeButton",
+      "rect": [
+        60.14,
+        43.37,
+        51.57,
+        48.82
+      ],
+      "use": "UI/Common/Icon_Home.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Home.png",
+      "spriteRect": [
+        60.14,
+        43.37,
+        51.57,
+        48.82
+      ],
+      "spritePpu": 0,
+      "checkError": 20.23
+    },
+    {
+      "id": "Logo",
+      "group": "HeaderLeft",
+      "rect": [
+        183.97,
+        33.98,
+        333.4,
+        75.54
+      ],
+      "use": "UI/Common/Logo_Callbreak_NoFlag.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Logo_Callbreak_NoFlag.png",
+      "spriteRect": [
+        183.97,
+        33.98,
+        333.4,
+        75.54
+      ],
+      "spritePpu": 0,
+      "checkError": 39.43
+    },
+    {
+      "id": "ScoresButton",
+      "kind": "button",
+      "group": "HeaderRight",
+      "shape": "ellipse",
+      "rect": [
+        1423.4,
+        25.4,
+        83.2,
+        82.2
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        1423.4,
+        25.4,
+        83.2,
+        82.2
+      ],
+      "spritePpu": 0,
+      "checkError": 10.84
+    },
+    {
+      "id": "ScoresIcon",
+      "parent": "ScoresButton",
+      "rect": [
+        1445.29,
+        41.32,
+        42.36,
+        48.59
+      ],
+      "use": "UI/Common/Icon_Scorecard.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Scorecard.png",
+      "spriteRect": [
+        1445.29,
+        41.32,
+        42.36,
+        48.59
+      ],
+      "spritePpu": 0,
+      "checkError": 24.55
+    },
+    {
+      "id": "ScoresCaption",
+      "kind": "label",
+      "group": "HeaderRight",
+      "text": "Scores",
+      "font": "SansSemiBold",
+      "rect": [
+        1430,
+        109.5,
+        70,
+        22
+      ],
+      "key": "ui.match_results.scores",
+      "inkBox": [
+        1436.8,
+        112.03,
+        1492.99,
+        126.45
+      ],
+      "capTop": 115,
+      "baseline": 126,
+      "color": "#46291A"
+    },
+    {
+      "id": "HeaderDivider",
+      "group": "HeaderRight",
+      "rect": [
+        1528.85,
+        40.8,
+        1.7,
+        56.4
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#4A3424",
+        "out": "Deco_HeaderDivider"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_HeaderDivider.png",
+      "spriteRect": [
+        1528.85,
+        40.8,
+        1.7,
+        56.4
+      ],
+      "spritePpu": 200,
+      "checkError": 16.32
+    },
+    {
+      "id": "SettingsButton",
+      "kind": "button",
+      "group": "HeaderRight",
+      "shape": "ellipse",
+      "rect": [
+        1552.6,
+        25.4,
+        83,
+        82.2
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        1552.6,
+        25.4,
+        83,
+        82.2
+      ],
+      "spritePpu": 0,
+      "checkError": 9.84
+    },
+    {
+      "id": "SettingsIcon",
+      "parent": "SettingsButton",
+      "rect": [
+        1573.05,
+        44.55,
+        42.74,
+        43.74
+      ],
+      "use": "UI/Icons/Icon_Settings.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Settings.png",
+      "spriteRect": [
+        1573.05,
+        44.55,
+        42.74,
+        43.74
+      ],
+      "spritePpu": 0,
+      "checkError": 22.94
+    },
+    {
+      "id": "SettingsCaption",
+      "kind": "label",
+      "group": "HeaderRight",
+      "text": "Settings",
+      "font": "SansSemiBold",
+      "rect": [
+        1553,
+        109.5,
+        82,
+        26
+      ],
+      "key": "ui.match_results.settings",
+      "inkBox": [
+        1560.41,
+        111.85,
+        1628.38,
+        129.83
+      ],
+      "capTop": 115,
+      "baseline": 126,
+      "color": "#4B2B1D"
+    },
+    {
+      "id": "Trophy",
+      "kind": "group",
+      "rect": [
+        674,
+        6,
+        328,
+        133
+      ]
+    },
+    {
+      "id": "TrophySparkle",
+      "parent": "Trophy",
+      "shape": "diff",
+      "rect": [
+        674,
+        70,
+        30,
+        34
+      ],
+      "scale": 2,
+      "out": "Deco_TrophySparkle",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_TrophySparkle.png",
+      "spriteRect": [
+        677,
+        74,
+        21,
+        24
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 0.44
+    },
+    {
+      "id": "TrophyArt",
+      "parent": "Trophy",
+      "shape": "diff",
+      "rect": [
+        704,
+        6,
+        298,
+        133
+      ],
+      "scale": 2,
+      "out": "Deco_Trophy",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_Trophy.png",
+      "spriteRect": [
+        704,
+        7,
+        293,
+        132
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 0.25
+    },
+    {
+      "id": "Headline",
+      "kind": "label",
+      "text": "You Win!",
+      "font": "SerifBold",
+      "rect": [
+        622,
+        139,
+        426,
+        84.5
+      ],
+      "capFit": [
+        143.3,
+        220
+      ],
+      "lineGradient": [
+        "#B50617",
+        "#3B0406"
+      ],
+      "inkBox": [
+        629.68,
+        139.63,
+        1039.57,
+        221.57
+      ],
+      "capTop": 144,
+      "baseline": 220,
+      "color": "#68070E",
+      "colorTop": "#890411",
+      "colorBottom": "#51080C"
+    },
+    {
+      "id": "Subtitle",
+      "kind": "label",
+      "text": "FIVE ROUNDS. ONE GREAT GAME.",
+      "font": "SansSemiBold",
+      "tracked": true,
+      "rect": [
+        558,
+        230,
+        556,
+        27
+      ],
+      "key": "ui.match_results.subtitle",
+      "inkBox": [
+        567.27,
+        235.44,
+        1105.17,
+        252.29
+      ],
+      "capTop": 236,
+      "baseline": 252,
+      "color": "#6B4E37"
+    },
+    {
+      "id": "Panel",
+      "shape": "roundrect",
+      "radius": 25.5,
+      "rect": [
+        383,
+        280.8,
+        906.7,
+        580.3
+      ],
+      "use": "UI/Common/UI_Panel_Large.png",
+      "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
+      "shadowSpread": 24,
+      "shadowDrop": 3,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
+      "spriteRect": [
+        383,
+        280.8,
+        906.7,
+        580.3
+      ],
+      "spritePpu": 0,
+      "checkError": 7.5
+    },
+    {
+      "id": "TitleDivider",
+      "rect": [
+        660.76,
+        266.89,
+        354.68,
+        19.79
+      ],
+      "use": "UI/Common/Deco_TitleDivider.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Deco_TitleDivider.png",
+      "spriteRect": [
+        660.76,
+        266.89,
+        354.68,
+        19.79
+      ],
+      "spritePpu": 0,
+      "checkError": 8.92
+    },
+    {
+      "id": "StandingsTitle",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Final Standings",
+      "font": "SerifBold",
+      "rect": [
+        648,
+        302,
+        380,
+        66
+      ],
+      "capFit": [
+        311.9,
+        350.7
+      ],
+      "lineGradient": [
+        "#B30716",
+        "#57070B"
+      ],
+      "key": "ui.match_results.standings_title",
+      "inkBox": [
+        656.1,
+        309.44,
+        1018.95,
+        362.25
+      ],
+      "capTop": 323,
+      "baseline": 351,
+      "color": "#7A0C13",
+      "colorTop": "#940711",
+      "colorBottom": "#640F13"
+    },
+    {
+      "id": "TotalCaption",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Total points",
+      "font": "SansMedium",
+      "rect": [
+        1060,
+        360,
+        128,
+        30
+      ],
+      "key": "ui.match_results.total_points",
+      "inkBox": [
+        1067.05,
+        364.84,
+        1180.57,
+        386.37
+      ],
+      "capTop": 366,
+      "baseline": 382,
+      "color": "#614630"
+    },
+    {
+      "id": "TableBody",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 13,
+      "rect": [
+        456.3,
+        393.5,
+        759.9,
+        248.5
+      ],
+      "sliceScale": 1.6,
+      "use": "UI/Common/UI_Panel_Card.png",
+      "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
+      "shadowSpread": 12,
+      "shadowDrop": 2,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Card.png",
+      "spriteRect": [
+        456.3,
+        393.5,
+        759.9,
+        248.5
+      ],
+      "spritePpu": 0,
+      "checkError": 5.24
+    },
+    {
+      "id": "RowSeparator1",
+      "parent": "TableBody",
+      "rect": [
+        457.8,
+        513.45,
+        756.9,
+        1.5
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#DBC7B6",
+        "out": "Deco_RowSeparator"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_RowSeparator.png",
+      "spriteRect": [
+        457.8,
+        513.45,
+        756.9,
+        1.5
+      ],
+      "spritePpu": 200,
+      "checkError": 6.45
+    },
+    {
+      "id": "RowSeparator0",
+      "parent": "TableBody",
+      "rect": [
+        457.8,
+        451.75,
+        756.9,
+        1.5
+      ],
+      "use": "Deco_RowSeparator",
+      "hidden": true,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_RowSeparator.png",
+      "spriteRect": [
+        457.8,
+        451.75,
+        756.9,
+        1.5
+      ],
+      "spritePpu": 0,
+      "checkError": 13.85
+    },
+    {
+      "id": "RowSeparator2",
+      "parent": "TableBody",
+      "rect": [
+        457.8,
+        575.45,
+        756.9,
+        1.5
+      ],
+      "use": "Deco_RowSeparator",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_RowSeparator.png",
+      "spriteRect": [
+        457.8,
+        575.45,
+        756.9,
+        1.5
+      ],
+      "spritePpu": 0,
+      "checkError": 6.71
+    },
+    {
+      "id": "HighlightBand",
+      "parent": "TableBody",
+      "rect": [
+        455.6,
+        393.4,
+        761.5,
+        59.5
+      ],
+      "make": {
+        "type": "roundrect",
+        "radius": 13,
+        "fill": "#FDEFD2",
+        "fill2": "#FBE8BF",
+        "stroke": "#E3B166",
+        "strokeWidth": 1.9,
+        "out": "UI_RowHighlight"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchResults/UI_RowHighlight.png",
+      "spriteRect": [
+        455.6,
+        393.4,
+        761.5,
+        59.5
+      ],
+      "spritePpu": 200,
+      "checkError": 6.22
+    },
+    {
+      "id": "Row0",
+      "kind": "group",
+      "parent": "TableBody",
+      "rect": [
+        455.6,
+        393.4,
+        761.5,
+        59.5
+      ]
+    },
+    {
+      "id": "RowRank0",
+      "kind": "label",
+      "parent": "Row0",
+      "text": "1",
+      "font": "SerifSemiBold",
+      "rect": [
+        494,
+        405,
+        36,
+        40
+      ],
+      "inkBox": [
+        505.79,
+        412.66,
+        518.57,
+        436.48
+      ],
+      "capTop": 414,
+      "baseline": 436,
+      "color": "#644727"
+    },
+    {
+      "id": "RowAvatarRing0",
+      "parent": "Row0",
+      "shape": "ellipse",
+      "rect": [
+        589.05,
+        397.95,
+        51,
+        51.2
+      ],
+      "use": "UI/Avatars/UI_AvatarRing.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/UI_AvatarRing.png",
+      "spriteRect": [
+        589.05,
+        397.95,
+        51,
+        51.2
+      ],
+      "spritePpu": 0,
+      "checkError": 18.91
+    },
+    {
+      "id": "RowAvatar0",
+      "parent": "RowAvatarRing0",
+      "shape": "ellipse",
+      "rect": [
+        590.8,
+        399.7,
+        47.5,
+        47.7
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        590.8,
+        399.7,
+        47.5,
+        47.7
+      ],
+      "spritePpu": 0,
+      "checkError": 20.04
+    },
+    {
+      "id": "RowCrown0",
+      "parent": "Row0",
+      "shape": "diff",
+      "rect": [
+        665,
+        404,
+        44,
+        38
+      ],
+      "scale": 2,
+      "out": "Icon_Crown",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchResults/Icon_Crown.png",
+      "spriteRect": [
+        668,
+        408,
+        40,
+        32
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 1.08
+    },
+    {
+      "id": "RowName0",
+      "kind": "label",
+      "parent": "Row0",
+      "text": "You",
+      "font": "SansBold",
+      "align": "left",
+      "rect": [
+        716,
+        405,
+        112,
+        40
+      ],
+      "inkBox": [
+        724.3,
+        412.66,
+        773.24,
+        435.88
+      ],
+      "capTop": 413,
+      "baseline": 436,
+      "color": "#181812"
+    },
+    {
+      "id": "RowTotal0",
+      "kind": "label",
+      "parent": "Row0",
+      "text": "21.3",
+      "font": "SerifBold",
+      "rect": [
+        1080,
+        405,
+        82,
+        40
+      ],
+      "inkBox": [
+        1091.17,
+        412.21,
+        1149.71,
+        436.59
+      ],
+      "capTop": 413,
+      "baseline": 436,
+      "color": "#191912"
+    },
+    {
+      "id": "Row1",
+      "kind": "group",
+      "parent": "TableBody",
+      "rect": [
+        455.6,
+        454.15,
+        761.5,
+        59.5
+      ]
+    },
+    {
+      "id": "RowRank1",
+      "kind": "label",
+      "parent": "Row1",
+      "text": "2",
+      "font": "SerifSemiBold",
+      "rect": [
+        494,
+        465,
+        36,
+        40
+      ],
+      "inkBox": [
+        503.7,
+        472.83,
+        519.74,
+        496.93
+      ],
+      "capTop": 473,
+      "baseline": 497,
+      "color": "#5B432C"
+    },
+    {
+      "id": "RowAvatarRing1",
+      "parent": "Row1",
+      "shape": "ellipse",
+      "rect": [
+        588.85,
+        458.65,
+        51.1,
+        51.5
+      ],
+      "use": "UI/Avatars/UI_AvatarRing.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/UI_AvatarRing.png",
+      "spriteRect": [
+        588.85,
+        458.65,
+        51.1,
+        51.5
+      ],
+      "spritePpu": 0,
+      "checkError": 18.24
+    },
+    {
+      "id": "RowAvatar1",
+      "parent": "RowAvatarRing1",
+      "shape": "ellipse",
+      "rect": [
+        590.6,
+        460.4,
+        47.6,
+        48
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        590.6,
+        460.4,
+        47.6,
+        48
+      ],
+      "spritePpu": 0,
+      "checkError": 20.26
+    },
+    {
+      "id": "RowCrown1",
+      "parent": "Row1",
+      "rect": [
+        668,
+        468.85,
+        40,
+        32
+      ],
+      "use": "Icon_Crown",
+      "hidden": true,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchResults/Icon_Crown.png",
+      "spriteRect": [
+        668,
+        468.85,
+        40,
+        32
+      ],
+      "spritePpu": 0,
+      "checkError": 31.37
+    },
+    {
+      "id": "RowName1",
+      "kind": "label",
+      "parent": "Row1",
+      "text": "Asha",
+      "font": "SansBold",
+      "align": "left",
+      "rect": [
+        716,
+        465,
+        112,
+        40
+      ],
+      "inkBox": [
+        724.69,
+        472.68,
+        790.68,
+        496.76
+      ],
+      "capTop": 479,
+      "baseline": 496,
+      "color": "#1C1C1D"
+    },
+    {
+      "id": "RowTotal1",
+      "kind": "label",
+      "parent": "Row1",
+      "text": "16.1",
+      "font": "SerifBold",
+      "rect": [
+        1080,
+        465,
+        82,
+        40
+      ],
+      "inkBox": [
+        1092.21,
+        472.77,
+        1147.17,
+        497.37
+      ],
+      "capTop": 473,
+      "baseline": 497,
+      "color": "#1E1E1E"
+    },
+    {
+      "id": "Row2",
+      "kind": "group",
+      "parent": "TableBody",
+      "rect": [
+        455.6,
+        516.25,
+        761.5,
+        59.5
+      ]
+    },
+    {
+      "id": "RowRank2",
+      "kind": "label",
+      "parent": "Row2",
+      "text": "3",
+      "font": "SerifSemiBold",
+      "rect": [
+        494,
+        527,
+        36,
+        40
+      ],
+      "inkBox": [
+        503.53,
+        534.53,
+        519.72,
+        558.88
+      ],
+      "capTop": 535,
+      "baseline": 559,
+      "color": "#5B432E"
+    },
+    {
+      "id": "RowAvatarRing2",
+      "parent": "Row2",
+      "shape": "ellipse",
+      "rect": [
+        588.95,
+        520.65,
+        51,
+        51.8
+      ],
+      "use": "UI/Avatars/UI_AvatarRing.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/UI_AvatarRing.png",
+      "spriteRect": [
+        588.95,
+        520.65,
+        51,
+        51.8
+      ],
+      "spritePpu": 0,
+      "checkError": 18.17
+    },
+    {
+      "id": "RowAvatar2",
+      "parent": "RowAvatarRing2",
+      "shape": "ellipse",
+      "rect": [
+        590.7,
+        522.4,
+        47.5,
+        48.3
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        590.7,
+        522.4,
+        47.5,
+        48.3
+      ],
+      "spritePpu": 0,
+      "checkError": 20.25
+    },
+    {
+      "id": "RowCrown2",
+      "parent": "Row2",
+      "rect": [
+        668,
+        531,
+        40,
+        32
+      ],
+      "use": "Icon_Crown",
+      "hidden": true,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchResults/Icon_Crown.png",
+      "spriteRect": [
+        668,
+        531,
+        40,
+        32
+      ],
+      "spritePpu": 0,
+      "checkError": 32.16
+    },
+    {
+      "id": "RowName2",
+      "kind": "label",
+      "parent": "Row2",
+      "text": "Suman",
+      "font": "SansBold",
+      "align": "left",
+      "rect": [
+        716,
+        527,
+        112,
+        40
+      ],
+      "inkBox": [
+        725.56,
+        534.62,
+        816.5,
+        558.44
+      ],
+      "capTop": 541,
+      "baseline": 558,
+      "color": "#1C1C1C"
+    },
+    {
+      "id": "RowTotal2",
+      "kind": "label",
+      "parent": "Row2",
+      "text": "12.0",
+      "font": "SerifBold",
+      "rect": [
+        1080,
+        527,
+        82,
+        40
+      ],
+      "inkBox": [
+        1092.05,
+        534.45,
+        1149.91,
+        558.96
+      ],
+      "capTop": 535,
+      "baseline": 559,
+      "color": "#181818"
+    },
+    {
+      "id": "Row3",
+      "kind": "group",
+      "parent": "TableBody",
+      "rect": [
+        455.6,
+        578.45,
+        761.5,
+        59.5
+      ]
+    },
+    {
+      "id": "RowRank3",
+      "kind": "label",
+      "parent": "Row3",
+      "text": "4",
+      "font": "SerifSemiBold",
+      "rect": [
+        494,
+        589,
+        36,
+        40
+      ],
+      "inkBox": [
+        502.56,
+        597.12,
+        520.43,
+        620.94
+      ],
+      "capTop": 599,
+      "baseline": 616,
+      "color": "#5C442F"
+    },
+    {
+      "id": "RowAvatarRing3",
+      "parent": "Row3",
+      "shape": "ellipse",
+      "rect": [
+        588.85,
+        582.95,
+        51.2,
+        51.8
+      ],
+      "use": "UI/Avatars/UI_AvatarRing.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/UI_AvatarRing.png",
+      "spriteRect": [
+        588.85,
+        582.95,
+        51.2,
+        51.8
+      ],
+      "spritePpu": 0,
+      "checkError": 17.89
+    },
+    {
+      "id": "RowAvatar3",
+      "parent": "RowAvatarRing3",
+      "shape": "ellipse",
+      "rect": [
+        590.6,
+        584.7,
+        47.7,
+        48.3
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        590.6,
+        584.7,
+        47.7,
+        48.3
+      ],
+      "spritePpu": 0,
+      "checkError": 20.26
+    },
+    {
+      "id": "RowCrown3",
+      "parent": "Row3",
+      "rect": [
+        668,
+        593.3,
+        40,
+        32
+      ],
+      "use": "Icon_Crown",
+      "hidden": true,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchResults/Icon_Crown.png",
+      "spriteRect": [
+        668,
+        593.3,
+        40,
+        32
+      ],
+      "spritePpu": 0,
+      "checkError": 30.95
+    },
+    {
+      "id": "RowName3",
+      "kind": "label",
+      "parent": "Row3",
+      "text": "Bikash",
+      "font": "SansBold",
+      "align": "left",
+      "rect": [
+        716,
+        589,
+        112,
+        40
+      ],
+      "inkBox": [
+        726.32,
+        596.27,
+        811.55,
+        620.37
+      ],
+      "capTop": 597,
+      "baseline": 620,
+      "color": "#1D1E1D"
+    },
+    {
+      "id": "RowTotal3",
+      "kind": "label",
+      "parent": "Row3",
+      "text": "6.1",
+      "font": "SerifBold",
+      "rect": [
+        1080,
+        589,
+        82,
+        40
+      ],
+      "inkBox": [
+        1100.51,
+        596.74,
+        1140.64,
+        621.15
+      ],
+      "capTop": 597,
+      "baseline": 621,
+      "color": "#1D1D1C"
+    },
+    {
+      "id": "FooterDivider",
+      "parent": "Panel",
+      "rect": [
+        695.57,
+        648.23,
+        285.19,
+        16.09
+      ],
+      "use": "UI/Common/Deco_TitleDivider.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Deco_TitleDivider.png",
+      "spriteRect": [
+        695.57,
+        648.23,
+        285.19,
+        16.09
+      ],
+      "spritePpu": 0,
+      "checkError": 7.57
+    },
+    {
+      "id": "FooterLineLeft",
+      "parent": "Panel",
+      "rect": [
+        650,
+        677.4,
+        68.5,
+        1.8
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#A3866D",
+        "out": "Deco_FooterLine"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_FooterLine.png",
+      "spriteRect": [
+        650,
+        677.4,
+        68.5,
+        1.8
+      ],
+      "spritePpu": 200,
+      "checkError": 20.41
+    },
+    {
+      "id": "Footer",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "5 rounds completed",
+      "font": "SansMedium",
+      "rect": [
+        726,
+        664,
+        220,
+        30
+      ],
+      "inkBox": [
+        734.28,
+        669.36,
+        938.22,
+        689.94
+      ],
+      "capTop": 674,
+      "baseline": 686,
+      "color": "#6D4F38"
+    },
+    {
+      "id": "FooterLineRight",
+      "parent": "Panel",
+      "rect": [
+        952,
+        677.4,
+        72,
+        1.8
+      ],
+      "use": "Deco_FooterLine",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_FooterLine.png",
+      "spriteRect": [
+        952,
+        677.4,
+        72,
+        1.8
+      ],
+      "spritePpu": 0,
+      "checkError": 19.74
+    },
+    {
+      "id": "PlayAgainButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 24.5,
+      "rect": [
+        424.3,
+        711.2,
+        418.6,
+        83.7
+      ],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Primary.png",
+      "shadowDrop": 6,
+      "shadowOpacity": 0.45,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "spriteRect": [
+        424.3,
+        711.2,
+        418.6,
+        83.7
+      ],
+      "spritePpu": 0,
+      "checkError": 23.74
+    },
+    {
+      "id": "PlayAgainLabel",
+      "kind": "label",
+      "parent": "PlayAgainButton",
+      "text": "Play Again",
+      "font": "SerifBold",
+      "ink": "light",
+      "style": "buttonLabel",
+      "rect": [
+        534,
+        726,
+        210,
+        56
+      ],
+      "capFit": [
+        736.1,
+        765.5
+      ],
+      "key": "ui.match_results.play_again",
+      "inkBox": [
+        544.51,
+        734.54,
+        734.44,
+        774.45
+      ],
+      "capTop": 737,
+      "baseline": 766,
+      "color": "#FDFBFB"
+    },
+    {
+      "id": "PlayAgainChevron",
+      "parent": "PlayAgainButton",
+      "rect": [
+        793.93,
+        740.65,
+        13.44,
+        24.28
+      ],
+      "use": "UI/Common/Icon_Chevron_Light.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Chevron_Light.png",
+      "spriteRect": [
+        793.93,
+        740.65,
+        13.44,
+        24.28
+      ],
+      "spritePpu": 0,
+      "checkError": 28.38
+    },
+    {
+      "id": "MainMenuButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 25,
+      "rect": [
+        865.9,
+        710.6,
+        383.4,
+        83.4
+      ],
+      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png",
+      "shadowDrop": 2,
+      "shadowOpacity": 0.4,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "spriteRect": [
+        865.9,
+        710.6,
+        383.4,
+        83.4
+      ],
+      "spritePpu": 0,
+      "checkError": 10.57
+    },
+    {
+      "id": "MainMenuLabel",
+      "kind": "label",
+      "parent": "MainMenuButton",
+      "text": "Main Menu",
+      "font": "SerifBold",
+      "rect": [
+        980,
+        730,
+        170,
+        46
+      ],
+      "key": "ui.match_results.main_menu",
+      "inkBox": [
+        991.26,
+        740.09,
+        1138.56,
+        763.9
+      ],
+      "capTop": 741,
+      "baseline": 764,
+      "color": "#1D1E1D"
+    },
+    {
+      "id": "MainMenuChevron",
+      "parent": "MainMenuButton",
+      "rect": [
+        1198.68,
+        740.49,
+        14.3,
+        24.97
+      ],
+      "use": "UI/Icons/Icon_Chevron.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Chevron.png",
+      "spriteRect": [
+        1198.68,
+        740.49,
+        14.3,
+        24.97
+      ],
+      "spritePpu": 0,
+      "checkError": 18.16
+    },
+    {
+      "id": "ScorecardButton",
+      "kind": "button",
+      "parent": "Panel",
+      "rect": [
+        716,
+        800,
+        240,
+        58
+      ],
+      "checkError": 5.33
+    },
+    {
+      "id": "ScorecardLabel",
+      "kind": "label",
+      "parent": "ScorecardButton",
+      "text": "View Scorecard",
+      "font": "SansMedium",
+      "rect": [
+        750,
+        814,
+        170,
+        25
+      ],
+      "key": "ui.match_results.view_scorecard",
+      "inkBox": [
+        757.48,
+        820.23,
+        912.65,
+        838.17
+      ],
+      "capTop": 825,
+      "baseline": 838,
+      "color": "#745339"
+    },
+    {
+      "id": "ScorecardUnderline",
+      "parent": "ScorecardButton",
+      "rect": [
+        757,
+        840.6,
+        156.4,
+        1.7
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#6F5540",
+        "out": "Deco_LinkUnderline"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/MatchResults/Deco_LinkUnderline.png",
+      "spriteRect": [
+        757,
+        840.6,
+        156.4,
+        1.7
+      ],
+      "spritePpu": 200,
+      "checkError": 5.91
+    }
+  ]
+}

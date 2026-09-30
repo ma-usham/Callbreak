@@ -1,0 +1,1240 @@
+{
+  "name": "Table",
+  "mockup": "08-gameplay.png",
+  "mockW": 1672,
+  "mockH": 941,
+  "background": "Assets/_Project/Art/Backgrounds/BG_Table.png",
+  "backgroundRect": [
+    -279,
+    -157,
+    2230,
+    1255
+  ],
+  "backgroundPpu": 87.0833,
+  "nodes": [
+    {
+      "id": "EdgeTop",
+      "rect": [
+        0,
+        0,
+        1672,
+        48
+      ],
+      "grow": 0,
+      "kind": "sprite",
+      "checkError": 11.33
+    },
+    {
+      "id": "EdgeBottom",
+      "rect": [
+        0,
+        893,
+        1672,
+        48
+      ],
+      "grow": 0,
+      "kind": "sprite",
+      "checkError": 108.64
+    },
+    {
+      "id": "EdgeLeft",
+      "rect": [
+        0,
+        0,
+        48,
+        941
+      ],
+      "grow": 0,
+      "kind": "sprite",
+      "checkError": 18.8
+    },
+    {
+      "id": "EdgeRight",
+      "rect": [
+        1624,
+        0,
+        48,
+        941
+      ],
+      "grow": 0,
+      "kind": "sprite",
+      "checkError": 16.61
+    },
+    {
+      "id": "Seat3",
+      "kind": "group",
+      "rect": [
+        96,
+        334,
+        226,
+        154
+      ]
+    },
+    {
+      "id": "SeatFan3",
+      "parent": "Seat3",
+      "rect": [
+        196,
+        334,
+        126,
+        104
+      ],
+      "kind": "sprite",
+      "checkError": 59.74
+    },
+    {
+      "id": "SeatRing3",
+      "parent": "Seat3",
+      "shape": "ellipse",
+      "rect": [
+        121.9,
+        343.0,
+        87.1,
+        87.1
+      ],
+      "use": "UI/Avatars/UI_AvatarRing.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/UI_AvatarRing.png",
+      "spriteRect": [
+        121.9,
+        343,
+        87.1,
+        87.1
+      ],
+      "spritePpu": 0,
+      "checkError": 27.78
+    },
+    {
+      "id": "SeatAvatar3",
+      "parent": "SeatRing3",
+      "shape": "ellipse",
+      "rect": [
+        129.1,
+        350.8,
+        72.9,
+        72.9
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        129.1,
+        350.8,
+        72.9,
+        72.9
+      ],
+      "spritePpu": 0,
+      "checkError": 28
+    },
+    {
+      "id": "SeatPlate3",
+      "parent": "Seat3",
+      "shape": "pill",
+      "rect": [
+        104.8,
+        415.8,
+        133.3,
+        33.0
+      ],
+      "scale": 2,
+      "slice": [
+        17,
+        0,
+        17,
+        0
+      ],
+      "grain": false,
+      "out": "UI_NamePlate",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Table/UI_NamePlate.png",
+      "spriteRect": [
+        104,
+        415,
+        135,
+        34
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 6.37
+    },
+    {
+      "id": "SeatName3",
+      "kind": "label",
+      "parent": "SeatPlate3",
+      "text": "Bikash",
+      "font": "SansSemiBold",
+      "rect": [
+        134,
+        420,
+        76,
+        25
+      ],
+      "inkBox": [
+        138.31,
+        423.53,
+        203.91,
+        441.46
+      ],
+      "capTop": 424,
+      "baseline": 441,
+      "color": "#1F1F1E"
+    },
+    {
+      "id": "SeatPill3",
+      "parent": "Seat3",
+      "shape": "pill",
+      "rect": [
+        96.5,
+        448.6,
+        150.3,
+        37.8
+      ],
+      "scale": 2,
+      "slice": [
+        19,
+        0,
+        19,
+        0
+      ],
+      "grain": false,
+      "out": "UI_StatusPill",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Table/UI_StatusPill.png",
+      "spriteRect": [
+        96,
+        448,
+        151,
+        39
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 2.41
+    },
+    {
+      "id": "SeatStatus3",
+      "kind": "label",
+      "parent": "SeatPill3",
+      "text": "Bid 3 \u2022 Won 1",
+      "font": "SansMedium",
+      "rect": [
+        111,
+        455,
+        120,
+        24
+      ],
+      "inkBox": [
+        116.19,
+        459.35,
+        224.98,
+        474.89
+      ],
+      "capTop": 460,
+      "baseline": 475,
+      "color": "#272019"
+    },
+    {
+      "id": "Seat1",
+      "kind": "group",
+      "rect": [
+        1352,
+        334,
+        226,
+        154
+      ]
+    },
+    {
+      "id": "SeatFan1",
+      "parent": "Seat1",
+      "rect": [
+        1353,
+        334,
+        124,
+        104
+      ],
+      "kind": "sprite",
+      "checkError": 65.97
+    },
+    {
+      "id": "SeatRing1",
+      "parent": "Seat1",
+      "shape": "ellipse",
+      "rect": [
+        1461.4,
+        344.2,
+        85.4,
+        85.4
+      ],
+      "use": "UI/Avatars/UI_AvatarRing.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/UI_AvatarRing.png",
+      "spriteRect": [
+        1461.4,
+        344.2,
+        85.4,
+        85.4
+      ],
+      "spritePpu": 0,
+      "checkError": 29.68
+    },
+    {
+      "id": "SeatAvatar1",
+      "parent": "SeatRing1",
+      "shape": "ellipse",
+      "rect": [
+        1468.3,
+        350.7,
+        72.6,
+        72.6
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        1468.3,
+        350.7,
+        72.6,
+        72.6
+      ],
+      "spritePpu": 0,
+      "checkError": 28.66
+    },
+    {
+      "id": "SeatPlate1",
+      "parent": "Seat1",
+      "shape": "pill",
+      "rect": [
+        1432.9,
+        415.8,
+        133.2,
+        32.9
+      ],
+      "use": "UI_NamePlate",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Table/UI_NamePlate.png",
+      "spriteRect": [
+        1432.9,
+        415.8,
+        133.2,
+        32.9
+      ],
+      "spritePpu": 0,
+      "checkError": 13.11
+    },
+    {
+      "id": "SeatName1",
+      "kind": "label",
+      "parent": "SeatPlate1",
+      "text": "Suman",
+      "font": "SansSemiBold",
+      "rect": [
+        1460,
+        420,
+        80,
+        25
+      ],
+      "inkBox": [
+        1464.83,
+        423.46,
+        1534.21,
+        441.46
+      ],
+      "capTop": 428,
+      "baseline": 441,
+      "color": "#1E1E1E"
+    },
+    {
+      "id": "SeatPill1",
+      "parent": "Seat1",
+      "shape": "pill",
+      "rect": [
+        1424.3,
+        448.6,
+        149.7,
+        37.8
+      ],
+      "use": "UI_StatusPill",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Table/UI_StatusPill.png",
+      "spriteRect": [
+        1424.3,
+        448.6,
+        149.7,
+        37.8
+      ],
+      "spritePpu": 0,
+      "checkError": 7.34
+    },
+    {
+      "id": "SeatStatus1",
+      "kind": "label",
+      "parent": "SeatPill1",
+      "text": "Bid 3 \u2022 Won 1",
+      "font": "SansMedium",
+      "rect": [
+        1440,
+        455,
+        120,
+        24
+      ],
+      "inkBox": [
+        1445,
+        459.59,
+        1552.92,
+        474.9
+      ],
+      "capTop": 460,
+      "baseline": 475,
+      "color": "#251E18"
+    },
+    {
+      "id": "Seat2",
+      "kind": "group",
+      "rect": [
+        711,
+        119,
+        250,
+        146
+      ]
+    },
+    {
+      "id": "SeatFan2",
+      "parent": "Seat2",
+      "rect": [
+        711,
+        119,
+        250,
+        98
+      ],
+      "kind": "sprite",
+      "checkError": 70.85
+    },
+    {
+      "id": "SeatRing2",
+      "parent": "Seat2",
+      "shape": "ellipse",
+      "rect": [
+        793.9,
+        125.1,
+        83.2,
+        83.2
+      ],
+      "use": "UI/Avatars/UI_AvatarRing.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/UI_AvatarRing.png",
+      "spriteRect": [
+        793.9,
+        125.1,
+        83.2,
+        83.2
+      ],
+      "spritePpu": 0,
+      "checkError": 44.87
+    },
+    {
+      "id": "SeatAvatar2",
+      "parent": "SeatRing2",
+      "shape": "ellipse",
+      "rect": [
+        800.7,
+        132.0,
+        70.2,
+        70.2
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        800.7,
+        132,
+        70.2,
+        70.2
+      ],
+      "spritePpu": 0,
+      "checkError": 34.64
+    },
+    {
+      "id": "SeatPlate2",
+      "parent": "Seat2",
+      "shape": "pill",
+      "rect": [
+        770.1,
+        194.9,
+        131.5,
+        32.9
+      ],
+      "use": "UI_NamePlate",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Table/UI_NamePlate.png",
+      "spriteRect": [
+        770.1,
+        194.9,
+        131.5,
+        32.9
+      ],
+      "spritePpu": 0,
+      "checkError": 16.43
+    },
+    {
+      "id": "SeatName2",
+      "kind": "label",
+      "parent": "SeatPlate2",
+      "text": "Asha",
+      "font": "SansSemiBold",
+      "rect": [
+        805,
+        200,
+        62,
+        24
+      ],
+      "inkBox": [
+        809.52,
+        203.3,
+        860.5,
+        220.75
+      ],
+      "capTop": 207,
+      "baseline": 220,
+      "color": "#1A1A1A"
+    },
+    {
+      "id": "SeatPill2",
+      "parent": "Seat2",
+      "shape": "pill",
+      "rect": [
+        761.5,
+        227.8,
+        148.0,
+        35.4
+      ],
+      "use": "UI_StatusPill",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Table/UI_StatusPill.png",
+      "spriteRect": [
+        761.5,
+        227.8,
+        148,
+        35.4
+      ],
+      "spritePpu": 0,
+      "checkError": 11.84
+    },
+    {
+      "id": "SeatStatus2",
+      "kind": "label",
+      "parent": "SeatPill2",
+      "text": "Bid 3 \u2022 Won 1",
+      "font": "SansMedium",
+      "rect": [
+        776,
+        234,
+        118,
+        23
+      ],
+      "inkBox": [
+        781.3,
+        238.02,
+        888.77,
+        252.89
+      ],
+      "capTop": 238,
+      "baseline": 253,
+      "color": "#261F1A"
+    },
+    {
+      "id": "TrickArea",
+      "rect": [
+        620,
+        334,
+        434,
+        220
+      ],
+      "kind": "sprite",
+      "checkError": 29.55
+    },
+    {
+      "id": "HandArea",
+      "rect": [
+        214,
+        696,
+        1312,
+        245
+      ],
+      "kind": "sprite",
+      "checkError": 78.78
+    },
+    {
+      "id": "HomeButton",
+      "kind": "button",
+      "group": "HeaderLeft",
+      "shape": "ellipse",
+      "rect": [
+        45.3,
+        29.2,
+        80.2,
+        79.9
+      ],
+      "grow": 9,
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        45.3,
+        29.2,
+        80.2,
+        79.9
+      ],
+      "spritePpu": 0,
+      "checkError": 23.54
+    },
+    {
+      "id": "HomeIcon",
+      "parent": "HomeButton",
+      "shape": "ink",
+      "rect": [
+        62,
+        44,
+        48,
+        49
+      ],
+      "use": "UI/Common/Icon_Home.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Home.png",
+      "spriteRect": [
+        62,
+        44,
+        48,
+        49
+      ],
+      "spritePpu": 0,
+      "color": "#050505",
+      "checkError": 20.25
+    },
+    {
+      "id": "Logo",
+      "group": "HeaderLeft",
+      "rect": [
+        184,
+        37.5,
+        330.5,
+        75.5
+      ],
+      "grow": 5,
+      "use": "UI/Common/Logo_Callbreak_NoFlag.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Logo_Callbreak_NoFlag.png",
+      "spriteRect": [
+        184,
+        37.5,
+        330.5,
+        75.5
+      ],
+      "spritePpu": 0,
+      "checkError": 59.22
+    },
+    {
+      "id": "RoundOrnamentLeft",
+      "group": "Top",
+      "shape": "ink",
+      "rect": [
+        646,
+        31,
+        80,
+        15
+      ],
+      "scale": 2,
+      "out": "Deco_RoundOrnament_Left",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Table/Deco_RoundOrnament_Left.png",
+      "spriteRect": [
+        646,
+        31,
+        80,
+        15
+      ],
+      "spritePpu": 174.1667,
+      "color": "#131614",
+      "checkError": 5.28
+    },
+    {
+      "id": "RoundLabel",
+      "kind": "label",
+      "group": "Top",
+      "text": "ROUND 1 / 5",
+      "font": "SansBold",
+      "tracked": true,
+      "rect": [
+        742,
+        22,
+        188,
+        28
+      ],
+      "inkBox": [
+        747.17,
+        25.81,
+        924.83,
+        46.62
+      ],
+      "capTop": 26,
+      "baseline": 46,
+      "color": "#201419"
+    },
+    {
+      "id": "RoundOrnamentRight",
+      "group": "Top",
+      "shape": "ink",
+      "rect": [
+        947,
+        31,
+        78,
+        15
+      ],
+      "scale": 2,
+      "out": "Deco_RoundOrnament_Right",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Table/Deco_RoundOrnament_Right.png",
+      "spriteRect": [
+        947,
+        31,
+        78,
+        15
+      ],
+      "spritePpu": 174.1667,
+      "color": "#180A0A",
+      "checkError": 6.14
+    },
+    {
+      "id": "TrumpLabel",
+      "kind": "label",
+      "group": "Top",
+      "text": "Trump",
+      "font": "SansSemiBold",
+      "rect": [
+        775,
+        59,
+        88,
+        33
+      ],
+      "key": "ui.table.trump",
+      "inkBox": [
+        779.28,
+        63.39,
+        857.96,
+        88.52
+      ],
+      "capTop": 69,
+      "baseline": 83,
+      "color": "#101519"
+    },
+    {
+      "id": "TrumpSuit",
+      "group": "Top",
+      "shape": "ink",
+      "rect": [
+        868,
+        59,
+        29,
+        33
+      ],
+      "scale": 2,
+      "out": "Icon_Trump",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Table/Icon_Trump.png",
+      "spriteRect": [
+        868,
+        59,
+        29,
+        33
+      ],
+      "spritePpu": 174.1667,
+      "color": "#08090A",
+      "checkError": 7.49
+    },
+    {
+      "id": "ScoresButton",
+      "kind": "button",
+      "group": "HeaderRight",
+      "shape": "ellipse",
+      "rect": [
+        1425.5,
+        28.0,
+        77.4,
+        78.5
+      ],
+      "grow": 9,
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        1425.5,
+        28,
+        77.4,
+        78.5
+      ],
+      "spritePpu": 0,
+      "checkError": 21.61
+    },
+    {
+      "id": "ScoresIcon",
+      "parent": "ScoresButton",
+      "shape": "ink",
+      "rect": [
+        1445,
+        39,
+        42,
+        53
+      ],
+      "use": "UI/Common/Icon_Scorecard.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Scorecard.png",
+      "spriteRect": [
+        1445,
+        40,
+        42,
+        52
+      ],
+      "spritePpu": 0,
+      "color": "#050505",
+      "checkError": 18.85
+    },
+    {
+      "id": "ScoresLabel",
+      "kind": "label",
+      "group": "HeaderRight",
+      "text": "Scores",
+      "font": "SansMedium",
+      "rect": [
+        1433,
+        109.5,
+        64,
+        19.5
+      ],
+      "key": "ui.table.scores",
+      "inkBox": [
+        1436.04,
+        111.81,
+        1493.44,
+        126.95
+      ],
+      "capTop": 116,
+      "baseline": 127,
+      "color": "#262424"
+    },
+    {
+      "id": "HeaderDivider",
+      "group": "HeaderRight",
+      "rect": [
+        1527.8,
+        39.2,
+        2.3,
+        59.5
+      ],
+      "make": {
+        "type": "rect",
+        "fill": "#1D1F1F",
+        "out": "Deco_HeaderDivider"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Table/Deco_HeaderDivider.png",
+      "spriteRect": [
+        1527.8,
+        39.2,
+        2.3,
+        59.5
+      ],
+      "spritePpu": 200,
+      "checkError": 26.61
+    },
+    {
+      "id": "SettingsButton",
+      "kind": "button",
+      "group": "HeaderRight",
+      "shape": "ellipse",
+      "rect": [
+        1554.2,
+        28.0,
+        77.8,
+        78.5
+      ],
+      "grow": 9,
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        1554.2,
+        28,
+        77.8,
+        78.5
+      ],
+      "spritePpu": 0,
+      "checkError": 34.69
+    },
+    {
+      "id": "SettingsIcon",
+      "parent": "SettingsButton",
+      "shape": "ink",
+      "rect": [
+        1568,
+        42,
+        50,
+        51
+      ],
+      "use": "UI/Icons/Icon_Settings.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Settings.png",
+      "spriteRect": [
+        1568,
+        42,
+        50,
+        51
+      ],
+      "spritePpu": 0,
+      "color": "#080808",
+      "checkError": 49.59
+    },
+    {
+      "id": "SettingsLabel",
+      "kind": "label",
+      "group": "HeaderRight",
+      "text": "Settings",
+      "font": "SansMedium",
+      "rect": [
+        1556,
+        109.5,
+        74,
+        23.5
+      ],
+      "key": "ui.table.settings",
+      "inkBox": [
+        1559.16,
+        110.84,
+        1627.76,
+        132.17
+      ],
+      "capTop": 116,
+      "baseline": 127,
+      "color": "#262524"
+    },
+    {
+      "id": "EmoteButton",
+      "kind": "button",
+      "group": "BottomLeft",
+      "shape": "ellipse",
+      "rect": [
+        28.5,
+        743.8,
+        72.2,
+        71.8
+      ],
+      "grow": 9,
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        28.5,
+        743.8,
+        72.2,
+        71.8
+      ],
+      "spritePpu": 0,
+      "checkError": 17.61
+    },
+    {
+      "id": "EmoteIcon",
+      "parent": "EmoteButton",
+      "shape": "ink",
+      "rect": [
+        44,
+        759,
+        42,
+        42
+      ],
+      "scale": 2,
+      "out": "Icon_Emote",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Table/Icon_Emote.png",
+      "spriteRect": [
+        44,
+        759,
+        42,
+        42
+      ],
+      "spritePpu": 174.1667,
+      "color": "#070707",
+      "checkError": 14.31
+    },
+    {
+      "id": "Seat0",
+      "kind": "group",
+      "group": "BottomLeft",
+      "rect": [
+        18,
+        828,
+        224,
+        106
+      ]
+    },
+    {
+      "id": "SeatPlate0",
+      "parent": "Seat0",
+      "shape": "pill",
+      "rect": [
+        66,
+        853.3,
+        166.1,
+        32.8
+      ],
+      "use": "UI_NamePlate",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Table/UI_NamePlate.png",
+      "spriteRect": [
+        66,
+        853.3,
+        166.1,
+        32.8
+      ],
+      "spritePpu": 0,
+      "checkError": 18.15
+    },
+    {
+      "id": "SeatName0",
+      "kind": "label",
+      "parent": "SeatPlate0",
+      "text": "You",
+      "font": "SansSemiBold",
+      "rect": [
+        144,
+        858,
+        44,
+        24
+      ],
+      "key": "ui.table.you",
+      "inkBox": [
+        147.68,
+        862.03,
+        183.35,
+        878.74
+      ],
+      "capTop": 862,
+      "baseline": 878,
+      "color": "#1D1D1D"
+    },
+    {
+      "id": "SeatPill0",
+      "parent": "Seat0",
+      "shape": "pill",
+      "rect": [
+        66,
+        886.1,
+        172.5,
+        36.8
+      ],
+      "use": "UI_StatusPill",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Table/UI_StatusPill.png",
+      "spriteRect": [
+        66,
+        886.1,
+        172.5,
+        36.8
+      ],
+      "spritePpu": 0,
+      "checkError": 18.02
+    },
+    {
+      "id": "SeatStatus0",
+      "kind": "label",
+      "parent": "SeatPill0",
+      "text": "Bid 4 \u2022 Won 2",
+      "font": "SansMedium",
+      "rect": [
+        112,
+        894,
+        118,
+        22
+      ],
+      "inkBox": [
+        116.2,
+        897.09,
+        223.99,
+        912.36
+      ],
+      "capTop": 897,
+      "baseline": 912,
+      "color": "#29231D"
+    },
+    {
+      "id": "SeatTimerRing0",
+      "parent": "Seat0",
+      "shape": "ellipse",
+      "rect": [
+        18.9,
+        828.7,
+        92.6,
+        92.6
+      ],
+      "make": {
+        "type": "ring",
+        "stroke": "#F9A51C",
+        "strokeWidth": 7.2,
+        "out": "UI_TimerRing"
+      },
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Table/UI_TimerRing.png",
+      "spriteRect": [
+        18.9,
+        828.7,
+        92.6,
+        92.6
+      ],
+      "spritePpu": 200,
+      "checkError": 24.76
+    },
+    {
+      "id": "SeatRing0",
+      "parent": "Seat0",
+      "shape": "ellipse",
+      "rect": [
+        26.1,
+        835.9,
+        78.2,
+        78.2
+      ],
+      "use": "UI/Avatars/UI_AvatarRing.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/UI_AvatarRing.png",
+      "spriteRect": [
+        26.1,
+        835.9,
+        78.2,
+        78.2
+      ],
+      "spritePpu": 0,
+      "checkError": 25.64
+    },
+    {
+      "id": "SeatAvatar0",
+      "parent": "SeatRing0",
+      "shape": "ellipse",
+      "rect": [
+        30.0,
+        839.8,
+        70.4,
+        70.4
+      ],
+      "use": "UI/Avatars/Avatar_Default.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Avatars/Avatar_Default.png",
+      "spriteRect": [
+        30,
+        839.8,
+        70.4,
+        70.4
+      ],
+      "spritePpu": 0,
+      "checkError": 27.26
+    },
+    {
+      "id": "SeatTimerDisc0",
+      "parent": "Seat0",
+      "shape": "ellipse",
+      "rect": [
+        44,
+        890,
+        42,
+        42
+      ],
+      "scale": 2,
+      "grain": false,
+      "out": "UI_TimerDisc",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Table/UI_TimerDisc.png",
+      "spriteRect": [
+        44,
+        890,
+        42,
+        42
+      ],
+      "spritePpu": 174.1667,
+      "checkError": 18.22
+    },
+    {
+      "id": "SeatTimerText0",
+      "kind": "label",
+      "parent": "SeatTimerDisc0",
+      "text": "18",
+      "font": "SansBold",
+      "ink": "light",
+      "rect": [
+        52,
+        899,
+        26,
+        21
+      ],
+      "inkBox": [
+        55.59,
+        903.04,
+        75.17,
+        917.58
+      ],
+      "capTop": 903,
+      "baseline": 917,
+      "color": "#FDFDFD"
+    },
+    {
+      "id": "SortButton",
+      "kind": "button",
+      "group": "BottomRight",
+      "shape": "ellipse",
+      "rect": [
+        1562.7,
+        832.3,
+        83.0,
+        83.2
+      ],
+      "grow": 9,
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        1562.7,
+        832.3,
+        83,
+        83.2
+      ],
+      "spritePpu": 0,
+      "checkError": 18.79
+    },
+    {
+      "id": "SortIcon",
+      "parent": "SortButton",
+      "shape": "ink",
+      "rect": [
+        1580,
+        849,
+        48,
+        50
+      ],
+      "scale": 2,
+      "out": "Icon_Sort",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Screens/Table/Icon_Sort.png",
+      "spriteRect": [
+        1580,
+        849,
+        48,
+        50
+      ],
+      "spritePpu": 174.1667,
+      "color": "#050505",
+      "checkError": 13.15
+    }
+  ]
+}

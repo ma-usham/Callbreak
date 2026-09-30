@@ -1,0 +1,75 @@
+{
+  // Screen 05 - Matchmaking (GDD §11). Rects are mockup pixels on 05-matchmaking.png.
+  // Shared menu background and the shared UI kit (Assets/_Project/Art/UI/...). Cut here (placeholders
+  // until the generated kit replaces them): the search arc, the spade, the filled and searching seat
+  // looks (one cut each, reused on the other seats), the elapsed pill and its clock. Hairlines are
+  // "make" shapes.
+  "name": "Matchmaking",
+  "mockup": "05-matchmaking.png",
+  "background": "shared",
+  "nodes": [
+    { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [40.5, 33.9, 88.0, 88.0], "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "BackIcon", "parent": "BackButton", "rect": [59.44, 53.94, 51.63, 49.56], "use": "UI/Common/Icon_Back.png" },
+    { "id": "AvatarRing", "kind": "button", "bind": "ProfileButton", "group": "HeaderLeft", "shape": "ellipse", "rect": [166.98, 35.58, 92.6, 92.6], "use": "UI/Avatars/UI_AvatarRing.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15 },
+    { "id": "Avatar", "parent": "AvatarRing", "shape": "ellipse", "rect": [170.67, 39.3, 85.2, 85.2], "use": "UI/Avatars/Avatar_Default.png" },
+    { "id": "Greeting", "kind": "label", "group": "HeaderLeft", "text": "Namaste,", "font": "SansSemiBold", "align": "left", "rect": [274, 46, 106, 30], "key": "ui.header.greeting" },
+    { "id": "PlayerName", "kind": "label", "group": "HeaderLeft", "text": "Player", "font": "SansBold", "align": "left", "rect": [274, 76, 102, 36] },
+
+    { "id": "SettingsButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1416.4, 35.5, 85.5, 85.5], "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "SettingsIcon", "parent": "SettingsButton", "rect": [1437.52, 57.1, 42.84, 42.05], "use": "UI/Icons/Icon_Settings.png" },
+    { "id": "HeaderDivider", "group": "HeaderRight", "rect": [1524.0, 48.3, 2.1, 61.3], "make": { "type": "rect", "fill": "#8B6D58", "out": "Deco_HeaderDivider" } },
+    { "id": "ShopButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1549.3, 34.9, 86.3, 86.3], "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "ShopIcon", "parent": "ShopButton", "rect": [1570.16, 60.83, 44.13, 36.78], "use": "UI/Icons/Icon_Shop.png" },
+
+    { "id": "Title", "kind": "label", "text": "Play Online", "font": "SerifBold", "rect": [598, 48, 475, 92], "key": "ui.matchmaking.title" },
+    { "id": "Subtitle", "kind": "label", "text": "FINDING YOUR TABLE", "font": "SansSemiBold", "tracked": true, "rect": [622, 140, 430, 30], "key": "ui.matchmaking.subtitle" },
+    { "id": "TitleDivider", "rect": [700.58, 173.56, 271.63, 19.67], "use": "UI/Common/Deco_TitleDivider.png" },
+
+    { "id": "Panel", "shape": "roundrect", "radius": 25.5, "rect": [421.6, 206.1, 829.3, 660.9], "use": "UI/Common/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
+
+    // The crimson search arc rotates (Spinner) around its own centre; the spade inside it stays still.
+    { "id": "SearchArc", "parent": "Panel", "shape": "diff", "lo": 0.04, "hi": 0.0401, "rect": [740.8, 220.3, 188, 164], "scale": 2, "out": "Deco_SearchArc",
+      "clip": [ { "shape": "ellipse", "rect": [797.2, 258.5, 76, 90], "outside": true },
+                { "shape": "ellipse", "rect": [742.8, 210.3, 184, 184] } ] },
+    { "id": "SearchSpade", "parent": "Panel", "shape": "diff", "lo": 0.04, "hi": 0.0401, "solid": true, "rect": [799, 262, 73, 82], "scale": 2, "out": "Icon_SearchSpade" },
+    { "id": "StatusTitle", "kind": "label", "parent": "Panel", "text": "Finding players...", "font": "SerifBold", "rect": [595, 380, 485, 65] },
+    { "id": "StatusSubtitle", "kind": "label", "parent": "Panel", "text": "3 of 4 players connected", "font": "SansSemiBold", "rect": [655, 450, 365, 40] },
+
+    // Seats: each has both looks; the view shows one. Filled = the cut of seat 0, searching = the cut of seat 3.
+    { "id": "Seat0", "kind": "group", "parent": "Panel", "rect": [499.11, 506.71, 119.4, 116.0] },
+    { "id": "SeatSearching0", "parent": "Seat0", "rect": [497.18, 505.1, 124, 121], "use": "UI_SeatSearching", "hidden": true },
+    { "id": "SeatFilled0", "parent": "Seat0", "shape": "ellipse", "rect": [499.11, 506.71, 119.4, 116.0], "scale": 2, "out": "UI_SeatFilled" },
+    { "id": "SeatName0", "kind": "label", "parent": "Seat0", "text": "You", "font": "SansBold", "rect": [530, 625, 60, 32] },
+    { "id": "SeatStatus0", "kind": "label", "parent": "Seat0", "text": "Ready", "font": "SansSemiBold", "rect": [522, 657, 75, 32] },
+
+    { "id": "Seat1", "kind": "group", "parent": "Panel", "rect": [682.45, 506.69, 119.4, 116.0] },
+    { "id": "SeatSearching1", "parent": "Seat1", "rect": [680.52, 505.08, 124, 121], "use": "UI_SeatSearching", "hidden": true },
+    { "id": "SeatFilled1", "parent": "Seat1", "rect": [682.34, 505.98, 120, 117], "use": "UI_SeatFilled" },
+    { "id": "SeatName1", "kind": "label", "parent": "Seat1", "text": "Asha", "font": "SansBold", "rect": [705, 625, 75, 32] },
+    { "id": "SeatStatus1", "kind": "label", "parent": "Seat1", "text": "Ready", "font": "SansSemiBold", "rect": [705, 657, 75, 32] },
+
+    { "id": "Seat2", "kind": "group", "parent": "Panel", "rect": [866.76, 506.76, 119.4, 116.0] },
+    { "id": "SeatSearching2", "parent": "Seat2", "rect": [864.83, 505.15, 124, 121], "use": "UI_SeatSearching", "hidden": true },
+    { "id": "SeatFilled2", "parent": "Seat2", "rect": [866.65, 506.05, 120, 117], "use": "UI_SeatFilled" },
+    { "id": "SeatName2", "kind": "label", "parent": "Seat2", "text": "Bikash", "font": "SansBold", "rect": [880, 625, 95, 32] },
+    { "id": "SeatStatus2", "kind": "label", "parent": "Seat2", "text": "Ready", "font": "SansSemiBold", "rect": [888, 657, 80, 32] },
+
+    { "id": "Seat3", "kind": "group", "parent": "Panel", "rect": [1051.93, 506.61, 119.4, 116.0] },
+    { "id": "SeatSearching3", "parent": "Seat3", "shape": "diff", "lo": 0.04, "hi": 0.0401, "rect": [1046, 500, 132, 129], "scale": 2, "out": "UI_SeatSearching",
+      "clip": { "shape": "ellipse", "rect": [1050.0, 504.6, 123.3, 120.0], "feather": 3 } },
+    { "id": "SeatFilled3", "parent": "Seat3", "rect": [1051.82, 505.9, 120, 117], "use": "UI_SeatFilled", "hidden": true },
+    { "id": "SeatName3", "kind": "label", "parent": "Seat3", "text": "Suman", "font": "SansSemiBold", "rect": [1068, 625, 90, 32] },
+    { "id": "SeatStatus3", "kind": "label", "parent": "Seat3", "text": "Searching", "font": "SansMedium", "rect": [1058, 657, 110, 32] },
+
+    { "id": "RuleLineLeft", "parent": "Panel", "rect": [534.7, 727.0, 115.2, 2.0], "make": { "type": "rect", "fill": "#CFB9A4", "fill2": "#C4A994", "out": "Deco_RuleLineLeft" } },
+    { "id": "Rules", "kind": "label", "parent": "Panel", "text": "5 rounds · Spades are trump", "font": "SansMedium", "rect": [670, 712, 335, 30], "key": "ui.matchmaking.rules" },
+    { "id": "RuleLineRight", "parent": "Panel", "rect": [1023.4, 727.0, 117.1, 2.0], "make": { "type": "rect", "fill": "#CFB9A4", "fill2": "#C4A994", "out": "Deco_RuleLineRight" } },
+
+    { "id": "CancelButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [664.3, 768.8, 343.4, 75.5], "use": "UI/Buttons/UI_ButtonSecondary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png", "shadowDrop": 2, "shadowOpacity": 0.4 },
+    { "id": "CancelLabel", "kind": "label", "parent": "CancelButton", "text": "Cancel", "font": "SansBold", "rect": [780, 785, 110, 42], "key": "ui.matchmaking.cancel" },
+
+    { "id": "ElapsedPill", "parent": "Panel", "shape": "pill", "rect": [1041.8, 780.8, 122.6, 52.6], "scale": 2, "out": "UI_ElapsedPill" },
+    { "id": "ElapsedClock", "parent": "ElapsedPill", "shape": "diff", "lo": 0.04, "hi": 0.0401, "solid": true, "rect": [1051, 790, 35, 35], "scale": 2, "out": "Icon_Clock" },
+    { "id": "Elapsed", "kind": "label", "parent": "ElapsedPill", "text": "00:12", "font": "SansSemiBold", "rect": [1088, 792, 62, 30] }
+  ]
+}
