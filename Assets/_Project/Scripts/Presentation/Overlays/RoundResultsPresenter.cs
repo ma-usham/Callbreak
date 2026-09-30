@@ -21,11 +21,12 @@ namespace Callbreak.Presentation.Overlays
     /// GDD §11 screen 09, round results. Opens once the round's RoundScored event has been played
     /// back (after the last trick was swept) and shows exactly what that event says: bid, won, the
     /// round's score and the running total per seat, the local player's row in gold, negatives with
-    /// a true minus sign. Rows reveal top to bottom 60 ms apart and the round scores count up (all
-    /// at once with Reduce motion). Next Round tells the session this seat is ready; after the
-    /// last round the button reads "See Final Results"; online it also shows the host's countdown,
-    /// after the last round as after any other. It waits for a menu or the scorecard to close
-    /// before it opens, and the next round (or the final standings) takes it away again.
+    /// a true minus sign. The panel rises, rows reveal top to bottom 60 ms apart and the round
+    /// scores count up (GDD §14); with Reduce motion, or for a summary rebuilt after a reconnect or
+    /// a restart, everything is simply there. Next Round tells the session this seat is ready;
+    /// after the last round the button reads "See Final Results"; online it also shows the host's
+    /// countdown, after the last round as after any other. It waits for a menu or the scorecard to
+    /// close before it opens, and the next round (or the final standings) takes it away again.
     /// </summary>
     public sealed class RoundResultsPresenter : IStartable, ITickable, IDisposable
     {
@@ -98,6 +99,7 @@ namespace Callbreak.Presentation.Overlays
             _table.Rebuilt += OnRebuilt;
             _session.SeatsChanged += OnSeatsChanged;
             _localization.LanguageChanged += OnLanguageChanged;
+            _settings.Changed += RenderMotion;
         }
 
         public void Dispose()
@@ -120,6 +122,7 @@ namespace Callbreak.Presentation.Overlays
                 _table.Rebuilt -= OnRebuilt;
                 _session.SeatsChanged -= OnSeatsChanged;
                 _localization.LanguageChanged -= OnLanguageChanged;
+                _settings.Changed -= RenderMotion;
                 _lifetime.Cancel();
                 _lifetime.Dispose();
             }
@@ -153,6 +156,7 @@ namespace Callbreak.Presentation.Overlays
                 // Over the bare table only: a menu or the scorecard the player has open stays open.
                 if ((top == ScreenId.Gameplay || top == ScreenId.None) && _router.Has(ScreenId.RoundResults))
                 {
+                    RenderMotion();
                     _router.Push(ScreenId.RoundResults);
                     BeginReveal();
                 }
@@ -230,6 +234,9 @@ namespace Callbreak.Presentation.Overlays
             _countdown = -1;
             Fill(animate);
         }
+
+        // A summary rebuilt after a reconnect or a restart does not rise either: it is simply there.
+        private void RenderMotion() => _view.ReduceMotion = _settings.ReduceMotion || !_animate;
 
         private void BeginReveal()
         {

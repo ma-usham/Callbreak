@@ -28,6 +28,17 @@ namespace Callbreak.Tests.EditMode.Presentation
             Assert.AreEqual(expected, Strings.Get(ResultsText.HeadlineKey(Place(rank, shared))));
         }
 
+        [TestCase(1, false, true)]
+        [TestCase(1, true, false)]
+        [TestCase(2, false, false)]
+        [TestCase(2, true, false)]
+        [TestCase(4, false, false)]
+        public void TheTrophy_IsForASoleWinnerOnly(int rank, bool shared, bool trophy)
+        {
+            // GDD §11 screen 10: "Sole 1st: 'You Win!' with the gold trophy. Tied 1st: 'Shared Victory!'".
+            Assert.AreEqual(trophy, ResultsText.ShowsTrophy(Place(rank, shared)));
+        }
+
         [Test]
         public void TheHeadline_OfATiedMatch_IsSharedForBothWinners()
         {

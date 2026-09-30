@@ -23,7 +23,9 @@ namespace Callbreak.Presentation.Overlays
     /// <summary>
     /// GDD §11 screen 10, match results. Opens once MatchEnded has been played back and shows its
     /// standings: the headline for the local player's place ("You Win!", "Shared Victory!",
-    /// "2nd Place"…), the trophy for a win, a crown on every winner's row, the local row in gold.
+    /// "2nd Place"…), the trophy for a sole win, a crown on every winner's row, the local row in
+    /// gold. The panel rises and the trophy drops in (GDD §14) unless Reduce motion is on, or the
+    /// results were rebuilt after a reconnect or a restart: those are not celebrated again.
     /// Play Again starts what the mode calls for (offline: a new match at the same difficulty;
     /// private room: back to the lobby; Quick Match: search again); Main Menu leaves the match and
     /// goes home. It replaces the last round's results, and waits for a menu or the scorecard the
@@ -106,6 +108,7 @@ namespace Callbreak.Presentation.Overlays
             _table.Rebuilt += OnRebuilt;
             _session.SeatsChanged += OnTextChanged;
             _localization.LanguageChanged += OnTextChanged;
+            _settings.Changed += RenderMotion;
 
             // A private room can close under the results (the host leaves): remember why.
             _room = _session.Mode == MatchMode.PrivateRoom && _rooms != null ? _rooms.Current : null;
@@ -137,6 +140,7 @@ namespace Callbreak.Presentation.Overlays
                 _table.Rebuilt -= OnRebuilt;
                 _session.SeatsChanged -= OnTextChanged;
                 _localization.LanguageChanged -= OnTextChanged;
+                _settings.Changed -= RenderMotion;
                 if (_room != null)
                 {
                     _room.Closed -= OnRoomClosed;
@@ -181,6 +185,7 @@ namespace Callbreak.Presentation.Overlays
                 _router.Show(ScreenId.Gameplay);
             }
 
+            RenderMotion();
             _router.Push(ScreenId.MatchResults);
             _shown = true;
             if (_celebrate && LocalStanding().Rank == 1)
@@ -193,6 +198,10 @@ namespace Callbreak.Presentation.Overlays
                 _haptics.Play(HapticPattern.Success);
             }
         }
+
+        // Standings rebuilt after a reconnect or a restart are not celebrated again: the panel is
+        // simply there and so is the trophy.
+        private void RenderMotion() => _view.ReduceMotion = _settings.ReduceMotion || !_celebrate;
 
         private void Unduck()
         {
@@ -258,7 +267,7 @@ namespace Callbreak.Presentation.Overlays
         {
             Standing local = LocalStanding();
             _view.SetHeadline(_localization.Get(ResultsText.HeadlineKey(local)));
-            _view.SetTrophyVisible(local.Rank == 1);
+            _view.SetTrophyVisible(ResultsText.ShowsTrophy(local));
             _view.SetFooter(ResultsText.RoundsCompleted(_table.State.Scores.Rounds.Count, _localization));
             int highlight = -1;
             for (int row = 0; row < _standings.Count && row < MatchResultsView.RowCount; row++)

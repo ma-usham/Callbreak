@@ -66,6 +66,12 @@ namespace Callbreak.Presentation.Table
             }
         }
 
+        /// <summary>
+        /// The gold trophy goes with "You Win!" only (GDD §11 screen 10): a first place shared with
+        /// another player reads "Shared Victory!" without it.
+        /// </summary>
+        public static bool ShowsTrophy(in Standing local) => local.Rank == 1 && !local.IsShared;
+
         /// <summary>"5 rounds completed" / "1 round completed".</summary>
         public static string RoundsCompleted(int rounds, ILocalization localization)
         {
