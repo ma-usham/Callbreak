@@ -4,8 +4,8 @@ namespace Callbreak.Editor.Screens
 {
     /// <summary>
     /// Screen 09: refits the title by its capital height and baseline, makes the table regular
-    /// (one size per kind of cell, columns and rows on common lines), gives the texts a presenter
-    /// changes a maximum width, and keeps the footer's arrows beside its text.
+    /// (tabular figures, one size per kind of cell, columns and rows on common lines), gives the
+    /// texts a presenter changes a maximum width, and keeps the footer's arrows beside its text.
     /// </summary>
     public static class RoundResultsCustomizer
     {
@@ -16,6 +16,7 @@ namespace Callbreak.Editor.Screens
         {
             ScreenExtras.Apply(ctx);
 
+            ScreenExtras.Tabular(ctx, ValueColumns.SelectMany(Column));
             ScreenExtras.UnifyStyle(ctx, Column("RowName"));
             ScreenExtras.UnifyStyle(ctx, ValueColumns.SelectMany(Column));
             ScreenExtras.AlignColumn(ctx, Column("RowName"));

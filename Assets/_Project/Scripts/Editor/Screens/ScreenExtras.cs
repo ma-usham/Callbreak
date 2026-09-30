@@ -24,6 +24,7 @@ namespace Callbreak.Editor.Screens
     /// as well, the glyphs are drawn heavier (a material preset of the font with that face
     /// dilation): squeezing Source Serif 4 to the mockups' narrow lettering thins its stems by about
     /// 15%, and the dilation gives that weight back; the fit allows for the extra thickness.
+    /// <c>"dilate"</c> on its own (no fit) just draws the label with the heavier preset.
     /// </para>
     /// <para>
     /// <c>"lineGradient": ["#capTop", "#baseline"]</c> on a label adds a <see cref="TextLineGradient"/>:
@@ -35,10 +36,12 @@ namespace Callbreak.Editor.Screens
     /// <para>
     /// <c>"fade": [left, right]</c> on a sprite node (a hairline drawn with <c>make</c>) adds a
     /// <see cref="LineFade"/>: the line fades to nothing over that many mockup pixels at each end.
+    /// <c>"mirror": true</c> on a sprite node draws its sprite flipped left to right (one kit sprite
+    /// for the ornament on the left of a medal and, mirrored, for the one on its right).
     /// </para>
     /// <para>
-    /// <see cref="UnifyStyle"/>, <see cref="AlignColumn"/> and <see cref="AlignRow"/> make a table of
-    /// dynamic values regular: the mockups' lettering differs a little from cell to cell (size,
+    /// <see cref="Tabular"/>, <see cref="UnifyStyle"/>, <see cref="AlignColumn"/> and <see cref="AlignRow"/>
+    /// make a table of dynamic values regular: the mockups' lettering differs a little from cell to cell (size,
     /// width, baseline), which is exact for the sample values and uneven as soon as a presenter
     /// writes other values into the cells. <see cref="Flank"/> keeps the ornaments either side of
     /// a centred caption next to its text when the text changes.
@@ -66,9 +69,10 @@ namespace Callbreak.Editor.Screens
             public string[] lineGradient;
             public float[] fade;
             public float dilate;
+            public bool mirror;
         }
 
-        /// <summary>Applies "capFit" / "xFit", "lineGradient" and "fade" to every node of the screen that carries one.</summary>
+        /// <summary>Applies "capFit" / "xFit", "lineGradient", "dilate", "fade" and "mirror" to every node of the screen that carries one.</summary>
         public static void Apply(ScreenBuildContext ctx)
         {
             string path = ScreenLayout.PathFor(ctx.Layout.name);
@@ -88,20 +92,29 @@ namespace Callbreak.Editor.Screens
                     Fade(ctx, item.id, item.fade);
                 }
 
-                if (!caps && !xHeight && !gradient)
+                if (item.mirror)
+                {
+                    Mirror(ctx, item.id);
+                }
+
+                if (!caps && !xHeight && !gradient && item.dilate <= 0f)
                 {
                     continue;
                 }
 
                 if (!ctx.Nodes.TryGetValue(item.id, out RectTransform rect) || !rect.TryGetComponent(out TextMeshProUGUI label))
                 {
-                    ctx.Warnings.Add($"{item.id}: capFit/xFit/lineGradient needs a label");
+                    ctx.Warnings.Add($"{item.id}: capFit/xFit/lineGradient/dilate needs a label");
                     continue;
                 }
 
                 if (caps || xHeight)
                 {
                     Refit(ctx, ctx.Node(item.id), label, caps ? item.capFit : item.xFit, caps ? "H" : "x", item.dilate);
+                }
+                else if (item.dilate > 0f)
+                {
+                    label.fontSharedMaterial = HeavyPreset(label.font, item.dilate);
                 }
 
                 if (gradient)
@@ -113,6 +126,18 @@ namespace Callbreak.Editor.Screens
                     so.ApplyModifiedPropertiesWithoutUndo();
                 }
             }
+        }
+
+        private static void Mirror(ScreenBuildContext ctx, string id)
+        {
+            Transform face = ctx.Nodes.TryGetValue(id, out RectTransform rect) ? rect.Find("Face") : null;
+            if (face == null)
+            {
+                ctx.Warnings.Add($"{id}: mirror needs a sprite node");
+                return;
+            }
+
+            face.localScale = new Vector3(-1f, 1f, 1f);
         }
 
         private static void Fade(ScreenBuildContext ctx, string id, float[] fade)
@@ -227,13 +252,88 @@ namespace Callbreak.Editor.Screens
                 return;
             }
 
-            Vector2 parentCentre = !string.IsNullOrEmpty(node.parent) && ctx.Nodes.ContainsKey(node.parent)
-                ? ctx.Node(node.parent).Centre
-                : UiBuildKit.ScreenCentre;
+            Vector2 parentCentre = ParentCentre(ctx, node);
             float targetX = ((node.inkBox[0] + node.inkBox[2]) / 2f - parentCentre.x) * UiBuildKit.ScaleX;
             float targetBaseline = -(fit[1] - parentCentre.y) * UiBuildKit.ScaleY;
             var rect = (RectTransform)label.transform;
             rect.anchoredPosition = new Vector2(targetX - final.center.x, targetBaseline - baseline);
+        }
+
+        /// <summary>
+        /// Gives score labels tabular figures (<see cref="TabularFigures"/>: every digit as wide as
+        /// the widest, as on the mockups) and fits each again with them: its width scale, so that the
+        /// ink as drawn is as wide as on the mockup, and its position, so that the ink is centred
+        /// where the mockup's is. Call before <see cref="UnifyStyle"/>.
+        /// </summary>
+        public static void Tabular(ScreenBuildContext ctx, IEnumerable<string> ids)
+        {
+            foreach (string id in ids)
+            {
+                if (!ctx.Nodes.TryGetValue(id, out RectTransform rect) || !rect.TryGetComponent(out TextMeshProUGUI label))
+                {
+                    ctx.Warnings.Add($"{id}: not a label");
+                    continue;
+                }
+
+                LayoutNode node = ctx.Node(id);
+                if (node.inkBox == null || node.inkBox.Length != 4)
+                {
+                    continue;
+                }
+
+                label.gameObject.AddComponent<TabularFigures>();
+                float targetWidth = (node.inkBox[2] - node.inkBox[0]) * UiBuildKit.ScaleX;
+                for (int pass = 0; pass < 2; pass++)
+                {
+                    if (!DrawnInk(label, out float left, out float right))
+                    {
+                        break;
+                    }
+
+                    label.characterHorizontalScale = Mathf.Clamp(label.characterHorizontalScale * targetWidth / Mathf.Max(0.01f, right - left), 0.3f, 2.5f);
+                }
+
+                if (DrawnInk(label, out float inkLeft, out float inkRight))
+                {
+                    float target = ((node.inkBox[0] + node.inkBox[2]) / 2f - ParentCentre(ctx, node).x) * UiBuildKit.ScaleX;
+                    rect.anchoredPosition = new Vector2(target - (inkLeft + inkRight) / 2f, rect.anchoredPosition.y);
+                }
+            }
+        }
+
+        /// <summary>
+        /// The horizontal extent of a label's ink as drawn, in its local space: read from the mesh,
+        /// so it includes what effects such as <see cref="TabularFigures"/> do to the glyphs.
+        /// </summary>
+        private static bool DrawnInk(TextMeshProUGUI label, out float left, out float right)
+        {
+            label.ForceMeshUpdate(true, true);
+            TMP_TextInfo info = label.textInfo;
+            left = float.MaxValue;
+            right = float.MinValue;
+            for (int i = 0; i < info.characterCount; i++)
+            {
+                TMP_CharacterInfo c = info.characterInfo[i];
+                if (!c.isVisible || c.textElement == null || c.textElement.glyph == null)
+                {
+                    continue;
+                }
+
+                // The quad includes the distance field's padding, symmetric around the glyph.
+                Vector3[] vertices = info.meshInfo[c.materialReferenceIndex].vertices;
+                float quadLeft = vertices[c.vertexIndex].x, quadRight = vertices[c.vertexIndex + 2].x;
+                float glyphWidth = c.textElement.glyph.metrics.width * c.scale * label.characterHorizontalScale;
+                float pad = Mathf.Max(0f, (quadRight - quadLeft - glyphWidth) / 2f);
+                left = Mathf.Min(left, quadLeft + pad);
+                right = Mathf.Max(right, quadRight - pad);
+            }
+
+            return right > left;
+        }
+
+        private static Vector2 ParentCentre(ScreenBuildContext ctx, LayoutNode node)
+        {
+            return !string.IsNullOrEmpty(node.parent) && ctx.Nodes.ContainsKey(node.parent) ? ctx.Node(node.parent).Centre : UiBuildKit.ScreenCentre;
         }
 
         /// <summary>
@@ -259,9 +359,10 @@ namespace Callbreak.Editor.Screens
         }
 
         /// <summary>
-        /// Puts the labels of one table column on one vertical line: the median of where each was
-        /// fitted (its left edge, centre or right edge, as its alignment says). The labels' parents
-        /// must share their horizontal position, as the rows of a table do.
+        /// Puts the labels of one table column at the same place in every row: horizontally on one
+        /// line (the median of where each was fitted: its left edge, centre or right edge, as its
+        /// alignment says) and at one height within the row (the median of their baselines). The
+        /// labels' parents must be the table's rows: nodes of one size, one above the other.
         /// </summary>
         public static void AlignColumn(ScreenBuildContext ctx, IEnumerable<string> ids)
         {
@@ -271,14 +372,20 @@ namespace Callbreak.Editor.Screens
                 return;
             }
 
-            float x = Median(labels.Select(l => l.rectTransform.anchoredPosition.x));
+            var position = new Vector2(
+                Median(labels.Select(l => l.rectTransform.anchoredPosition.x)),
+                Median(labels.Select(l => l.rectTransform.anchoredPosition.y)));
             foreach (TextMeshProUGUI label in labels)
             {
-                label.rectTransform.anchoredPosition = new Vector2(x, label.rectTransform.anchoredPosition.y);
+                label.rectTransform.anchoredPosition = position;
             }
         }
 
-        /// <summary>Puts the labels of one table row (children of the same node) on one baseline: the median of theirs.</summary>
+        /// <summary>
+        /// Puts labels of one table row (children of the same node) that are set alike on one
+        /// baseline: the median of theirs. (Cells of different sizes are centred on the row on the
+        /// mockups, so their baselines differ; leave those to <see cref="AlignColumn"/>.)
+        /// </summary>
         public static void AlignRow(ScreenBuildContext ctx, IEnumerable<string> ids)
         {
             List<TextMeshProUGUI> labels = Labels(ctx, ids);

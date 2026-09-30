@@ -7,7 +7,7 @@ namespace Callbreak.Presentation.Widgets
     /// Keeps two ornaments (the little rules or arrows either side of a centred caption such as
     /// "Round 2 begins next") at the same distance from the text when the text changes: they move
     /// apart or together by half the change in its width, and hide while there is no text. The
-    /// view calls <see cref="Refresh"/> after setting the text.
+    /// view calls <see cref="Refresh"/> after setting the text; it also runs when the label is enabled.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(TMP_Text))]
@@ -23,8 +23,15 @@ namespace Callbreak.Presentation.Widgets
 
         private TMP_Text _label;
 
+        private void OnEnable() => Refresh();
+
         public void Refresh()
         {
+            if (_left == null || _right == null)
+            {
+                return;     // not wired yet (the screen builder adds the component first)
+            }
+
             if (_label == null)
             {
                 _label = GetComponent<TMP_Text>();
@@ -38,7 +45,7 @@ namespace Callbreak.Presentation.Widgets
                 return;
             }
 
-            _label.ForceMeshUpdate();
+            _label.ForceMeshUpdate(true, true);     // also while the screen is still hidden
             float spread = (Width(_label) - _designWidth) / 2f;
             _left.anchoredPosition = new Vector2(_leftX - spread, _left.anchoredPosition.y);
             _right.anchoredPosition = new Vector2(_rightX + spread, _right.anchoredPosition.y);

@@ -1,17 +1,17 @@
 {
   // Screen 11 - Settings (GDD §11). Rects are mockup pixels on 11-settings.png.
-  // Shared kit for the background, header discs, avatar, divider, panel, buttons and common icons
-  // (their rects put each kit sprite's own ink on this mockup's); cut here (placeholders until the
-  // generated kit art arrives): the speaker, book and info icons, the toggles (one ON and one OFF
-  // look), the slider knob and the language dropdown.
-  // Thin lines and the slider's track and fill (which must stretch) are vectors in their measured colours.
+  // Shared kit for the background, header discs, avatar, title divider (a diamond and one line sprite,
+  // mirrored on the left), panel, buttons and every icon. Cut here (placeholders until the Controls
+  // kit arrives): the toggles (one ON and one OFF look), the slider knob and the language dropdown.
+  // Thin lines and the slider's track and fill (which must stretch) are drawn shapes in their
+  // measured colours.
   "name": "Settings",
   "mockup": "11-settings.png",
   "background": "shared",
   "nodes": [
     { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [40.4, 34.4, 89.2, 88.2],
       "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
-    { "id": "BackIcon", "parent": "BackButton", "rect": [60.32, 55.47, 50.60, 47.54], "use": "UI/Common/Icon_Back.png" },
+    { "id": "BackIcon", "parent": "BackButton", "rect": [65.62, 59.35, 39.59, 38.71], "use": "UI/Icons/Icon_Back.png" },
     { "id": "AvatarRing", "kind": "button", "bind": "ProfileButton", "group": "HeaderLeft", "shape": "ellipse", "rect": [167.6, 35.0, 91.6, 93.0],
       "use": "UI/Avatars/UI_AvatarRing.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15 },
     { "id": "Avatar", "parent": "AvatarRing", "shape": "ellipse", "rect": [171.8, 39.0, 84.0, 85.6], "use": "UI/Avatars/Avatar_Default.png" },
@@ -24,14 +24,16 @@
 
     { "id": "Title", "kind": "label", "text": "Settings", "font": "SerifBold", "rect": [668, 62, 338, 98], "xFit": [90.9, 137.5], "dilate": 0.12, "lineGradient": ["#AF071C", "#5C030E"], "key": "ui.settings.title" },
     { "id": "Subtitle", "kind": "label", "text": "MAKE YOURSELF AT HOME", "font": "SansSemiBold", "tracked": true, "rect": [590, 160, 495, 30], "key": "ui.settings.subtitle" },
-    { "id": "TitleDivider", "rect": [687.15, 196.56, 300.58, 17.36], "use": "UI/Common/Deco_TitleDivider.png" },
+    { "id": "TitleDividerLeft", "rect": [669.9, 203.2, 159.4, 3.7], "use": "UI/Decor/Deco_TitleDivider_Line.png", "mirror": true },
+    { "id": "TitleDividerDiamond", "rect": [829.1, 198.1, 13.7, 13.7], "use": "UI/Decor/Deco_TitleDivider_Diamond.png" },
+    { "id": "TitleDividerRight", "rect": [842.6, 203.2, 156.9, 3.7], "use": "UI/Decor/Deco_TitleDivider_Line.png" },
 
     { "id": "Panel", "shape": "roundrect", "radius": 25, "rect": [349.1, 225.2, 974.9, 630.7],
-      "use": "UI/Common/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
+      "use": "UI/Panels/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
     { "id": "ColumnDivider", "parent": "Panel", "rect": [835.65, 265.9, 1.19, 316.7], "make": { "type": "rect", "fill": "#D8C5B5", "out": "Deco_ColumnDivider" } },
     { "id": "ButtonsDivider", "parent": "Panel", "rect": [429, 609.47, 815, 1.48], "fade": [0, 15], "make": { "type": "rect", "fill": "#D4BFAF", "out": "Deco_ButtonsDivider" } },
 
-    { "id": "SoundIcon", "parent": "Panel", "shape": "ink", "rect": [434, 276, 62, 54], "scale": 2, "out": "Icon_Sound" },
+    { "id": "SoundIcon", "parent": "Panel", "rect": [438.63, 277.16, 54.8, 49.58], "use": "UI/Icons/Icon_Sound.png" },
     { "id": "SoundHeading", "kind": "label", "parent": "Panel", "text": "Sound", "font": "SerifBold", "align": "left", "rect": [508, 272, 128, 50], "key": "ui.settings.sound" },
     { "id": "SoundAccent", "parent": "Panel", "rect": [514.56, 328.51, 19.86, 2.16], "make": { "type": "rect", "fill": "#42210B", "out": "Deco_HeadingAccent" } },
     { "id": "SoundRule", "parent": "Panel", "rect": [531, 335.45, 256.8, 1.43], "fade": [14, 8], "make": { "type": "rect", "fill": "#D2BEAD", "out": "Deco_HeadingRule_Sound" } },
@@ -61,12 +63,12 @@
 
     { "id": "HowToPlayButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 31, "rect": [474.8, 634.8, 352.8, 84.8],
       "use": "UI/Buttons/UI_ButtonSecondary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png", "shadowDrop": 2, "shadowOpacity": 0.4 },
-    { "id": "HowToPlayIcon", "parent": "HowToPlayButton", "shape": "diff", "solid": true, "rect": [514, 648, 58, 58], "scale": 2, "out": "Icon_HowToPlay" },
+    { "id": "HowToPlayIcon", "parent": "HowToPlayButton", "rect": [518.88, 650.99, 48.71, 52.19], "use": "UI/Icons/Icon_HowToPlay.png" },
     { "id": "HowToPlayLabel", "kind": "label", "parent": "HowToPlayButton", "text": "How to Play", "font": "SansBold", "rect": [585, 656, 154, 42], "key": "ui.settings.how_to_play" },
     { "id": "HowToPlayChevron", "parent": "HowToPlayButton", "rect": [784.03, 666.31, 12.07, 21.11], "use": "UI/Icons/Icon_Chevron.png" },
     { "id": "AboutButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 31, "rect": [844.3, 634.8, 353.0, 84.8],
       "use": "UI/Buttons/UI_ButtonSecondary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png", "shadowDrop": 2, "shadowOpacity": 0.4 },
-    { "id": "AboutIcon", "parent": "AboutButton", "shape": "ink", "rect": [902, 648, 60, 60], "scale": 2, "out": "Icon_About" },
+    { "id": "AboutIcon", "parent": "AboutButton", "rect": [905.22, 650.71, 53.03, 53.03], "use": "UI/Icons/Icon_About.png" },
     { "id": "AboutLabel", "kind": "label", "parent": "AboutButton", "text": "About", "font": "SansBold", "rect": [977, 658, 84, 40], "key": "ui.settings.about" },
     { "id": "AboutChevron", "parent": "AboutButton", "rect": [1157.98, 666.89, 12.56, 20.78], "use": "UI/Icons/Icon_Chevron.png" },
 

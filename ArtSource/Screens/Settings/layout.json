@@ -35,28 +35,28 @@
         88.2
       ],
       "spritePpu": 0,
-      "checkError": 5.02
+      "checkError": 5.01
     },
     {
       "id": "BackIcon",
       "parent": "BackButton",
       "rect": [
-        60.32,
-        55.47,
-        50.60,
-        47.54
+        65.62,
+        59.35,
+        39.59,
+        38.71
       ],
-      "use": "UI/Common/Icon_Back.png",
+      "use": "UI/Icons/Icon_Back.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/Icon_Back.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Back.png",
       "spriteRect": [
-        60.32,
-        55.47,
-        50.6,
-        47.54
+        65.62,
+        59.35,
+        39.59,
+        38.71
       ],
       "spritePpu": 0,
-      "checkError": 7.34
+      "checkError": 10.01
     },
     {
       "id": "AvatarRing",
@@ -256,24 +256,65 @@
       "color": "#79593F"
     },
     {
-      "id": "TitleDivider",
+      "id": "TitleDividerLeft",
       "rect": [
-        687.15,
-        196.56,
-        300.58,
-        17.36
+        669.9,
+        203.2,
+        159.4,
+        3.7
       ],
-      "use": "UI/Common/Deco_TitleDivider.png",
+      "use": "UI/Decor/Deco_TitleDivider_Line.png",
+      "mirror": true,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/Deco_TitleDivider.png",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider_Line.png",
       "spriteRect": [
-        687.15,
-        196.56,
-        300.58,
-        17.36
+        669.9,
+        203.2,
+        159.4,
+        3.7
       ],
       "spritePpu": 0,
-      "checkError": 7.66
+      "checkError": 20.18
+    },
+    {
+      "id": "TitleDividerDiamond",
+      "rect": [
+        829.1,
+        198.1,
+        13.7,
+        13.7
+      ],
+      "use": "UI/Decor/Deco_TitleDivider_Diamond.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider_Diamond.png",
+      "spriteRect": [
+        829.1,
+        198.1,
+        13.7,
+        13.7
+      ],
+      "spritePpu": 0,
+      "checkError": 15.28
+    },
+    {
+      "id": "TitleDividerRight",
+      "rect": [
+        842.6,
+        203.2,
+        156.9,
+        3.7
+      ],
+      "use": "UI/Decor/Deco_TitleDivider_Line.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider_Line.png",
+      "spriteRect": [
+        842.6,
+        203.2,
+        156.9,
+        3.7
+      ],
+      "spritePpu": 0,
+      "checkError": 7.76
     },
     {
       "id": "Panel",
@@ -285,12 +326,12 @@
         974.9,
         630.7
       ],
-      "use": "UI/Common/UI_Panel_Large.png",
+      "use": "UI/Panels/UI_Panel_Large.png",
       "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
       "shadowSpread": 24,
       "shadowDrop": 3,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Large.png",
       "spriteRect": [
         349.1,
         225.2,
@@ -298,7 +339,7 @@
         630.7
       ],
       "spritePpu": 0,
-      "checkError": 5.05
+      "checkError": 5.85
     },
     {
       "id": "ColumnDivider",
@@ -323,7 +364,7 @@
         316.7
       ],
       "spritePpu": 200,
-      "checkError": 4.28
+      "checkError": 3.93
     },
     {
       "id": "ButtonsDivider",
@@ -352,31 +393,28 @@
         1.48
       ],
       "spritePpu": 200,
-      "checkError": 12.84
+      "checkError": 12.75
     },
     {
       "id": "SoundIcon",
       "parent": "Panel",
-      "shape": "ink",
       "rect": [
-        434,
-        276,
-        62,
-        54
+        438.63,
+        277.16,
+        54.8,
+        49.58
       ],
-      "scale": 2,
-      "out": "Icon_Sound",
+      "use": "UI/Icons/Icon_Sound.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Settings/Icon_Sound.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Sound.png",
       "spriteRect": [
-        434,
-        276,
-        62,
-        54
+        438.63,
+        277.16,
+        54.8,
+        49.58
       ],
-      "spritePpu": 174.1667,
-      "color": "#111617",
-      "checkError": 5.02
+      "spritePpu": 0,
+      "checkError": 18.74
     },
     {
       "id": "SoundHeading",
@@ -425,7 +463,7 @@
         2.16
       ],
       "spritePpu": 200,
-      "checkError": 25.49
+      "checkError": 25.61
     },
     {
       "id": "SoundRule",
@@ -454,7 +492,7 @@
         1.43
       ],
       "spritePpu": 200,
-      "checkError": 10.72
+      "checkError": 11.85
     },
     {
       "id": "MusicLabel",
@@ -503,7 +541,7 @@
         46
       ],
       "spritePpu": 174.1667,
-      "checkError": 0.58
+      "checkError": 0.5
     },
     {
       "id": "SoundEffectsLabel",
@@ -551,7 +589,7 @@
         45.8
       ],
       "spritePpu": 0,
-      "checkError": 6.31
+      "checkError": 6.21
     },
     {
       "id": "VolumeLabel",
@@ -611,7 +649,7 @@
         32.6
       ],
       "hole": false,
-      "checkError": 6.88
+      "checkError": 6.91
     },
     {
       "id": "VolumeTrack",
@@ -637,7 +675,7 @@
         18.9
       ],
       "spritePpu": 200,
-      "checkError": 9.29
+      "checkError": 9.21
     },
     {
       "id": "VolumeFill",
@@ -669,7 +707,7 @@
         18.9
       ],
       "spritePpu": 200,
-      "checkError": 11.86
+      "checkError": 11.76
     },
     {
       "id": "VolumeKnob",
@@ -697,7 +735,7 @@
         33
       ],
       "spritePpu": 174.1667,
-      "checkError": 5.82
+      "checkError": 5.91
     },
     {
       "id": "PrefsIcon",
@@ -718,7 +756,7 @@
         49.5
       ],
       "spritePpu": 0,
-      "checkError": 21
+      "checkError": 21.27
     },
     {
       "id": "PrefsHeading",
@@ -767,7 +805,7 @@
         2.14
       ],
       "spritePpu": 0,
-      "checkError": 25.12
+      "checkError": 25.13
     },
     {
       "id": "PrefsRule",
@@ -796,7 +834,7 @@
         1.47
       ],
       "spritePpu": 200,
-      "checkError": 11.15
+      "checkError": 13.32
     },
     {
       "id": "LanguageLabel",
@@ -844,7 +882,7 @@
         56
       ],
       "spritePpu": 174.1667,
-      "checkError": 0.31
+      "checkError": 0.83
     },
     {
       "id": "LanguageValue",
@@ -915,7 +953,7 @@
         45.9
       ],
       "spritePpu": 0,
-      "checkError": 8.55
+      "checkError": 9.34
     },
     {
       "id": "ReduceMotionLabel",
@@ -964,7 +1002,7 @@
         45
       ],
       "spritePpu": 174.1667,
-      "checkError": 1.24
+      "checkError": 1.46
     },
     {
       "id": "HowToPlayButton",
@@ -990,31 +1028,28 @@
         84.8
       ],
       "spritePpu": 0,
-      "checkError": 7.3
+      "checkError": 9.06
     },
     {
       "id": "HowToPlayIcon",
       "parent": "HowToPlayButton",
-      "shape": "diff",
-      "solid": true,
       "rect": [
-        514,
-        648,
-        58,
-        58
+        518.88,
+        650.99,
+        48.71,
+        52.19
       ],
-      "scale": 2,
-      "out": "Icon_HowToPlay",
+      "use": "UI/Icons/Icon_HowToPlay.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Settings/Icon_HowToPlay.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_HowToPlay.png",
       "spriteRect": [
-        515,
-        649,
-        56,
-        56
+        518.88,
+        650.99,
+        48.71,
+        52.19
       ],
-      "spritePpu": 174.1667,
-      "checkError": 2.19
+      "spritePpu": 0,
+      "checkError": 20.95
     },
     {
       "id": "HowToPlayLabel",
@@ -1084,31 +1119,28 @@
         84.8
       ],
       "spritePpu": 0,
-      "checkError": 8.06
+      "checkError": 8.66
     },
     {
       "id": "AboutIcon",
       "parent": "AboutButton",
-      "shape": "ink",
       "rect": [
-        902,
-        648,
-        60,
-        60
+        905.22,
+        650.71,
+        53.03,
+        53.03
       ],
-      "scale": 2,
-      "out": "Icon_About",
+      "use": "UI/Icons/Icon_About.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Settings/Icon_About.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_About.png",
       "spriteRect": [
-        902,
-        648,
-        60,
-        60
+        905.22,
+        650.71,
+        53.03,
+        53.03
       ],
-      "spritePpu": 174.1667,
-      "color": "#0B0E10",
-      "checkError": 8.37
+      "spritePpu": 0,
+      "checkError": 15.8
     },
     {
       "id": "AboutLabel",
@@ -1178,7 +1210,7 @@
         90
       ],
       "spritePpu": 0,
-      "checkError": 22.13
+      "checkError": 22.17
     },
     {
       "id": "DoneLabel",
