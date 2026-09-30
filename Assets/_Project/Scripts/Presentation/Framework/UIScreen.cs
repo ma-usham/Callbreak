@@ -13,6 +13,10 @@ namespace Callbreak.Presentation.Framework
     {
         [SerializeField] private ScreenId _screenId = ScreenId.None;
 
+        // Everything but the background: screens that share a background slide only this, so the
+        // scenery stays still while the content moves.
+        [SerializeField] private RectTransform _content;
+
         private CanvasGroup _canvasGroup;
         private RectTransform _rect;
 
@@ -21,6 +25,9 @@ namespace Callbreak.Presentation.Framework
         public CanvasGroup CanvasGroup => _canvasGroup != null ? _canvasGroup : _canvasGroup = GetComponent<CanvasGroup>();
 
         public RectTransform Rect => _rect != null ? _rect : _rect = (RectTransform)transform;
+
+        /// <summary>What the screen transition slides: the content, or the whole screen.</summary>
+        public RectTransform SlideTarget => _content != null ? _content : Rect;
 
         /// <summary>
         /// Raised when Android back (or Escape) reaches this screen while it is on top. With no

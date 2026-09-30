@@ -1,0 +1,18 @@
+using System;
+
+namespace Callbreak.Application.Profile
+{
+    /// <summary>
+    /// profile.json (GDD §29): the display name and avatar preset, nothing else personal. Plain
+    /// serializable data read and written by <see cref="ProfileService"/>.
+    /// </summary>
+    [Serializable]
+    public sealed class ProfileData
+    {
+        public const int CurrentVersion = 1;
+
+        public int schemaVersion = CurrentVersion;
+        public string displayName = ProfileService.DefaultDisplayName;
+        public int avatarId;
+    }
+}

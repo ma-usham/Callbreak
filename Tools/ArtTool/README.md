@@ -1,10 +1,33 @@
 # arttool and the screen pipeline
 
-Every Callbreak screen is rebuilt from its own reference mockup (`Assets/ArtRefrences/game-screens/NN-*.png`,
-1672 × 941) so the game looks exactly like it: a clean background plate, the mockup's own pixels
-for every panel, button, icon and ornament (cut out with exact edges), and every word re-set in
-TextMeshPro at the size, width and position measured on the mockup. Screen 01
+Every Callbreak screen is laid out on its own reference mockup (`Assets/ArtRefrences/game-screens/NN-*.png`,
+1672 × 941): every element at the position and size measured on the mockup, and every word re-set
+in TextMeshPro at the size, width and position measured there. The art itself is shared wherever
+the same element appears on several screens (the owner's rule: reuse, don't re-cut): one menu
+background, one set of panels, buttons, header discs, dividers and common icons, 9-sliced where
+their size changes. Only what is unique to a screen is cut from its mockup. Screen 01
 (`ArtSource/Screens/PlayWithFriends/screen.json`) is the worked example; read it first.
+
+## 0 · The shared kit
+
+| Sprite (`use` path) | What | How to place |
+| --- | --- | --- |
+| background `"shared"` | `Backgrounds/BG_Menu_Wide.png`: the main menu's scenery with margins for 21:9 and 4:3 | top-level `"background": "shared"` on every menu-style screen (01-06, 09-12, 14-16) |
+| `UI/Common/UI_Panel_Large.png` | big ivory panel, textile corners at the top, faint mountains at the bottom corners; 9-slice (corners 160 × 170 top, 160 × 110 bottom) | `rect` = the panel's edge (`fitrect`); `"shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3`; minimum 330 × 290 |
+| `UI/Common/UI_Panel_Card.png` | small plain ivory card/tile; 9-slice (corners 26) | `"shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2` |
+| `UI/Buttons/UI_ButtonPrimary_Normal.png` | crimson pill with gold rim and woven caps; sliced horizontally, scales to the button's height | `"shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45` |
+| `UI/Buttons/UI_ButtonSecondary_Normal.png` | ivory pill with brown outline; sliced horizontally | `"shadowUse": "UI/Buttons/UI_Shadow_Secondary.png", "shadowDrop": 2, "shadowOpacity": 0.4` |
+| `UI/Buttons/UI_ButtonCircle_Normal.png` | ivory header disc | `"shape": "ellipse"`, `"shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2` |
+| `UI/Avatars/UI_AvatarRing.png` + `UI/Avatars/Avatar_Default.png` | the player's avatar (white ring + picture) | ring: `"shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15` |
+| `UI/Common/Deco_TitleDivider.png` | thin line with a diamond under titles | `"shape": "ink"` + the mockup rect (lands on this mockup's own divider) |
+| `UI/Common/Logo_Callbreak_NoFlag.png`, `UI/Ornaments/Logo_Callbreak.png` | the logo without / with the flag | `rect` = the logo's box on the mockup |
+| icons `UI/Common/Icon_{Back,Home,Scorecard,Close,Chevron_Light}.png`, `UI/Icons/Icon_{Settings,Shop,Friends,Offline,Chevron,Spade_Gold}.png` | dark (or white) silhouettes | `"shape": "ink"` (or `"ink": "light"`) + a loose rect around this mockup's icon: the sprite lands exactly on its ink |
+
+A `use` node is still measured on the mockup and still erased from what is behind it; `"opacity"`
+dims a shared sprite and `"sliceScale"` overrides the 9-slice scale. If the kit lacks something
+several screens need, don't cut private copies: say so in your report. Kit sources are
+`ArtSource/Screens/CommonKit*/screen.json` and `Assets/_Project/Scripts/Editor/CommonKit.cs`
+(import settings).
 
 ```
 ArtSource/Screens/<Name>/screen.json   you write this: the screen's elements, back to front

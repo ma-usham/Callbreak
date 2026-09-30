@@ -1,39 +1,52 @@
 {
   // Screen 01 - Play with Friends (GDD §11). Rects are mockup pixels on 01-play-with-friends.png.
+  // Worked example of the shared kit: the menu background, panels, buttons, header discs, avatar,
+  // divider and common icons are reused ("use"); only what is unique here is cut ("out").
   "name": "PlayWithFriends",
   "mockup": "01-play-with-friends.png",
+  "background": "shared",
   "nodes": [
-    { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [43.1, 37.4, 82.8, 81.9], "shadow": 12, "scale": 2, "out": "UI_ButtonCircle" },
-    { "id": "BackIcon", "parent": "BackButton", "shape": "ink", "rect": [60, 55, 50, 48], "scale": 2, "out": "Icon_Back" },
-    { "id": "AvatarRing", "kind": "button", "bind": "ProfileButton", "group": "HeaderLeft", "shape": "ellipse", "rect": [167.2, 35.8, 92, 92], "shadow": 12, "use": "UI/Avatars/UI_AvatarRing.png" },
+    { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [43.1, 37.4, 82.8, 81.9],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "BackIcon", "parent": "BackButton", "shape": "ink", "rect": [60, 55, 50, 48], "use": "UI/Common/Icon_Back.png" },
+    { "id": "AvatarRing", "kind": "button", "bind": "ProfileButton", "group": "HeaderLeft", "shape": "ellipse", "rect": [167.2, 35.8, 92, 92],
+      "use": "UI/Avatars/UI_AvatarRing.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15 },
     { "id": "Avatar", "parent": "AvatarRing", "shape": "ellipse", "rect": [171.3, 39.8, 83.7, 84.2], "use": "UI/Avatars/Avatar_Default.png" },
     { "id": "Greeting", "kind": "label", "group": "HeaderLeft", "text": "Namaste,", "font": "SansSemiBold", "align": "left", "rect": [274, 46, 106, 30], "key": "ui.header.greeting" },
     { "id": "PlayerName", "kind": "label", "group": "HeaderLeft", "text": "Player", "font": "SansBold", "align": "left", "rect": [274, 76, 102, 36] },
 
-    { "id": "SettingsButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1419.2, 37.9, 79.6, 80.8], "shadow": 12, "scale": 2, "out": "UI_ButtonCircle_Settings" },
-    { "id": "SettingsIcon", "parent": "SettingsButton", "shape": "ink", "rect": [1434, 53, 50, 50], "scale": 2, "out": "Icon_Settings" },
+    { "id": "SettingsButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1419.2, 37.9, 79.6, 80.8],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "SettingsIcon", "parent": "SettingsButton", "shape": "ink", "rect": [1434, 53, 50, 50], "use": "UI/Icons/Icon_Settings.png" },
     { "id": "HeaderDivider", "group": "HeaderRight", "shape": "ink", "rect": [1521, 45, 8, 68], "out": "Deco_HeaderDivider" },
-    { "id": "ShopButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1551.4, 37.8, 80.7, 81.0], "shadow": 12, "scale": 2, "out": "UI_ButtonCircle_Shop" },
-    { "id": "ShopIcon", "parent": "ShopButton", "shape": "ink", "rect": [1567, 53, 52, 50], "scale": 2, "out": "Icon_Shop" },
+    { "id": "ShopButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1551.4, 37.8, 80.7, 81.0],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "ShopIcon", "parent": "ShopButton", "shape": "ink", "rect": [1567, 53, 52, 50], "use": "UI/Icons/Icon_Shop.png" },
 
     { "id": "Title", "kind": "label", "text": "Play with Friends", "font": "SerifBold", "rect": [565, 88, 545, 78], "key": "ui.friends.title" },
     { "id": "Subtitle", "kind": "label", "text": "CREATE A ROOM AND PLAY TOGETHER", "font": "SansSemiBold", "tracked": true, "rect": [480, 166, 708, 28], "key": "ui.friends.subtitle" },
-    { "id": "TitleDivider", "shape": "ink", "rect": [670, 202, 335, 18], "scale": 2, "out": "Deco_TitleDivider" },
+    { "id": "TitleDivider", "shape": "ink", "rect": [670, 202, 335, 18], "use": "UI/Common/Deco_TitleDivider.png" },
 
-    { "id": "CreatePanel", "kind": "button", "shape": "roundrect", "radius": 24, "rect": [366.5, 235.6, 459.5, 581.9], "out": "UI_Panel_CreateRoom" },
+    { "id": "CreatePanel", "kind": "button", "shape": "roundrect", "radius": 24, "rect": [366.5, 235.6, 459.5, 581.9],
+      "use": "UI/Common/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
     { "id": "CreateIcon", "parent": "CreatePanel", "shape": "diff", "solid": true, "rect": [500, 305, 212, 165], "scale": 2, "out": "Icon_CreateRoom" },
     { "id": "CreateTitle", "kind": "label", "parent": "CreatePanel", "text": "Create Room", "font": "SerifBold", "rect": [428, 482, 338, 60], "key": "ui.friends.create_title" },
     { "id": "CreateLine1", "kind": "label", "parent": "CreatePanel", "text": "Make a room and", "font": "SansRegular", "rect": [470, 562, 255, 36], "key": "ui.friends.create_line1" },
     { "id": "CreateLine2", "kind": "label", "parent": "CreatePanel", "text": "invite your friends", "font": "SansRegular", "rect": [468, 599, 258, 41], "key": "ui.friends.create_line2" },
-    { "id": "CreateButton", "kind": "button", "parent": "CreatePanel", "shape": "roundrect", "radius": 34, "rect": [396.3, 696.0, 401.4, 90.8], "scale": 2, "out": "UI_ButtonPrimary_CreateRoom" },
+    { "id": "CreateButton", "kind": "button", "parent": "CreatePanel", "shape": "roundrect", "radius": 34, "rect": [396.3, 696.0, 401.4, 90.8],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
     { "id": "CreateButtonLabel", "kind": "label", "parent": "CreateButton", "text": "Create Room", "font": "SansMedium", "ink": "light", "rect": [498, 718, 195, 44], "key": "ui.friends.create_cta" },
+    { "id": "CreateChevron", "parent": "CreateButton", "shape": "ink", "ink": "light", "rect": [748, 724, 28, 36], "use": "UI/Common/Icon_Chevron_Light.png" },
 
-    { "id": "JoinPanel", "kind": "button", "shape": "roundrect", "radius": 24.5, "rect": [846.7, 236.1, 460.1, 581.4], "out": "UI_Panel_JoinRoom" },
+    { "id": "JoinPanel", "kind": "button", "shape": "roundrect", "radius": 24.5, "rect": [846.7, 236.1, 460.1, 581.4],
+      "use": "UI/Common/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
     { "id": "JoinIcon", "parent": "JoinPanel", "shape": "ink", "rect": [996, 306, 160, 150], "scale": 2, "out": "Icon_EnterRoom" },
     { "id": "JoinTitle", "kind": "label", "parent": "JoinPanel", "text": "Join Room", "font": "SerifBold", "rect": [938, 482, 282, 66], "key": "ui.friends.join_title" },
     { "id": "JoinLine1", "kind": "label", "parent": "JoinPanel", "text": "Enter a room code", "font": "SansRegular", "rect": [948, 563, 264, 35], "key": "ui.friends.join_line1" },
     { "id": "JoinLine2", "kind": "label", "parent": "JoinPanel", "text": "to join your friends", "font": "SansRegular", "rect": [948, 599, 264, 41], "key": "ui.friends.join_line2" },
-    { "id": "JoinButton", "kind": "button", "parent": "JoinPanel", "shape": "roundrect", "radius": 33.5, "rect": [875.5, 696.0, 401.5, 90.8], "scale": 2, "out": "UI_ButtonPrimary_JoinRoom" },
-    { "id": "JoinButtonLabel", "kind": "label", "parent": "JoinButton", "text": "Join Room", "font": "SansMedium", "ink": "light", "rect": [995, 718, 162, 44], "key": "ui.friends.join_cta" }
+    { "id": "JoinButton", "kind": "button", "parent": "JoinPanel", "shape": "roundrect", "radius": 33.5, "rect": [875.5, 696.0, 401.5, 90.8],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "JoinButtonLabel", "kind": "label", "parent": "JoinButton", "text": "Join Room", "font": "SansMedium", "ink": "light", "rect": [995, 718, 162, 44], "key": "ui.friends.join_cta" },
+    { "id": "JoinChevron", "parent": "JoinButton", "shape": "ink", "ink": "light", "rect": [1228, 724, 28, 36], "use": "UI/Common/Icon_Chevron_Light.png" }
   ]
 }

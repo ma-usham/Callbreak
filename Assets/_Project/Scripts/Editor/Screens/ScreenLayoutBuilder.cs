@@ -76,18 +76,24 @@ namespace Callbreak.Editor.Screens
 
             BuildBackground(ctx);
 
+            // Everything else sits under Content, which is what screen transitions slide.
+            var content = new GameObject("Content", typeof(RectTransform));
+            ctx.Content = (RectTransform)content.transform;
+            ctx.Content.SetParent(ctx.Root, false);
+            Stretch(ctx.Content);
+
             // Centre content scales with the design area; corner groups follow the safe area.
-            ctx.Groups["Centre"] = UiBuildKit.CreateDesignGroup("Centre", ctx.Root, UiBuildKit.Attach.Centre);
+            ctx.Groups["Centre"] = UiBuildKit.CreateDesignGroup("Centre", ctx.Content, UiBuildKit.Attach.Centre);
             var safe = new GameObject("SafeArea", typeof(RectTransform), typeof(SafeAreaFitter));
             var safeRect = (RectTransform)safe.transform;
-            safeRect.SetParent(ctx.Root, false);
+            safeRect.SetParent(ctx.Content, false);
             Stretch(safeRect);
             ctx.SafeArea = safeRect;
             foreach (string g in ctx.Layout.nodes.Where(n => string.IsNullOrEmpty(n.parent)).Select(n => GroupOf(n)).Distinct())
             {
                 if (!ctx.Groups.ContainsKey(g))
                 {
-                    ctx.Groups[g] = UiBuildKit.CreateDesignGroup(g, g == "Full" ? ctx.Root : safeRect, ParseAttach(g));
+                    ctx.Groups[g] = UiBuildKit.CreateDesignGroup(g, g == "Full" ? ctx.Content : safeRect, ParseAttach(g));
                 }
             }
 
@@ -118,7 +124,7 @@ namespace Callbreak.Editor.Screens
                 return;
             }
 
-            Sprite plate = UiBuildKit.LoadSpriteAt(l.background, l.backgroundPpu > 0 ? l.backgroundPpu : 100f * l.mockW / UiBuildKit.CanvasWidth);
+            Sprite plate = UiBuildKit.LoadSpriteAt(l.background, l.backgroundPpu);
             float[] r = l.backgroundRect != null && l.backgroundRect.Length == 4 ? l.backgroundRect : new[] { 0f, 0f, l.mockW, l.mockH };
             RectTransform bg = UiBuildKit.CreateAt(
                 "Background", ctx.Root, new Vector2(r[0] + r[2] / 2f, r[1] + r[3] / 2f), UiBuildKit.ScreenCentre, UiBuildKit.FromMock(r[2], r[3]));
@@ -163,7 +169,23 @@ namespace Callbreak.Editor.Screens
             {
                 bool isButton = node.kind == "button";
                 Sprite sprite = LoadNodeSprite(node);
-                face = PlaceSprite(root, "Face", sprite, node.spriteRect ?? node.rect, centre, node.spritePpu, isButton || node.raycast);
+                float[] faceRect = node.spriteRect ?? node.rect;
+                float multiplier = SliceMultiplier(node, sprite, faceRect);
+                if (!string.IsNullOrEmpty(node.shadowUse))
+                {
+                    PlaceSharedShadow(ctx, node, root, centre, sprite, faceRect, multiplier);
+                }
+
+                face = PlaceSprite(root, "Face", sprite, faceRect, centre, node.spritePpu, isButton || node.raycast);
+                if (face != null)
+                {
+                    face.pixelsPerUnitMultiplier = multiplier;
+                    if (node.opacity > 0f && node.opacity < 1f)
+                    {
+                        face.color = new Color(1f, 1f, 1f, node.opacity);
+                    }
+                }
+
                 if (sprite == null)
                 {
                     ctx.Warnings.Add($"{node.id}: sprite {node.sprite} missing");
@@ -197,6 +219,70 @@ namespace Callbreak.Editor.Screens
             if (node.hidden)
             {
                 root.gameObject.SetActive(false);
+            }
+        }
+
+        /// <summary>
+        /// A shared sprite that is 9-sliced only horizontally (a pill button) is scaled as a whole to
+        /// the element's height, so its rounded ends and woven caps keep their proportions; sliced
+        /// panels keep their corners at native size. "sliceScale" in the layout overrides this.
+        /// </summary>
+        private static float SliceMultiplier(LayoutNode node, Sprite sprite, float[] rect)
+        {
+            if (node.sliceScale > 0f)
+            {
+                return node.sliceScale;
+            }
+
+            if (sprite == null || sprite.border == Vector4.zero || rect == null || rect.Length != 4 || node.spritePpu > 0)
+            {
+                return 1f;
+            }
+
+            bool horizontalOnly = sprite.border.y == 0f && sprite.border.w == 0f;
+            if (!horizontalOnly)
+            {
+                return 1f;
+            }
+
+            float nativeHeight = UiBuildKit.NativeSize(sprite).y;
+            float height = UiBuildKit.FromMock(0f, rect[3]).y;
+            return height > 0.01f ? nativeHeight / height : 1f;
+        }
+
+        /// <summary>
+        /// A shared shadow sprite behind a shared face ("shadowUse"): its spread is either given in
+        /// mockup pixels ("shadowSpread", for 9-sliced shadows) or taken from how much larger the
+        /// shadow sprite is than the face sprite, scaled like the face; "shadowDrop" moves it down.
+        /// </summary>
+        private static void PlaceSharedShadow(ScreenBuildContext ctx, LayoutNode node, RectTransform root, Vector2 centre, Sprite face, float[] faceRect, float multiplier)
+        {
+            Sprite shadow = UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/{node.shadowUse}", 0f);
+            if (shadow == null || faceRect == null)
+            {
+                ctx.Warnings.Add($"{node.id}: shadow {node.shadowUse} missing");
+                return;
+            }
+
+            float spreadX, spreadY;
+            if (node.shadowSpread > 0f)
+            {
+                spreadX = spreadY = node.shadowSpread;
+            }
+            else
+            {
+                Vector2 s = UiBuildKit.NativeSize(shadow), f = face != null ? UiBuildKit.NativeSize(face) : s;
+                float scale = face != null && f.y > 0.01f ? UiBuildKit.FromMock(0f, faceRect[3]).y / f.y : 1f;
+                spreadX = (s.x - f.x) / 2f * scale / UiBuildKit.ScaleX;
+                spreadY = (s.y - f.y) / 2f * scale / UiBuildKit.ScaleY;
+            }
+
+            var rect = new[] { faceRect[0] - spreadX, faceRect[1] - spreadY + node.shadowDrop, faceRect[2] + 2 * spreadX, faceRect[3] + 2 * spreadY };
+            Image image = PlaceSprite(root, "Shadow", shadow, rect, centre, 0f, false);
+            if (image != null)
+            {
+                image.pixelsPerUnitMultiplier = node.shadowSpread > 0f ? 1f : multiplier;
+                image.color = new Color(1f, 1f, 1f, node.shadowOpacity > 0f ? node.shadowOpacity : 1f);
             }
         }
 
@@ -279,6 +365,12 @@ namespace Callbreak.Editor.Screens
 
             Component view = ctx.Root.gameObject.AddComponent(viewType);
             var so = new SerializedObject(view);
+            SerializedProperty contentProp = so.FindProperty("_content");
+            if (contentProp != null)
+            {
+                contentProp.objectReferenceValue = ctx.Content;
+            }
+
             SerializedProperty id = so.FindProperty("_screenId");
             if (id != null && Enum.TryParse(ctx.Layout.name, out ScreenId screenId))
             {
@@ -454,6 +546,9 @@ namespace Callbreak.Editor.Screens
         public Transform BuildParent { get; set; }
 
         public RectTransform Background { get; set; }
+
+        /// <summary>Parent of everything except the background.</summary>
+        public RectTransform Content { get; set; }
 
         public RectTransform SafeArea { get; set; }
 

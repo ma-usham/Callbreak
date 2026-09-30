@@ -56,6 +56,41 @@ namespace ArtTool
                         Commands.Profile(img, isRow, line, int.Parse(Get("from")), int.Parse(Get("to")), int.Parse(Get("edges", "4")));
                         return 0;
                     }
+                    case "extend":
+                    {
+                        // Surrounds a 16:9 plate with margins: mirrored, progressively blurred scenery,
+                        // or a generated wide image (--wide) kept outside the original centre.
+                        Img core = Img.Load(Get("in"));
+                        int w = int.Parse(Get("width")), h = int.Parse(Get("height"));
+                        Img ext = Job.ExtendPlate(core, (w - core.W) / 2, (h - core.H) / 2, Get("wide"), new System.Text.StringBuilder());
+                        ext.Save(Get("out"));
+                        Console.WriteLine($"{Get("out")}  {ext.W}x{ext.H}");
+                        return 0;
+                    }
+                    case "shadow":
+                    {
+                        // A soft drop shadow for a rounded rectangle, as a small 9-slice sprite at
+                        // mockup scale: place it over the element's rect grown by the printed spread.
+                        double radius = double.Parse(Get("radius", "24")), blur = double.Parse(Get("blur", "8"));
+                        float opacity = float.Parse(Get("opacity", "0.22"));
+                        var col = Img.ParseHex(Get("color", "#2A1A12"));
+                        int spread = (int)Math.Ceiling(blur * 3);
+                        int core = (int)Math.Ceiling(radius * 2) + 4;
+                        int size = core + 2 * spread;
+                        var shape = new Shape("roundrect", spread, spread, core, core, radius);
+                        var a = new float[size * size];
+                        for (int y = 0; y < size; y++)
+                            for (int x = 0; x < size; x++)
+                                a[y * size + x] = shape.Coverage(x + 0.5, y + 0.5);
+                        int boxR = Math.Max(1, (int)Math.Round((Math.Sqrt(4 * blur * blur + 1) - 1) / 2));
+                        a = Inpaint.Blur(a, size, size, boxR);
+                        var img = new Img(size, size);
+                        for (int i = 0; i < img.Count; i++) { img.R[i] = col.r; img.G[i] = col.g; img.B[i] = col.b; img.A[i] = a[i] * opacity; }
+                        img.Save(Get("out"));
+                        int border = spread + (int)Math.Ceiling(radius) + 2;
+                        Console.WriteLine($"{Get("out")}  {size}x{size}  spread {spread} px  9-slice border {border},{border},{border},{border} px");
+                        return 0;
+                    }
                     case "fitrect":
                         Commands.FitRect(Img.Load(Commands.MockupPath(repo, Get("screen"))), Commands.Rect(Get("rect")), int.Parse(Get("search", "6")));
                         return 0;

@@ -3,14 +3,14 @@
   "mockup": "01-play-with-friends.png",
   "mockW": 1672,
   "mockH": 941,
-  "background": "Assets/_Project/Art/Backgrounds/BG_PlayWithFriends.png",
+  "background": "Assets/_Project/Art/Backgrounds/BG_Menu_Wide.png",
   "backgroundRect": [
     -279,
     -157,
     2230,
     1255
   ],
-  "backgroundPpu": 87.0833,
+  "backgroundPpu": 0,
   "nodes": [
     {
       "id": "BackButton",
@@ -23,26 +23,19 @@
         82.8,
         81.9
       ],
-      "shadow": 12,
-      "scale": 2,
-      "out": "UI_ButtonCircle",
-      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_ButtonCircle.png",
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
       "spriteRect": [
-        43,
-        37,
-        83,
-        83
+        43.1,
+        37.4,
+        82.8,
+        81.9
       ],
-      "spritePpu": 174.1667,
-      "shadowSprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_ButtonCircle_Shadow.png",
-      "shadowRect": [
-        30,
-        24,
-        107,
-        109
-      ],
-      "shadowPpu": 87.0833,
-      "checkError": 1.99
+      "spritePpu": 0,
+      "checkError": 7.34
     },
     {
       "id": "BackIcon",
@@ -54,19 +47,18 @@
         50,
         48
       ],
-      "scale": 2,
-      "out": "Icon_Back",
+      "use": "UI/Common/Icon_Back.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/Icon_Back.png",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Back.png",
       "spriteRect": [
         60,
         55,
         50,
         48
       ],
-      "spritePpu": 174.1667,
+      "spritePpu": 0,
       "color": "#0A0A0C",
-      "checkError": 1.02
+      "checkError": 6
     },
     {
       "id": "AvatarRing",
@@ -80,8 +72,10 @@
         92,
         92
       ],
-      "shadow": 12,
       "use": "UI/Avatars/UI_AvatarRing.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 5,
+      "shadowOpacity": 0.15,
       "sprite": "Assets/_Project/Art/UI/Avatars/UI_AvatarRing.png",
       "spriteRect": [
         167.2,
@@ -90,15 +84,7 @@
         92
       ],
       "spritePpu": 0,
-      "shadowSprite": "Assets/_Project/Art/Screens/PlayWithFriends/AvatarRing_Shadow.png",
-      "shadowRect": [
-        155,
-        24,
-        116,
-        116
-      ],
-      "shadowPpu": 87.0833,
-      "checkError": 8.71
+      "checkError": 12.11
     },
     {
       "id": "Avatar",
@@ -120,7 +106,7 @@
         84.2
       ],
       "spritePpu": 0,
-      "checkError": 14.41
+      "checkError": 14.22
     },
     {
       "id": "Greeting",
@@ -180,26 +166,19 @@
         79.6,
         80.8
       ],
-      "shadow": 12,
-      "scale": 2,
-      "out": "UI_ButtonCircle_Settings",
-      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_ButtonCircle_Settings.png",
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
       "spriteRect": [
-        1419,
-        37,
-        80,
-        82
+        1419.2,
+        37.9,
+        79.6,
+        80.8
       ],
-      "spritePpu": 174.1667,
-      "shadowSprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_ButtonCircle_Settings_Shadow.png",
-      "shadowRect": [
-        1407,
-        26,
-        103,
-        105
-      ],
-      "shadowPpu": 87.0833,
-      "checkError": 1.61
+      "spritePpu": 0,
+      "checkError": 22.32
     },
     {
       "id": "SettingsIcon",
@@ -211,19 +190,18 @@
         50,
         50
       ],
-      "scale": 2,
-      "out": "Icon_Settings",
+      "use": "UI/Icons/Icon_Settings.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/Icon_Settings.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Settings.png",
       "spriteRect": [
         1434,
         54,
         50,
         49
       ],
-      "spritePpu": 174.1667,
+      "spritePpu": 0,
       "color": "#1D1D1D",
-      "checkError": 1.71
+      "checkError": 45.1
     },
     {
       "id": "HeaderDivider",
@@ -246,7 +224,7 @@
       ],
       "spritePpu": 87.0833,
       "color": "#917864",
-      "checkError": 2.95
+      "checkError": 2.86
     },
     {
       "id": "ShopButton",
@@ -259,26 +237,19 @@
         80.7,
         81.0
       ],
-      "shadow": 12,
-      "scale": 2,
-      "out": "UI_ButtonCircle_Shop",
-      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_ButtonCircle_Shop.png",
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
       "spriteRect": [
-        1551,
-        37,
-        82,
-        82
+        1551.4,
+        37.8,
+        80.7,
+        81
       ],
-      "spritePpu": 174.1667,
-      "shadowSprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_ButtonCircle_Shop_Shadow.png",
-      "shadowRect": [
-        1540,
-        25,
-        105,
-        106
-      ],
-      "shadowPpu": 87.0833,
-      "checkError": 2.07
+      "spritePpu": 0,
+      "checkError": 41.65
     },
     {
       "id": "ShopIcon",
@@ -290,19 +261,18 @@
         52,
         50
       ],
-      "scale": 2,
-      "out": "Icon_Shop",
+      "use": "UI/Icons/Icon_Shop.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/Icon_Shop.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Shop.png",
       "spriteRect": [
         1567,
         53,
         52,
         50
       ],
-      "spritePpu": 174.1667,
+      "spritePpu": 0,
       "color": "#1B1B1A",
-      "checkError": 2.38
+      "checkError": 91.05
     },
     {
       "id": "Title",
@@ -360,19 +330,18 @@
         335,
         18
       ],
-      "scale": 2,
-      "out": "Deco_TitleDivider",
+      "use": "UI/Common/Deco_TitleDivider.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/Deco_TitleDivider.png",
+      "sprite": "Assets/_Project/Art/UI/Common/Deco_TitleDivider.png",
       "spriteRect": [
         670,
         202,
         335,
         18
       ],
-      "spritePpu": 174.1667,
+      "spritePpu": 0,
       "color": "#90755B",
-      "checkError": 1.17
+      "checkError": 4.61
     },
     {
       "id": "CreatePanel",
@@ -385,16 +354,19 @@
         459.5,
         581.9
       ],
-      "out": "UI_Panel_CreateRoom",
-      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_Panel_CreateRoom.png",
+      "use": "UI/Common/UI_Panel_Large.png",
+      "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
+      "shadowSpread": 24,
+      "shadowDrop": 3,
+      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
       "spriteRect": [
-        366,
-        235,
-        460,
-        583
+        366.5,
+        235.6,
+        459.5,
+        581.9
       ],
-      "spritePpu": 87.0833,
-      "checkError": 0.17
+      "spritePpu": 0,
+      "checkError": 5.37
     },
     {
       "id": "CreateIcon",
@@ -418,7 +390,7 @@
         156
       ],
       "spritePpu": 174.1667,
-      "checkError": 0.11
+      "checkError": 0.97
     },
     {
       "id": "CreateTitle",
@@ -501,17 +473,19 @@
         401.4,
         90.8
       ],
-      "scale": 2,
-      "out": "UI_ButtonPrimary_CreateRoom",
-      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_ButtonPrimary_CreateRoom.png",
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Primary.png",
+      "shadowDrop": 6,
+      "shadowOpacity": 0.45,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonPrimary_Normal.png",
       "spriteRect": [
-        396,
+        396.3,
         696,
-        402,
-        91
+        401.4,
+        90.8
       ],
-      "spritePpu": 174.1667,
-      "checkError": 0.6
+      "spritePpu": 0,
+      "checkError": 21.51
     },
     {
       "id": "CreateButtonLabel",
@@ -538,6 +512,30 @@
       "color": "#FEFCFC"
     },
     {
+      "id": "CreateChevron",
+      "parent": "CreateButton",
+      "shape": "ink",
+      "ink": "light",
+      "rect": [
+        748,
+        724,
+        28,
+        36
+      ],
+      "use": "UI/Common/Icon_Chevron_Light.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Chevron_Light.png",
+      "spriteRect": [
+        752,
+        724,
+        24,
+        36
+      ],
+      "spritePpu": 0,
+      "color": "#FEFEFE",
+      "checkError": 51.42
+    },
+    {
       "id": "JoinPanel",
       "kind": "button",
       "shape": "roundrect",
@@ -548,16 +546,19 @@
         460.1,
         581.4
       ],
-      "out": "UI_Panel_JoinRoom",
-      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_Panel_JoinRoom.png",
+      "use": "UI/Common/UI_Panel_Large.png",
+      "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
+      "shadowSpread": 24,
+      "shadowDrop": 3,
+      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
       "spriteRect": [
-        846,
-        236,
-        461,
-        582
+        846.7,
+        236.1,
+        460.1,
+        581.4
       ],
-      "spritePpu": 87.0833,
-      "checkError": 0.25
+      "spritePpu": 0,
+      "checkError": 5.56
     },
     {
       "id": "JoinIcon",
@@ -581,7 +582,7 @@
       ],
       "spritePpu": 174.1667,
       "color": "#1E1E1D",
-      "checkError": 1.01
+      "checkError": 2.02
     },
     {
       "id": "JoinTitle",
@@ -664,17 +665,19 @@
         401.5,
         90.8
       ],
-      "scale": 2,
-      "out": "UI_ButtonPrimary_JoinRoom",
-      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/UI_ButtonPrimary_JoinRoom.png",
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Primary.png",
+      "shadowDrop": 6,
+      "shadowOpacity": 0.45,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonPrimary_Normal.png",
       "spriteRect": [
-        875,
+        875.5,
         696,
-        402,
-        91
+        401.5,
+        90.8
       ],
-      "spritePpu": 174.1667,
-      "checkError": 0.61
+      "spritePpu": 0,
+      "checkError": 21.69
     },
     {
       "id": "JoinButtonLabel",
@@ -699,6 +702,30 @@
       "capTop": 734,
       "baseline": 751,
       "color": "#FEFCFC"
+    },
+    {
+      "id": "JoinChevron",
+      "parent": "JoinButton",
+      "shape": "ink",
+      "ink": "light",
+      "rect": [
+        1228,
+        724,
+        28,
+        36
+      ],
+      "use": "UI/Common/Icon_Chevron_Light.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Chevron_Light.png",
+      "spriteRect": [
+        1228,
+        724,
+        28,
+        36
+      ],
+      "spritePpu": 0,
+      "color": "#FEFEFE",
+      "checkError": 51.47
     }
   ]
 }

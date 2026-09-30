@@ -56,6 +56,14 @@ namespace Callbreak.Editor.Screens
         public bool hidden;
         public bool raycast;
 
+        // Shared sprites ("use"): opacity, 9-slice scale, and a shared shadow placed behind.
+        public float opacity;
+        public float sliceScale;
+        public string shadowUse;
+        public float shadowSpread;
+        public float shadowDrop;
+        public float shadowOpacity;
+
         // Labels
         public string text;
         public string font;          // SerifBold | SerifSemiBold | SansRegular | SansMedium | SansSemiBold | SansBold

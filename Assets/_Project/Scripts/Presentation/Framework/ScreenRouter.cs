@@ -172,7 +172,7 @@ namespace Callbreak.Presentation.Framework
         private static void Apply(UIScreen screen, float alpha, float x)
         {
             screen.CanvasGroup.alpha = alpha;
-            screen.Rect.anchoredPosition = new Vector2(x, 0f);
+            screen.SlideTarget.anchoredPosition = new Vector2(x, 0f);
         }
 
         public void Dispose()

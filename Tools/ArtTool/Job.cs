@@ -35,8 +35,15 @@ namespace ArtTool
 
         private string ScreenDir => Path.Combine(_repo, "ArtSource", "Screens", _name);
         private string AssetsArt => Path.Combine(_repo, "Assets", "_Project", "Art");
-        private string AssetsDir => Path.Combine(AssetsArt, "Screens", _name);
-        private string ExportsDir => Path.Combine(_repo, "ArtSource", "Exports", "Screens", _name);
+        private string OutDir => _spec["outDir"]?.ToString() ?? $"Screens/{_name}";
+        private string AssetsDir => Path.Combine(AssetsArt, OutDir.Replace('/', Path.DirectorySeparatorChar));
+        private string ExportsDir => Path.Combine(_repo, "ArtSource", "Exports", OutDir.Replace('/', Path.DirectorySeparatorChar));
+        private string AssetPathFor(string name) => $"Assets/_Project/Art/{OutDir}/{name}.png";
+
+        /// <summary>"screen" (default): this screen's own plate; "shared": the shared menu background; "none": no background (kit jobs).</summary>
+        private string BackgroundMode => _spec["background"]?.ToString() ?? "screen";
+
+        public const string SharedMenuBackground = "Assets/_Project/Art/Backgrounds/BG_Menu_Wide.png";
         private string ScreenNumber => _mockupFile.Length >= 2 ? _mockupFile.Substring(0, 2) : "";
 
         public Job(string repo, string specPath)
@@ -112,9 +119,9 @@ namespace ArtTool
 
             Directory.CreateDirectory(Path.Combine(ScreenDir, "check"));
             string platePath = Path.Combine(AssetsArt, "Backgrounds", $"BG_{_name}.png");
-            if (writeAssets)
+            if (writeAssets && BackgroundMode == "screen")
             {
-                Img wide = Extend(plate);
+                Img wide = Extend(plate, ExtendX, ExtendY, _spec["plate"]?["generatedWide"]?.ToString());
                 wide.Save(platePath);
                 wide.Save(Path.Combine(_repo, "ArtSource", "Exports", "Backgrounds", $"BG_{_name}.png"));
                 Handoff($"Backgrounds/BG_{_name}.png", "bg", wide.W, wide.H, _spec["plate"]?["generated"] != null ? "BG-1 + patch" : "inpainted from mockup",
@@ -122,7 +129,7 @@ namespace ArtTool
             }
 
             Verify(composite, labelMask);
-            WriteLayout(writeAssets ? platePath : null);
+            WriteLayout(BackgroundMode == "screen" ? platePath : null);
             File.WriteAllText(Path.Combine(ScreenDir, "check", "report.txt"), _log.ToString());
             Console.Write(_log.ToString());
             return 0;
@@ -411,14 +418,15 @@ namespace ArtTool
         /// kept; otherwise the margins mirror the plate's edges and fade into a growing blur, which
         /// reads as out-of-focus scenery.
         /// </summary>
-        private Img Extend(Img core)
+        private Img Extend(Img core, int extendX, int extendY, string wide) => ExtendPlate(core, extendX, extendY, wide == null ? null : Path.Combine(_repo, wide), _log);
+
+        public static Img ExtendPlate(Img core, int ExtendX, int ExtendY, string wide, StringBuilder _log)
         {
             int w = core.W + 2 * ExtendX, h = core.H + 2 * ExtendY;
-            string wide = _spec["plate"]?["generatedWide"]?.ToString();
             Img ext;
-            if (!string.IsNullOrEmpty(wide) && File.Exists(Path.Combine(_repo, wide)))
+            if (!string.IsNullOrEmpty(wide) && File.Exists(wide))
             {
-                ext = Img.Load(Path.Combine(_repo, wide));
+                ext = Img.Load(wide);
                 if (ext.W != w || ext.H != h) ext = ext.Resize(w, h);
                 _log.AppendLine($"plate: margins from {wide}");
             }
@@ -602,11 +610,11 @@ namespace ArtTool
 
             n.SpriteRect = new double[] { spriteBox.X, spriteBox.Y, spriteBox.W, spriteBox.H };
             n.SpritePpu = Math.Round(PpuAt1x * n.Scale, 4);
-            n.SpritePath = $"Assets/_Project/Art/Screens/{_name}/{n.Out}.png";
+            n.SpritePath = AssetPathFor(n.Out);
             if (writeAssets)
             {
                 SaveBoth(sprite, n.Out);
-                Handoff($"Screens/{_name}/{n.Out}.png", n.IsMatte && n.Shape == "ink" ? "icon" : "ui", sprite.W, sprite.H,
+                Handoff($"{OutDir}/{n.Out}.png", n.IsMatte && n.Shape == "ink" ? "icon" : "ui", sprite.W, sprite.H,
                     "cut from mockup", n.IsGeometric ? $"{n.Shape}; children erased" : $"{n.Shape} matte");
             }
 
@@ -618,11 +626,11 @@ namespace ArtTool
                     Img sh = shadowImg.Crop(sb.X - box.X, sb.Y - box.Y, sb.W, sb.H);
                     n.ShadowRect = new double[] { sb.X, sb.Y, sb.W, sb.H };
                     n.ShadowPpu = Math.Round(PpuAt1x, 4);
-                    n.ShadowPath = $"Assets/_Project/Art/Screens/{_name}/{n.Out}_Shadow.png";
+                    n.ShadowPath = AssetPathFor(n.Out + "_Shadow");
                     if (writeAssets)
                     {
                         SaveBoth(sh, n.Out + "_Shadow");
-                        Handoff($"Screens/{_name}/{n.Out}_Shadow.png", "ui", sh.W, sh.H, "extracted", "drop shadow solved against the clean background");
+                        Handoff($"{OutDir}/{n.Out}_Shadow.png", "ui", sh.W, sh.H, "extracted", "drop shadow solved against the clean background");
                     }
                 }
             }
@@ -674,11 +682,11 @@ namespace ArtTool
             Img sh = shadowImg.Crop(sb.X - box.X, sb.Y - box.Y, sb.W, sb.H);
             n.ShadowRect = new double[] { sb.X, sb.Y, sb.W, sb.H };
             n.ShadowPpu = Math.Round(PpuAt1x, 4);
-            n.ShadowPath = $"Assets/_Project/Art/Screens/{_name}/{name}_Shadow.png";
+            n.ShadowPath = AssetPathFor(name + "_Shadow");
             if (writeAssets)
             {
                 SaveBoth(sh, name + "_Shadow");
-                Handoff($"Screens/{_name}/{name}_Shadow.png", "ui", sh.W, sh.H, "extracted", "drop shadow solved against the clean background");
+                Handoff($"{OutDir}/{name}_Shadow.png", "ui", sh.W, sh.H, "extracted", "drop shadow solved against the clean background");
             }
         }
 
@@ -695,13 +703,13 @@ namespace ArtTool
         {
             string name = n.Make["out"]?.ToString() ?? n.Id;
             Img hi = Vector.Make(n.Make, n.W, n.H, 2 * CanvasPerMock);
-            n.SpritePath = $"Assets/_Project/Art/Screens/{_name}/{name}.png";
+            n.SpritePath = AssetPathFor(name);
             n.SpriteRect = new[] { n.X, n.Y, n.W, n.H };
             n.SpritePpu = 200;
             if (writeAssets)
             {
                 SaveBoth(hi, name);
-                Handoff($"Screens/{_name}/{name}.png", "ui", hi.W, hi.H, "rebuilt", Vector.Describe(n.Make));
+                Handoff($"{OutDir}/{name}.png", "ui", hi.W, hi.H, "rebuilt", Vector.Describe(n.Make));
             }
 
             Img lo = hi.Resize(Math.Max(1, (int)Math.Round(n.W)), Math.Max(1, (int)Math.Round(n.H)));
@@ -784,9 +792,9 @@ namespace ArtTool
                 ["mockup"] = _mockupFile,
                 ["mockW"] = MockW,
                 ["mockH"] = MockH,
-                ["background"] = platePath != null ? ToAssetPath(platePath) : $"Assets/_Project/Art/Backgrounds/BG_{_name}.png",
+                ["background"] = BackgroundMode == "none" ? "" : BackgroundMode == "shared" ? SharedMenuBackground : (platePath != null ? ToAssetPath(platePath) : $"Assets/_Project/Art/Backgrounds/BG_{_name}.png"),
                 ["backgroundRect"] = ToJson(new double[] { -ExtendX, -ExtendY, MockW + 2 * ExtendX, MockH + 2 * ExtendY }),
-                ["backgroundPpu"] = Math.Round(PpuAt1x, 4),
+                ["backgroundPpu"] = BackgroundMode == "shared" ? 0 : Math.Round(PpuAt1x, 4),
             };
             var arr = new JsonArray();
             foreach (Node n in _nodes)
