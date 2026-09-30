@@ -184,6 +184,14 @@ Also:
    - PurrNet's settings asset was added.
    The company name and bundle id are still the template's. Debug Symbols should be SymbolTable
    or Full if crash reports are to show stack traces (the Android export warns about it).
+
+   The Android export made Unity save settings of its own. They are left **uncommitted** for
+   you, because AGENTS.md keeps these folders yours:
+   - `ProjectSettings/ProjectSettings.asset`: portrait autorotation off, the Input System
+     actions in Preloaded Assets, Android batching;
+   - `ProjectSettings/UnityConnectSettings.asset`: services enabled;
+   - the URP assets in `Assets/Settings`: shader prefiltering and volume defaults;
+   - a new `ProjectSettings/ApplicationConstants.json`.
 5. **Online**:
    - The relay path is unencrypted UDP. Accept it for Phase 1, or add payload encryption.
    - The join limit is client-side.
