@@ -38,6 +38,7 @@ namespace Callbreak.Editor.Screens
 
         public static void Customize(ScreenBuildContext ctx)
         {
+            ScreenExtras.Apply(ctx);   // "mirror" on the title divider's left line
             BuildNameField(ctx);
             BuildNameMessage(ctx);
             LetPlayerNameShrink(ctx);
@@ -103,15 +104,15 @@ namespace Callbreak.Editor.Screens
         /// <summary>The name keeps the mockup's size while it fits between the panel edge and the stats divider, then shrinks.</summary>
         private static void LetPlayerNameShrink(ScreenBuildContext ctx)
         {
-            if (!ctx.Nodes.TryGetValue("PlayerName", out RectTransform rect) || !ctx.Nodes.ContainsKey("StatsLineTop"))
+            if (!ctx.Nodes.TryGetValue("PlayerName", out RectTransform rect) || !ctx.Nodes.ContainsKey("StatsDivider"))
             {
-                ctx.Warnings.Add("PlayerName: needs PlayerName and StatsLineTop nodes");
+                ctx.Warnings.Add("PlayerName: needs PlayerName and StatsDivider nodes");
                 return;
             }
 
             float[] ink = ctx.Node("PlayerName").inkBox;
             float centre = (ink[0] + ink[2]) / 2f;
-            float halfWidth = ctx.Node("StatsLineTop").rect[0] - NameSideMargin - centre;
+            float halfWidth = ctx.CentreOf("StatsDivider").x - NameSideMargin - centre;
             rect.sizeDelta = new Vector2(UiBuildKit.FromMock(2f * halfWidth, 0f).x, rect.sizeDelta.y);
 
             var label = rect.GetComponent<TMP_Text>();

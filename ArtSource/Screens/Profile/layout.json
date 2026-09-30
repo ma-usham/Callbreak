@@ -35,28 +35,28 @@
         88.4
       ],
       "spritePpu": 0,
-      "checkError": 5.67
+      "checkError": 5.93
     },
     {
       "id": "BackIcon",
       "parent": "BackButton",
       "rect": [
-        60.99,
-        54.79,
-        50.84,
-        48.81
+        66.58,
+        59.61,
+        39.59,
+        38.73
       ],
-      "use": "UI/Common/Icon_Back.png",
+      "use": "UI/Icons/Icon_Back.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/Icon_Back.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Back.png",
       "spriteRect": [
-        60.99,
-        54.79,
-        50.84,
-        48.81
+        66.58,
+        59.61,
+        39.59,
+        38.73
       ],
       "spritePpu": 0,
-      "checkError": 8.54
+      "checkError": 12.81
     },
     {
       "id": "Title",
@@ -83,24 +83,65 @@
       "colorBottom": "#680A10"
     },
     {
-      "id": "TitleDivider",
+      "id": "TitleLineLeft",
       "rect": [
-        717.2,
-        128.24,
-        239.37,
-        15.75
+        714.7,
+        134.8,
+        115.2,
+        3.4
       ],
-      "use": "UI/Common/Deco_TitleDivider.png",
+      "use": "UI/Decor/Deco_TitleDivider_Line.png",
+      "mirror": true,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/Deco_TitleDivider.png",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider_Line.png",
       "spriteRect": [
-        717.2,
-        128.24,
-        239.37,
-        15.75
+        714.7,
+        134.8,
+        115.2,
+        3.4
       ],
       "spritePpu": 0,
-      "checkError": 7.29
+      "checkError": 13.37
+    },
+    {
+      "id": "TitleDiamond",
+      "rect": [
+        829.7,
+        130.2,
+        12.7,
+        12.7
+      ],
+      "use": "UI/Decor/Deco_TitleDivider_Diamond.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider_Diamond.png",
+      "spriteRect": [
+        829.7,
+        130.2,
+        12.7,
+        12.7
+      ],
+      "spritePpu": 0,
+      "checkError": 12.57
+    },
+    {
+      "id": "TitleLineRight",
+      "rect": [
+        842.1,
+        134.8,
+        98.5,
+        3.4
+      ],
+      "use": "UI/Decor/Deco_TitleDivider_Line.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider_Line.png",
+      "spriteRect": [
+        842.1,
+        134.8,
+        98.5,
+        3.4
+      ],
+      "spritePpu": 0,
+      "checkError": 4.8
     },
     {
       "id": "Subtitle",
@@ -135,12 +176,12 @@
         904.2,
         675.6
       ],
-      "use": "UI/Common/UI_Panel_Large.png",
+      "use": "UI/Panels/UI_Panel_Large.png",
       "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
       "shadowSpread": 24,
       "shadowDrop": 3,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Large.png",
       "spriteRect": [
         383.7,
         195,
@@ -148,7 +189,7 @@
         675.6
       ],
       "spritePpu": 0,
-      "checkError": 5.12
+      "checkError": 6.2
     },
     {
       "id": "AvatarRing",
@@ -174,7 +215,7 @@
         215.6
       ],
       "spritePpu": 0,
-      "checkError": 10.18
+      "checkError": 10.81
     },
     {
       "id": "Avatar",
@@ -196,7 +237,7 @@
         208.3
       ],
       "spritePpu": 0,
-      "checkError": 10.45
+      "checkError": 10.98
     },
     {
       "id": "EditAvatarButton",
@@ -221,33 +262,29 @@
         67
       ],
       "spritePpu": 0,
-      "checkError": 8.81
+      "checkError": 10.46
     },
     {
       "id": "EditAvatarIcon",
       "parent": "EditAvatarButton",
-      "shape": "diff",
-      "lo": 0.04,
-      "hi": 0.0401,
-      "solid": true,
       "rect": [
-        656,
-        416,
-        34,
-        34
+        657.02,
+        417.12,
+        33.05,
+        33.05
       ],
-      "scale": 2,
-      "out": "Icon_Pencil",
+      "use": "UI/Icons/Icon_Pencil.png",
+      "opacity": 0.992,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Profile/Icon_Pencil.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Pencil.png",
       "spriteRect": [
-        656,
-        416,
-        34,
-        34
+        657.02,
+        417.12,
+        33.05,
+        33.05
       ],
-      "spritePpu": 174.1667,
-      "checkError": 2.33
+      "spritePpu": 0,
+      "checkError": 8.29
     },
     {
       "id": "PlayerName",
@@ -295,82 +332,25 @@
       "color": "#8F6E52"
     },
     {
-      "id": "StatsLineTop",
+      "id": "StatsDivider",
       "parent": "Panel",
       "rect": [
-        752.65,
+        746.6,
         260.8,
-        1.35,
-        143.7
+        13.3,
+        290.8
       ],
-      "make": {
-        "type": "rect",
-        "fill": "#E7DBCE",
-        "fill2": "#D4C1AD",
-        "out": "Deco_StatsLineTop"
-      },
+      "use": "UI/Decor/Deco_ProfileDividerVertical.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Profile/Deco_StatsLineTop.png",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_ProfileDividerVertical.png",
       "spriteRect": [
-        752.65,
+        746.6,
         260.8,
-        1.35,
-        143.7
+        13.3,
+        290.8
       ],
-      "spritePpu": 200,
-      "checkError": 7.82
-    },
-    {
-      "id": "StatsDiamond",
-      "parent": "Panel",
-      "shape": "diff",
-      "lo": 0.04,
-      "hi": 0.0401,
-      "solid": true,
-      "rect": [
-        744,
-        408,
-        18,
-        20
-      ],
-      "scale": 2,
-      "out": "Deco_DividerDiamond",
-      "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Profile/Deco_DividerDiamond.png",
-      "spriteRect": [
-        745,
-        410,
-        17,
-        17
-      ],
-      "spritePpu": 174.1667,
-      "checkError": 1.43
-    },
-    {
-      "id": "StatsLineBottom",
-      "parent": "Panel",
-      "rect": [
-        752.65,
-        431.6,
-        1.35,
-        120.0
-      ],
-      "make": {
-        "type": "rect",
-        "fill": "#D6C2AF",
-        "fill2": "#EEE3D7",
-        "out": "Deco_StatsLineBottom"
-      },
-      "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Profile/Deco_StatsLineBottom.png",
-      "spriteRect": [
-        752.65,
-        431.6,
-        1.35,
-        120
-      ],
-      "spritePpu": 200,
-      "checkError": 7.13
+      "spritePpu": 0,
+      "checkError": 2.65
     },
     {
       "id": "Tile0",
@@ -383,12 +363,13 @@
         235.0,
         120.1
       ],
-      "use": "UI/Common/UI_Panel_Card.png",
+      "sliceScale": 1.2,
+      "use": "UI/Panels/UI_Panel_Card.png",
       "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
       "shadowSpread": 12,
       "shadowDrop": 2,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Card.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card.png",
       "spriteRect": [
         787.1,
         260.4,
@@ -396,33 +377,29 @@
         120.1
       ],
       "spritePpu": 0,
-      "checkError": 2.96
+      "checkError": 7.25
     },
     {
       "id": "Tile0Icon",
       "parent": "Tile0",
-      "shape": "diff",
-      "lo": 0.04,
-      "hi": 0.0401,
-      "solid": true,
       "rect": [
-        800,
-        280,
-        68,
-        70
+        803.01,
+        283.42,
+        61.71,
+        66.06
       ],
-      "scale": 2,
-      "out": "Icon_StatGames",
+      "use": "UI/Icons/Icon_StatGames.png",
+      "opacity": 0.985,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Profile/Icon_StatGames.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_StatGames.png",
       "spriteRect": [
-        802,
-        282,
-        65,
-        68
+        803.01,
+        283.42,
+        61.71,
+        66.06
       ],
-      "spritePpu": 174.1667,
-      "checkError": 0.97
+      "spritePpu": 0,
+      "checkError": 19.98
     },
     {
       "id": "Tile0Caption",
@@ -482,12 +459,13 @@
         220.2,
         119.5
       ],
-      "use": "UI/Common/UI_Panel_Card.png",
+      "sliceScale": 1.2,
+      "use": "UI/Panels/UI_Panel_Card.png",
       "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
       "shadowSpread": 12,
       "shadowDrop": 2,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Card.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card.png",
       "spriteRect": [
         1040.7,
         260.9,
@@ -495,33 +473,29 @@
         119.5
       ],
       "spritePpu": 0,
-      "checkError": 3.77
+      "checkError": 7.34
     },
     {
       "id": "Tile1Icon",
       "parent": "Tile1",
-      "shape": "diff",
-      "lo": 0.04,
-      "hi": 0.0401,
-      "solid": true,
       "rect": [
-        1060,
-        282,
-        66,
-        68
+        1063.84,
+        286.29,
+        57.4,
+        60.88
       ],
-      "scale": 2,
-      "out": "Icon_StatWins",
+      "use": "UI/Icons/Icon_StatWins.png",
+      "opacity": 0.989,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Profile/Icon_StatWins.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_StatWins.png",
       "spriteRect": [
-        1061,
-        285,
-        64,
-        63
+        1063.84,
+        286.29,
+        57.4,
+        60.88
       ],
-      "spritePpu": 174.1667,
-      "checkError": 1.2
+      "spritePpu": 0,
+      "checkError": 13.85
     },
     {
       "id": "Tile1Caption",
@@ -581,12 +555,13 @@
         235.0,
         120.3
       ],
-      "use": "UI/Common/UI_Panel_Card.png",
+      "sliceScale": 1.2,
+      "use": "UI/Panels/UI_Panel_Card.png",
       "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
       "shadowSpread": 12,
       "shadowDrop": 2,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Card.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card.png",
       "spriteRect": [
         787.1,
         400.8,
@@ -594,33 +569,29 @@
         120.3
       ],
       "spritePpu": 0,
-      "checkError": 2.41
+      "checkError": 5.51
     },
     {
       "id": "Tile2Icon",
       "parent": "Tile2",
-      "shape": "diff",
-      "lo": 0.04,
-      "hi": 0.0401,
-      "solid": true,
       "rect": [
-        805,
-        425,
-        62,
-        66
+        808.87,
+        432.48,
+        53.83,
+        55.57
       ],
-      "scale": 2,
-      "out": "Icon_StatWinRate",
+      "use": "UI/Icons/Icon_StatWinRate.png",
+      "opacity": 0.989,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Profile/Icon_StatWinRate.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_StatWinRate.png",
       "spriteRect": [
-        806,
-        432,
-        61,
-        57
+        808.87,
+        432.48,
+        53.83,
+        55.57
       ],
-      "spritePpu": 174.1667,
-      "checkError": 0.82
+      "spritePpu": 0,
+      "checkError": 13.41
     },
     {
       "id": "Tile2Caption",
@@ -680,12 +651,13 @@
         219.4,
         119.9
       ],
-      "use": "UI/Common/UI_Panel_Card.png",
+      "sliceScale": 1.2,
+      "use": "UI/Panels/UI_Panel_Card.png",
       "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
       "shadowSpread": 12,
       "shadowDrop": 2,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Card.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card.png",
       "spriteRect": [
         1040.8,
         401.1,
@@ -693,33 +665,29 @@
         119.9
       ],
       "spritePpu": 0,
-      "checkError": 2.67
+      "checkError": 5.89
     },
     {
       "id": "Tile3Icon",
       "parent": "Tile3",
-      "shape": "diff",
-      "lo": 0.04,
-      "hi": 0.0401,
-      "solid": true,
       "rect": [
-        1058,
-        423,
-        70,
-        68
+        1062.11,
+        428.04,
+        60.89,
+        60.02
       ],
-      "scale": 2,
-      "out": "Icon_StatBestScore",
+      "use": "UI/Icons/Icon_StatBestScore.png",
+      "opacity": 0.989,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Profile/Icon_StatBestScore.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_StatBestScore.png",
       "spriteRect": [
-        1061,
-        427,
-        65,
-        62
+        1062.11,
+        428.04,
+        60.89,
+        60.02
       ],
-      "spritePpu": 174.1667,
-      "checkError": 1
+      "spritePpu": 0,
+      "checkError": 11.47
     },
     {
       "id": "Tile3Caption",
@@ -769,75 +737,25 @@
       "color": "#1C1D1D"
     },
     {
-      "id": "NameLineLeft",
+      "id": "NameDivider",
       "parent": "Panel",
       "rect": [
         451.8,
-        594.0,
-        365.6,
-        1.4
+        586.6,
+        767.9,
+        16.1
       ],
-      "make": {
-        "type": "rect",
-        "fill": "#CAB099",
-        "out": "Deco_NameLineLeft"
-      },
+      "use": "UI/Decor/Deco_ProfileDivider.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Profile/Deco_NameLineLeft.png",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_ProfileDivider.png",
       "spriteRect": [
         451.8,
-        594,
-        365.6,
-        1.4
-      ],
-      "spritePpu": 200,
-      "checkError": 7.42
-    },
-    {
-      "id": "NameDiamond",
-      "parent": "Panel",
-      "rect": [
-        826.4,
-        584.6,
-        19.2,
-        19.4
-      ],
-      "use": "Deco_DividerDiamond",
-      "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Profile/Deco_DividerDiamond.png",
-      "spriteRect": [
-        826.4,
-        584.6,
-        19.2,
-        19.4
+        586.6,
+        767.9,
+        16.1
       ],
       "spritePpu": 0,
-      "checkError": 9.88
-    },
-    {
-      "id": "NameLineRight",
-      "parent": "Panel",
-      "rect": [
-        853.7,
-        594.0,
-        366.0,
-        1.4
-      ],
-      "make": {
-        "type": "rect",
-        "fill": "#CAB099",
-        "out": "Deco_NameLineRight"
-      },
-      "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Profile/Deco_NameLineRight.png",
-      "spriteRect": [
-        853.7,
-        594,
-        366,
-        1.4
-      ],
-      "spritePpu": 200,
-      "checkError": 9.12
+      "checkError": 2.42
     },
     {
       "id": "DisplayNameCaption",
@@ -885,7 +803,7 @@
         61
       ],
       "spritePpu": 174.1667,
-      "checkError": 0.28
+      "checkError": 0.34
     },
     {
       "id": "FieldText",
@@ -934,7 +852,7 @@
         78.9
       ],
       "spritePpu": 0,
-      "checkError": 24.21
+      "checkError": 24.18
     },
     {
       "id": "SaveLabel",

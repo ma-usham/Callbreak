@@ -27,6 +27,7 @@ namespace Callbreak.Editor.Screens
 
         public static void Customize(ScreenBuildContext ctx)
         {
+            ScreenExtras.Apply(ctx);   // "mirror" on the title divider's left line
             ctx.Nodes["SearchArc"].gameObject.AddComponent<Spinner>();
             float nameWidth = ctx.Node("Seat1").rect[0] - ctx.Node("Seat0").rect[0] - NameGap;
 

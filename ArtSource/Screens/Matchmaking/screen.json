@@ -1,15 +1,16 @@
 {
   // Screen 05 - Matchmaking (GDD §11). Rects are mockup pixels on 05-matchmaking.png.
-  // Shared menu background and the shared UI kit (Assets/_Project/Art/UI/...). Cut here (placeholders
-  // until the generated kit replaces them): the search arc, the spade, the filled and searching seat
-  // looks (one cut each, reused on the other seats), the clock icon. Hairlines and the flat elapsed
-  // pill are "make" shapes.
+  // Shared menu background and the shared UI kit (Assets/_Project/Art/UI/...): the panel, the elapsed
+  // pill, the search arc, the title divider and the icons (back, spade, clock) are the generated kit
+  // (ArtSource/Kit/*.map.csv; an icon's "opacity" is the one at which the kit's black ink reads as
+  // this mockup's ink). Still cut here (no generated replacement yet): the filled and searching seat
+  // looks (one cut each, reused on the other seats). Hairlines are "make" shapes.
   "name": "Matchmaking",
   "mockup": "05-matchmaking.png",
   "background": "shared",
   "nodes": [
     { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [40.5, 33.9, 88.0, 88.0], "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
-    { "id": "BackIcon", "parent": "BackButton", "rect": [59.44, 53.94, 51.63, 49.56], "use": "UI/Common/Icon_Back.png" },
+    { "id": "BackIcon", "parent": "BackButton", "rect": [65.2, 58.95, 39.95, 39.08], "use": "UI/Icons/Icon_Back.png" },
     { "id": "AvatarRing", "kind": "button", "bind": "ProfileButton", "group": "HeaderLeft", "shape": "ellipse", "rect": [166.98, 35.58, 92.6, 92.6], "use": "UI/Avatars/UI_AvatarRing.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15 },
     { "id": "Avatar", "parent": "AvatarRing", "shape": "ellipse", "rect": [170.67, 39.3, 85.2, 85.2], "use": "UI/Avatars/Avatar_Default.png" },
     { "id": "Greeting", "kind": "label", "group": "HeaderLeft", "text": "Namaste,", "font": "SansSemiBold", "align": "left", "rect": [274, 46, 106, 30], "key": "ui.header.greeting" },
@@ -23,15 +24,19 @@
 
     { "id": "Title", "kind": "label", "text": "Play Online", "font": "SerifBold", "rect": [598, 48, 475, 92], "key": "ui.matchmaking.title" },
     { "id": "Subtitle", "kind": "label", "text": "FINDING YOUR TABLE", "font": "SansSemiBold", "tracked": true, "rect": [622, 140, 430, 30], "key": "ui.matchmaking.subtitle" },
-    { "id": "TitleDivider", "rect": [700.58, 173.56, 271.63, 19.67], "use": "UI/Common/Deco_TitleDivider.png" },
+    // The generated title divider, built from parts (ArtSource/Kit/Decor.title-divider.csv): the diamond
+    // at its own size and the line sprite stretched to this mockup's line length, as it is on the right
+    // and mirrored on the left ("mirror", applied by ScreenExtras.Apply from the customizer).
+    { "id": "TitleLineLeft", "rect": [691.9, 181.6, 136.8, 3.8], "use": "UI/Decor/Deco_TitleDivider_Line.png", "mirror": true },
+    { "id": "TitleDiamond", "rect": [828.5, 176.5, 14.1, 14.1], "use": "UI/Decor/Deco_TitleDivider_Diamond.png" },
+    { "id": "TitleLineRight", "rect": [842.3, 181.6, 133.0, 3.8], "use": "UI/Decor/Deco_TitleDivider_Line.png" },
 
-    { "id": "Panel", "shape": "roundrect", "radius": 25.5, "rect": [421.6, 206.1, 829.3, 660.9], "use": "UI/Common/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
+    { "id": "Panel", "shape": "roundrect", "radius": 25.5, "rect": [421.6, 206.1, 829.3, 660.9], "use": "UI/Panels/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
 
-    // The crimson search arc rotates (Spinner) around its own centre; the spade inside it stays still.
-    { "id": "SearchArc", "parent": "Panel", "shape": "diff", "lo": 0.04, "hi": 0.0401, "rect": [740.8, 220.3, 188, 164], "scale": 2, "out": "Deco_SearchArc",
-      "clip": [ { "shape": "ellipse", "rect": [797.2, 258.5, 76, 90], "outside": true },
-                { "shape": "ellipse", "rect": [742.8, 210.3, 184, 184] } ] },
-    { "id": "SearchSpade", "parent": "Panel", "shape": "diff", "lo": 0.04, "hi": 0.0401, "solid": true, "rect": [799, 262, 73, 82], "scale": 2, "out": "Icon_SearchSpade" },
+    // The crimson search arc rotates (Spinner) around its own centre (the ring's centre is the sprite's
+    // centre); the spade inside it stays still.
+    { "id": "SearchArc", "parent": "Panel", "rect": [755.4, 222.3, 161.0, 161.0], "use": "UI/Decor/Deco_SearchArc.png" },
+    { "id": "SearchSpade", "parent": "Panel", "rect": [800.56, 263.44, 70.01, 80.38], "use": "UI/Icons/Icon_Suit_Spade.png", "opacity": 0.994 },
     { "id": "StatusTitle", "kind": "label", "parent": "Panel", "text": "Finding players...", "font": "SerifBold", "rect": [595, 380, 485, 65] },
     { "id": "StatusSubtitle", "kind": "label", "parent": "Panel", "text": "3 of 4 players connected", "font": "SansSemiBold", "rect": [655, 450, 365, 40] },
 
@@ -68,8 +73,8 @@
     { "id": "CancelButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [664.3, 768.8, 343.4, 75.5], "use": "UI/Buttons/UI_ButtonSecondary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png", "shadowDrop": 2, "shadowOpacity": 0.4 },
     { "id": "CancelLabel", "kind": "label", "parent": "CancelButton", "text": "Cancel", "font": "SansBold", "rect": [780, 785, 110, 42], "key": "ui.matchmaking.cancel" },
 
-    { "id": "ElapsedPill", "parent": "Panel", "rect": [1041.8, 780.9, 122.4, 52.3], "make": { "type": "pill", "fill": "#EADACC", "out": "UI_ElapsedPill" } },
-    { "id": "ElapsedClock", "parent": "ElapsedPill", "shape": "diff", "lo": 0.04, "hi": 0.0401, "solid": true, "rect": [1051, 790, 35, 35], "scale": 2, "out": "Icon_Clock" },
+    { "id": "ElapsedPill", "parent": "Panel", "shape": "pill", "rect": [1041.8, 780.9, 122.4, 52.3], "use": "UI/Table/UI_Pill_Elapsed.png" },
+    { "id": "ElapsedClock", "parent": "ElapsedPill", "rect": [1054.02, 792.89, 28.7, 28.7], "use": "UI/Icons/Icon_Clock.png" },
     { "id": "Elapsed", "kind": "label", "parent": "ElapsedPill", "text": "00:12", "font": "SansSemiBold", "rect": [1088, 792, 62, 30] }
   ]
 }

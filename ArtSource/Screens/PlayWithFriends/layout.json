@@ -35,30 +35,29 @@
         81.9
       ],
       "spritePpu": 0,
-      "checkError": 7.34
+      "checkError": 7.47
     },
     {
       "id": "BackIcon",
       "parent": "BackButton",
-      "shape": "ink",
       "rect": [
-        60,
-        55,
-        50,
-        48
+        65.36,
+        59.67,
+        38.84,
+        38
       ],
-      "use": "UI/Common/Icon_Back.png",
+      "use": "UI/Icons/Icon_Back.png",
+      "opacity": 0.993,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/Icon_Back.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Back.png",
       "spriteRect": [
-        60,
-        55,
-        50,
-        48
+        65.36,
+        59.67,
+        38.84,
+        38
       ],
       "spritePpu": 0,
-      "color": "#0A0A0C",
-      "checkError": 6
+      "checkError": 8.75
     },
     {
       "id": "AvatarRing",
@@ -206,25 +205,27 @@
     {
       "id": "HeaderDivider",
       "group": "HeaderRight",
-      "shape": "ink",
       "rect": [
-        1521,
-        45,
-        8,
-        68
+        1524.0,
+        48.4,
+        1.7,
+        61.4
       ],
-      "out": "Deco_HeaderDivider",
+      "make": {
+        "type": "rect",
+        "fill": "#917864",
+        "out": "Deco_HeaderDivider_Line"
+      },
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/Deco_HeaderDivider.png",
+      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/Deco_HeaderDivider_Line.png",
       "spriteRect": [
-        1521,
-        45,
-        8,
-        68
+        1524,
+        48.4,
+        1.7,
+        61.4
       ],
-      "spritePpu": 87.0833,
-      "color": "#917864",
-      "checkError": 2.86
+      "spritePpu": 200,
+      "checkError": 10.01
     },
     {
       "id": "ShopButton",
@@ -323,25 +324,23 @@
     },
     {
       "id": "TitleDivider",
-      "shape": "ink",
       "rect": [
-        670,
-        202,
-        335,
-        18
+        671.8,
+        204.5,
+        330.0,
+        13.0
       ],
-      "use": "UI/Common/Deco_TitleDivider.png",
+      "use": "UI/Decor/Deco_TitleDivider.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/Deco_TitleDivider.png",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider.png",
       "spriteRect": [
-        670,
-        202,
-        335,
-        18
+        671.8,
+        204.5,
+        330,
+        13
       ],
       "spritePpu": 0,
-      "color": "#90755B",
-      "checkError": 4.61
+      "checkError": 5.45
     },
     {
       "id": "CreatePanel",
@@ -354,11 +353,11 @@
         459.5,
         581.9
       ],
-      "use": "UI/Common/UI_Panel_Large.png",
+      "use": "UI/Panels/UI_Panel_Large.png",
       "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
       "shadowSpread": 24,
       "shadowDrop": 3,
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Large.png",
       "spriteRect": [
         366.5,
         235.6,
@@ -366,31 +365,49 @@
         581.9
       ],
       "spritePpu": 0,
-      "checkError": 5.37
+      "checkError": 7.21
+    },
+    {
+      "id": "CreateMountains",
+      "parent": "CreatePanel",
+      "rect": [
+        368.0,
+        622.4,
+        460.0,
+        93.2
+      ],
+      "use": "UI/Decor/Deco_MountainFooter.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_MountainFooter.png",
+      "spriteRect": [
+        368,
+        622.4,
+        460,
+        93.2
+      ],
+      "spritePpu": 0,
+      "checkError": 8.49
     },
     {
       "id": "CreateIcon",
       "parent": "CreatePanel",
-      "shape": "diff",
-      "solid": true,
       "rect": [
-        500,
-        305,
-        212,
-        165
+        506.14,
+        311.81,
+        200.88,
+        152.18
       ],
-      "scale": 2,
-      "out": "Icon_CreateRoom",
+      "use": "UI/Icons/Icon_CreateRoom.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/Icon_CreateRoom.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_CreateRoom.png",
       "spriteRect": [
-        503,
-        310,
-        208,
-        156
+        506.14,
+        311.81,
+        200.88,
+        152.18
       ],
-      "spritePpu": 174.1667,
-      "checkError": 0.97
+      "spritePpu": 0,
+      "checkError": 12.12
     },
     {
       "id": "CreateTitle",
@@ -485,7 +502,7 @@
         90.8
       ],
       "spritePpu": 0,
-      "checkError": 21.51
+      "checkError": 21.56
     },
     {
       "id": "CreateButtonLabel",
@@ -546,11 +563,11 @@
         460.1,
         581.4
       ],
-      "use": "UI/Common/UI_Panel_Large.png",
+      "use": "UI/Panels/UI_Panel_Large.png",
       "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
       "shadowSpread": 24,
       "shadowDrop": 3,
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Large.png",
       "spriteRect": [
         846.7,
         236.1,
@@ -558,31 +575,50 @@
         581.4
       ],
       "spritePpu": 0,
-      "checkError": 5.56
+      "checkError": 7.19
+    },
+    {
+      "id": "JoinMountains",
+      "parent": "JoinPanel",
+      "rect": [
+        848.0,
+        622.4,
+        460.0,
+        93.2
+      ],
+      "use": "UI/Decor/Deco_MountainFooter.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_MountainFooter.png",
+      "spriteRect": [
+        848,
+        622.4,
+        460,
+        93.2
+      ],
+      "spritePpu": 0,
+      "checkError": 8.65
     },
     {
       "id": "JoinIcon",
       "parent": "JoinPanel",
-      "shape": "ink",
       "rect": [
-        996,
-        306,
-        160,
-        150
+        1002.52,
+        311.49,
+        146.97,
+        139.14
       ],
-      "scale": 2,
-      "out": "Icon_EnterRoom",
+      "use": "UI/Icons/Icon_EnterRoom.png",
+      "opacity": 0.976,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/PlayWithFriends/Icon_EnterRoom.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_EnterRoom.png",
       "spriteRect": [
-        996,
-        306,
-        160,
-        150
+        1002.52,
+        311.49,
+        146.97,
+        139.14
       ],
-      "spritePpu": 174.1667,
-      "color": "#1E1E1D",
-      "checkError": 2.02
+      "spritePpu": 0,
+      "checkError": 15.68
     },
     {
       "id": "JoinTitle",
@@ -677,7 +713,7 @@
         90.8
       ],
       "spritePpu": 0,
-      "checkError": 21.69
+      "checkError": 21.73
     },
     {
       "id": "JoinButtonLabel",

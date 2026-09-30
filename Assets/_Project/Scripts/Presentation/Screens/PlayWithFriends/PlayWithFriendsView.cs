@@ -19,6 +19,7 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private UnityEngine.UI.Button _createButton;
         [SerializeField] private UnityEngine.UI.Button _joinPanel;
         [SerializeField] private UnityEngine.UI.Button _joinButton;
+        [SerializeField] private UnityEngine.UI.Image _avatar;
         [SerializeField] private TMP_Text _playerName;
 
         public event Action BackClicked;
@@ -33,6 +34,15 @@ namespace Callbreak.Presentation.Screens
             if (_playerName.text != playerName)
             {
                 _playerName.text = playerName;
+            }
+        }
+
+        /// <summary>The player's avatar preset in the header. A missing sprite keeps the picture it shows (the default one).</summary>
+        public void SetAvatar(Sprite avatar)
+        {
+            if (avatar != null)
+            {
+                _avatar.sprite = avatar;
             }
         }
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Callbreak.Application.Cosmetics;
 using Callbreak.Application.Ports;
+using Callbreak.Application.Settings;
 using Callbreak.Core.Cards;
 using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
@@ -10,9 +11,11 @@ using VContainer.Unity;
 namespace Callbreak.Presentation.Screens
 {
     /// <summary>
-    /// GDD §11 screen 15: choose the deck you play with. Every deck shows its back; the one being
-    /// looked at flips to its ace of spades so the faces can be seen before choosing. "Use
-    /// Selected Deck" equips it from the next match; all three decks are owned, nothing costs money.
+    /// GDD §11 screen 15: choose the deck you play with. Every deck is shown by its back, also
+    /// when the screen opens; selecting one turns its picture over to its ace of spades for a
+    /// moment and back, so the faces can be seen before choosing (with Reduce motion the picture
+    /// changes side without turning). "Use Selected Deck" equips it from the next match; all
+    /// three decks are owned, nothing costs money.
     /// </summary>
     public sealed class CardCollectionPresenter : IStartable, IDisposable
     {
@@ -23,6 +26,7 @@ namespace Callbreak.Presentation.Screens
         private readonly ICosmeticsService _cosmetics;
         private readonly ILocalization _localization;
         private readonly CardSpriteProvider _sprites;
+        private readonly ISettingsService _settings;
 
         private int _selected;
 
@@ -31,13 +35,15 @@ namespace Callbreak.Presentation.Screens
             ScreenRouter router,
             ICosmeticsService cosmetics,
             ILocalization localization,
-            CardSpriteProvider sprites)
+            CardSpriteProvider sprites,
+            ISettingsService settings)
         {
             _view = view;
             _router = router;
             _cosmetics = cosmetics;
             _localization = localization;
             _sprites = sprites;
+            _settings = settings;
         }
 
         public void Start()
@@ -83,7 +89,7 @@ namespace Callbreak.Presentation.Screens
                     i,
                     _localization.Get("ui.deck." + deck.Replace('-', '_')),
                     _localization.Get(i == equipped ? "ui.card_collection.equipped" : "ui.card_collection.owned"));
-                _view.SetPreview(i, i == _selected ? _sprites.Face(deck, AceOfSpades) : _sprites.Back(deck));
+                _view.SetPreview(i, _sprites.Back(deck));
             }
 
             _view.SetSelected(_selected);
@@ -115,6 +121,11 @@ namespace Callbreak.Presentation.Screens
 
             _selected = index;
             Render();
+            if (index < _view.DeckCount)
+            {
+                string deck = _cosmetics.DeckIds[index];
+                _view.PeekFace(index, _sprites.Face(deck, AceOfSpades), _sprites.Back(deck), _settings.ReduceMotion);
+            }
         }
 
         private void OnUse()

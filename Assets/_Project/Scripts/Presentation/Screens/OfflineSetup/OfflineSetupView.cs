@@ -25,6 +25,7 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private UnityEngine.UI.Button _startButton;
         [SerializeField] private TMP_Text _startLabel;
         [SerializeField] private UnityEngine.UI.Image _startChevron;
+        [SerializeField] private UnityEngine.UI.Image _avatar;
         [SerializeField] private TMP_Text _playerName;
         [SerializeField] private SelectableGroup _difficulty;
 
@@ -42,6 +43,15 @@ namespace Callbreak.Presentation.Screens
             if (_playerName.text != playerName)
             {
                 _playerName.text = playerName;
+            }
+        }
+
+        /// <summary>The player's avatar preset in the header. A missing sprite keeps the picture it shows (the default one).</summary>
+        public void SetAvatar(Sprite avatar)
+        {
+            if (avatar != null)
+            {
+                _avatar.sprite = avatar;
             }
         }
 

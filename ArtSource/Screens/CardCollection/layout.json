@@ -35,28 +35,28 @@
         91.6
       ],
       "spritePpu": 0,
-      "checkError": 4.89
+      "checkError": 3.98
     },
     {
       "id": "BackIcon",
       "parent": "BackButton",
       "rect": [
-        59.76,
-        54,
-        50.96,
-        48.92
+        65.06,
+        58.81,
+        39.62,
+        38.76
       ],
-      "use": "UI/Common/Icon_Back.png",
+      "use": "UI/Icons/Icon_Back.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/Icon_Back.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Back.png",
       "spriteRect": [
-        59.76,
-        54,
-        50.96,
-        48.92
+        65.06,
+        58.81,
+        39.62,
+        38.76
       ],
       "spritePpu": 0,
-      "checkError": 9.29
+      "checkError": 8.58
     },
     {
       "id": "CollectionButton",
@@ -81,33 +81,29 @@
         91.4
       ],
       "spritePpu": 0,
-      "checkError": 2.8
+      "checkError": 6.95
     },
     {
       "id": "CollectionIcon",
       "parent": "CollectionButton",
-      "shape": "diff",
-      "lo": 0.04,
-      "hi": 0.0401,
-      "solid": true,
       "rect": [
-        1560,
-        48,
-        58,
-        58
+        1566.08,
+        53.18,
+        48.66,
+        48.66
       ],
-      "scale": 2,
-      "out": "Icon_CardStack",
+      "use": "UI/Icons/Icon_CardStack.png",
+      "opacity": 0.99,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/CardCollection/Icon_CardStack.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_CardStack.png",
       "spriteRect": [
-        1564,
-        52,
-        52,
-        51
+        1566.08,
+        53.18,
+        48.66,
+        48.66
       ],
-      "spritePpu": 174.1667,
-      "checkError": 1.24
+      "spritePpu": 0,
+      "checkError": 14.49
     },
     {
       "id": "Title",
@@ -159,22 +155,22 @@
     {
       "id": "TitleDivider",
       "rect": [
-        677.89,
-        170.23,
-        318.3,
-        18.34
+        676.1,
+        173.2,
+        321.3,
+        12.7
       ],
-      "use": "UI/Common/Deco_TitleDivider.png",
+      "use": "UI/Decor/Deco_TitleDivider.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/Deco_TitleDivider.png",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider.png",
       "spriteRect": [
-        677.89,
-        170.23,
-        318.3,
-        18.34
+        676.1,
+        173.2,
+        321.3,
+        12.7
       ],
       "spritePpu": 0,
-      "checkError": 7.69
+      "checkError": 4.92
     },
     {
       "id": "Panel",
@@ -186,12 +182,12 @@
         938.7,
         558.5
       ],
-      "use": "UI/Common/UI_Panel_Large.png",
+      "use": "UI/Panels/UI_Panel_Large.png",
       "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
       "shadowSpread": 24,
       "shadowDrop": 3,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Large.png",
       "spriteRect": [
         367,
         197.5,
@@ -199,7 +195,7 @@
         558.5
       ],
       "spritePpu": 0,
-      "checkError": 7.43
+      "checkError": 8.11
     },
     {
       "id": "Decks",
@@ -224,11 +220,11 @@
         284.9,
         451.9
       ],
-      "use": "UI/Common/UI_Panel_Card.png",
+      "use": "UI/Panels/UI_Panel_Card.png",
       "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
       "shadowSpread": 12,
       "shadowDrop": 2,
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Card.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card.png",
       "spriteRect": [
         393.5,
         221.8,
@@ -236,7 +232,7 @@
         451.9
       ],
       "spritePpu": 0,
-      "checkError": 7.63
+      "checkError": 8.6
     },
     {
       "id": "DeckPreview0",
@@ -251,6 +247,7 @@
       ],
       "shadow": 12,
       "use": "Cards/ClassicCrimson/Back_ClassicCrimson.png",
+      "bind": "DeckCard0",
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Cards/ClassicCrimson/Back_ClassicCrimson.png",
       "spriteRect": [
@@ -263,12 +260,12 @@
       "shadowSprite": "Assets/_Project/Art/Screens/CardCollection/DeckPreview0_Shadow.png",
       "shadowRect": [
         429,
-        238,
+        231,
         213,
-        303
+        310
       ],
       "shadowPpu": 87.0833,
-      "checkError": 10.98
+      "checkError": 11.03
     },
     {
       "id": "DeckName0",
@@ -349,7 +346,7 @@
       ],
       "spritePpu": 174.1667,
       "color": "#820A0A",
-      "checkError": 7.62
+      "checkError": 8.52
     },
     {
       "id": "RadioOn0",
@@ -372,7 +369,7 @@
         41
       ],
       "spritePpu": 174.1667,
-      "checkError": 54.19
+      "checkError": 54.39
     },
     {
       "id": "Unselected0",
@@ -405,7 +402,7 @@
         41
       ],
       "spritePpu": 0,
-      "checkError": 53.06
+      "checkError": 53.28
     },
     {
       "id": "DeckStatus0",
@@ -442,11 +439,11 @@
         284.9,
         451.9
       ],
-      "use": "UI/Common/UI_Panel_Card.png",
+      "use": "UI/Panels/UI_Panel_Card.png",
       "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
       "shadowSpread": 12,
       "shadowDrop": 2,
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Card.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card.png",
       "spriteRect": [
         695.1,
         221.8,
@@ -454,7 +451,7 @@
         451.9
       ],
       "spritePpu": 0,
-      "checkError": 9.42
+      "checkError": 10.18
     },
     {
       "id": "DeckPreview1",
@@ -469,6 +466,7 @@
       ],
       "shadow": 12,
       "use": "Cards/HimalayanIvory/Back_HimalayanIvory.png",
+      "bind": "DeckCard1",
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Cards/HimalayanIvory/Back_HimalayanIvory.png",
       "spriteRect": [
@@ -481,12 +479,12 @@
       "shadowSprite": "Assets/_Project/Art/Screens/CardCollection/DeckPreview1_Shadow.png",
       "shadowRect": [
         729,
-        239,
+        231,
         215,
-        302
+        310
       ],
       "shadowPpu": 87.0833,
-      "checkError": 9.37
+      "checkError": 9.41
     },
     {
       "id": "DeckName1",
@@ -541,7 +539,7 @@
         459
       ],
       "spritePpu": 0,
-      "checkError": 9.86
+      "checkError": 10.57
     },
     {
       "id": "RadioOn1",
@@ -562,7 +560,7 @@
         41
       ],
       "spritePpu": 0,
-      "checkError": 1.97
+      "checkError": 2.32
     },
     {
       "id": "Unselected1",
@@ -596,7 +594,7 @@
         41
       ],
       "spritePpu": 174.1667,
-      "checkError": 1.91
+      "checkError": 2.22
     },
     {
       "id": "DeckStatus1",
@@ -633,11 +631,11 @@
         284.8,
         451.9
       ],
-      "use": "UI/Common/UI_Panel_Card.png",
+      "use": "UI/Panels/UI_Panel_Card.png",
       "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
       "shadowSpread": 12,
       "shadowDrop": 2,
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Card.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card.png",
       "spriteRect": [
         996,
         221.8,
@@ -645,7 +643,7 @@
         451.9
       ],
       "spritePpu": 0,
-      "checkError": 8.25
+      "checkError": 9.26
     },
     {
       "id": "DeckPreview2",
@@ -660,6 +658,7 @@
       ],
       "shadow": 12,
       "use": "Cards/KathmanduGold/Back_KathmanduGold.png",
+      "bind": "DeckCard2",
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/Cards/KathmanduGold/Back_KathmanduGold.png",
       "spriteRect": [
@@ -672,12 +671,12 @@
       "shadowSprite": "Assets/_Project/Art/Screens/CardCollection/DeckPreview2_Shadow.png",
       "shadowRect": [
         1031,
-        240,
+        232,
         214,
-        301
+        309
       ],
       "shadowPpu": 87.0833,
-      "checkError": 6.29
+      "checkError": 6.38
     },
     {
       "id": "DeckName2",
@@ -732,7 +731,7 @@
         459
       ],
       "spritePpu": 0,
-      "checkError": 8.52
+      "checkError": 9.44
     },
     {
       "id": "RadioOn2",
@@ -753,7 +752,7 @@
         41
       ],
       "spritePpu": 0,
-      "checkError": 6.61
+      "checkError": 6.96
     },
     {
       "id": "Unselected2",
@@ -785,7 +784,7 @@
         41
       ],
       "spritePpu": 0,
-      "checkError": 6.68
+      "checkError": 7.03
     },
     {
       "id": "DeckStatus2",

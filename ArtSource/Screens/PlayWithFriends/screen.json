@@ -1,14 +1,20 @@
 {
   // Screen 01 - Play with Friends (GDD §11). Rects are mockup pixels on 01-play-with-friends.png.
   // Worked example of the shared kit: the menu background, panels, buttons, header discs, avatar,
-  // divider and common icons are reused ("use"); only what is unique here is cut ("out").
+  // divider and icons are all reused ("use"); nothing is cut from this mockup any more. The two
+  // panels, the title divider and the back, create-room and enter-room icons are the generated kit
+  // (ArtSource/Kit/Panels.map.csv, Decor.map.csv, Icons.map.csv; an icon's "opacity" is the one at
+  // which the kit's black ink reads as this mockup's ink); the hairline between the header buttons
+  // is a drawn shape ("make"). The faint mountains above each card's button are the kit's overlay
+  // (UI/Decor/Deco_MountainFooter.png, rects from Decor.map.csv): the generated panel's own
+  // mountains sit in its bottom corners, which these short cards hide behind their buttons.
   "name": "PlayWithFriends",
   "mockup": "01-play-with-friends.png",
   "background": "shared",
   "nodes": [
     { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [43.1, 37.4, 82.8, 81.9],
       "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
-    { "id": "BackIcon", "parent": "BackButton", "shape": "ink", "rect": [60, 55, 50, 48], "use": "UI/Common/Icon_Back.png" },
+    { "id": "BackIcon", "parent": "BackButton", "rect": [65.36, 59.67, 38.84, 38], "use": "UI/Icons/Icon_Back.png", "opacity": 0.993 },
     { "id": "AvatarRing", "kind": "button", "bind": "ProfileButton", "group": "HeaderLeft", "shape": "ellipse", "rect": [167.2, 35.8, 92, 92],
       "use": "UI/Avatars/UI_AvatarRing.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 5, "shadowOpacity": 0.15 },
     { "id": "Avatar", "parent": "AvatarRing", "shape": "ellipse", "rect": [171.3, 39.8, 83.7, 84.2], "use": "UI/Avatars/Avatar_Default.png" },
@@ -18,18 +24,19 @@
     { "id": "SettingsButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1419.2, 37.9, 79.6, 80.8],
       "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
     { "id": "SettingsIcon", "parent": "SettingsButton", "shape": "ink", "rect": [1434, 53, 50, 50], "use": "UI/Icons/Icon_Settings.png" },
-    { "id": "HeaderDivider", "group": "HeaderRight", "shape": "ink", "rect": [1521, 45, 8, 68], "out": "Deco_HeaderDivider" },
+    { "id": "HeaderDivider", "group": "HeaderRight", "rect": [1524.0, 48.4, 1.7, 61.4], "make": { "type": "rect", "fill": "#917864", "out": "Deco_HeaderDivider_Line" } },
     { "id": "ShopButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1551.4, 37.8, 80.7, 81.0],
       "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
     { "id": "ShopIcon", "parent": "ShopButton", "shape": "ink", "rect": [1567, 53, 52, 50], "use": "UI/Icons/Icon_Shop.png" },
 
     { "id": "Title", "kind": "label", "text": "Play with Friends", "font": "SerifBold", "rect": [565, 88, 545, 78], "key": "ui.friends.title" },
     { "id": "Subtitle", "kind": "label", "text": "CREATE A ROOM AND PLAY TOGETHER", "font": "SansSemiBold", "tracked": true, "rect": [480, 166, 708, 28], "key": "ui.friends.subtitle" },
-    { "id": "TitleDivider", "shape": "ink", "rect": [670, 202, 335, 18], "use": "UI/Common/Deco_TitleDivider.png" },
+    { "id": "TitleDivider", "rect": [671.8, 204.5, 330.0, 13.0], "use": "UI/Decor/Deco_TitleDivider.png" },
 
     { "id": "CreatePanel", "kind": "button", "shape": "roundrect", "radius": 24, "rect": [366.5, 235.6, 459.5, 581.9],
-      "use": "UI/Common/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
-    { "id": "CreateIcon", "parent": "CreatePanel", "shape": "diff", "solid": true, "rect": [500, 305, 212, 165], "scale": 2, "out": "Icon_CreateRoom" },
+      "use": "UI/Panels/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
+    { "id": "CreateMountains", "parent": "CreatePanel", "rect": [368.0, 622.4, 460.0, 93.2], "use": "UI/Decor/Deco_MountainFooter.png" },
+    { "id": "CreateIcon", "parent": "CreatePanel", "rect": [506.14, 311.81, 200.88, 152.18], "use": "UI/Icons/Icon_CreateRoom.png" },
     { "id": "CreateTitle", "kind": "label", "parent": "CreatePanel", "text": "Create Room", "font": "SerifBold", "rect": [428, 482, 338, 60], "key": "ui.friends.create_title" },
     { "id": "CreateLine1", "kind": "label", "parent": "CreatePanel", "text": "Make a room and", "font": "SansRegular", "rect": [470, 562, 255, 36], "key": "ui.friends.create_line1" },
     { "id": "CreateLine2", "kind": "label", "parent": "CreatePanel", "text": "invite your friends", "font": "SansRegular", "rect": [468, 599, 258, 41], "key": "ui.friends.create_line2" },
@@ -39,8 +46,9 @@
     { "id": "CreateChevron", "parent": "CreateButton", "shape": "ink", "ink": "light", "rect": [748, 724, 28, 36], "use": "UI/Common/Icon_Chevron_Light.png" },
 
     { "id": "JoinPanel", "kind": "button", "shape": "roundrect", "radius": 24.5, "rect": [846.7, 236.1, 460.1, 581.4],
-      "use": "UI/Common/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
-    { "id": "JoinIcon", "parent": "JoinPanel", "shape": "ink", "rect": [996, 306, 160, 150], "scale": 2, "out": "Icon_EnterRoom" },
+      "use": "UI/Panels/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
+    { "id": "JoinMountains", "parent": "JoinPanel", "rect": [848.0, 622.4, 460.0, 93.2], "use": "UI/Decor/Deco_MountainFooter.png" },
+    { "id": "JoinIcon", "parent": "JoinPanel", "rect": [1002.52, 311.49, 146.97, 139.14], "use": "UI/Icons/Icon_EnterRoom.png", "opacity": 0.976 },
     { "id": "JoinTitle", "kind": "label", "parent": "JoinPanel", "text": "Join Room", "font": "SerifBold", "rect": [938, 482, 282, 66], "key": "ui.friends.join_title" },
     { "id": "JoinLine1", "kind": "label", "parent": "JoinPanel", "text": "Enter a room code", "font": "SansRegular", "rect": [948, 563, 264, 35], "key": "ui.friends.join_line1" },
     { "id": "JoinLine2", "kind": "label", "parent": "JoinPanel", "text": "to join your friends", "font": "SansRegular", "rect": [948, 599, 264, 41], "key": "ui.friends.join_line2" },

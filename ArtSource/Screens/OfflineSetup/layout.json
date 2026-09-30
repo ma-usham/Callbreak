@@ -35,28 +35,28 @@
         88
       ],
       "spritePpu": 0,
-      "checkError": 5.56
+      "checkError": 4.76
     },
     {
       "id": "BackIcon",
       "parent": "BackButton",
       "rect": [
-        59.94,
-        54.52,
-        50.75,
-        48.72
+        65.5,
+        59.31,
+        39.36,
+        38.5
       ],
-      "use": "UI/Common/Icon_Back.png",
+      "use": "UI/Icons/Icon_Back.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/Icon_Back.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Back.png",
       "spriteRect": [
-        59.94,
-        54.52,
-        50.75,
-        48.72
+        65.5,
+        59.31,
+        39.36,
+        38.5
       ],
       "spritePpu": 0,
-      "checkError": 10.3
+      "checkError": 11.95
     },
     {
       "id": "AvatarRing",
@@ -82,7 +82,7 @@
         92.7
       ],
       "spritePpu": 0,
-      "checkError": 9.54
+      "checkError": 9.53
     },
     {
       "id": "Avatar",
@@ -104,7 +104,7 @@
         85.55
       ],
       "spritePpu": 0,
-      "checkError": 10.68
+      "checkError": 10.67
     },
     {
       "id": "Greeting",
@@ -176,7 +176,7 @@
         87.2
       ],
       "spritePpu": 0,
-      "checkError": 8.97
+      "checkError": 8.98
     },
     {
       "id": "SettingsIcon",
@@ -247,24 +247,65 @@
       "color": "#77563D"
     },
     {
-      "id": "TitleDivider",
+      "id": "TitleLineLeft",
       "rect": [
-        686.72,
-        186.08,
-        300.52,
-        19.31
+        677.7,
+        194.2,
+        151.4,
+        3.7
       ],
-      "use": "UI/Common/Deco_TitleDivider.png",
+      "use": "UI/Decor/Deco_TitleDivider_Line.png",
+      "mirror": true,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/Deco_TitleDivider.png",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider_Line.png",
       "spriteRect": [
-        686.72,
-        186.08,
-        300.52,
-        19.31
+        677.7,
+        194.2,
+        151.4,
+        3.7
       ],
       "spritePpu": 0,
-      "checkError": 7.76
+      "checkError": 20.51
+    },
+    {
+      "id": "TitleDiamond",
+      "rect": [
+        828.8,
+        189.1,
+        13.7,
+        13.7
+      ],
+      "use": "UI/Decor/Deco_TitleDivider_Diamond.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider_Diamond.png",
+      "spriteRect": [
+        828.8,
+        189.1,
+        13.7,
+        13.7
+      ],
+      "spritePpu": 0,
+      "checkError": 18.28
+    },
+    {
+      "id": "TitleLineRight",
+      "rect": [
+        842.3,
+        194.2,
+        144.4,
+        3.7
+      ],
+      "use": "UI/Decor/Deco_TitleDivider_Line.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider_Line.png",
+      "spriteRect": [
+        842.3,
+        194.2,
+        144.4,
+        3.7
+      ],
+      "spritePpu": 0,
+      "checkError": 7.37
     },
     {
       "id": "Panel",
@@ -276,12 +317,12 @@
         865.3,
         682.8
       ],
-      "use": "UI/Common/UI_Panel_Large.png",
+      "use": "UI/Panels/UI_Panel_Large.png",
       "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
       "shadowSpread": 24,
       "shadowDrop": 3,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Large.png",
       "spriteRect": [
         403.8,
         215.3,
@@ -289,33 +330,29 @@
         682.8
       ],
       "spritePpu": 0,
-      "checkError": 7.83
+      "checkError": 9.64
     },
     {
       "id": "MonitorIcon",
       "parent": "Panel",
-      "shape": "diff",
-      "lo": 0.04,
-      "hi": 0.0401,
-      "solid": true,
       "rect": [
-        750,
-        240,
-        175,
-        140
+        757.71,
+        248.8,
+        156.53,
+        124.35
       ],
-      "scale": 2,
-      "out": "Icon_OfflineMonitor",
+      "use": "UI/Icons/Icon_OfflineMonitor.png",
+      "opacity": 0.989,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/OfflineSetup/Icon_OfflineMonitor.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_OfflineMonitor.png",
       "spriteRect": [
-        754,
-        248,
-        164,
-        127
+        757.71,
+        248.8,
+        156.53,
+        124.35
       ],
-      "spritePpu": 174.1667,
-      "checkError": 0.52
+      "spritePpu": 0,
+      "checkError": 11.71
     },
     {
       "id": "Heading",
@@ -386,11 +423,11 @@
         252.6,
         211.0
       ],
-      "use": "UI/Common/UI_Panel_Card.png",
+      "use": "UI/Panels/UI_Panel_Card.png",
       "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
       "shadowSpread": 12,
       "shadowDrop": 2,
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Card.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card.png",
       "spriteRect": [
         440.9,
         504,
@@ -398,7 +435,7 @@
         211
       ],
       "spritePpu": 0,
-      "checkError": 15.08
+      "checkError": 16.2
     },
     {
       "id": "Selected0",
@@ -431,7 +468,7 @@
         215.3
       ],
       "spritePpu": 0,
-      "checkError": 14.9
+      "checkError": 15.97
     },
     {
       "id": "CheckBadge0",
@@ -457,28 +494,24 @@
     {
       "id": "IconEasy",
       "parent": "CardEasy",
-      "shape": "diff",
-      "lo": 0.04,
-      "hi": 0.0401,
-      "solid": true,
       "rect": [
-        530,
-        525,
-        75,
-        70
+        536.44,
+        530.76,
+        55.72,
+        62.68
       ],
-      "scale": 2,
-      "out": "Icon_DifficultyEasy",
+      "use": "UI/Icons/Icon_DifficultyEasy.png",
+      "opacity": 0.976,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/OfflineSetup/Icon_DifficultyEasy.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_DifficultyEasy.png",
       "spriteRect": [
-        535,
-        530,
-        60,
-        65
+        536.44,
+        530.76,
+        55.72,
+        62.68
       ],
-      "spritePpu": 174.1667,
-      "checkError": 1.14
+      "spritePpu": 0,
+      "checkError": 20.16
     },
     {
       "id": "NameEasy",
@@ -561,11 +594,11 @@
         252.25,
         217.7
       ],
-      "use": "UI/Common/UI_Panel_Card.png",
+      "use": "UI/Panels/UI_Panel_Card.png",
       "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
       "shadowSpread": 12,
       "shadowDrop": 2,
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Card.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card.png",
       "spriteRect": [
         710,
         500.3,
@@ -573,7 +606,7 @@
         217.7
       ],
       "spritePpu": 0,
-      "checkError": 2.94
+      "checkError": 5.69
     },
     {
       "id": "Selected1",
@@ -632,7 +665,7 @@
       ],
       "spritePpu": 174.1667,
       "color": "#8C0709",
-      "checkError": 3.27
+      "checkError": 5.82
     },
     {
       "id": "CheckBadge1",
@@ -658,33 +691,29 @@
         43
       ],
       "spritePpu": 174.1667,
-      "checkError": 1.86
+      "checkError": 2.5
     },
     {
       "id": "IconNormal",
       "parent": "CardNormal",
-      "shape": "diff",
-      "lo": 0.04,
-      "hi": 0.0401,
-      "solid": true,
       "rect": [
-        785,
-        522,
-        105,
-        72
+        790.7,
+        527.91,
+        92.23,
+        65.26
       ],
-      "scale": 2,
-      "out": "Icon_DifficultyNormal",
+      "use": "UI/Icons/Icon_DifficultyNormal.png",
+      "opacity": 0.979,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/OfflineSetup/Icon_DifficultyNormal.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_DifficultyNormal.png",
       "spriteRect": [
-        787,
-        526,
-        100,
-        68
+        790.7,
+        527.91,
+        92.23,
+        65.26
       ],
-      "spritePpu": 174.1667,
-      "checkError": 1.09
+      "spritePpu": 0,
+      "checkError": 17.05
     },
     {
       "id": "NameNormal",
@@ -767,11 +796,11 @@
         252.9,
         211.2
       ],
-      "use": "UI/Common/UI_Panel_Card.png",
+      "use": "UI/Panels/UI_Panel_Card.png",
       "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
       "shadowSpread": 12,
       "shadowDrop": 2,
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Card.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card.png",
       "spriteRect": [
         979.1,
         504,
@@ -779,7 +808,7 @@
         211.2
       ],
       "spritePpu": 0,
-      "checkError": 14.61
+      "checkError": 16.84
     },
     {
       "id": "Selected2",
@@ -812,7 +841,7 @@
         215.5
       ],
       "spritePpu": 0,
-      "checkError": 14.43
+      "checkError": 16.56
     },
     {
       "id": "CheckBadge2",
@@ -833,33 +862,29 @@
         43
       ],
       "spritePpu": 0,
-      "checkError": 87.59
+      "checkError": 88.18
     },
     {
       "id": "IconHard",
       "parent": "CardHard",
-      "shape": "diff",
-      "lo": 0.04,
-      "hi": 0.0401,
-      "solid": true,
       "rect": [
-        1052,
-        520,
-        112,
-        74
+        1058.76,
+        525.22,
+        99.99,
+        67.82
       ],
-      "scale": 2,
-      "out": "Icon_DifficultyHard",
+      "use": "UI/Icons/Icon_DifficultyHard.png",
+      "opacity": 0.979,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/OfflineSetup/Icon_DifficultyHard.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_DifficultyHard.png",
       "spriteRect": [
-        1056,
-        525,
-        106,
-        69
+        1058.76,
+        525.22,
+        99.99,
+        67.82
       ],
-      "spritePpu": 174.1667,
-      "checkError": 0.86
+      "spritePpu": 0,
+      "checkError": 17.4
     },
     {
       "id": "NameHard",
@@ -953,7 +978,7 @@
         1.9
       ],
       "spritePpu": 200,
-      "checkError": 8.54
+      "checkError": 8.8
     },
     {
       "id": "Footer",
@@ -1001,7 +1026,7 @@
         1.9
       ],
       "spritePpu": 200,
-      "checkError": 8.28
+      "checkError": 8.59
     },
     {
       "id": "StartButton",
@@ -1027,7 +1052,7 @@
         93.4
       ],
       "spritePpu": 0,
-      "checkError": 23.64
+      "checkError": 23.71
     },
     {
       "id": "StartLabel",

@@ -17,7 +17,8 @@ namespace Callbreak.Editor.Screens
 
         public static void Customize(ScreenBuildContext ctx)
         {
-            var group = ctx.Nodes["Difficulty"].gameObject.AddComponent<SelectableGroup>();
+            ScreenExtras.Apply(ctx);   // "mirror" on the title divider's left line
+            var group =ctx.Nodes["Difficulty"].gameObject.AddComponent<SelectableGroup>();
             var so = new SerializedObject(group);
             SerializedProperty options = so.FindProperty("_options");
             SerializedProperty looks = so.FindProperty("_selectedLooks");

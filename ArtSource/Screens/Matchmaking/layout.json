@@ -35,28 +35,28 @@
         88
       ],
       "spritePpu": 0,
-      "checkError": 5.58
+      "checkError": 4.45
     },
     {
       "id": "BackIcon",
       "parent": "BackButton",
       "rect": [
-        59.44,
-        53.94,
-        51.63,
-        49.56
+        65.2,
+        58.95,
+        39.95,
+        39.08
       ],
-      "use": "UI/Common/Icon_Back.png",
+      "use": "UI/Icons/Icon_Back.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/Icon_Back.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Back.png",
       "spriteRect": [
-        59.44,
-        53.94,
-        51.63,
-        49.56
+        65.2,
+        58.95,
+        39.95,
+        39.08
       ],
       "spritePpu": 0,
-      "checkError": 8.1
+      "checkError": 6.71
     },
     {
       "id": "AvatarRing",
@@ -82,7 +82,7 @@
         92.6
       ],
       "spritePpu": 0,
-      "checkError": 9.39
+      "checkError": 9.38
     },
     {
       "id": "Avatar",
@@ -222,7 +222,7 @@
         61.3
       ],
       "spritePpu": 200,
-      "checkError": 9.36
+      "checkError": 9.43
     },
     {
       "id": "ShopButton",
@@ -247,7 +247,7 @@
         86.3
       ],
       "spritePpu": 0,
-      "checkError": 18.93
+      "checkError": 18.92
     },
     {
       "id": "ShopIcon",
@@ -318,24 +318,65 @@
       "color": "#7A583E"
     },
     {
-      "id": "TitleDivider",
+      "id": "TitleLineLeft",
       "rect": [
-        700.58,
-        173.56,
-        271.63,
-        19.67
+        691.9,
+        181.6,
+        136.8,
+        3.8
       ],
-      "use": "UI/Common/Deco_TitleDivider.png",
+      "use": "UI/Decor/Deco_TitleDivider_Line.png",
+      "mirror": true,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/Deco_TitleDivider.png",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider_Line.png",
       "spriteRect": [
-        700.58,
-        173.56,
-        271.63,
-        19.67
+        691.9,
+        181.6,
+        136.8,
+        3.8
       ],
       "spritePpu": 0,
-      "checkError": 8.02
+      "checkError": 20.33
+    },
+    {
+      "id": "TitleDiamond",
+      "rect": [
+        828.5,
+        176.5,
+        14.1,
+        14.1
+      ],
+      "use": "UI/Decor/Deco_TitleDivider_Diamond.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider_Diamond.png",
+      "spriteRect": [
+        828.5,
+        176.5,
+        14.1,
+        14.1
+      ],
+      "spritePpu": 0,
+      "checkError": 19.46
+    },
+    {
+      "id": "TitleLineRight",
+      "rect": [
+        842.3,
+        181.6,
+        133.0,
+        3.8
+      ],
+      "use": "UI/Decor/Deco_TitleDivider_Line.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider_Line.png",
+      "spriteRect": [
+        842.3,
+        181.6,
+        133,
+        3.8
+      ],
+      "spritePpu": 0,
+      "checkError": 13.99
     },
     {
       "id": "Panel",
@@ -347,12 +388,12 @@
         829.3,
         660.9
       ],
-      "use": "UI/Common/UI_Panel_Large.png",
+      "use": "UI/Panels/UI_Panel_Large.png",
       "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
       "shadowSpread": 24,
       "shadowDrop": 3,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/UI/Common/UI_Panel_Large.png",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Large.png",
       "spriteRect": [
         421.6,
         206.1,
@@ -360,79 +401,50 @@
         660.9
       ],
       "spritePpu": 0,
-      "checkError": 3.74
+      "checkError": 5.05
     },
     {
       "id": "SearchArc",
       "parent": "Panel",
-      "shape": "diff",
-      "lo": 0.04,
-      "hi": 0.0401,
       "rect": [
-        740.8,
-        220.3,
-        188,
-        164
+        755.4,
+        222.3,
+        161.0,
+        161.0
       ],
-      "scale": 2,
-      "out": "Deco_SearchArc",
-      "clip": [
-        {
-          "shape": "ellipse",
-          "rect": [
-            797.2,
-            258.5,
-            76,
-            90
-          ],
-          "outside": true
-        },
-        {
-          "shape": "ellipse",
-          "rect": [
-            742.8,
-            210.3,
-            184,
-            184
-          ]
-        }
-      ],
+      "use": "UI/Decor/Deco_SearchArc.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Matchmaking/Deco_SearchArc.png",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_SearchArc.png",
       "spriteRect": [
-        745,
-        224,
-        179,
-        156
+        755.4,
+        222.3,
+        161,
+        161
       ],
-      "spritePpu": 174.1667,
-      "checkError": 1.27
+      "spritePpu": 0,
+      "checkError": 7.67
     },
     {
       "id": "SearchSpade",
       "parent": "Panel",
-      "shape": "diff",
-      "lo": 0.04,
-      "hi": 0.0401,
-      "solid": true,
       "rect": [
-        799,
-        262,
-        73,
-        82
+        800.56,
+        263.44,
+        70.01,
+        80.38
       ],
-      "scale": 2,
-      "out": "Icon_SearchSpade",
+      "use": "UI/Icons/Icon_Suit_Spade.png",
+      "opacity": 0.994,
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Matchmaking/Icon_SearchSpade.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Suit_Spade.png",
       "spriteRect": [
-        800,
-        263,
-        72,
-        81
+        800.56,
+        263.44,
+        70.01,
+        80.38
       ],
-      "spritePpu": 174.1667,
-      "checkError": 1.19
+      "spritePpu": 0,
+      "checkError": 12.44
     },
     {
       "id": "StatusTitle",
@@ -509,7 +521,7 @@
         121
       ],
       "spritePpu": 0,
-      "checkError": 0.81
+      "checkError": 0.64
     },
     {
       "id": "SeatFilled0",
@@ -532,7 +544,7 @@
         117
       ],
       "spritePpu": 174.1667,
-      "checkError": 0.67
+      "checkError": 0.52
     },
     {
       "id": "SeatName0",
@@ -609,7 +621,7 @@
         121
       ],
       "spritePpu": 0,
-      "checkError": 3.98
+      "checkError": 4.02
     },
     {
       "id": "SeatFilled1",
@@ -707,7 +719,7 @@
         121
       ],
       "spritePpu": 0,
-      "checkError": 4.49
+      "checkError": 4.52
     },
     {
       "id": "SeatFilled2",
@@ -728,7 +740,7 @@
         117
       ],
       "spritePpu": 0,
-      "checkError": 4.66
+      "checkError": 4.68
     },
     {
       "id": "SeatName2",
@@ -818,7 +830,7 @@
         121
       ],
       "spritePpu": 174.1667,
-      "checkError": 40.05
+      "checkError": 39.88
     },
     {
       "id": "SeatFilled3",
@@ -840,7 +852,7 @@
         117
       ],
       "spritePpu": 0,
-      "checkError": 47.2
+      "checkError": 47.07
     },
     {
       "id": "SeatName3",
@@ -910,7 +922,7 @@
         2
       ],
       "spritePpu": 200,
-      "checkError": 7.53
+      "checkError": 8.46
     },
     {
       "id": "Rules",
@@ -959,7 +971,7 @@
         2
       ],
       "spritePpu": 200,
-      "checkError": 7.45
+      "checkError": 8.32
     },
     {
       "id": "CancelButton",
@@ -984,7 +996,7 @@
         75.5
       ],
       "spritePpu": 0,
-      "checkError": 7.7
+      "checkError": 7.75
     },
     {
       "id": "CancelLabel",
@@ -1012,53 +1024,45 @@
     {
       "id": "ElapsedPill",
       "parent": "Panel",
+      "shape": "pill",
       "rect": [
         1041.8,
         780.9,
         122.4,
         52.3
       ],
-      "make": {
-        "type": "pill",
-        "fill": "#EADACC",
-        "out": "UI_ElapsedPill"
-      },
+      "use": "UI/Table/UI_Pill_Elapsed.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Matchmaking/UI_ElapsedPill.png",
+      "sprite": "Assets/_Project/Art/UI/Table/UI_Pill_Elapsed.png",
       "spriteRect": [
         1041.8,
         780.9,
         122.4,
         52.3
       ],
-      "spritePpu": 200,
-      "checkError": 1.6
+      "spritePpu": 0,
+      "checkError": 3.99
     },
     {
       "id": "ElapsedClock",
       "parent": "ElapsedPill",
-      "shape": "diff",
-      "lo": 0.04,
-      "hi": 0.0401,
-      "solid": true,
       "rect": [
-        1051,
-        790,
-        35,
-        35
+        1054.02,
+        792.89,
+        28.7,
+        28.7
       ],
-      "scale": 2,
-      "out": "Icon_Clock",
+      "use": "UI/Icons/Icon_Clock.png",
       "kind": "sprite",
-      "sprite": "Assets/_Project/Art/Screens/Matchmaking/Icon_Clock.png",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Clock.png",
       "spriteRect": [
-        1053,
-        793,
-        31,
-        30
+        1054.02,
+        792.89,
+        28.7,
+        28.7
       ],
-      "spritePpu": 174.1667,
-      "checkError": 0.91
+      "spritePpu": 0,
+      "checkError": 10.68
     },
     {
       "id": "Elapsed",

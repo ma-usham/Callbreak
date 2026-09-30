@@ -22,6 +22,7 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private UnityEngine.UI.Button _shopButton;
         [SerializeField] private UnityEngine.UI.Button _cancelButton;
         [SerializeField] private TMP_Text _cancelLabel;
+        [SerializeField] private UnityEngine.UI.Image _avatar;
         [SerializeField] private TMP_Text _playerName;
         [SerializeField] private TMP_Text _statusTitle;
         [SerializeField] private TMP_Text _statusSubtitle;
@@ -39,6 +40,15 @@ namespace Callbreak.Presentation.Screens
         public void SetPlayerName(string playerName)
         {
             SetText(_playerName, playerName);
+        }
+
+        /// <summary>The player's avatar preset in the header. A missing sprite keeps the picture it shows (the default one).</summary>
+        public void SetAvatar(Sprite avatar)
+        {
+            if (avatar != null)
+            {
+                _avatar.sprite = avatar;
+            }
         }
 
         /// <summary>"Finding players..." · "3 of 4 players connected" (or "Table found", an error line...).</summary>
