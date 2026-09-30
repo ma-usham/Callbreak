@@ -64,13 +64,15 @@ namespace Callbreak.Application.Sessions
             _settings = settings;
             _difficulty = request.Difficulty;
             timing ??= BotTiming.Offline;
-            RuleSet rules = RuleSet.NepaliStandard;
+            RuleSet rules = OfflineMatchStore.Rules;
 
+            // The engine keeps dealing from the generator it was restored with, so that one, and
+            // no copy of it, is the generator whose state the next save must hold.
             if (request.ResumeSaved && store.TryLoad(out OfflineMatchSave save) &&
-                MatchEngine.TryRestore(save.match, rules, Pcg32Random.FromState(save.rngState, save.rngIncrement), out MatchEngine restored, out _))
+                OfflineMatchStore.TryRestore(save, out MatchEngine restored, out Pcg32Random restoredRng))
             {
                 _engine = restored;
-                _rng = Pcg32Random.FromState(save.rngState, save.rngIncrement);
+                _rng = restoredRng;
                 _seed = save.seed;
                 _difficulty = (BotDifficulty)save.difficulty;
                 _resumed = true;
@@ -323,7 +325,7 @@ namespace Callbreak.Application.Sessions
             {
                 if (standing.Seat == LocalSeat)
                 {
-                    _stats.RecordMatch(_engine.MatchId, standing.Rank, standing.TotalTenths, abandoned: false);
+                    _stats.RecordFinished(_engine.MatchId, standing, View.Scores);
                 }
             }
 

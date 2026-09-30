@@ -188,5 +188,206 @@ namespace Callbreak.Tests.EditMode.Application
             Assert.AreEqual(4, stats.Current.gamesPlayed);
             Assert.AreEqual(3, stats.Current.wins);
         }
+
+        // GDD §15 "Tracked for later: calls-met %, average call, win streak".
+
+        [Test]
+        public void NoFile_TheCallAndStreakFiguresAreZero()
+        {
+            PlayerStats current = _stats.Current;
+
+            Assert.AreEqual(0, current.roundsPlayed);
+            Assert.AreEqual(0, current.roundsMet);
+            Assert.AreEqual(0, current.callsTotal);
+            Assert.AreEqual(0f, current.CallsMetRate);
+            Assert.AreEqual(0f, current.AverageCall);
+            Assert.AreEqual(0, current.winStreak);
+            Assert.AreEqual(0, current.bestWinStreak);
+        }
+
+        [Test]
+        public void FinishedMatch_AddsItsRoundsItsMetCallsAndItsCalls()
+        {
+            _stats.RecordMatch("m1", 2, 120, false, roundsPlayed: 5, roundsMet: 3, callsTotal: 14);
+
+            PlayerStats first = _stats.Current;
+            Assert.AreEqual(5, first.roundsPlayed);
+            Assert.AreEqual(3, first.roundsMet);
+            Assert.AreEqual(14, first.callsTotal);
+            Assert.AreEqual(0.6f, first.CallsMetRate, 0.0001f);
+            Assert.AreEqual(2.8f, first.AverageCall, 0.0001f);
+
+            _stats.RecordMatch("m2", 1, 161, false, roundsPlayed: 5, roundsMet: 5, callsTotal: 11);
+
+            PlayerStats second = _stats.Current;
+            Assert.AreEqual(10, second.roundsPlayed);
+            Assert.AreEqual(8, second.roundsMet);
+            Assert.AreEqual(25, second.callsTotal);
+            Assert.AreEqual(0.8f, second.CallsMetRate, 0.0001f);
+            Assert.AreEqual(2.5f, second.AverageCall, 0.0001f);
+        }
+
+        [Test]
+        public void AbandonedMatch_AddsNoRounds()
+        {
+            _stats.RecordMatch("m1", 2, 120, false, roundsPlayed: 5, roundsMet: 3, callsTotal: 14);
+
+            _stats.RecordMatch("left", 4, 20, true, roundsPlayed: 2, roundsMet: 1, callsTotal: 6);
+
+            PlayerStats current = _stats.Current;
+            Assert.AreEqual(2, current.gamesPlayed, "it still counts as played");
+            Assert.AreEqual(5, current.roundsPlayed);
+            Assert.AreEqual(3, current.roundsMet);
+            Assert.AreEqual(14, current.callsTotal);
+        }
+
+        [Test]
+        public void WinStreak_CountsWinsInARow_AndALossEndsIt()
+        {
+            _stats.RecordMatch("m1", 1, 150, false);
+            _stats.RecordMatch("m2", 1, 140, false);
+            Assert.AreEqual(2, _stats.Current.winStreak);
+            Assert.AreEqual(2, _stats.Current.bestWinStreak);
+
+            _stats.RecordMatch("m3", 2, 90, false);
+            Assert.AreEqual(0, _stats.Current.winStreak, "second place ends the run");
+            Assert.AreEqual(2, _stats.Current.bestWinStreak, "the best run is kept");
+
+            _stats.RecordMatch("m4", 1, 130, false);
+            Assert.AreEqual(1, _stats.Current.winStreak);
+            Assert.AreEqual(2, _stats.Current.bestWinStreak);
+
+            _stats.RecordMatch("m5", 1, 130, false);
+            _stats.RecordMatch("m6", 1, 130, false);
+            Assert.AreEqual(3, _stats.Current.winStreak);
+            Assert.AreEqual(3, _stats.Current.bestWinStreak);
+        }
+
+        [Test]
+        public void WinStreak_AbandonedMatchEndsIt_EvenFromFirstPlace()
+        {
+            _stats.RecordMatch("m1", 1, 150, false);
+            _stats.RecordMatch("m2", 1, 140, false);
+
+            _stats.RecordMatch("left", 1, 400, true);
+
+            Assert.AreEqual(0, _stats.Current.winStreak);
+            Assert.AreEqual(2, _stats.Current.bestWinStreak);
+            Assert.AreEqual(2, _stats.Current.wins);
+        }
+
+        [Test]
+        public void SameMatchId_CountsItsRoundsAndItsPlaceInTheStreakOnce()
+        {
+            _stats.RecordMatch("m1", 1, 213, false, roundsPlayed: 5, roundsMet: 4, callsTotal: 15);
+            _stats.RecordMatch("m1", 1, 213, false, roundsPlayed: 5, roundsMet: 4, callsTotal: 15);
+            _stats.RecordMatch("m1", 3, 50, false, roundsPlayed: 5, roundsMet: 0, callsTotal: 40);
+            _stats.RecordMatch("m1", 1, 213, true);
+
+            PlayerStats current = _stats.Current;
+            Assert.AreEqual(5, current.roundsPlayed);
+            Assert.AreEqual(4, current.roundsMet);
+            Assert.AreEqual(15, current.callsTotal);
+            Assert.AreEqual(1, current.winStreak, "a repeat neither extends the run nor ends it");
+            Assert.AreEqual(1, current.bestWinStreak);
+        }
+
+        [Test]
+        public void CallAndStreakFigures_SurviveARestart()
+        {
+            _stats.RecordMatch("m1", 1, 213, false, roundsPlayed: 5, roundsMet: 4, callsTotal: 15);
+            _stats.RecordMatch("m2", 1, 190, false, roundsPlayed: 5, roundsMet: 5, callsTotal: 12);
+            _stats.RecordMatch("m3", 3, 90, false, roundsPlayed: 5, roundsMet: 2, callsTotal: 18);
+            _stats.RecordMatch("m4", 1, 170, false, roundsPlayed: 5, roundsMet: 3, callsTotal: 13);
+
+            PlayerStats reloaded = new StatsService(_store).Current;
+
+            Assert.AreEqual(20, reloaded.roundsPlayed);
+            Assert.AreEqual(14, reloaded.roundsMet);
+            Assert.AreEqual(58, reloaded.callsTotal);
+            Assert.AreEqual(1, reloaded.winStreak);
+            Assert.AreEqual(2, reloaded.bestWinStreak);
+        }
+
+        [Test]
+        public void FileFromBeforeTheseFigures_KeepsItsCounters_StartsTheNewOnesAtZero_AndIsSavedAtTheCurrentVersion()
+        {
+            // Version 1 had no rounds, calls or streaks: nothing can fill them in afterwards.
+            Assert.Greater(StatsData.CurrentVersion, 1, "adding fields bumped the version");
+            var old = new StatsData { schemaVersion = 1, gamesPlayed = 40, wins = 12, hasBest = true, bestTotalTenths = 213 };
+            old.recentMatchIds.Add("old-match");
+            _store.Put(StatsService.SaveKey, old);
+            var stats = new StatsService(_store);
+
+            Assert.IsFalse(stats.IsReadOnly);
+            Assert.AreEqual(40, stats.Current.gamesPlayed);
+            Assert.AreEqual(12, stats.Current.wins);
+            Assert.AreEqual(213, stats.Current.bestTotalTenths);
+            Assert.AreEqual(0, stats.Current.roundsPlayed);
+            Assert.AreEqual(0f, stats.Current.CallsMetRate);
+            Assert.AreEqual(0, stats.Current.winStreak);
+            Assert.AreEqual(0, stats.Current.bestWinStreak);
+
+            stats.RecordMatch("old-match", 1, 100, false, roundsPlayed: 5, roundsMet: 5, callsTotal: 10);
+            Assert.AreEqual(40, stats.Current.gamesPlayed, "the ids it remembered still count");
+
+            stats.RecordMatch("m1", 1, 100, false, roundsPlayed: 5, roundsMet: 4, callsTotal: 16);
+
+            StatsData saved = _store.Peek<StatsData>(StatsService.SaveKey);
+            Assert.AreEqual(StatsData.CurrentVersion, saved.schemaVersion);
+            Assert.AreEqual(41, saved.gamesPlayed);
+            Assert.AreEqual(13, saved.wins);
+            Assert.AreEqual(5, saved.roundsPlayed);
+            Assert.AreEqual(4, saved.roundsMet);
+            Assert.AreEqual(16, saved.callsTotal);
+            Assert.AreEqual(1, saved.winStreak);
+            Assert.AreEqual(1, saved.bestWinStreak);
+        }
+
+        [Test]
+        public void RecordMatch_RejectsRoundFiguresNoMatchCanHave()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _stats.RecordMatch("m1", 1, 10, false, roundsPlayed: -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _stats.RecordMatch("m1", 1, 10, false, roundsPlayed: 5, roundsMet: 6));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _stats.RecordMatch("m1", 1, 10, false, roundsPlayed: 5, roundsMet: -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _stats.RecordMatch("m1", 1, 10, false, roundsPlayed: 5, roundsMet: 2, callsTotal: -1));
+            Assert.AreEqual(0, _stats.Current.gamesPlayed);
+            Assert.AreEqual(0, _store.SaveCount);
+        }
+
+        [Test]
+        public void InconsistentCallAndStreakFiguresOnDisk_AreRepaired()
+        {
+            _store.Put(StatsService.SaveKey, new StatsData
+            {
+                gamesPlayed = 3,
+                wins = 2,
+                roundsPlayed = 10,
+                roundsMet = 14,
+                callsTotal = -5,
+                winStreak = 9,
+                bestWinStreak = 1,
+            });
+
+            PlayerStats current = new StatsService(_store).Current;
+
+            Assert.AreEqual(10, current.roundsMet, "no more rounds met than played");
+            Assert.AreEqual(0, current.callsTotal);
+            Assert.AreEqual(2, current.winStreak, "no longer than the wins there are");
+            Assert.AreEqual(2, current.bestWinStreak, "never shorter than the current run");
+        }
+
+        [Test]
+        public void Current_IsASnapshotOfTheNewFiguresToo()
+        {
+            _stats.RecordMatch("m1", 1, 213, false, roundsPlayed: 5, roundsMet: 4, callsTotal: 15);
+
+            PlayerStats taken = _stats.Current;
+            taken.roundsPlayed = 99;
+            taken.winStreak = 99;
+
+            Assert.AreEqual(5, _stats.Current.roundsPlayed);
+            Assert.AreEqual(1, _stats.Current.winStreak);
+        }
     }
 }

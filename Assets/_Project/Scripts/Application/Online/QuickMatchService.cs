@@ -84,8 +84,11 @@ namespace Callbreak.Application.Online
             Close();
             string playerId = _auth != null && !string.IsNullOrEmpty(_auth.PlayerId) ? _auth.PlayerId : "guest";
             var identity = new HelloMessage(Protocol.Version, playerId, _profile.DisplayName, _profile.AvatarId, _cosmetics.SelectedDeckId);
-            var settings = new RoomSettings("Quick Match", _config.TurnSeconds);
-            _host = new RoomHost(string.Empty, settings, null, _bots, _names, new Pcg32Random(_seedSource()), _cosmetics.DeckIds, _seedSource, _timing);
+            // The room is never shown; its one turn time stands for the card timer. The table
+            // itself runs on the Quick Match clocks: 20 s to call, 15 s to play a card (GDD §6).
+            var settings = new RoomSettings("Quick Match", _config.Clocks.PlaySeconds);
+            _host = new RoomHost(
+                string.Empty, settings, null, _bots, _names, new Pcg32Random(_seedSource()), _cosmetics.DeckIds, _seedSource, _timing, clocks: _config.Clocks);
             _host.Tick(_now);
             _client = new RoomClient(_host.Local, identity, _host, MatchMode.QuickMatch, _stats, _settings);
             _client.Tick(_now);

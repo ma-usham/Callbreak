@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Callbreak.Application.Cosmetics;
@@ -9,6 +10,8 @@ using Callbreak.Core.Cards;
 using Callbreak.Core.Events;
 using Callbreak.Core.Match;
 using Callbreak.Core.Randomness;
+using Callbreak.Core.Rules;
+using Callbreak.Core.Scoring;
 using Callbreak.Core.Views;
 using Callbreak.Tests.EditMode.Support;
 using NUnit.Framework;
@@ -240,6 +243,134 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
 
             Assert.IsTrue(_store.HasSave);
             Assert.AreEqual(0, _stats.Current.gamesPlayed, "leaving an offline match records nothing");
+        }
+
+        [Test]
+        public void Resume_SaveThatCannotBeContinued_DealsANewMatchInstead()
+        {
+            // A file with no real match in it, as a JSON store reads it back.
+            _saves.Put(OfflineMatchStore.Key, new OfflineMatchSave { match = new MatchSnapshot() });
+
+            OfflineMatchSession session = NewSession(BotTiming.Instant, resume: true);
+            session.Start();
+
+            Assert.IsFalse(session.IsResumed);
+            Assert.AreEqual(13, session.View.Hand.Count, "a new match was dealt");
+        }
+
+        [Test]
+        public void Resume_SaveWhoseGeneratorCannotBeRebuilt_DealsANewMatchInstead()
+        {
+            OfflineMatchSession first = NewSession(BotTiming.Instant);
+            first.Start();
+            double now = 0;
+            PlayUntil(first, ref now, view => view.CompletedTricks.Count >= 1);
+            first.LeaveAsync(CancellationToken.None).Wait();
+            OfflineMatchSave save = _saves.Peek<OfflineMatchSave>(OfflineMatchStore.Key);
+            save.rngIncrement = 0UL;
+            _saves.Put(OfflineMatchStore.Key, save);
+
+            OfflineMatchSession second = NewSession(BotTiming.Instant, resume: true);
+            second.Start();
+
+            Assert.IsFalse(second.IsResumed);
+            Assert.AreNotEqual(first.MatchId, second.MatchId);
+        }
+
+        [Test]
+        public void Resume_Twice_DealsTheCardsAnUninterruptedMatchWouldHaveDealt()
+        {
+            // Left in round 1, resumed, left again in round 2, resumed again: round 3 must come
+            // from the generator where round 2's deal left it, not from where round 1's did.
+            double now = 0;
+            OfflineMatchSession first = NewSession(BotTiming.Instant);
+            first.Start();
+            PlayUntil(first, ref now, view => view.Round == 1 && view.CompletedTricks.Count >= 2);
+            first.LeaveAsync(CancellationToken.None).Wait();
+            ulong seed = _saves.Peek<OfflineMatchSave>(OfflineMatchStore.Key).seed;
+
+            OfflineMatchSession second = NewSession(BotTiming.Instant, resume: true);
+            second.Start();
+            Assert.IsTrue(second.IsResumed);
+            PlayUntil(second, ref now, view => view.Round == 2 && view.CompletedTricks.Count >= 2);
+            second.LeaveAsync(CancellationToken.None).Wait();
+
+            OfflineMatchSession third = NewSession(BotTiming.Instant, resume: true);
+            var dealt = new List<CardSet>();
+            third.EventReceived += e =>
+            {
+                if (e is HandDealt hand)
+                {
+                    dealt.Add(hand.Hand);
+                }
+            };
+            third.Start();
+            Assert.IsTrue(third.IsResumed);
+            PlayUntil(third, ref now, view => view.Round == 3);
+
+            Assert.AreEqual(1, dealt.Count, "round 3 was dealt in the third run");
+            Assert.AreEqual(HandsOfSouth(seed)[2], dealt[0]);
+        }
+
+        [Test]
+        public void PlayToEnd_RecordsTheLocalSeatsRoundsCallsAndPlaceInTheWinStreak()
+        {
+            OfflineMatchSession session = NewSession(BotTiming.Instant);
+            double now = 0;
+
+            session.Start();
+            PlayToEnd(session, ref now);
+
+            PlayerStats stats = _stats.Current;
+            int rank = 0;
+            foreach (Standing standing in session.View.FinalStandings)
+            {
+                if (standing.Seat == Seat.South)
+                {
+                    rank = standing.Rank;
+                }
+            }
+
+            Assert.AreEqual(session.Rules.Rounds, stats.roundsPlayed);
+            Assert.AreEqual(session.View.Scores.RoundsMetBy(Seat.South), stats.roundsMet);
+            Assert.AreEqual(2 * session.Rules.Rounds, stats.callsTotal, "the test player calls 2 every round");
+            Assert.AreEqual(rank == 1 ? 1 : 0, stats.winStreak);
+            Assert.AreEqual(rank == 1 ? 1 : 0, stats.bestWinStreak);
+        }
+
+        private static void PlayUntil(OfflineMatchSession session, ref double now, Func<PlayerView, bool> reached)
+        {
+            for (int step = 0; step < 20000 && !reached(session.View); step++)
+            {
+                now += 0.25;
+                session.Tick(now);
+                ActAsPlayer(session);
+            }
+
+            Assert.IsTrue(reached(session.View), "the match got that far");
+        }
+
+        /// <summary>
+        /// The hands South is dealt, round by round, in a match with this seed that nobody
+        /// interrupts. Every seat plays its lowest legal card, as the test player and bots do;
+        /// calls change no card.
+        /// </summary>
+        private static List<CardSet> HandsOfSouth(ulong seed)
+        {
+            var engine = new MatchEngine(RuleSet.NepaliStandard, new Pcg32Random(seed), TestSetups.With(false, true, true, true));
+            var driver = new MatchDriver(engine, randomPolicy: false);
+            driver.Start();
+            driver.PlayToEnd();
+            var hands = new List<CardSet>();
+            foreach (MatchEvent e in driver.Events)
+            {
+                if (e is HandDealt hand && hand.Seat == Seat.South)
+                {
+                    hands.Add(hand.Hand);
+                }
+            }
+
+            return hands;
         }
 
         private static int CallsPlaced(PlayerView view)

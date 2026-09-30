@@ -25,9 +25,6 @@ namespace Callbreak.Application.Online
         /// <summary>GDD §8: this many timeouts in a row mark a seat Away.</summary>
         public const int TimeoutsBeforeAway = 2;
 
-        /// <summary>GDD §11 screen 09: the round summary's countdown online.</summary>
-        public const double SummarySeconds = 10.0;
-
         /// <summary>How long the host waits for every member's table to load before dealing anyway.</summary>
         public const double TableReadyWaitSeconds = 8.0;
 

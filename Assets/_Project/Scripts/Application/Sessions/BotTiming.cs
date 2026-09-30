@@ -19,6 +19,12 @@ namespace Callbreak.Application.Sessions
         /// <summary>Offline defaults: 0.6-1.4 s think, 0.35 s forced, 0.9 s + 0.35 s sweep, 1.6 s deal.</summary>
         public static BotTiming Offline { get; } = new BotTiming();
 
+        /// <summary>
+        /// Hosted tables, Quick Match and private rooms alike (GDD §6): bots think 0.8-1.6 s; a
+        /// forced move, the finished trick and the deal take as long as they do offline.
+        /// </summary>
+        public static BotTiming Hosted { get; } = new BotTiming(thinkMinSeconds: 0.8, thinkMaxSeconds: 1.6);
+
         /// <summary>No delays at all, for tests and simulations.</summary>
         public static BotTiming Instant { get; } = new BotTiming(0, 0, 0, 0, 0);
 

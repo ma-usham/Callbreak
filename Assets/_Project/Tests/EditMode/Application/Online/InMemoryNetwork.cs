@@ -23,8 +23,12 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
         public int Delivered { get; private set; }
 
+        /// <summary>How often a device asked the relay to host a room, whatever the answer was.</summary>
+        public int HostAttempts { get; private set; }
+
         public Task<HostLinkResult> HostAsync(string roomCode, CancellationToken ct)
         {
+            HostAttempts++;
             if (HostError != RoomError.None)
             {
                 return Task.FromResult(new HostLinkResult(null, HostError));

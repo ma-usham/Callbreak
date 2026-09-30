@@ -111,6 +111,21 @@ namespace Callbreak.Application.Online
                 throw new ArgumentNullException(nameof(settings));
             }
 
+            // GDD §11 screen 02: the name is "checked again on the server", which in this phase is
+            // the host. The Create Room screen never sends a name that fails here, so there is no
+            // error of its own for it (RoomError is wire format): it is Unknown, and nothing else
+            // happens, neither on the network nor to a room this device is already in.
+            string name = RoomNames.Normalize(settings.Name);
+            if (!RoomNames.IsValid(name, _names))
+            {
+                return new RoomResult(null, RoomError.Unknown);
+            }
+
+            if (name != settings.Name)
+            {
+                settings = new RoomSettings(name, settings.TurnSeconds, settings.Rounds);
+            }
+
             if (_busy)
             {
                 return new RoomResult(null, RoomError.RateLimited);

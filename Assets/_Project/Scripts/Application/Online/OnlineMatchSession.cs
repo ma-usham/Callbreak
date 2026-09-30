@@ -406,7 +406,7 @@ namespace Callbreak.Application.Online
                 Standing standing = standings[i];
                 if (standing.Seat == LocalSeat && _stats != null)
                 {
-                    _stats.RecordMatch(View.MatchId, standing.Rank, standing.TotalTenths, abandoned: false);
+                    _stats.RecordFinished(View.MatchId, standing, View.Scores);
                 }
             }
 
@@ -447,7 +447,11 @@ namespace Callbreak.Application.Online
                 }
                 else if (status.SummaryRemainingMs >= 0)
                 {
-                    timer = new TurnTimerState(View.Viewer, _now + (status.SummaryRemainingMs / 1000.0), Protocol.SummarySeconds, true);
+                    // The host says how long the countdown is (10 s in Quick Match, 15 s in a private
+                    // room, GDD §6); a status that does not is taken to have just started.
+                    double remaining = status.SummaryRemainingMs / 1000.0;
+                    double length = status.TimerDurationMs > 0 ? status.TimerDurationMs / 1000.0 : remaining;
+                    timer = new TurnTimerState(View.Viewer, _now + remaining, length, true);
                 }
             }
 

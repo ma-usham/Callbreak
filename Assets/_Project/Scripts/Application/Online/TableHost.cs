@@ -28,8 +28,7 @@ namespace Callbreak.Application.Online
         private readonly MatchEngine _engine;
         private readonly BotDriver _bots;
         private readonly BotTiming _timing;
-        private readonly int _turnSeconds;
-        private readonly double _summarySeconds;
+        private readonly TableClocks _clocks;
         private readonly SeatState[] _seats = new SeatState[SeatExtensions.Count];
         private readonly List<MatchEvent> _outbox = new List<MatchEvent>();
         private readonly List<MatchEvent> _visible = new List<MatchEvent>();
@@ -39,6 +38,7 @@ namespace Callbreak.Application.Online
         private bool _clockRunning;
         private TurnId _clockTurn = TurnId.None;
         private Seat _clockSeat;
+        private int _clockSeconds;
         private double _clockDeadline;
         private double _holdUntil;
         private bool _summaryOpen;
@@ -57,8 +57,7 @@ namespace Callbreak.Application.Online
             }
 
             _timing = setup.Timing;
-            _turnSeconds = setup.TurnSeconds;
-            _summarySeconds = setup.SummarySeconds;
+            _clocks = setup.Clocks;
             _engine = new MatchEngine(setup.Rules, new Pcg32Random(setup.Seed), new MatchSetup(setup.MatchId, setup.Seats));
 
             var botSeats = new Dictionary<Seat, IBotStrategy>();
@@ -291,16 +290,18 @@ namespace Callbreak.Application.Online
             Seat timerSeat = _engine.CurrentSeat;
             if (_clockRunning)
             {
-                double left = Math.Max(0.0, Math.Min(_clockDeadline - now, _turnSeconds));
+                double left = Math.Max(0.0, Math.Min(_clockDeadline - now, _clockSeconds));
                 remaining = (int)Math.Round(left * 1000.0);
-                duration = _turnSeconds * 1000;
+                duration = _clockSeconds * 1000;
                 timerSeat = _clockSeat;
             }
 
             int summary = TableStatus.NoClock;
             if (_summaryOpen && _engine.Phase == Phase.RoundSummary)
             {
+                // No turn is open in the summary, so the duration is free to say how long the countdown is.
                 summary = (int)Math.Round(Math.Max(0.0, _summaryDeadline - now) * 1000.0);
+                duration = (int)Math.Round(_clocks.SummarySeconds * 1000.0);
             }
 
             var connections = new SeatConnection[_seats.Length];
@@ -398,7 +399,7 @@ namespace Callbreak.Application.Online
                             break;
                         case RoundScored _:
                             _summaryOpen = true;
-                            _summaryDeadline = now + _summarySeconds;
+                            _summaryDeadline = now + _clocks.SummarySeconds;
                             break;
                         case MatchEnded _:
                             ended = true;
@@ -466,12 +467,16 @@ namespace Callbreak.Application.Online
             return any;
         }
 
-        /// <summary>Runs the turn clock while a present person holds the turn; bots pace themselves.</summary>
+        /// <summary>
+        /// Runs the turn clock while a present person holds the turn; bots pace themselves. A call
+        /// turn and a play turn each have their own length (GDD §6: 20 s and 15 s in Quick Match).
+        /// </summary>
         private void RefreshClock(double now)
         {
             TurnId turn = _engine.CurrentTurn;
             bool open = !turn.IsNone && (_engine.Phase == Phase.Calling || _engine.Phase == Phase.Playing);
-            if (!open || _turnSeconds <= 0)
+            int seconds = _engine.Phase == Phase.Calling ? _clocks.CallSeconds : _clocks.PlaySeconds;
+            if (!open || seconds <= 0)
             {
                 _clockRunning = false;
                 _clockTurn = TurnId.None;
@@ -495,7 +500,8 @@ namespace Callbreak.Application.Online
             _clockRunning = true;
             _clockTurn = turn;
             _clockSeat = seat;
-            _clockDeadline = Math.Max(now, _holdUntil) + _turnSeconds;
+            _clockSeconds = seconds;
+            _clockDeadline = Math.Max(now, _holdUntil) + seconds;
         }
 
         private sealed class SeatState

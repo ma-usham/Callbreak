@@ -1,14 +1,29 @@
+using Callbreak.Core.Rules;
+
 namespace Callbreak.Application.Rooms
 {
     /// <summary>What the host chooses on Create Room (GDD §11 screen 02). Players and rounds are fixed in v1.</summary>
     public sealed class RoomSettings
     {
-        public RoomSettings(string name, int turnSeconds, int rounds = 5)
+        /// <summary>A room whose matches are as long as the rules say (<see cref="DefaultRounds"/>).</summary>
+        public RoomSettings(string name, int turnSeconds)
+            : this(name, turnSeconds, DefaultRounds)
+        {
+        }
+
+        /// <param name="rounds">The match length the host published, as a member reads it from the lobby.</param>
+        public RoomSettings(string name, int turnSeconds, int rounds)
         {
             Name = name;
             TurnSeconds = turnSeconds;
             Rounds = rounds;
         }
+
+        /// <summary>
+        /// The match length of every room in v1 (GDD §5 "Rounds", the "5 rounds" tile on Create
+        /// Room): the rule set's, never a number of its own.
+        /// </summary>
+        public static int DefaultRounds => RuleSet.NepaliStandard.Rounds;
 
         /// <summary>3-20 characters, trimmed and filtered.</summary>
         public string Name { get; }
@@ -16,6 +31,7 @@ namespace Callbreak.Application.Rooms
         /// <summary>15 or 30.</summary>
         public int TurnSeconds { get; }
 
+        /// <summary>The rounds of a match in this room.</summary>
         public int Rounds { get; }
     }
 

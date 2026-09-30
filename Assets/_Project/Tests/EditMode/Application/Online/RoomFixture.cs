@@ -26,7 +26,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
         private readonly List<Member> _members = new List<Member>();
 
-        public RoomFixture(int turnSeconds = 0, BotTiming timing = null)
+        /// <param name="clocks">The table's clocks; null runs it as a private room on <paramref name="turnSeconds"/>.</param>
+        public RoomFixture(int turnSeconds = 0, BotTiming timing = null, TableClocks clocks = null)
         {
             Network = new InMemoryNetwork();
             HostLink = Network.HostAsync(Code, CancellationToken.None).Result.Link;
@@ -39,7 +40,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 new Pcg32Random(5),
                 new[] { "classic-crimson", "himalayan-ivory", "kathmandu-gold" },
                 () => 42UL,
-                timing ?? BotTiming.Instant);
+                timing ?? BotTiming.Instant,
+                clocks: clocks);
             HostMember = Add(Host.Local, "player-host", "Hari", Host);
             Assert.AreEqual(RoomError.None, HostMember.Client.JoinAsync(CancellationToken.None).Result);
         }

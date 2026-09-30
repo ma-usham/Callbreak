@@ -70,6 +70,88 @@ namespace Callbreak.Tests.EditMode.Application.Online
             Assert.AreEqual(RoomError.Unknown, result.Error);
         }
 
+        // GDD §11 screen 02: the name is "3-20 characters, trimmed, and profanity-filtered (checked
+        // again on the server)". In this phase the host is the server.
+
+        [TestCase("ab")]
+        [TestCase("  ab  ")]
+        [TestCase("")]
+        [TestCase("   ")]
+        [TestCase(null)]
+        [TestCase("Twenty-one characters")]
+        [TestCase("Shit Table")]
+        public void Create_NameTheScreenShouldNeverHaveSent_IsRefusedBeforeTheNetworkIsTouched(string name)
+        {
+            Device host = NewDevice("Hari");
+
+            RoomResult result = host.Rooms.CreateRoomAsync(new RoomSettings(name, 30), CancellationToken.None).Result;
+
+            Assert.IsFalse(result.Succeeded);
+            Assert.AreEqual(RoomError.Unknown, result.Error, "a bad name has no error of its own");
+            Assert.IsNull(host.Rooms.Current);
+            Assert.AreEqual(0, _network.HostAttempts, "the relay was never asked for a room");
+            CollectionAssert.IsEmpty(host.Tracked.Names, "no room was created");
+        }
+
+        [TestCase("abc")]
+        [TestCase("Twenty characters ok")]
+        public void Create_NameAtTheLimits_OpensTheRoom(string name)
+        {
+            Device host = NewDevice("Hari");
+
+            RoomResult result = host.Rooms.CreateRoomAsync(new RoomSettings(name, 30), CancellationToken.None).Result;
+
+            Assert.IsTrue(result.Succeeded);
+            Assert.AreEqual(name, result.Session.Settings.Name);
+            Assert.AreEqual(1, _network.HostAttempts);
+        }
+
+        [Test]
+        public void Create_NameWithSpacesAround_OpensTheRoomUnderTheTrimmedName()
+        {
+            Device host = NewDevice("Hari");
+            Device guest = NewDevice("Asha");
+
+            RoomResult result = host.Rooms.CreateRoomAsync(new RoomSettings("  Hari's   Table ", 15), CancellationToken.None).Result;
+            Task<RoomResult> joining = guest.Rooms.JoinRoomAsync(result.Session.Code, CancellationToken.None);
+            Settle();
+
+            Assert.IsTrue(result.Succeeded);
+            Assert.AreEqual("Hari's Table", result.Session.Settings.Name);
+            Assert.AreEqual(15, result.Session.Settings.TurnSeconds, "the rest of the settings are kept");
+            Assert.AreEqual("Hari's Table", joining.Result.Session.Settings.Name, "guests see the trimmed name");
+        }
+
+        [Test]
+        public void Create_RefusedName_LeavesTheRoomThisDeviceIsInAlone()
+        {
+            Device host = NewDevice("Hari");
+            IRoomSession first = host.Rooms.CreateRoomAsync(new RoomSettings("Hari's Table", 30), CancellationToken.None).Result.Session;
+
+            RoomResult second = host.Rooms.CreateRoomAsync(new RoomSettings("ab", 30), CancellationToken.None).Result;
+
+            Assert.AreEqual(RoomError.Unknown, second.Error);
+            Assert.AreSame(first, host.Rooms.Current, "a refused room does not cost the open one");
+        }
+
+        [Test]
+        public void Create_PrivateRoom_RunsBothTurnClocksOnTheHostsChoice()
+        {
+            Device host = NewDevice("Hari");
+            IRoomSession room = host.Rooms.CreateRoomAsync(new RoomSettings("Hari's Table", 15), CancellationToken.None).Result.Session;
+            Assert.IsTrue(room.StartAsync(true, CancellationToken.None).Result);
+            Settle();
+            IMatchSession session = room.Match;
+            session.Start();
+            Settle();
+
+            double call = DurationOnTurn(session, Phase.Calling);
+            double play = DurationOnTurn(session, Phase.Playing);
+
+            Assert.AreEqual(15.0, call, 0.001, "GDD §6: a private room's call timer is the host's choice");
+            Assert.AreEqual(15.0, play, 0.001, "and so is its card timer");
+        }
+
         [Test]
         public void Join_ByCodeTypedLoosely_SeatsTheGuest()
         {
@@ -446,6 +528,25 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 RoomFixture.Act(b);
                 _network.Pump();
             }
+        }
+
+        /// <summary>Plays on until the session's seat holds a turn of that kind; gives the length of the clock on it.</summary>
+        private double DurationOnTurn(IMatchSession session, Phase phase)
+        {
+            for (int i = 0; i < 4000; i++)
+            {
+                if (session.View.IsMyTurn && session.View.Phase == phase)
+                {
+                    Assert.IsTrue(session.Timer.IsRunning, "a clock runs on a person's turn");
+                    return session.Timer.Duration;
+                }
+
+                RoomFixture.Act(session);
+                Settle();
+            }
+
+            Assert.Fail("the player never held that kind of turn");
+            return 0.0;
         }
 
         private static IClientLink LinkOf(Device device) => device.Rooms.ClientLink;

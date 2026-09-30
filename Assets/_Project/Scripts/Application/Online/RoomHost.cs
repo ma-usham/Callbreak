@@ -33,6 +33,7 @@ namespace Callbreak.Application.Online
         private readonly Func<ulong> _seedSource;
         private readonly BotTiming _timing;
         private readonly BotLevel _fillLevel;
+        private readonly TableClocks _clocks;
         private readonly LocalLink _local;
         private readonly Member[] _members = new Member[Seats];
         private readonly Dictionary<PeerId, int> _seatOfPeer = new Dictionary<PeerId, int>();
@@ -49,6 +50,11 @@ namespace Callbreak.Application.Online
 
         /// <param name="remote">The relay's host end; null for a room nobody else can reach (Quick Match filled with bots).</param>
         /// <param name="seedSource">Draws each match's shuffle seed (a CSPRNG in production, GDD §22).</param>
+        /// <param name="timing">How the table's bots pace themselves; null gives the hosted defaults (GDD §6).</param>
+        /// <param name="clocks">
+        /// The table's turn clocks and round-results countdown; null runs the room as a private
+        /// room, on the turn time of <paramref name="settings"/> (GDD §6).
+        /// </param>
         public RoomHost(
             string code,
             RoomSettings settings,
@@ -59,7 +65,8 @@ namespace Callbreak.Application.Online
             IReadOnlyList<string> deckIds,
             Func<ulong> seedSource,
             BotTiming timing = null,
-            BotLevel fillLevel = BotLevel.Normal)
+            BotLevel fillLevel = BotLevel.Normal,
+            TableClocks clocks = null)
         {
             _code = code ?? string.Empty;
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -71,6 +78,7 @@ namespace Callbreak.Application.Online
             _seedSource = seedSource ?? throw new ArgumentNullException(nameof(seedSource));
             _timing = timing;
             _fillLevel = fillLevel;
+            _clocks = clocks;
             _local = new LocalLink(this);
             if (_remote != null)
             {
@@ -181,7 +189,8 @@ namespace Callbreak.Application.Online
 
             ulong seed = _seedSource();
             string matchId = "room-" + _code + "-" + seed.ToString("x16");
-            var setup = new TableHostSetup(RuleSet.NepaliStandard, matchId, profiles, humans, _settings.TurnSeconds, seed, _fillLevel, _timing);
+            TableClocks clocks = _clocks ?? TableClocks.PrivateRoom(_settings.TurnSeconds);
+            var setup = new TableHostSetup(RuleSet.NepaliStandard, matchId, profiles, humans, clocks, seed, _fillLevel, _timing);
             if (_table != null)
             {
                 _table.Outbound -= OnTableOutbound;

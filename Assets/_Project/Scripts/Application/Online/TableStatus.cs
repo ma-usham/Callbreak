@@ -32,6 +32,11 @@ namespace Callbreak.Application.Online
         /// <summary>Milliseconds left on the turn clock, or <see cref="NoClock"/> when none is running.</summary>
         public int TimerRemainingMs { get; }
 
+        /// <summary>
+        /// The whole length in milliseconds of the clock that is running: the turn clock's (a call
+        /// turn and a play turn can differ), or in the round summary the countdown's. 0 when
+        /// nothing runs.
+        /// </summary>
         public int TimerDurationMs { get; }
 
         /// <summary>Milliseconds until the next round starts by itself, or <see cref="NoClock"/>.</summary>
