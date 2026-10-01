@@ -36,8 +36,8 @@ namespace Callbreak.Presentation.Overlays
     /// </summary>
     public sealed class MatchResultsPresenter : IStartable, ITickable, IDisposable
     {
-        /// <summary>How long the music stays ducked: the length of the victory sting (SFX_Victory_01, 3 s).</summary>
-        public const double VictoryStingSeconds = 3.0;
+        /// <summary>How long the music stays ducked: the length of the victory sting (SFX_Victory_01, 2.5 s).</summary>
+        public const double VictoryStingSeconds = 2.5;
 
         private readonly MatchResultsView _view;
         private readonly AvatarLibrary _avatars;

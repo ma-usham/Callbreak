@@ -35,7 +35,10 @@ static class Program
             return 2;
         }
 
+        // A cue with a generated source (ArtSource/Audio/Sources/sources.json) is made from it instead.
+        var recorded = Recorded.Load(root);
         var jobs = Sfx.All().Concat(Music.All(stems == null ? null : (name, ch) => WriteStem(stems, name, ch)))
+            .Select(j => recorded.TryGetValue(j.Name, out Job source) ? source : j)
             .Where(j => only == null || j.Name.Contains(only, StringComparison.OrdinalIgnoreCase)).ToList();
         if (jobs.Count == 0) { Console.Error.WriteLine($"No cue matches '{only}'."); return 2; }
         if (pictures != null) Directory.CreateDirectory(pictures);
@@ -51,7 +54,8 @@ static class Program
                 byte[] bytes = Wav.Encode(job.Render(), job.Music);
                 bool wrote = Wav.WriteIfChanged(MainPath(job), bytes);
                 Wav.WriteIfChanged(CopyPath(job), bytes);
-                Console.WriteLine($"{(wrote ? "wrote    " : "unchanged")} {job.Name}.wav  ({clock.Elapsed.TotalSeconds:0.0} s)");
+                string from = recorded.ContainsKey(job.Name) ? "from its source" : "synthesized";
+                Console.WriteLine($"{(wrote ? "wrote    " : "unchanged")} {job.Name}.wav  ({from}, {clock.Elapsed.TotalSeconds:0.0} s)");
             }
             Console.WriteLine();
         }

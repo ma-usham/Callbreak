@@ -53,22 +53,24 @@ namespace Callbreak.Editor
         // Set from the loudest 100 ms of each file (Tools/AudioGen prints it as "loud"), so that in the game
         // cards sit near -18 LUFS, stings near -17, the victory near -13, interface sounds near -21 and the
         // timer tick near -24, over music at about -17 (menu) and -23 (table).
+        // Recomputed for the generated sources (ElevenLabs, 1 Oct 2026; ArtSource/Audio/Sources) so each cue
+        // keeps the loudness it had in the game before.
         private static readonly Dictionary<SoundCue, float> DefaultVolume = new Dictionary<SoundCue, float>
         {
             { SoundCue.CardShuffle, 1f },
-            { SoundCue.CardDeal, 0.6f },
+            { SoundCue.CardDeal, 0.73f },
             { SoundCue.CardPlay, 1f },
-            { SoundCue.TrickCollect, 0.55f },
-            { SoundCue.CallConfirm, 0.6f },
-            { SoundCue.YourTurn, 0.45f },
-            { SoundCue.TimerTick, 0.6f },
-            { SoundCue.CallMet, 0.6f },
-            { SoundCue.CallMissed, 0.5f },
-            { SoundCue.RoundEnd, 0.6f },
-            { SoundCue.Victory, 0.9f },
-            { SoundCue.UiTap, 0.7f },
-            { SoundCue.UiBack, 0.65f },
-            { SoundCue.Toggle, 0.7f },
+            { SoundCue.TrickCollect, 1f },
+            { SoundCue.CallConfirm, 1f },
+            { SoundCue.YourTurn, 0.68f },
+            { SoundCue.TimerTick, 0.5f },
+            { SoundCue.CallMet, 0.55f },
+            { SoundCue.CallMissed, 0.4f },
+            { SoundCue.RoundEnd, 0.53f },
+            { SoundCue.Victory, 0.83f },
+            { SoundCue.UiTap, 0.74f },
+            { SoundCue.UiBack, 0.82f },
+            { SoundCue.Toggle, 0.87f },
         };
 
         [MenuItem("Callbreak/Build/Audio Library")]

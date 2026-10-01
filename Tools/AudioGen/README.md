@@ -1,8 +1,10 @@
-# audiogen: Callbreak's sound effects and music, made from code
+# audiogen: Callbreak's sound effects and music
 
-Every sound the game plays (GDD §14) is synthesised here: no samples, no libraries, nothing to
-license. The files are stand-ins so the game has sound now; a composer or a foley session can
-replace any of them later **under the same file name** and nothing else changes.
+Every sound the game plays (GDD §14) is made here, under the file names the game knows. Since
+1 Oct 2026 all of them come from **generated sources**: the effects from ElevenLabs, the two music
+loops from Gemini (see [Generated sources](#generated-sources)). The synthesizer below still renders
+any cue the sources do not cover, and is what every cue used before. A composer or a foley session
+can replace any sound later **under the same file name** and nothing else changes.
 
 ```bash
 dotnet run --project Tools/AudioGen -c Release            # render everything, then measure it
@@ -33,6 +35,33 @@ how loud each one is in the game is set by its volume in the cue library, not by
 
 Build output goes to `/obj/AudioGen` (already ignored). Note that `.gitignore` ignores `*.csproj`,
 so `AudioGen.csproj` has to be added with `git add -f`.
+
+## Generated sources
+
+`ArtSource/Audio/Sources/sources.json` lists, for each cue it covers, the source file and how to cut
+it, and keeps every prompt. A cue listed there is made from its source (`Recorded.cs`) instead of
+being synthesized, and goes through the same checks.
+
+- **Effects** (`ElevenLabs/<Cue>/take<N>.wav`): ElevenLabs Sound Effects, 48 kHz WAV, prompt
+  influence 60%. Each generation gave four takes and two to four were downloaded; `source` names the
+  one in use, so another take is a one-word change. An effect is folded to mono and resampled to
+  44.1 kHz, starts 3 ms before its first sound, stops after its last (at most `max` seconds), fades
+  in over 1 ms and out over `fadeOut` to an exact zero, and is peak-normalised and padded to whole
+  ADPCM blocks. `drive` rounds the transient (tanh), as the synthesized card sounds did, where a take
+  was too quiet for its old in-game loudness at full volume.
+- **Music** (`Gemini/MUS_*.mp3`, decoded to `.wav` beside it by Unity's own MP3 import): Gemini
+  "Create music", instrumental. A loop is cut between `loop` [start, end], chosen as a whole number
+  of bars at the track's tempo with `node Tools/AudioGen/find-loop.js <wav> <from> <to> <crossfade>
+  <beat guess> <beats per bar>` (menu: 125 BPM, 28 bars; table: 80 BPM, 13 bars). The end is aligned
+  to the sample by waveform correlation, and the last `crossfade` seconds fade into the music just
+  before the start, so the seam is like any other sample. Then -14 LUFS, peaks under -1 dBFS.
+
+The cue volumes in `AudioLibraryBuilder` were recomputed from the "loud" column so that each cue
+keeps the loudness it had in the game with the synthesized sounds (within 0.5 dB).
+
+Licences: generated sound is only as free to use as the generator's plan allows. Check that the
+ElevenLabs plan the effects were made on includes a commercial licence, and Google's terms for
+Gemini music, before the game is published.
 
 ## What you should hear
 

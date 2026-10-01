@@ -1,0 +1,46 @@
+{
+  "about": "Cues made from generated sources instead of synthesis (Tools/AudioGen/Recorded.cs). Each entry replaces the synthesized cue of the same name. Sound effects: ElevenLabs Sound Effects, 1 October 2026, 48 kHz WAV downloads, prompt influence 60%, durations as given. Music: Gemini 'Create music' (instrumental), 1 October 2026, MP3 downloads decoded to 44.1 kHz WAV by Unity. To try another take, change 'source' and run: dotnet run --project Tools/AudioGen -c Release",
+  "sfx": {
+    "SFX_CardPlay_01": { "source": "ElevenLabs/CardPlay/take1.wav", "max": 0.30, "fadeOut": 0.04 },
+    "SFX_CardPlay_02": { "source": "ElevenLabs/CardPlay/take2.wav", "max": 0.30, "fadeOut": 0.04 },
+    "SFX_CardPlay_03": { "source": "ElevenLabs/CardPlay/take3.wav", "max": 0.30, "fadeOut": 0.04 },
+    "SFX_CardPlay_04": { "source": "ElevenLabs/CardPlay/take4.wav", "max": 0.30, "fadeOut": 0.04 },
+    "SFX_CardDeal_01": { "source": "ElevenLabs/CardDeal/take4.wav", "max": 0.30, "fadeOut": 0.03 },
+    "SFX_CardDeal_02": { "source": "ElevenLabs/CardDeal/take1.wav", "max": 0.30, "fadeOut": 0.03 },
+    "SFX_CardDeal_03": { "source": "ElevenLabs/CardDeal/take2.wav", "max": 0.30, "fadeOut": 0.03 },
+    "SFX_CardShuffle_01": { "source": "ElevenLabs/CardShuffle/take4.wav", "max": 0.90, "fadeOut": 0.06, "drive": 1.6 },
+    "SFX_TrickCollect_01": { "source": "ElevenLabs/TrickCollect/take2.wav", "max": 0.50, "fadeOut": 0.06 },
+    "SFX_CallConfirm_01": { "source": "ElevenLabs/CallConfirm/take4.wav", "max": 0.30, "fadeOut": 0.05, "drive": 2 },
+    "SFX_YourTurn_01": { "source": "ElevenLabs/YourTurn/take2.wav", "max": 0.80, "fadeOut": 0.10 },
+    "SFX_TimerTick_01": { "source": "ElevenLabs/TimerTick/take2.wav", "max": 0.10, "fadeOut": 0.025 },
+    "SFX_CallMet_01": { "source": "ElevenLabs/CallMet/take1.wav", "max": 1.00, "fadeOut": 0.20 },
+    "SFX_CallMissed_01": { "source": "ElevenLabs/CallMissed/take1.wav", "max": 0.80, "fadeOut": 0.15 },
+    "SFX_RoundEnd_01": { "source": "ElevenLabs/RoundEnd/take2.wav", "max": 1.20, "fadeOut": 0.25 },
+    "SFX_Victory_01": { "source": "ElevenLabs/Victory/take1.wav", "max": 3.00, "fadeOut": 0.30 },
+    "SFX_UiTap_01": { "source": "ElevenLabs/UiTap/take1.wav", "max": 0.10, "fadeOut": 0.02 },
+    "SFX_UiBack_01": { "source": "ElevenLabs/UiBack/take1.wav", "max": 0.12, "fadeOut": 0.025, "drive": 1.4 },
+    "SFX_Toggle_01": { "source": "ElevenLabs/Toggle/take1.wav", "max": 0.15, "fadeOut": 0.025, "drive": 1.4 }
+  },
+  "music": {
+    "MUS_Menu_Theme": { "source": "Gemini/MUS_Menu_Theme.wav", "from": 5.0, "to": 65.0, "crossfade": 1.5, "loop": [9.255, 63.021], "note": "125.0 BPM; 28 bars of 4 beats (53.77 s); found with Tools/AudioGen/find-loop.js" },
+    "MUS_Table_Loop": { "source": "Gemini/MUS_Table_Loop.wav", "from": 12.0, "to": 58.5, "crossfade": 1.5, "loop": [14.295, 53.295], "note": "80.0 BPM; 13 bars of 4 beats (39.00 s); found with Tools/AudioGen/find-loop.js" }
+  },
+  "prompts": {
+    "ElevenLabs/CardPlay": "A single playing card tossed onto a felt-covered wooden card table: a quick crisp paper flick, then a soft flat pat as it lands and settles. Close-miked, dry studio foley, no reverb, no music, no voices. (0.5 s)",
+    "ElevenLabs/CardDeal": "One playing card dealt quickly off the top of a deck and slid across a felt card table: a short soft papery fft slide, ending in a light flick. Close-miked, dry studio foley, no reverb, no music, no voices. (0.5 s)",
+    "ElevenLabs/CardShuffle": "A deck of playing cards riffle-shuffled once on a table: a fast papery riffle, the two halves bridged together, and a soft tap as the deck is squared. Close-miked, dry studio foley, no reverb, no music, no voices. (1.2 s)",
+    "ElevenLabs/TrickCollect": "Four playing cards swept together across a felt card table into a neat pile: a soft sliding shhk of paper and a light pat as the small stack comes to rest. Close-miked, dry studio foley, no reverb, no music, no voices. (0.7 s)",
+    "ElevenLabs/CallConfirm": "A single soft muted wooden knock, like a fingertip tapping the wooden rim of a Nepali madal drum: warm, short, rounded and dry. One hit only. No reverb, no music, no voices. (0.5 s)",
+    "ElevenLabs/YourTurn": "A gentle friendly two-note rising chime on a soft wooden marimba, telling a player it is their turn in a calm card game: warm and round, a short soft ring, never urgent. Dry, no music, no voices. (1.0 s)",
+    "ElevenLabs/TimerTick": "One tiny dry wooden tick, like a small woodblock clock ticking once: very short, crisp and quiet. A single tick only. No reverb, no music, no voices. (automatic length)",
+    "ElevenLabs/CallMet": "A short warm success chime: three soft bell tones rising into a gentle major chord, like small brass bells at a Nepali temple, pleasant and quiet with a short ring. No music, no voices. (1.2 s)",
+    "ElevenLabs/CallMissed": "A soft falling two-note muted tone, like a small tongue drum played under a cloth: a gentle sigh of disappointment when a player misses their call in a calm card game. Warm and low, short, not a buzzer and not comical. No music, no voices. (1.0 s)",
+    "ElevenLabs/RoundEnd": "A short descending chime phrase: four soft bell notes stepping down one after another and ringing out gently, marking the end of a round in a calm card game. Warm and quiet, like small temple bells. Nothing else, no music, no voices. (1.5 s)",
+    "ElevenLabs/Victory": "A short joyful Nepali celebration sting for winning a card game: a quick madal hand-drum roll building into two strong drum strokes, then a bright bansuri bamboo flute flourish that rises and resolves, festive like Dashain. About three seconds, no vocals. (3.0 s)",
+    "ElevenLabs/UiTap": "A small soft rounded wooden button tap for a mobile card game menu: one very short, clean and gentle tok, like a fingertip on a small wooden block. Dry, no echo, no ding, no plastic click, no music, no voices. (0.5 s)",
+    "ElevenLabs/UiBack": "A soft low wooden tap for going back or closing a screen in a mobile card game menu: one very short rounded tok, a little lower and softer than a button tap, slightly falling. Dry, no echo, no whoosh, no music, no voices. (0.5 s)",
+    "ElevenLabs/Toggle": "A tiny soft two-part wooden switch click, tk-tok, the second slightly lower, for flipping a settings toggle in a mobile card game menu. Very short and dry, no echo, no metal, no plastic snap, no music, no voices. (0.5 s)",
+    "Gemini/MUS_Menu_Theme": "Cheerful Nepali folk instrumental with a bansuri flute melody, a lively madal drum groove and sarangi. Warm, welcoming and lightly festive, for a game's main menu background music. (Create music: Short, Instrumental)",
+    "Gemini/MUS_Table_Loop": "Gentle Nepali folk instrumental with bansuri flute and madal drum, calm and warm, for background music. (Create music: Short, Instrumental)"
+  }
+}
