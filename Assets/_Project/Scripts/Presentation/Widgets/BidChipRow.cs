@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Callbreak.Presentation.Framework;
+using LitMotion;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -10,10 +12,13 @@ namespace Callbreak.Presentation.Widgets
     /// The row of call chips (GDD §11 screen 07, §12 "Chips are circles on ivory; the selected one
     /// is crimson with white text"): one chip per call from the rule set's minimum to its maximum, a
     /// single choice with nothing chosen at first. One crimson chip image moves onto whichever chip
-    /// is chosen, and that chip's number turns white.
+    /// is chosen, and that chip's number turns white. The crimson chip pops in on the first choice
+    /// and glides to the next (ADR 023); with Reduce motion it is simply there.
     /// </summary>
     public sealed class BidChipRow : MonoBehaviour
     {
+        private const float GlideSeconds = 0.16f;
+
         [SerializeField] private UnityEngine.UI.Button[] _chips = Array.Empty<UnityEngine.UI.Button>();
         [SerializeField] private TMP_Text[] _labels = Array.Empty<TMP_Text>();
         [SerializeField] private RectTransform _selection;
@@ -24,6 +29,7 @@ namespace Callbreak.Presentation.Widgets
 
         private readonly List<UnityAction> _handlers = new List<UnityAction>(8);
         private int _lastCall;
+        private MotionHandle _motion;
 
         /// <summary>A chip was tapped: its call.</summary>
         public event Action<int> Chosen;
@@ -33,6 +39,9 @@ namespace Callbreak.Presentation.Widgets
 
         /// <summary>How many chips the row can show.</summary>
         public int Capacity => _chips.Length;
+
+        /// <summary>With Reduce motion the crimson chip moves at once (GDD §14).</summary>
+        public bool ReduceMotion { get; set; }
 
         /// <summary>
         /// Shows the chips for calls <paramref name="minCall"/> to <paramref name="maxCall"/>
@@ -74,14 +83,32 @@ namespace Callbreak.Presentation.Widgets
             _selected = call;
             int index = call - _firstCall;
             bool any = call != 0 && index >= 0 && index < _chips.Length && _chips[index].gameObject.activeSelf;
-            if (_selection.gameObject.activeSelf != any)
+            bool shown = _selection.gameObject.activeSelf;
+            StopMotion();
+            if (shown != any)
             {
                 _selection.gameObject.SetActive(any);
             }
 
             if (any)
             {
-                _selection.anchoredPosition = ((RectTransform)_chips[index].transform).anchoredPosition;
+                Vector2 target = ((RectTransform)_chips[index].transform).anchoredPosition;
+                bool moves = !ReduceMotion && gameObject.activeInHierarchy;
+                if (moves && shown && _selection.anchoredPosition != target)
+                {
+                    _motion = LMotion.Create(_selection.anchoredPosition, target, GlideSeconds)
+                        .WithEase(Ease.OutCubic)
+                        .WithScheduler(MotionScheduler.UpdateIgnoreTimeScale)
+                        .Bind(_selection, (position, selection) => selection.anchoredPosition = position);
+                }
+                else
+                {
+                    _selection.anchoredPosition = target;
+                    if (moves && !shown)
+                    {
+                        _motion = UiMotion.PopIn(_selection, null, false, 0.7f, UiMotion.Short);
+                    }
+                }
             }
 
             for (int i = 0; i < _labels.Length; i++)
@@ -133,6 +160,19 @@ namespace Callbreak.Presentation.Widgets
             }
 
             _handlers.Clear();
+            StopMotion();
+        }
+
+        /// <summary>Stops the crimson chip where it is and gives it its size back.</summary>
+        private void StopMotion()
+        {
+            UiMotion.Stop(ref _motion);
+
+            // When the scene unloads the chip may already be gone.
+            if (_selection != null)
+            {
+                _selection.localScale = Vector3.one;
+            }
         }
 
         private void OnChip(int index)

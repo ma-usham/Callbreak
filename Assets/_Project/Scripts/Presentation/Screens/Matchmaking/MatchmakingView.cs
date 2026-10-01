@@ -64,6 +64,15 @@ namespace Callbreak.Presentation.Screens
             _seat[index].Show(filled, playerName, status);
         }
 
+        /// <summary>With Reduce motion a seat that fills only fades its player in (GDD §14).</summary>
+        public void SetReduceMotion(bool on)
+        {
+            foreach (MatchmakingSeat seat in _seat)
+            {
+                seat.ReduceMotion = on;
+            }
+        }
+
         /// <summary>The elapsed time, already formatted ("00:12").</summary>
         public void SetElapsed(string elapsed)
         {

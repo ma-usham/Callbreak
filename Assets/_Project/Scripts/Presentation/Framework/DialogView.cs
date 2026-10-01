@@ -9,8 +9,9 @@ namespace Callbreak.Presentation.Framework
     /// <summary>
     /// The one confirmation dialog (GDD §23 popup layer): a dimmed backdrop and a panel with a
     /// title, an optional line of body text, a primary button and an optional secondary one. The
-    /// panel grows with its text. It fades in and out on unscaled time (the same with Reduce
-    /// motion, which only removes the small rise) and its canvas is off while it is closed.
+    /// panel grows with its text. On unscaled time the dim fades in while the panel pops in
+    /// (<see cref="UiMotion.PopIn"/>), and on closing the panel shrinks a touch as everything fades
+    /// out; with Reduce motion it only fades. Its canvas is off while it is closed.
     /// <see cref="DialogService"/> decides what it shows and what the buttons mean.
     /// </summary>
     [RequireComponent(typeof(Canvas), typeof(CanvasGroup))]
@@ -25,7 +26,6 @@ namespace Callbreak.Presentation.Framework
         [SerializeField] private Button _cancelButton;
         [SerializeField] private TMP_Text _cancelLabel;
         [SerializeField] private float _fadeSeconds = 0.18f;
-        [SerializeField] private float _rise = 18f;
         [SerializeField] private float _paddingTop = 58f;
         [SerializeField] private float _paddingBottom = 60f;
         [SerializeField] private float _bodyGap = 12f;
@@ -35,6 +35,7 @@ namespace Callbreak.Presentation.Framework
         private Canvas _canvas;
         private CanvasGroup _group;
         private MotionHandle _motion;
+        private MotionHandle _panelMotion;
 
         public event Action Confirmed;
 
@@ -137,28 +138,25 @@ namespace Callbreak.Presentation.Framework
 
         private void Animate(float target, bool deactivate)
         {
-            if (_motion.IsActive())
-            {
-                _motion.Cancel();
-            }
-
+            UiMotion.Stop(ref _motion);
+            UiMotion.Stop(ref _panelMotion);
+            _panel.anchoredPosition = Vector2.zero;
             float from = Group.alpha;
-            float rise = ReduceMotion ? 0f : _rise;
-            _motion = LMotion.Create(from, target, _fadeSeconds)
-                .WithEase(Ease.OutCubic)
+            _motion = LMotion.Create(from, target, deactivate ? UiMotion.Quick : _fadeSeconds)
+                .WithEase(deactivate ? Ease.InCubic : Ease.OutCubic)
                 .WithScheduler(MotionScheduler.UpdateIgnoreTimeScale)
                 .WithOnComplete(() =>
                 {
                     if (deactivate)
                     {
                         Canvas.enabled = false;
+                        _panel.localScale = Vector3.one;
                     }
                 })
-                .Bind(this, (alpha, view) =>
-                {
-                    view.Group.alpha = alpha;
-                    view._panel.anchoredPosition = new Vector2(0f, -rise * (1f - alpha));
-                });
+                .Bind(this, (alpha, view) => view.Group.alpha = alpha);
+            _panelMotion = deactivate
+                ? UiMotion.PopOut(_panel, null, ReduceMotion, null)
+                : UiMotion.PopIn(_panel, null, ReduceMotion);
         }
 
         private void OnConfirm()
@@ -187,10 +185,8 @@ namespace Callbreak.Presentation.Framework
 
         private void OnDestroy()
         {
-            if (_motion.IsActive())
-            {
-                _motion.Cancel();
-            }
+            UiMotion.Stop(ref _motion);
+            UiMotion.Stop(ref _panelMotion);
         }
     }
 }

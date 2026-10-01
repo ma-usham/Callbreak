@@ -1,6 +1,7 @@
 using System;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Widgets;
+using LitMotion;
 using TMPro;
 using UnityEngine;
 
@@ -10,7 +11,8 @@ namespace Callbreak.Presentation.Overlays
     /// GDD §11 screen 13, the match menu: "Game Menu" over the dimmed table, with a close ×, the
     /// mode tag ("Offline match · Paused" or "Online match · Game continues"), Resume Game,
     /// Scorecard, the Sound switch, Leave Match, and "Your match is paused." for offline matches.
-    /// Leaving is confirmed by the shared dialog, not here.
+    /// Leaving is confirmed by the shared dialog, not here. It is a panel over the table, not a
+    /// page: it does not slide, the dim fades in and the panel pops in like the dialog's.
     /// </summary>
     public sealed class MatchMenuView : UIScreen
     {
@@ -21,6 +23,16 @@ namespace Callbreak.Presentation.Overlays
         [SerializeField] private ToggleSwitch _soundToggle;
         [SerializeField] private TMP_Text _modeLabel;
         [SerializeField] private GameObject _pausedNote;
+
+        private MotionHandle _panelMotion;
+
+        public override bool Slides => false;
+
+        /// <summary>With Reduce motion the panel only fades with the screen (GDD §14).</summary>
+        public bool ReduceMotion { get; set; }
+
+        // The "Game Menu" modal: every button sits on it.
+        private Transform Panel => _resumeButton.transform.parent;
 
         public event Action CloseClicked;
 
@@ -55,6 +67,23 @@ namespace Callbreak.Presentation.Overlays
         public void SetSound(bool on)
         {
             _soundToggle.SetIsOnWithoutNotify(on);
+        }
+
+        public override void OnShown()
+        {
+            UiMotion.Stop(ref _panelMotion);
+            _panelMotion = UiMotion.PopIn(Panel, null, ReduceMotion);
+        }
+
+        public override void OnHidden()
+        {
+            UiMotion.Stop(ref _panelMotion);
+            _panelMotion = UiMotion.PopOut(Panel, null, ReduceMotion, null);
+        }
+
+        private void OnDestroy()
+        {
+            UiMotion.Stop(ref _panelMotion);
         }
 
         private void OnEnable()

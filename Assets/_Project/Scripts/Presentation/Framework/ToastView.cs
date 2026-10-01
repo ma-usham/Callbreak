@@ -7,9 +7,10 @@ namespace Callbreak.Presentation.Framework
 {
     /// <summary>
     /// One toast on screen (GDD §23 toast layer): an ivory pill at the top centre that sizes itself
-    /// to its text, fades in, stays for <c>_holdSeconds</c>, fades out, then raises
-    /// <see cref="Finished"/>. Only fades, so it is the same with Reduce motion. It never takes
-    /// input. <see cref="ToastService"/> queues the texts; this view shows one at a time.
+    /// to its text, drops into place as it fades in, stays for <c>_holdSeconds</c>, lifts a little
+    /// as it fades out, then raises <see cref="Finished"/> (ADR 023). With Reduce motion it only
+    /// fades. It never takes input. <see cref="ToastService"/> queues the texts; this view shows one
+    /// at a time.
     /// </summary>
     public sealed class ToastView : MonoBehaviour
     {
@@ -21,8 +22,12 @@ namespace Callbreak.Presentation.Framework
         [SerializeField] private float _maxTextWidth = 1100f;
         [SerializeField] private Vector2 _padding = new Vector2(36f, 16f);
         [SerializeField] private float _minHeight = 64f;
+        [SerializeField] private float _dropDistance = 20f;
+        [SerializeField] private float _liftDistance = 12f;
 
         private MotionHandle _motion;
+        private Vector2 _home;
+        private bool _hasHome;
 
         /// <summary>Raised when a toast has faded out completely (not when it is cleared).</summary>
         public event Action Finished;
@@ -30,6 +35,9 @@ namespace Callbreak.Presentation.Framework
         public bool IsShowing { get; private set; }
 
         public string Text => _label != null ? _label.text : string.Empty;
+
+        /// <summary>With Reduce motion the toast only fades (GDD §14).</summary>
+        public bool ReduceMotion { get; set; }
 
         /// <summary>Shows <paramref name="text"/> now, replacing any toast on screen.</summary>
         public void Show(string text)
@@ -39,12 +47,13 @@ namespace Callbreak.Presentation.Framework
             Fit();
             _pill.gameObject.SetActive(true);
             IsShowing = true;
-            _group.alpha = 0f;
+            float drop = ReduceMotion ? 0f : _dropDistance;
+            Place(0f, drop);
             _motion = LMotion.Create(0f, 1f, _fadeSeconds)
-                .WithEase(Ease.OutQuad)
+                .WithEase(Ease.OutCubic)
                 .WithScheduler(MotionScheduler.UpdateIgnoreTimeScale)
                 .WithOnComplete(FadeOut)
-                .Bind(_group, (alpha, group) => group.alpha = alpha);
+                .Bind(this, (t, view) => view.Place(t, drop * (1f - t)));
         }
 
         /// <summary>Hides at once without raising <see cref="Finished"/>.</summary>
@@ -59,18 +68,37 @@ namespace Callbreak.Presentation.Framework
 
             if (_pill != null)
             {
+                if (_hasHome)
+                {
+                    _pill.anchoredPosition = _home;
+                }
+
                 _pill.gameObject.SetActive(false);
             }
         }
 
         private void FadeOut()
         {
-            _motion = LMotion.Create(1f, 0f, _fadeSeconds)
+            float lift = ReduceMotion ? 0f : _liftDistance;
+            _motion = LMotion.Create(0f, 1f, _fadeSeconds)
                 .WithDelay(_holdSeconds)
-                .WithEase(Ease.InQuad)
+                .WithEase(Ease.InCubic)
                 .WithScheduler(MotionScheduler.UpdateIgnoreTimeScale)
                 .WithOnComplete(Complete)
-                .Bind(_group, (alpha, group) => group.alpha = alpha);
+                .Bind(this, (t, view) => view.Place(1f - t, lift * t));
+        }
+
+        /// <summary>The pill at <paramref name="alpha"/>, <paramref name="above"/> px above its place.</summary>
+        private void Place(float alpha, float above)
+        {
+            if (!_hasHome)
+            {
+                _home = _pill.anchoredPosition;
+                _hasHome = true;
+            }
+
+            _group.alpha = alpha;
+            _pill.anchoredPosition = new Vector2(_home.x, _home.y + above);
         }
 
         private void Complete()
@@ -79,6 +107,7 @@ namespace Callbreak.Presentation.Framework
             // Finished handler doesn't try to cancel it.
             _motion = default;
             IsShowing = false;
+            _pill.anchoredPosition = _home;
             _pill.gameObject.SetActive(false);
             Finished?.Invoke();
         }

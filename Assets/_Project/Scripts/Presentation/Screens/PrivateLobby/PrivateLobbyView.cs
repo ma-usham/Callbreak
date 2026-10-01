@@ -1,6 +1,7 @@
 using System;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Widgets;
+using LitMotion;
 using TMPro;
 using UnityEngine;
 
@@ -11,8 +12,9 @@ namespace Callbreak.Presentation.Screens
     /// code with a copy button, Invite Friends, four seats (seat 0 is the host) and the primary
     /// button. The host sees Start Game; a guest sees the same button as a Ready toggle and
     /// "Waiting for host…" in the footer's place. An empty seat shows a dimmed avatar, its name
-    /// line in muted brown and no ready dot. Holding a seat raises <see cref="SeatLongPressed"/>
-    /// (the host removes a player that way); the presenter decides whether it applies.
+    /// line in muted brown and no ready dot; a player who takes it pops in (ADR 023). Holding a
+    /// seat raises <see cref="SeatLongPressed"/> (the host removes a player that way); the
+    /// presenter decides whether it applies.
     /// </summary>
     public sealed class PrivateLobbyView : UIScreen
     {
@@ -47,9 +49,13 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private Color _mutedColor = new Color32(0x84, 0x60, 0x42, 0xFF);
         [SerializeField] private Color _readyColor = new Color32(0x2E, 0x73, 0x35, 0xFF);
 
+        // What each seat last showed: -1 nothing yet, 0 empty, 1 a player.
+        private readonly int[] _seatShown = { -1, -1, -1, -1 };
+        private readonly MotionHandle[] _seatMotion = new MotionHandle[SeatCount];
         private Action[] _seatHoldHandlers;
         private bool _isHost = true;
         private bool _startInteractable = true;
+        private bool _reduceMotion;
 
         public event Action BackClicked;
         public event Action SettingsClicked;
@@ -82,8 +88,19 @@ namespace Callbreak.Presentation.Screens
             SetText(_seatStatus[index], status);
             _seatStatus[index].color = style == SeatStatusStyle.Ready ? _readyColor : _mutedColor;
             _seatDot[index].SetActive(showReadyDot && occupied);
+            bool joined = occupied && _seatShown[index] == 0 && isActiveAndEnabled;
+            _seatShown[index] = occupied ? 1 : 0;
+            UiMotion.Finish(ref _seatMotion[index]);
             _seatAvatar[index].alpha = occupied ? 1f : EmptySeatAvatarAlpha;
+            if (joined)
+            {
+                CanvasGroup avatar = _seatAvatar[index];
+                _seatMotion[index] = UiMotion.PopIn(avatar.transform, avatar, _reduceMotion, 0.8f);
+            }
         }
+
+        /// <summary>With Reduce motion a player who takes a seat only fades in (GDD §14).</summary>
+        public void SetReduceMotion(bool on) => _reduceMotion = on;
 
         /// <summary>The seat's avatar picture (players pick their avatar); null shows the default silhouette.</summary>
         public void SetSeatAvatar(int index, Sprite avatar)
@@ -140,6 +157,11 @@ namespace Callbreak.Presentation.Screens
             for (int i = 0; i < _seatHold.Length && _seatHoldHandlers != null; i++)
             {
                 _seatHold[i].Held -= _seatHoldHandlers[i];
+            }
+
+            for (int i = 0; i < _seatMotion.Length; i++)
+            {
+                UiMotion.Finish(ref _seatMotion[i]);
             }
         }
 

@@ -30,6 +30,12 @@ namespace Callbreak.Presentation.Framework
         public RectTransform SlideTarget => _content != null ? _content : Rect;
 
         /// <summary>
+        /// Whether the screen transition slides the content in and out. A panel over the table
+        /// (the match menu) stays where it is, fades with the screen, and pops in on its own.
+        /// </summary>
+        public virtual bool Slides => true;
+
+        /// <summary>
         /// Raised when Android back (or Escape) reaches this screen while it is on top. With no
         /// subscriber the router simply pops the screen.
         /// </summary>

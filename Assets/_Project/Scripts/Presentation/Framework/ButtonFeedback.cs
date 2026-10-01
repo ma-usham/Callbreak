@@ -7,8 +7,9 @@ using VContainer;
 namespace Callbreak.Presentation.Framework
 {
     /// <summary>
-    /// GDD §12/§14 button press: scale to 0.97 in 90 ms (OutQuad) and back. The 8% darkening is the
-    /// Button's colour tint. Lives on the button root, so the face, label and shadow scale together.
+    /// GDD §12/§14 button press: scale to 0.97 in 90 ms (OutQuad); let go, it springs back past its
+    /// size by 2% and settles (220 ms; ADR 023). The 8% darkening is the Button's colour tint.
+    /// Lives on the button root, so the face, label and shadow scale together.
     /// A tap also plays the button's sound cue once the audio service has been injected. It sits
     /// after the Button on its object, so a presenter that answers the press with a cue of its own
     /// is heard instead (the audio service plays one UI cue per frame, the first).
@@ -17,7 +18,9 @@ namespace Callbreak.Presentation.Framework
     public sealed class ButtonFeedback : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler, IPointerClickHandler
     {
         private const float PressedScale = 0.97f;
-        private const float Duration = 0.09f;
+        private const float PressSeconds = 0.09f;
+        private const float ReleaseSeconds = 0.22f;
+        private const float ReleaseSwell = 0.02f;
 
         [SerializeField] private UnityEngine.UI.Selectable _selectable;
         [SerializeField] private SoundCue _cue = SoundCue.UiTap;
@@ -54,7 +57,12 @@ namespace Callbreak.Presentation.Framework
             }
 
             _pressed = true;
-            ScaleTo(PressedScale);
+            Stop();
+            float from = transform.localScale.x;
+            _motion = LMotion.Create(from, PressedScale, PressSeconds)
+                .WithEase(Ease.OutQuad)
+                .WithScheduler(MotionScheduler.UpdateIgnoreTimeScale)
+                .Bind(transform, (v, t) => t.localScale = new Vector3(v, v, 1f));
         }
 
         public void OnPointerUp(PointerEventData eventData) => Release();
@@ -69,29 +77,28 @@ namespace Callbreak.Presentation.Framework
             }
 
             _pressed = false;
-            ScaleTo(1f);
+            Stop();
+            float from = transform.localScale.x;
+            _motion = LMotion.Create(0f, 1f, ReleaseSeconds)
+                .WithScheduler(MotionScheduler.UpdateIgnoreTimeScale)
+                .Bind(transform, (t, target) =>
+                {
+                    float s = Mathf.Lerp(from, 1f, EaseUtility.Evaluate(t, Ease.OutCubic)) + (ReleaseSwell * Mathf.Sin(t * Mathf.PI));
+                    target.localScale = new Vector3(s, s, 1f);
+                });
         }
 
-        private void ScaleTo(float target)
+        private void Stop()
         {
             if (_motion.IsActive())
             {
                 _motion.Cancel();
             }
-
-            float from = transform.localScale.x;
-            _motion = LMotion.Create(from, target, Duration)
-                .WithEase(Ease.OutQuad)
-                .Bind(transform, (v, t) => t.localScale = new Vector3(v, v, 1f));
         }
 
         private void OnDisable()
         {
-            if (_motion.IsActive())
-            {
-                _motion.Cancel();
-            }
-
+            Stop();
             _pressed = false;
             _armed = false;
             transform.localScale = Vector3.one;

@@ -127,6 +127,7 @@ namespace Callbreak.Presentation.Overlays
             _view.SetMode(_localization.Get(IsOffline ? ModeOfflineKey : ModeOnlineKey));
             _view.SetPausedNoteVisible(IsOffline);
             _view.SetSound(_settings.Music || _settings.SoundEffects);
+            _view.ReduceMotion = _settings.ReduceMotion;
         }
 
         private void OnResume()

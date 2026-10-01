@@ -159,6 +159,7 @@ namespace Callbreak.Presentation.Screens
                 return;
             }
 
+            _view.SetReduceMotion(_settings.ReduceMotion);
             IReadOnlyList<RoomSeat> seats = room.Seats;
             int occupied = 0;
             bool guestsReady = true;

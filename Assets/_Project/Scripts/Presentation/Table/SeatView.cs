@@ -1,4 +1,5 @@
 using System;
+using Callbreak.Presentation.Framework;
 using LitMotion;
 using TMPro;
 using UnityEngine;
@@ -14,6 +15,7 @@ namespace Callbreak.Presentation.Table
     /// avatar says how the player is connected ("Away", "Reconnecting…" with a spinner, "Bot
     /// playing") or, on an online table, that the seat is a fill-in bot ("BOT"); the mockups do
     /// not draw it, so it is made of the kit's tag pill and hidden until there is something to say.
+    /// The chip pops in, and a bubble shrinks and fades away when its time is up (ADR 023).
     /// </summary>
     public sealed class SeatView : MonoBehaviour
     {
@@ -43,10 +45,12 @@ namespace Callbreak.Presentation.Table
 
         private MotionHandle _bubbleMotion;
         private MotionHandle _pulseMotion;
+        private MotionHandle _chipMotion;
         private int _shownSeconds = int.MinValue;
         private bool _met;
         private bool _muted;
         private bool _chipBusy;
+        private bool _bubbleStill;
 
         /// <summary>The opponent tapped: the presenter mutes or unmutes this seat's emotes.</summary>
         public event Action AvatarClicked;
@@ -56,6 +60,9 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>The fan of face-down cards; null for the local seat.</summary>
         public OpponentHandView Fan => _fan;
+
+        /// <summary>With Reduce motion the chip only fades in (GDD §14).</summary>
+        public bool ReduceMotion { get; set; }
 
         public void SetName(string playerName)
         {
@@ -103,7 +110,15 @@ namespace Callbreak.Presentation.Table
             bool show = !string.IsNullOrEmpty(text);
             if (_chip.gameObject.activeSelf != show)
             {
+                // It pops in, and goes at once.
+                Cancel(ref _chipMotion);
+                _chip.localScale = Vector3.one;
+                UiMotion.GroupOf(_chip.gameObject).alpha = 1f;
                 _chip.gameObject.SetActive(show);
+                if (show)
+                {
+                    _chipMotion = UiMotion.PopIn(_chip, UiMotion.GroupOf(_chip.gameObject), ReduceMotion, 0.8f, UiMotion.Short);
+                }
             }
 
             if (!show || (_chipText.text == text && _chipBusy == busy && _chipSpinner.activeSelf == busy))
@@ -194,6 +209,8 @@ namespace Callbreak.Presentation.Table
         public void ShowBubble(string text, float seconds, bool reduceMotion)
         {
             Cancel(ref _bubbleMotion);
+            _bubbleStill = reduceMotion;
+            UiMotion.GroupOf(_bubble.gameObject).alpha = 1f;
             SetText(_bubbleText, text);
             float width = Mathf.Max(_bubbleMinWidth, Mathf.Ceil(_bubbleText.GetPreferredValues(text).x) + _bubblePadding);
             _bubble.sizeDelta = new Vector2(width, _bubble.sizeDelta.y);
@@ -207,10 +224,7 @@ namespace Callbreak.Presentation.Table
         public void HideBubble()
         {
             Cancel(ref _bubbleMotion);
-            if (_bubble.gameObject.activeSelf)
-            {
-                _bubble.gameObject.SetActive(false);
-            }
+            HideBubbleNow();
         }
 
         /// <summary>"Won +1": a short pulse on the status pill (GDD §14; the number alone with Reduce motion).</summary>
@@ -249,15 +263,25 @@ namespace Callbreak.Presentation.Table
 
         private void HoldBubble(float seconds)
         {
-            _bubbleMotion = LMotion.Create(0f, 1f, Mathf.Max(0.1f, seconds)).WithOnComplete(HideBubbleNow).RunWithoutBinding();
+            _bubbleMotion = LMotion.Create(0f, 1f, Mathf.Max(0.1f, seconds)).WithOnComplete(FadeBubble).RunWithoutBinding();
+        }
+
+        /// <summary>Its time is up: the bubble shrinks a little as it fades (it only fades with Reduce motion).</summary>
+        private void FadeBubble()
+        {
+            _bubbleMotion = UiMotion.PopOut(_bubble, UiMotion.GroupOf(_bubble.gameObject), _bubbleStill, HideBubbleNow, 0.85f, UiMotion.Short);
         }
 
         private void HideBubbleNow()
         {
             _bubbleMotion = default;
+
+            // When the scene unloads the bubble may already be gone.
             if (_bubble != null)
             {
                 _bubble.gameObject.SetActive(false);
+                _bubble.localScale = Vector3.one;
+                UiMotion.GroupOf(_bubble.gameObject).alpha = 1f;
             }
         }
 
@@ -278,6 +302,7 @@ namespace Callbreak.Presentation.Table
 
             Cancel(ref _bubbleMotion);
             Cancel(ref _pulseMotion);
+            UiMotion.Finish(ref _chipMotion);
 
             // When the scene unloads the pill may already be gone.
             if (_statusPill != null)

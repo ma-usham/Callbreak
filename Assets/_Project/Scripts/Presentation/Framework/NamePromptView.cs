@@ -10,8 +10,9 @@ namespace Callbreak.Presentation.Framework
     /// The name question when the game starts (ADR 022): a dimmed backdrop and the dialog's panel
     /// with a title, the name field, a line under it (the note, or why a name cannot be used) and
     /// Continue. It cannot be dismissed: the backdrop only keeps taps from reaching the menu. It
-    /// fades in and out like the dialog, on its own canvas above it; its labels come from the UI
-    /// table, and <see cref="NamePromptPresenter"/> decides when it shows and what the line says.
+    /// pops in and fades out like the dialog (<see cref="UiMotion"/>), on its own canvas above it;
+    /// its labels come from the UI table, and <see cref="NamePromptPresenter"/> decides when it
+    /// shows and what the line says.
     /// </summary>
     [RequireComponent(typeof(Canvas), typeof(CanvasGroup))]
     public sealed class NamePromptView : MonoBehaviour
@@ -24,7 +25,6 @@ namespace Callbreak.Presentation.Framework
         [SerializeField] private Color _noteColor = new Color(0.478f, 0.349f, 0.247f, 1f);
         [SerializeField] private Color _errorColor = new Color(0.478f, 0.063f, 0.086f, 1f);
         [SerializeField] private float _fadeSeconds = 0.18f;
-        [SerializeField] private float _rise = 18f;
 
         // The panel stacks its parts from the top and grows with its text, like the dialog.
         [SerializeField] private float _paddingTop = 58f;
@@ -36,6 +36,7 @@ namespace Callbreak.Presentation.Framework
         private Canvas _canvas;
         private CanvasGroup _group;
         private MotionHandle _motion;
+        private MotionHandle _panelMotion;
 
         /// <summary>The text in the field changed (typed, pasted or cleared).</summary>
         public event Action<string> NameChanged;
@@ -143,28 +144,25 @@ namespace Callbreak.Presentation.Framework
 
         private void Animate(float target, bool deactivate)
         {
-            if (_motion.IsActive())
-            {
-                _motion.Cancel();
-            }
-
+            UiMotion.Stop(ref _motion);
+            UiMotion.Stop(ref _panelMotion);
+            _panel.anchoredPosition = Vector2.zero;
             float from = Group.alpha;
-            float rise = ReduceMotion ? 0f : _rise;
-            _motion = LMotion.Create(from, target, _fadeSeconds)
-                .WithEase(Ease.OutCubic)
+            _motion = LMotion.Create(from, target, deactivate ? UiMotion.Short : _fadeSeconds)
+                .WithEase(deactivate ? Ease.InCubic : Ease.OutCubic)
                 .WithScheduler(MotionScheduler.UpdateIgnoreTimeScale)
                 .WithOnComplete(() =>
                 {
                     if (deactivate)
                     {
                         Canvas.enabled = false;
+                        _panel.localScale = Vector3.one;
                     }
                 })
-                .Bind(this, (alpha, view) =>
-                {
-                    view.Group.alpha = alpha;
-                    view._panel.anchoredPosition = new Vector2(0f, -rise * (1f - alpha));
-                });
+                .Bind(this, (alpha, view) => view.Group.alpha = alpha);
+            _panelMotion = deactivate
+                ? UiMotion.PopOut(_panel, null, ReduceMotion, null)
+                : UiMotion.PopIn(_panel, null, ReduceMotion);
         }
 
         private void OnValueChanged(string text)
@@ -193,10 +191,8 @@ namespace Callbreak.Presentation.Framework
 
         private void OnDestroy()
         {
-            if (_motion.IsActive())
-            {
-                _motion.Cancel();
-            }
+            UiMotion.Stop(ref _motion);
+            UiMotion.Stop(ref _panelMotion);
         }
     }
 }

@@ -233,6 +233,7 @@ namespace Callbreak.Presentation.Screens
         /// <summary>Four seat circles, the status lines and the honest elapsed time.</summary>
         private void Render(MatchmakingProgress progress)
         {
+            _view.SetReduceMotion(_settings.ReduceMotion);
             int connected = 0;
             for (int i = 0; i < _view.SeatCount; i++)
             {

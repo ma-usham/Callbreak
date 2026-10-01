@@ -1046,15 +1046,30 @@ namespace Callbreak.Editor
 
             /// <summary>
             /// Finishes the view tweens that only move things into place (hand arrangement, the
-            /// prompt's flash, screen transitions): the Editor does not advance them while this
-            /// tool runs. Seat bubbles are left alone; finishing theirs would hide them at once.
+            /// prompt's pop and flash, the pickers and panels popping in, the crimson call chip,
+            /// screen transitions): the Editor does not advance them while this tool runs. Seat
+            /// bubbles are left alone; finishing theirs would hide them at once.
             /// </summary>
             private void SettleTweens()
             {
                 Settle(_table.Hand, "_arrangeMotion");
                 Settle(_table.Hand, "_shakeMotion");
                 Settle(_table.Prompt, "_motion");
+                Settle(_table.Emotes, "_motion");
+                Settle(_table, "_coverMotion");
+                Settle(_table, "_bannerMotion");
+                for (int i = 0; i < TableView.SeatCount; i++)
+                {
+                    Settle(_table.Seat(i), "_chipMotion");
+                }
+
                 Settle(_bidding, "_panelMotion");
+                Settle(Field<BidChipRow>(_bidding, "_chips"), "_motion");
+                if (_menu != null)
+                {
+                    Settle(_menu, "_panelMotion");
+                }
+
                 if (_router == null)
                 {
                     return;

@@ -7,14 +7,21 @@ namespace Callbreak.Presentation.Framework
 {
     /// <summary>
     /// Navigation between the screens of one scene (GDD §23): a stack with Show, Push, Replace and
-    /// Pop, the screen-change transition (fade plus a 24 px slide in the direction of travel,
-    /// 220 ms OutCubic; fade only with Reduce motion) and Android back, which goes to the top
-    /// screen first. Plain C#; the scene's lifetime scope creates it with the scene's screens.
+    /// Pop, the screen-change transition and Android back, which goes to the top screen first.
+    /// Plain C#; the scene's lifetime scope creates it with the scene's screens. The transition
+    /// (280 ms, OutQuart): the arriving screen fades in, slides 36 px in the direction of travel
+    /// and grows from 98.5% to its size; the leaving one slides on and fades out in the first part
+    /// of that time, so the two never blur together. A screen that does not slide
+    /// (<see cref="UIScreen.Slides"/>) only fades. With Reduce motion screens only fade.
     /// </summary>
     public sealed class ScreenRouter : IDisposable
     {
-        private const float Duration = 0.22f;
-        private const float Slide = 24f;
+        private const float Duration = 0.28f;
+        private const float Slide = 36f;
+        private const float ArrivingScale = 0.985f;
+
+        // The leaving screen is gone by this share of the transition.
+        private const float LeavingFade = 0.6f;
 
         private readonly Dictionary<ScreenId, UIScreen> _screens = new Dictionary<ScreenId, UIScreen>();
         private readonly List<ScreenId> _stack = new List<ScreenId>();
@@ -161,7 +168,10 @@ namespace Callbreak.Presentation.Framework
                 running.Cancel();
             }
 
-            if (ReduceMotion)
+            bool arriving = !deactivate;
+            bool slides = screen.Slides && !ReduceMotion;
+            float fromScale = arriving && slides ? ArrivingScale : 1f;
+            if (!slides)
             {
                 fromX = 0f;
                 toX = 0f;
@@ -169,7 +179,7 @@ namespace Callbreak.Presentation.Framework
 
             if (instant)
             {
-                Apply(screen, toAlpha, toX);
+                Apply(screen, toAlpha, toX, 1f);
                 if (deactivate)
                 {
                     screen.gameObject.SetActive(false);
@@ -178,22 +188,36 @@ namespace Callbreak.Presentation.Framework
                 return;
             }
 
-            Apply(screen, fromAlpha, fromX);
-            var state = new AnimState(screen, fromAlpha, toAlpha, fromX, toX);
+            Apply(screen, fromAlpha, fromX, fromScale);
+            var state = new AnimState(screen, fromAlpha, toAlpha, fromX, toX, fromScale, arriving);
+
+            // Linear time; Step gives each part its own curve.
             MotionBuilder<float, LitMotion.NoOptions, LitMotion.Adapters.FloatMotionAdapter> builder =
-                LMotion.Create(0f, 1f, Duration).WithEase(Ease.OutCubic);
+                LMotion.Create(0f, 1f, Duration);
             if (deactivate)
             {
                 builder = builder.WithOnComplete(() => screen.gameObject.SetActive(false));
             }
 
-            _motions[screen] = builder.Bind(state, (t, s) => Apply(s.Screen, Mathf.Lerp(s.FromAlpha, s.ToAlpha, t), Mathf.Lerp(s.FromX, s.ToX, t)));
+            _motions[screen] = builder.Bind(state, (t, s) => Step(s, t));
         }
 
-        private static void Apply(UIScreen screen, float alpha, float x)
+        private static void Step(AnimState s, float t)
+        {
+            float move = EaseUtility.Evaluate(t, Ease.OutQuart);
+            float fade = s.Arriving ? EaseUtility.Evaluate(t, Ease.OutCubic) : EaseUtility.Evaluate(Mathf.Clamp01(t / LeavingFade), Ease.OutQuad);
+            Apply(
+                s.Screen,
+                Mathf.Lerp(s.FromAlpha, s.ToAlpha, fade),
+                Mathf.Lerp(s.FromX, s.ToX, move),
+                Mathf.LerpUnclamped(s.FromScale, 1f, move));
+        }
+
+        private static void Apply(UIScreen screen, float alpha, float x, float scale)
         {
             screen.CanvasGroup.alpha = alpha;
             screen.SlideTarget.anchoredPosition = new Vector2(x, 0f);
+            screen.SlideTarget.localScale = new Vector3(scale, scale, 1f);
         }
 
         public void Dispose()
@@ -216,14 +240,18 @@ namespace Callbreak.Presentation.Framework
             public readonly float ToAlpha;
             public readonly float FromX;
             public readonly float ToX;
+            public readonly float FromScale;
+            public readonly bool Arriving;
 
-            public AnimState(UIScreen screen, float fromAlpha, float toAlpha, float fromX, float toX)
+            public AnimState(UIScreen screen, float fromAlpha, float toAlpha, float fromX, float toX, float fromScale, bool arriving)
             {
                 Screen = screen;
                 FromAlpha = fromAlpha;
                 ToAlpha = toAlpha;
                 FromX = fromX;
                 ToX = toX;
+                FromScale = fromScale;
+                Arriving = arriving;
             }
         }
     }

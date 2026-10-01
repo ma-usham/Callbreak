@@ -99,6 +99,7 @@ namespace Callbreak.Presentation.Table
             _table.Rebuilt += OnRebuilt;
             _localization.LanguageChanged += OnRebuilt;
             _settings.Changed += OnSettingsChanged;
+            _view.ReduceMotion = _settings.ReduceMotion;
             _view.SetCallRange(_session.Rules.MinCall, _session.Rules.MaxCall);
             Render(false);
         }
@@ -134,7 +135,7 @@ namespace Callbreak.Presentation.Table
             return scope != null && scope.TryResolve(out ICallAdvisor advisor) ? advisor : null;
         }
 
-        /// <summary>An event has played: a panel whose turn is over slides away.</summary>
+        /// <summary>An event has played: the panel rises as the local call turn begins, and slides away once it is over.</summary>
         private void OnPlayed(MatchEvent e) => Render(true);
 
         /// <summary>The table was rebuilt, or the language changed: the panel is what the state says, at once.</summary>
@@ -142,6 +143,8 @@ namespace Callbreak.Presentation.Table
 
         private void OnSettingsChanged()
         {
+            _view.ReduceMotion = _settings.ReduceMotion;
+
             // The beginner assist can be switched while the panel is open.
             if (_started && _shownTurn != TurnId.None)
             {
@@ -149,7 +152,7 @@ namespace Callbreak.Presentation.Table
             }
         }
 
-        private void Render(bool slideAway)
+        private void Render(bool slide)
         {
             TableState state = _table.State;
             bool calling = state.Phase == TablePhase.Calling && state.HasTurn;
@@ -174,12 +177,20 @@ namespace Callbreak.Presentation.Table
 
                 _view.SetReason(_refusalKey != null ? _localization.Get(_refusalKey) : null);
                 _view.SetHint(SuggestedCall(state));
-                _view.ShowPanel(true);
+                if (slide)
+                {
+                    _view.SlideIn(_settings.ReduceMotion);
+                }
+                else
+                {
+                    _view.ShowPanel(true);
+                }
+
                 return;
             }
 
             _shownTurn = TurnId.None;
-            if (slideAway)
+            if (slide)
             {
                 _view.SlideAway(_settings.ReduceMotion);
             }

@@ -49,6 +49,7 @@ namespace Callbreak.Presentation.Screens
         {
             if (id == ScreenId.HowToPlay)
             {
+                _view.ReduceMotion = _settings.ReduceMotion;
                 _view.SetFirstTime(!_settings.HowToPlaySeen);
             }
         }

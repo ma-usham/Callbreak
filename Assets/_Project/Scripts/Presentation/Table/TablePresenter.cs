@@ -181,6 +181,7 @@ namespace Callbreak.Presentation.Table
             _started = true;
             _router.ReduceMotion = ReduceMotion;
             _view.Hand.ReduceMotion = ReduceMotion;
+            _view.ReduceMotion = ReduceMotion;
             if (_router.Has(ScreenId.Gameplay) && _router.Current == ScreenId.None)
             {
                 _router.Show(ScreenId.Gameplay);
@@ -419,6 +420,7 @@ namespace Callbreak.Presentation.Table
         {
             _router.ReduceMotion = ReduceMotion;
             _view.Hand.ReduceMotion = ReduceMotion;
+            _view.ReduceMotion = ReduceMotion;
         }
 
         private void OnLanguageChanged()

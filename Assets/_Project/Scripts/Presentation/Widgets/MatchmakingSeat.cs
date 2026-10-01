@@ -1,4 +1,6 @@
 using System;
+using Callbreak.Presentation.Framework;
+using LitMotion;
 using TMPro;
 using UnityEngine;
 
@@ -10,6 +12,7 @@ namespace Callbreak.Presentation.Widgets
     /// shows one of them. The name and status follow the look: the mockup sets a filled seat's name
     /// heavier and its status in green ("Ready"), a searching seat's name lighter and its status in a
     /// muted brown ("Searching"). Each look's text style is taken from a mockup label that shows it.
+    /// A seat that fills while the screen is up pops its player in (ADR 023).
     /// </summary>
     public sealed class MatchmakingSeat : MonoBehaviour
     {
@@ -22,11 +25,22 @@ namespace Callbreak.Presentation.Widgets
         [SerializeField] private TextStyle _searchingName;
         [SerializeField] private TextStyle _searchingStatus;
 
+        private MotionHandle _motion;
+
+        /// <summary>With Reduce motion a seat that fills only fades its player in (GDD §14).</summary>
+        public bool ReduceMotion { get; set; }
+
         public void Show(bool filled, string playerName, string status)
         {
             if (_filledLook.activeSelf != filled)
             {
+                bool fills = filled && gameObject.activeInHierarchy;
+                UiMotion.Finish(ref _motion);
                 _filledLook.SetActive(filled);
+                if (fills)
+                {
+                    _motion = UiMotion.PopIn(_filledLook.transform, UiMotion.GroupOf(_filledLook), ReduceMotion, 0.8f);
+                }
             }
 
             if (_searchingLook.activeSelf == filled)
@@ -46,6 +60,8 @@ namespace Callbreak.Presentation.Widgets
                 _status.text = status;
             }
         }
+
+        private void OnDisable() => UiMotion.Finish(ref _motion);
 
         /// <summary>How one label looks in one state: typeface, size, width and colour.</summary>
         [Serializable]

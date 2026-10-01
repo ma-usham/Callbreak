@@ -2,6 +2,7 @@ using System;
 using Callbreak.Core.Cards;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Widgets;
+using LitMotion;
 using TMPro;
 using UnityEngine;
 
@@ -9,10 +10,15 @@ namespace Callbreak.Presentation.Screens
 {
     /// <summary>
     /// GDD §11 screen 00, the home hub. Shows who the player is and raises one event per entry
-    /// point; the presenter decides where each one leads.
+    /// point; the presenter decides where each one leads. The first time it shows after the menu
+    /// loads, the three play buttons and the line under them rise into place one after another
+    /// (ADR 023); with Reduce motion they are simply there.
     /// </summary>
     public sealed class MainMenuView : UIScreen
     {
+        // The loading curtain is still lifting when the menu first shows.
+        private const float IntroDelay = 0.12f;
+
         [SerializeField] private UnityEngine.UI.Button _profileButton;
         [SerializeField] private UnityEngine.UI.Button _settingsButton;
         [SerializeField] private UnityEngine.UI.Button _shopButton;
@@ -30,6 +36,10 @@ namespace Callbreak.Presentation.Screens
         // The fan's four aces, indexed by suit.
         [SerializeField] private UnityEngine.UI.Image[] _fanFaces;
         [SerializeField] private float _mutedAlpha = 0.5f;
+
+        private readonly MotionHandle[] _intro = new MotionHandle[4];
+        private bool _introPlayed;
+        private bool _reduceMotion;
 
         public event Action ProfileClicked;
         public event Action SettingsClicked;
@@ -95,8 +105,38 @@ namespace Callbreak.Presentation.Screens
             }
         }
 
-        /// <summary>With Reduce motion the card fan stands still (GDD §14).</summary>
-        public void SetReduceMotion(bool on) => _fanSway.Still = on;
+        /// <summary>With Reduce motion the card fan stands still and the buttons do not rise (GDD §14).</summary>
+        public void SetReduceMotion(bool on)
+        {
+            _reduceMotion = on;
+            _fanSway.Still = on;
+        }
+
+        public override void OnShown()
+        {
+            if (_introPlayed)
+            {
+                return;
+            }
+
+            _introPlayed = true;
+            if (_reduceMotion)
+            {
+                return;
+            }
+
+            GameObject last = _resumeButton.gameObject.activeSelf ? _resumeButton.gameObject : _footer;
+            Rise(0, _playOnlineButton.transform);
+            Rise(1, _playWithFriendsButton.transform);
+            Rise(2, _playOfflineButton.transform);
+            Rise(3, last.transform);
+        }
+
+        private void Rise(int index, Transform target)
+        {
+            UiMotion.Stop(ref _intro[index]);
+            _intro[index] = UiMotion.RiseIn((RectTransform)target, false, delay: IntroDelay + (index * UiMotion.Stagger));
+        }
 
         private void OnEnable()
         {
@@ -118,6 +158,12 @@ namespace Callbreak.Presentation.Screens
             _playWithFriendsButton.onClick.RemoveListener(OnPlayWithFriendsClicked);
             _playOfflineButton.onClick.RemoveListener(OnPlayOfflineClicked);
             _resumeButton.onClick.RemoveListener(OnResumeClicked);
+
+            // A rise cut short puts its button in its place.
+            for (int i = 0; i < _intro.Length; i++)
+            {
+                UiMotion.Stop(ref _intro[i]);
+            }
         }
 
         private void OnProfileClicked() => ProfileClicked?.Invoke();

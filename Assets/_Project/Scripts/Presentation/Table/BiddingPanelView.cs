@@ -10,8 +10,9 @@ namespace Callbreak.Presentation.Table
     /// <summary>
     /// GDD §11 screen 07, "Make your call": the call panel in the middle of the table. It shows only
     /// on the local seat's call turn: chips from the rule set's lowest to highest call with nothing
-    /// chosen, and a Confirm button that stays disabled until a chip is chosen. Once the call is
-    /// placed the panel slides away. Before that turn the centre of the table reads "Asha is
+    /// chosen, and a Confirm button that stays disabled until a chip is chosen. As the turn begins
+    /// the panel rises into place (ADR 023); once the call is placed it slides away, the same way
+    /// back. Before that turn the centre of the table reads "Asha is
     /// calling…". A call that is refused puts its reason where the subtitle is. With the beginner
     /// assist on, a faint dot marks the suggested call. The table itself (HUD, seats, hand) is the
     /// <see cref="TableView"/> underneath.
@@ -37,6 +38,7 @@ namespace Callbreak.Presentation.Table
         private Vector2 _restPosition;
         private float _slideDistance;
         private bool _leaving;
+        private bool _entering;
         private int _minCall = 1;
         private int _hintedCall;
 
@@ -58,6 +60,15 @@ namespace Callbreak.Presentation.Table
         /// <summary>The call the beginner assist's dot is on; 0 while it is hidden.</summary>
         public int HintedCall => _hint != null && _hint.gameObject.activeSelf ? _hintedCall : 0;
 
+        /// <summary>With Reduce motion the crimson chip moves to the chosen chip at once (GDD §14).</summary>
+        public bool ReduceMotion
+        {
+            get => _chips.ReduceMotion;
+            set => _chips.ReduceMotion = value;
+        }
+
+        private RectTransform PanelRect => (RectTransform)_panel.transform;
+
         /// <summary>The chips to offer: RuleSet.MinCall to RuleSet.MaxCall.</summary>
         public void SetCallRange(int minCall, int maxCall)
         {
@@ -73,6 +84,41 @@ namespace Callbreak.Presentation.Table
             {
                 _panel.SetActive(show);
             }
+        }
+
+        /// <summary>
+        /// The local call turn begins: the panel rises 24 px into place as it fades in, the slide
+        /// away played backwards. With Reduce motion it only fades. A panel already up stays as it
+        /// is, and one on its way out comes back at once.
+        /// </summary>
+        public void SlideIn(bool reduceMotion)
+        {
+            if (_panel.activeSelf)
+            {
+                if (_leaving)
+                {
+                    StopSlide();
+                }
+
+                return;
+            }
+
+            _panel.SetActive(true);
+
+            // (A panel built before it could slide has no group to fade: it is just there.)
+            if (!gameObject.activeInHierarchy || _panelGroup == null)
+            {
+                return;
+            }
+
+            _entering = true;
+            _restPosition = PanelRect.anchoredPosition;
+            _slideDistance = reduceMotion ? 0f : SlideDistance;
+            ApplySlide(1f);
+            _panelMotion = LMotion.Create(1f, 0f, SlideSeconds)
+                .WithEase(Ease.OutCubic)
+                .WithOnComplete(EndSlideIn)
+                .Bind(this, (t, view) => view.ApplySlide(t));
         }
 
         /// <summary>
@@ -93,8 +139,10 @@ namespace Callbreak.Presentation.Table
                 return;
             }
 
+            // A panel still rising is put in its place first.
+            StopSlide();
             _leaving = true;
-            _restPosition = ((RectTransform)_panel.transform).anchoredPosition;
+            _restPosition = PanelRect.anchoredPosition;
             _slideDistance = reduceMotion ? 0f : SlideDistance;
             _panelGroup.blocksRaycasts = false;
             _panelMotion = LMotion.Create(0f, 1f, SlideSeconds)
@@ -199,10 +247,11 @@ namespace Callbreak.Presentation.Table
             }
         }
 
+        /// <summary>The panel <paramref name="t"/> of the way gone: lower and fainter.</summary>
         private void ApplySlide(float t)
         {
             _panelGroup.alpha = 1f - t;
-            ((RectTransform)_panel.transform).anchoredPosition = _restPosition + new Vector2(0f, -_slideDistance * t);
+            PanelRect.anchoredPosition = _restPosition + new Vector2(0f, -_slideDistance * t);
         }
 
         private void EndSlide()
@@ -210,6 +259,12 @@ namespace Callbreak.Presentation.Table
             _panelMotion = default;
             RestorePanel();
             _panel.SetActive(false);
+        }
+
+        private void EndSlideIn()
+        {
+            _panelMotion = default;
+            RestorePanel();
         }
 
         private void StopSlide()
@@ -226,12 +281,13 @@ namespace Callbreak.Presentation.Table
         /// <summary>Puts the panel back as it is shown: in place, opaque and touchable.</summary>
         private void RestorePanel()
         {
-            if (!_leaving)
+            if (!_leaving && !_entering)
             {
                 return;
             }
 
             _leaving = false;
+            _entering = false;
 
             // When the scene unloads the panel may already be gone.
             if (_panelGroup != null)
@@ -242,7 +298,7 @@ namespace Callbreak.Presentation.Table
 
             if (_panel != null)
             {
-                ((RectTransform)_panel.transform).anchoredPosition = _restPosition;
+                PanelRect.anchoredPosition = _restPosition;
             }
         }
 

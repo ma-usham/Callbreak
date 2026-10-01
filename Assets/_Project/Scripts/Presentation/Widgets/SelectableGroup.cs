@@ -1,4 +1,6 @@
 using System;
+using Callbreak.Presentation.Framework;
+using LitMotion;
 using TMPro;
 using UnityEngine;
 
@@ -8,7 +10,8 @@ namespace Callbreak.Presentation.Widgets
     /// A single choice among several tappable options: segmented controls (15 sec | 30 sec),
     /// difficulty cards, deck cards with radio buttons. Each option has a button, a "selected"
     /// look that is shown only on the chosen one, an optional "unselected" look, and optional
-    /// labels whose colour follows the selection.
+    /// labels whose colour follows the selection. A tapped option's selected look fades in
+    /// (ADR 023); one set by a presenter is simply there.
     /// </summary>
     public sealed class SelectableGroup : MonoBehaviour
     {
@@ -21,6 +24,7 @@ namespace Callbreak.Presentation.Widgets
         [SerializeField] private int _selectedIndex;
 
         private UnityEngine.Events.UnityAction[] _handlers;
+        private MotionHandle _fade;
 
         /// <summary>Raised when the player chooses another option.</summary>
         public event Action<int> Changed;
@@ -60,6 +64,8 @@ namespace Callbreak.Presentation.Widgets
             {
                 _options[i].onClick.RemoveListener(_handlers[i]);
             }
+
+            UiMotion.Finish(ref _fade);
         }
 
         private void Select(int index)
@@ -68,14 +74,29 @@ namespace Callbreak.Presentation.Widgets
             {
                 _selectedIndex = index;
                 Render();
+                FadeInSelected();
                 Changed?.Invoke(index);
             }
 
             Tapped?.Invoke(index);
         }
 
+        private void FadeInSelected()
+        {
+            if (_selectedLooks == null || _selectedIndex < 0 || _selectedIndex >= _selectedLooks.Length || _selectedLooks[_selectedIndex] == null)
+            {
+                return;
+            }
+
+            CanvasGroup look = UiMotion.GroupOf(_selectedLooks[_selectedIndex]);
+            look.alpha = 0f;
+            _fade = UiMotion.Fade(look, 1f, UiMotion.Quick);
+        }
+
         private void Render()
         {
+            // A look still fading in is finished first, so no option is left half-chosen.
+            UiMotion.Finish(ref _fade);
             for (int i = 0; i < Count; i++)
             {
                 bool on = i == _selectedIndex;

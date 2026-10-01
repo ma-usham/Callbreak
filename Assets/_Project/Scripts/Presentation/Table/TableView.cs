@@ -1,5 +1,6 @@
 using System;
 using Callbreak.Presentation.Framework;
+using LitMotion;
 using TMPro;
 using UnityEngine;
 
@@ -37,6 +38,10 @@ namespace Callbreak.Presentation.Table
         // The GDD asks for a small "Trick 6 / 13" under the round line; mockup 08 does not draw it.
         [SerializeField] private bool _showTrickCounter;
 
+        private MotionHandle _coverMotion;
+        private MotionHandle _bannerMotion;
+        private bool _reduceMotion;
+
         /// <summary>Home: opens the match menu; it never leaves the table at once (GDD screen 07, callout 2).</summary>
         public event Action HomeClicked;
 
@@ -73,6 +78,25 @@ namespace Callbreak.Presentation.Table
         /// <summary>Whether the HUD shows "Trick 6 / 13" under the round line (off: mockup 08 has no such line).</summary>
         public bool ShowTrickCounter => _showTrickCounter;
 
+        /// <summary>
+        /// GDD §14 Reduce motion, for the table's own parts: the turn prompt, the emote picker, the
+        /// seat chips and the "I'm back" banner only fade (the hand has its own switch).
+        /// </summary>
+        public bool ReduceMotion
+        {
+            get => _reduceMotion;
+            set
+            {
+                _reduceMotion = value;
+                _prompt.ReduceMotion = value;
+                _emotes.ReduceMotion = value;
+                foreach (SeatView seat in _seat)
+                {
+                    seat.ReduceMotion = value;
+                }
+            }
+        }
+
         /// <summary>"ROUND 1 / 5".</summary>
         public void SetRound(string text)
         {
@@ -100,26 +124,46 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>
         /// The "Reconnecting…" cover while the session is re-joining: the table stays visible
-        /// underneath and takes no input.
+        /// underneath and takes no input. It fades in, and goes at once when the table is back.
         /// </summary>
         public void SetReconnecting(bool reconnecting)
         {
-            if (_reconnecting.activeSelf != reconnecting)
+            if (_reconnecting.activeSelf == reconnecting)
             {
-                _reconnecting.SetActive(reconnecting);
+                return;
+            }
+
+            UiMotion.Stop(ref _coverMotion);
+            CanvasGroup cover = UiMotion.GroupOf(_reconnecting);
+            cover.alpha = 1f;
+            _reconnecting.SetActive(reconnecting);
+            if (reconnecting)
+            {
+                cover.alpha = 0f;
+                _coverMotion = UiMotion.Fade(cover, 1f);
             }
         }
 
         /// <summary>
         /// The "I'm back" banner of a seat marked Away after two timeouts: a bot plays its turns
-        /// until the player taps it (GDD §8).
+        /// until the player taps it (GDD §8). It pops in (fades in with Reduce motion), and goes at
+        /// once when the player is back.
         /// </summary>
         public void SetAway(bool away)
         {
             GameObject banner = _imBackButton.gameObject;
-            if (banner.activeSelf != away)
+            if (banner.activeSelf == away)
             {
-                banner.SetActive(away);
+                return;
+            }
+
+            UiMotion.Stop(ref _bannerMotion);
+            banner.transform.localScale = Vector3.one;
+            UiMotion.GroupOf(banner).alpha = 1f;
+            banner.SetActive(away);
+            if (away)
+            {
+                _bannerMotion = UiMotion.PopIn(banner.transform, UiMotion.GroupOf(banner), ReduceMotion);
             }
         }
 
@@ -145,6 +189,8 @@ namespace Callbreak.Presentation.Table
             _trickTap.onClick.RemoveListener(OnTrickTap);
             _imBackButton.onClick.RemoveListener(OnImBack);
             _hand.Touched -= OnTableTap;
+            UiMotion.Finish(ref _coverMotion);
+            UiMotion.Finish(ref _bannerMotion);
         }
 
         private void OnHome() => HomeClicked?.Invoke();

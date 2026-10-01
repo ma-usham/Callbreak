@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Callbreak.Presentation.Framework;
+using LitMotion;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,7 +11,9 @@ namespace Callbreak.Presentation.Table
     /// <summary>
     /// The quick-phrase picker over the emote button (GDD §8 "Emotes, not chat"; screen 08 callout
     /// 10): the six phrases of the Emotes table. Tapping a phrase raises its index; tapping
-    /// anywhere else closes the picker. While the rate limit holds, the phrases are disabled.
+    /// anywhere else closes the picker. While the rate limit holds, the phrases are disabled. The
+    /// card pops out of its corner by the button and shrinks back into it as it fades (ADR 023);
+    /// with Reduce motion it only fades.
     /// </summary>
     public sealed class EmotePickerView : MonoBehaviour
     {
@@ -19,6 +23,9 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private TMP_Text[] _labels = Array.Empty<TMP_Text>();
 
         private readonly List<UnityEngine.Events.UnityAction> _handlers = new List<UnityEngine.Events.UnityAction>(6);
+        private MotionHandle _motion;
+        private CanvasGroup _group;
+        private bool _closing;
 
         /// <summary>A phrase was tapped: its index in the Emotes table.</summary>
         public event Action<int> EmoteChosen;
@@ -26,9 +33,18 @@ namespace Callbreak.Presentation.Table
         /// <summary>The player tapped outside the picker.</summary>
         public event Action Dismissed;
 
-        public bool IsOpen => _panel.activeSelf;
+        /// <summary>Open, and taking taps; false as soon as it closes, while it fades out.</summary>
+        public bool IsOpen => _panel.activeSelf && !_closing;
 
         public int Count => _buttons.Length;
+
+        /// <summary>With Reduce motion the picker only fades in and out (GDD §14).</summary>
+        public bool ReduceMotion { get; set; }
+
+        private CanvasGroup Group => _group != null ? _group : _group = UiMotion.GroupOf(_panel);
+
+        // The card with the phrases; it grows from its pivot, the corner by the emote button.
+        private Transform Card => _buttons.Length > 0 && _buttons[0] != null ? _buttons[0].transform.parent : _panel.transform;
 
         public void SetPhrases(IReadOnlyList<string> phrases)
         {
@@ -46,18 +62,67 @@ namespace Callbreak.Presentation.Table
 
         public void Open()
         {
-            if (!_panel.activeSelf)
+            if (IsOpen)
             {
-                _panel.SetActive(true);
+                return;
             }
+
+            // (A picker on its way out goes at once and comes back in.)
+            CancelMotion();
+            _panel.SetActive(true);
+            _motion = UiMotion.PopIn(Card, Group, ReduceMotion, 0.9f, UiMotion.Short);
         }
 
         public void Close()
         {
-            if (_panel.activeSelf)
+            if (!IsOpen)
             {
-                _panel.SetActive(false);
+                return;
             }
+
+            CancelMotion();
+            _closing = true;
+            Group.blocksRaycasts = false;
+            _motion = UiMotion.PopOut(Card, Group, ReduceMotion, OnClosed);
+        }
+
+        private void OnClosed()
+        {
+            _motion = default;
+            Rest();
+        }
+
+        private void CancelMotion()
+        {
+            if (_motion.IsActive())
+            {
+                _motion.Cancel();
+            }
+
+            _motion = default;
+            Rest();
+        }
+
+        /// <summary>The card as it is at rest: full size, opaque and touchable; a picker that was closing is closed.</summary>
+        private void Rest()
+        {
+            // When the scene unloads the panel may already be gone.
+            if (_group != null)
+            {
+                _group.alpha = 1f;
+                _group.blocksRaycasts = true;
+            }
+
+            if (_panel != null)
+            {
+                Card.localScale = Vector3.one;
+                if (_closing && _panel.activeSelf)
+                {
+                    _panel.SetActive(false);
+                }
+            }
+
+            _closing = false;
         }
 
         /// <summary>False while the emote limit holds (one every 3 s, ten per round).</summary>
@@ -101,6 +166,8 @@ namespace Callbreak.Presentation.Table
             {
                 _dismiss.onClick.RemoveListener(OnDismiss);
             }
+
+            CancelMotion();
         }
 
         private void OnDismiss() => Dismissed?.Invoke();
