@@ -153,6 +153,7 @@ namespace Callbreak.Editor.Screens
             viewport.gameObject.AddComponent<RectMask2D>();
             viewport.SetSiblingIndex(textRect.GetSiblingIndex());
             textRect.SetParent(viewport, true);
+            UiBuildKit.FillTextArea(viewport, text);
 
             // Placeholder: the same fitted style, dimmed, shown only while the field is empty.
             var placeholderObject = Object.Instantiate(textRect.gameObject, viewport, true);

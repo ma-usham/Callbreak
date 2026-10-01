@@ -67,6 +67,7 @@ namespace Callbreak.Editor.Screens
             viewport.gameObject.AddComponent<RectMask2D>();
             viewport.SetSiblingIndex(textRect.GetSiblingIndex());
             textRect.SetParent(viewport, true);
+            UiBuildKit.FillTextArea(viewport, text);
 
             Image face = field.Find("Face")?.GetComponent<Image>();
             if (face != null)

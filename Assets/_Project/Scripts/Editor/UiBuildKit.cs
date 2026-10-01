@@ -60,6 +60,27 @@ namespace Callbreak.Editor
             return rect;
         }
 
+        /// <summary>
+        /// Lays an input field's text across its typing area. TMP_InputField scrolls a long text by
+        /// moving it, and after a deletion moves it back towards x = 0, as if the text filled the
+        /// area; a fitted label resting anywhere else was pulled there, to the middle of the field.
+        /// The label now spans the area from edge to edge; its words stay exactly where they were,
+        /// the gap from the area's left edge becoming the label's left margin. The height is kept.
+        /// Call before copying the label into a placeholder, so that the two start together.
+        /// </summary>
+        public static void FillTextArea(RectTransform textArea, TMP_Text label)
+        {
+            var rect = label.rectTransform;
+            float left = rect.localPosition.x + rect.rect.xMin * rect.localScale.x;
+            float margin = (left - textArea.rect.xMin) / rect.localScale.x;
+            rect.anchorMin = new Vector2(0f, rect.anchorMin.y);
+            rect.anchorMax = new Vector2(1f, rect.anchorMax.y);
+            rect.offsetMin = new Vector2(0f, rect.offsetMin.y);
+            rect.offsetMax = new Vector2(0f, rect.offsetMax.y);
+            Vector4 margins = label.margin;
+            label.margin = new Vector4(margin, margins.y, margins.z, margins.w);
+        }
+
         /// <summary>Size of a mockup measurement in canvas units.</summary>
         public static Vector2 FromMock(float width, float height)
         {
