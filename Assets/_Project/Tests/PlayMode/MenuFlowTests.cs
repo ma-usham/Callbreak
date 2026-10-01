@@ -52,7 +52,8 @@ namespace Callbreak.Tests.PlayMode
         {
             yield return Boot(freshInstall: true);
             ScreenRouter router = _game.MenuRouter;
-            Assert.AreEqual(ScreenId.HowToPlay, router.Current, "GDD 15: How to Play comes up by itself, once");
+            yield return AnswerName("Asha");
+            Assert.AreEqual(ScreenId.HowToPlay, router.Current, "GDD 15: How to Play comes up by itself, once, after the name (ADR 022)");
             Assert.IsFalse(_game.Settings.HowToPlaySeen);
 
             GameFixture.Press(router, "GotItButton");
@@ -73,6 +74,7 @@ namespace Callbreak.Tests.PlayMode
         public IEnumerator Boot_FreshInstall_PracticeAccepted_StartsAnEasyOfflineMatch()
         {
             yield return Boot(freshInstall: true);
+            yield return AnswerName("Asha");
             GameFixture.Press(_game.MenuRouter, "GotItButton");
             yield return null;
 
@@ -151,6 +153,8 @@ namespace Callbreak.Tests.PlayMode
             links.Receive("callbreak://join/ab2-cde");
             yield return null;
 
+            // ADR 022: a new player answers the name question first; the primer waits for it.
+            yield return AnswerName("Asha");
             Assert.AreEqual(ScreenId.HowToPlay, router.Current, "the primer comes before a player's first match");
             GameFixture.Press(router, "GotItButton");
             yield return null;
@@ -206,6 +210,21 @@ namespace Callbreak.Tests.PlayMode
         private IEnumerator Boot(bool freshInstall = false)
         {
             yield return _game.Boot(freshInstall, extra: builder => builder.RegisterInstance<INetworkStatus>(new Network(online: true)));
+        }
+
+        /// <summary>
+        /// ADR 022: a new player is asked for a name first, and nothing else the menu does by itself
+        /// (the rules primer) shows until it is answered.
+        /// </summary>
+        private IEnumerator AnswerName(string name)
+        {
+            yield return null;
+            NamePromptView prompt = UnityEngine.Object.FindFirstObjectByType<NamePromptView>(FindObjectsInactive.Include);
+            Assert.IsTrue(prompt != null && prompt.IsShowing, "a new player is asked for a name");
+            Assert.AreNotEqual(ScreenId.HowToPlay, _game.MenuRouter.Current, "the primer does not open behind the name question");
+            prompt.GetComponentInChildren<TMPro.TMP_InputField>(true).text = name;
+            GameFixture.PressIn(prompt, "ContinueButton");
+            yield return null;
         }
 
         private static IEnumerator OpenAndReturn(ScreenRouter router, string button, ScreenId expected)

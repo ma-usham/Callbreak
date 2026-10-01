@@ -40,6 +40,8 @@ namespace Callbreak.Tests.PlayMode
 
             Button next = Continue(prompt);
             Assert.IsFalse(next.interactable, "Continue waits for a name");
+            yield return null;
+            Assert.AreEqual(ScreenId.MainMenu, _game.MenuRouter.Current, "How to Play does not open behind the name question");
             Assert.IsTrue(_game.Menu.Container.Resolve<NamePromptPresenter>().HandleBack(), "Android back cannot close the question");
             Assert.IsTrue(prompt.IsShowing);
 
@@ -58,6 +60,7 @@ namespace Callbreak.Tests.PlayMode
             Assert.IsTrue(profile.HasChosenName);
             Assert.AreEqual("Asha", MainMenuName(), "the main menu shows the chosen name");
             Assert.IsFalse(_game.Menu.Container.Resolve<NamePromptPresenter>().HandleBack(), "back reaches the menu again");
+            yield return GameFixture.Until(() => _game.MenuRouter.Current == ScreenId.HowToPlay, "How to Play to open once the name is answered");
         }
 
         [UnityTest]
