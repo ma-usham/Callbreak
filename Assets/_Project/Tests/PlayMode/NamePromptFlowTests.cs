@@ -66,11 +66,38 @@ namespace Callbreak.Tests.PlayMode
             Assert.IsFalse(_game.Menu.Container.Resolve<NamePromptPresenter>().HandleBack(), "back reaches the menu again");
             Assert.AreEqual(ScreenId.HowToPlay, router.Current);
             Assert.IsTrue(rules.RulesVisible, "the rules appear once the name is answered");
+            Assert.IsTrue(DimShowing(rules), "the first time, the rules sit over the dimmed background, as the name question did");
+            Assert.IsFalse(GameFixture.CanPress(rules, "BackButton"), "no back button the first time");
+            Assert.IsFalse(GameFixture.CanPress(rules, "SettingsButton"), "no settings gear the first time");
 
             GameFixture.Press(router, "GotItButton");
             yield return null;
             Assert.AreEqual(ScreenId.MainMenu, router.Current, "the main menu comes after the rules");
             Assert.IsTrue(_game.Settings.HowToPlaySeen);
+
+            // From Settings later, How to Play has its usual look again.
+            _game.PressDialog(confirm: false);
+            yield return null;
+            GameFixture.Press(router, "SettingsButton");
+            yield return null;
+            GameFixture.Press(router, "HowToPlayButton");
+            yield return null;
+            Assert.AreEqual(ScreenId.HowToPlay, router.Current);
+            Assert.IsFalse(DimShowing(rules), "no dim once the rules have been seen");
+            Assert.IsTrue(GameFixture.CanPress(rules, "BackButton") && GameFixture.CanPress(rules, "SettingsButton"), "the back button and the gear are back");
+        }
+
+        private static bool DimShowing(HowToPlayView rules)
+        {
+            foreach (Transform child in rules.GetComponentsInChildren<Transform>(false))
+            {
+                if (child.name == "Dim")
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         [UnityTest]

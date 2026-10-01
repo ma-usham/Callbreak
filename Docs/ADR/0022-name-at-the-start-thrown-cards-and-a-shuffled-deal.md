@@ -19,7 +19,9 @@
   the app opens on How to Play's background and logo, without the rules or its buttons, under
   the panel; once the name is answered the rules appear, and the main menu (with the practice
   offer) comes after "Got It". The rules never show behind the panel, also on the way to Join
-  Room for an invite link on a new phone.
+  Room for an invite link on a new phone. Until the rules have been seen, How to Play keeps the
+  name panel's look: the background and logo dimmed behind the rules, and no back button or
+  settings gear (Got It is the way on). Opened later from Settings it looks as before.
   Keeping "Player" is an answer too. The profile remembers the answer (`nameChosen`); a profile
   that already holds a name of its own counts as answered, and one whose name had to fall back to
   "Player" is asked again. The nudge after the first match is gone.

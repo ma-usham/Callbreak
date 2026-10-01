@@ -8,7 +8,8 @@ namespace Callbreak.Presentation.Screens
     /// <summary>
     /// GDD §11 screen 12: the rules primer. It opens from Settings, and once, on its own, the first
     /// time a player picks a way to play: then "Got It" carries on to that mode, and going back
-    /// returns to the menu. Either way the primer counts as seen.
+    /// returns to the menu. Either way the primer counts as seen. Until it is seen it has the
+    /// first-time look (ADR 022): dimmed behind the rules, with no back or settings button.
     /// </summary>
     public sealed class HowToPlayPresenter : IStartable, IDisposable
     {
@@ -31,6 +32,8 @@ namespace Callbreak.Presentation.Screens
             _view.BackRequested += OnBack;
             _view.SettingsClicked += OnSettings;
             _view.GotItClicked += OnGotIt;
+            _router.Changed += OnScreenChanged;
+            OnScreenChanged(_router.Current);
         }
 
         public void Dispose()
@@ -39,6 +42,15 @@ namespace Callbreak.Presentation.Screens
             _view.BackRequested -= OnBack;
             _view.SettingsClicked -= OnSettings;
             _view.GotItClicked -= OnGotIt;
+            _router.Changed -= OnScreenChanged;
+        }
+
+        private void OnScreenChanged(ScreenId id)
+        {
+            if (id == ScreenId.HowToPlay)
+            {
+                _view.SetFirstTime(!_settings.HowToPlaySeen);
+            }
         }
 
         private void OnGotIt()
