@@ -30,6 +30,12 @@ namespace Callbreak.Presentation.Widgets
         /// <summary>With Reduce motion a seat that fills only fades its player in (GDD §14).</summary>
         public bool ReduceMotion { get; set; }
 
+        /// <summary>A player sits here (the avatar disc rather than the dashed circle).</summary>
+        public bool IsFilled => _filledLook.activeSelf;
+
+        /// <summary>The line under the name: "Ready", "Searching".</summary>
+        public string Status => _status.text;
+
         public void Show(bool filled, string playerName, string status)
         {
             if (_filledLook.activeSelf != filled)

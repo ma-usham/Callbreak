@@ -18,9 +18,9 @@ namespace Callbreak.Editor.Screens
     /// mockup 08 draws them; a <see cref="SeatView"/> per seat, with the timer ring, seconds disc
     /// and bubble the opponents' seats need (derived from the local seat's); the turn prompt, the
     /// trick counter, the emote picker, the "Reconnecting…" cover and the "I'm back" banner (derived
-    /// from kit pills, panels and buttons); and each seat's chip for "Away", "Reconnecting…", "Bot
-    /// playing" and a fill-in bot's "BOT" (the kit's tag pill, hidden until there is something to
-    /// say). Names get a width: a long one shrinks, then ends in an ellipsis. Controls smaller than
+    /// from kit pills, panels and buttons); and each seat's chip for "Away", "Reconnecting…" and "Bot
+    /// playing" (the kit's tag pill, hidden until there is something to say; a bot that fills a
+    /// seat has none, ADR 025). Names get a width: a long one shrinks, then ends in an ellipsis. Controls smaller than
     /// 88 px answer to touches on 88 px (GDD §16) without being drawn any larger.
     /// All mockup measurements are in mockup pixels (1672 × 941), as in the layout.
     /// </summary>
@@ -76,7 +76,7 @@ namespace Callbreak.Editor.Screens
         /// <summary>GDD §16 "Touch targets are ≥ 88 px", in canvas units.</summary>
         public const float MinTouch = 88f;
 
-        // ---- The seat chip ("Away", "Reconnecting…", "Bot playing", "BOT"): the kit's tag pill on the
+        // ---- The seat chip ("Away", "Reconnecting…", "Bot playing"): the kit's tag pill on the
         // top edge of an opponent's avatar; the local seat's sits above its name plate, left of the
         // hand.
         private const float ChipHeight = 24f;
@@ -313,8 +313,9 @@ namespace Callbreak.Editor.Screens
             TextMeshProUGUI bubbleText = Label("Text", bubble, nameStyle, "4");
             bubble.gameObject.SetActive(false);
 
-            // The chip: how the seat's player is connected, or a fill-in bot's tag (GDD §8, §9). It
-            // sizes itself to its text; the spinner shows only with "Reconnecting…".
+            // The chip: how the seat's player is connected (GDD §8; a fill-in bot has none, ADR 025).
+            // It sizes itself to its text; the spinner shows only with "Reconnecting…". ("BOT" is
+            // only the sample the prefab is built with.)
             Vector2 chipCentre = local ? LocalChipCentre : avatarCentre + new Vector2(0f, 2f - ringNode.rect[3] / 2f);
             RectTransform chip = UiBuildKit.CreateAt("Chip", root, chipCentre, seatCentre, UiBuildKit.FromMock(56f, ChipHeight));
             Sliced(chip, LoadTableSprite("UI_Pill_Tag"));

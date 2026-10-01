@@ -14,7 +14,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
     /// <summary>
     /// ADR 020, one deck per table: every face and every back at a table, for every player, is in
     /// one deck. A private room plays in the host's deck, whatever its guests chose; Quick Match in
-    /// one the hosting device draws from the catalog.
+    /// the deck the player chose (ADR 025).
     /// </summary>
     public sealed partial class RoomServiceTests
     {
@@ -81,14 +81,17 @@ namespace Callbreak.Tests.EditMode.Application.Online
         }
 
         [Test]
-        public void QuickMatch_EverySeatIsInOneDeckDrawnFromTheCatalog()
+        public void QuickMatch_EverySeatIsInTheDeckThePlayerChose()
         {
-            // "Any card can appear": the player's own choice (here the default deck) does not decide it.
-            var drawn = new HashSet<string>();
-            for (ulong seed = 1; seed <= 12; seed++)
+            // ADR 025: Quick Match plays in the player's own deck, as offline and a room they host do.
+            Device device = NewDevice("Hari");
+            Assert.Greater(device.Cosmetics.DeckIds.Count, 1, "more than one deck to choose from");
+            for (int d = 0; d < device.Cosmetics.DeckIds.Count; d++)
             {
-                ulong tableSeed = seed;
-                Device device = NewDevice("Hari");
+                string chosen = device.Cosmetics.DeckIds[d];
+                device.Cosmetics.SelectDeck(chosen);
+                Assert.AreEqual(chosen, device.Cosmetics.SelectedDeckId, "the player chose " + chosen);
+                ulong tableSeed = (ulong)(d + 1);
                 var quick = new QuickMatchService(new QuickMatchConfig(botFillDelaySeconds: 1), device.Profile, device.Cosmetics, device.Auth, new TestBots(),
                     device.Stats, device.Settings, device.Network, new NameFilter(), () => tableSeed, BotTiming.Instant);
                 quick.FindMatchAsync(null, CancellationToken.None);
@@ -100,14 +103,9 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
                 IMatchSession table = quick.Match;
                 Assert.IsNotNull(table, "the bots filled the table");
-                string deck = table.Seats[0].DeckThemeId;
-                CollectionAssert.Contains(device.Cosmetics.DeckIds, deck, "seed " + seed + ": a deck from the catalog");
-                AssertTableDeck(table, deck, "seed " + seed);
-                drawn.Add(deck);
+                AssertTableDeck(table, chosen, "chose " + chosen);
                 quick.Dispose();
             }
-
-            Assert.Greater(drawn.Count, 1, "the deck is drawn for each table");
         }
 
         /// <summary>Every seat of <paramref name="table"/> is in <paramref name="deck"/>: what the table draws, and what the host sent.</summary>

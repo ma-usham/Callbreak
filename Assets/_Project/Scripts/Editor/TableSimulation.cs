@@ -2639,9 +2639,9 @@ namespace Callbreak.Editor
             private DialogRequest LastDialog() => _dialogs.Requests.Count > 0 ? _dialogs.Requests[_dialogs.Requests.Count - 1] : null;
 
             /// <summary>
-            /// GDD §9 "Online fill-ins show a small BOT tag": the same bots, on a table that is not
-            /// offline. The mockups draw no tag, so the picture is made here, with a reconnecting and
-            /// an away seat beside it.
+            /// ADR 025: on an online table a bot that fills a seat looks like any other player, with
+            /// no tag (GDD §9 gave it "BOT"). The same bots, on a table that is not offline; the
+            /// picture has a reconnecting and an away seat beside them.
             /// </summary>
             private void StageBotTags()
             {
@@ -2651,13 +2651,13 @@ namespace Callbreak.Editor
                 {
                     Seat seat = (Seat)(((int)Local + rel) % SeatExtensions.Count);
                     Check(_active.Seats[(int)seat].IsBot, "the staged seats are bots");
-                    Equal(_text.Get(SeatStatus.BotTagKey), _table.Seat(rel).Chip, "online, a fill-in bot carries the BOT tag");
+                    Check(_table.Seat(rel).Chip == null, "online, a fill-in bot carries no tag", _table.Seat(rel).Chip);
                 }
 
                 Check(_table.Seat(0).Chip == null, "the local seat has no tag");
                 StageConnection((Seat)(((int)Local + 2) % SeatExtensions.Count), SeatConnection.Reconnecting);
                 StageConnection((Seat)(((int)Local + 3) % SeatExtensions.Count), SeatConnection.Away);
-                Check(_table.Seat(2).ChipIsBusy, "the connection wins over the tag");
+                Check(_table.Seat(2).ChipIsBusy, "a reconnecting seat still shows its chip and spinner");
                 Snapshot("Table_seat_chips");
                 _session.ModeOverride = null;
                 _session.SeatsOverride = null;

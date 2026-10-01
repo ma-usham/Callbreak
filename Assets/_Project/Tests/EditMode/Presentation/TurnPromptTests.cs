@@ -101,7 +101,6 @@ namespace Callbreak.Tests.EditMode.Presentation
                 TurnPrompt.WaitingForKey, TurnPrompt.WinsTrickKey, TurnPrompt.YouWinTrickKey, TurnPrompt.YouLeadKey, TurnPrompt.CallingKey,
                 SeatStatus.WaitingKey, SeatStatus.CallingKey, SeatStatus.ChoosingBidKey, SeatStatus.BidKey, SeatStatus.BidAutoKey,
                 SeatStatus.BidWonKey, SeatStatus.BidWonMetKey, SeatStatus.AwayKey, SeatStatus.ReconnectingKey, SeatStatus.BotPlayingKey,
-                SeatStatus.BotTagKey,
             })
             {
                 Assert.IsTrue(_text.Has(key), key);
@@ -169,29 +168,18 @@ namespace Callbreak.Tests.EditMode.Presentation
         public void ConnectionChip_SaysWhatTheOthersSee()
         {
             // GDD 8 "What others see": its own short chip beside the pill, not in place of the line.
-            Assert.IsNull(SeatStatus.Chip(SeatConnection.Connected, false, _text), "a player who is there has no chip");
-            Assert.AreEqual("Away", SeatStatus.Chip(SeatConnection.Away, false, _text));
-            Assert.AreEqual("Reconnecting…", SeatStatus.Chip(SeatConnection.Reconnecting, false, _text));
-            Assert.AreEqual("Bot playing", SeatStatus.Chip(SeatConnection.BotControlled, false, _text));
-            Assert.AreEqual("Bot playing", SeatStatus.Chip(SeatConnection.Left, false, _text));
+            // ADR 025: a player who is there has no chip, whether a person or a bot that filled the seat.
+            Assert.IsNull(SeatStatus.Chip(SeatConnection.Connected, _text), "a player who is there has no chip");
+            Assert.AreEqual("Away", SeatStatus.Chip(SeatConnection.Away, _text));
+            Assert.AreEqual("Reconnecting…", SeatStatus.Chip(SeatConnection.Reconnecting, _text));
+            Assert.AreEqual("Bot playing", SeatStatus.Chip(SeatConnection.BotControlled, _text));
+            Assert.AreEqual("Bot playing", SeatStatus.Chip(SeatConnection.Left, _text));
 
             // Only "Reconnecting…" has the spinner.
             Assert.IsTrue(SeatStatus.ChipIsBusy(SeatConnection.Reconnecting));
             foreach (SeatConnection connection in new[] { SeatConnection.Connected, SeatConnection.Away, SeatConnection.BotControlled, SeatConnection.Left })
             {
                 Assert.IsFalse(SeatStatus.ChipIsBusy(connection), connection.ToString());
-            }
-        }
-
-        [Test]
-        public void FillInBots_CarryTheBotTag()
-        {
-            // GDD 9 "Online fill-ins show a small BOT tag"; the presenter asks for it in the online modes only.
-            Assert.AreEqual("BOT", SeatStatus.Chip(SeatConnection.Connected, true, _text));
-            Assert.IsFalse(SeatStatus.ChipIsBusy(SeatConnection.Connected));
-            foreach (SeatConnection connection in NotAtTheTable)
-            {
-                Assert.AreEqual(SeatStatus.Chip(connection, false, _text), SeatStatus.Chip(connection, true, _text), connection + ": the connection is what matters more");
             }
         }
 

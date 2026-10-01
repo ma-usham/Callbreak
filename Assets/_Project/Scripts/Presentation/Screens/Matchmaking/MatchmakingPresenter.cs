@@ -242,9 +242,9 @@ namespace Callbreak.Presentation.Screens
                 if (local || (seat != null && seat.Occupied))
                 {
                     connected++;
+                    // Every player found reads "Ready", a bot that fills the table too (ADR 025).
                     string name = local ? _localization.Get("ui.common.you") : seat.Name;
-                    string status = !local && seat.IsBot ? _localization.Get("ui.matchmaking.seat_bot") : _localization.Get("ui.matchmaking.seat_ready");
-                    _view.SetSeat(i, true, name, status);
+                    _view.SetSeat(i, true, name, _localization.Get("ui.matchmaking.seat_ready"));
                 }
                 else
                 {

@@ -31,7 +31,6 @@ namespace Callbreak.Application.Online
         private readonly NameFilter _names;
         private readonly IRandom _rng;
         private readonly IReadOnlyList<string> _deckIds;
-        private readonly string _tableDeck;
         private readonly Func<ulong> _seedSource;
         private readonly BotTiming _timing;
         private readonly BotLevel _fillLevel;
@@ -60,11 +59,6 @@ namespace Callbreak.Application.Online
         /// The table's turn clocks and round-results countdown; null runs the room as a private
         /// room, on the turn time of <paramref name="settings"/> (GDD §6).
         /// </param>
-        /// <param name="tableDeck">
-        /// The one deck of this room's tables, every face and every back of every seat (ADR 020):
-        /// Quick Match draws it from the catalog. Null plays in the host player's own deck, as a
-        /// private room does.
-        /// </param>
         public RoomHost(
             string code,
             RoomSettings settings,
@@ -76,8 +70,7 @@ namespace Callbreak.Application.Online
             Func<ulong> seedSource,
             BotTiming timing = null,
             BotLevel fillLevel = BotLevel.Normal,
-            TableClocks clocks = null,
-            string tableDeck = null)
+            TableClocks clocks = null)
         {
             _code = code ?? string.Empty;
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -86,7 +79,6 @@ namespace Callbreak.Application.Online
             _names = names ?? throw new ArgumentNullException(nameof(names));
             _rng = rng ?? throw new ArgumentNullException(nameof(rng));
             _deckIds = deckIds ?? new string[0];
-            _tableDeck = tableDeck != null ? CleanDeck(tableDeck) : null;
             _seedSource = seedSource ?? throw new ArgumentNullException(nameof(seedSource));
             _timing = timing;
             _fillLevel = fillLevel;
@@ -189,9 +181,9 @@ namespace Callbreak.Application.Online
                 }
             }
 
-            // The deck Quick Match drew, or else the host's own (seat 0 is always taken here). A
-            // guest's faces are in it too, whatever deck that guest chose.
-            string deck = _tableDeck ?? _members[0].DeckThemeId;
+            // The host's own deck (seat 0 is always taken here), in Quick Match too (ADR 025). A
+            // guest's faces are in it as well, whatever deck that guest chose (ADR 020).
+            string deck = _members[0].DeckThemeId;
             for (int i = 0; i < Seats; i++)
             {
                 Member m = _members[i];

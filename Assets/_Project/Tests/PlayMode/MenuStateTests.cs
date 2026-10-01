@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Callbreak.Application.Cosmetics;
@@ -7,6 +8,7 @@ using Callbreak.Application.Flow;
 using Callbreak.Application.Matchmaking;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
+using Callbreak.Application.Rooms;
 using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
 using Callbreak.Core.Cards;
@@ -14,6 +16,7 @@ using Callbreak.Infrastructure.Audio;
 using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Table;
+using Callbreak.Presentation.Widgets;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -148,6 +151,36 @@ namespace Callbreak.Tests.PlayMode
 
             Assert.AreEqual(ScreenId.MainMenu, router.Current);
             Assert.AreEqual(1, matchmaking.Searches, "nothing searches behind the player's back");
+        }
+
+        [UnityTest]
+        public IEnumerator Matchmaking_PlayersFound_EveryOneReadsReady_TheBotsToo()
+        {
+            // ADR 025: a bot that fills the table looks like any other player found.
+            yield return _game.Boot(extra: builder =>
+            {
+                builder.RegisterInstance<INetworkStatus>(new FixedNetwork(online: true));
+                builder.RegisterInstance<IMatchmakingService>(new BotTableMatchmaking());
+            });
+            ScreenRouter router = _game.MenuRouter;
+            var text = _game.Services.Resolve<ILocalization>();
+            string ready = text.Get("ui.matchmaking.seat_ready");
+
+            GameFixture.Press(router, "PlayOnlineButton");
+            MatchmakingSeat[] seats = null;
+            yield return GameFixture.Until(
+                () =>
+                {
+                    Component screen = router.Get<UIScreen>(ScreenId.Matchmaking);
+                    seats = screen != null ? screen.GetComponentsInChildren<MatchmakingSeat>(true) : null;
+                    return seats != null && seats.Length == 4 && Array.TrueForAll(seats, s => s.IsFilled);
+                },
+                "the four players found to show");
+
+            foreach (MatchmakingSeat seat in seats)
+            {
+                Assert.AreEqual(ready, seat.Status, seat.name + ": every player found reads \"Ready\", none \"BOT\"");
+            }
         }
 
         [UnityTest]
@@ -350,6 +383,27 @@ namespace Callbreak.Tests.PlayMode
             }
 
             Assert.Fail("No active button " + buttonName + " under " + root.name + ".");
+        }
+
+        /// <summary>A Quick Match that finds three bots at once, then keeps the search open until it is cancelled.</summary>
+        private sealed class BotTableMatchmaking : IMatchmakingService
+        {
+            public IMatchSession Match => null;
+
+            public Task<MatchmakingResult> FindMatchAsync(IProgress<MatchmakingProgress> progress, CancellationToken ct)
+            {
+                var seats = new List<RoomSeat>
+                {
+                    new RoomSeat(0, true, "Hari", 1, CosmeticsService.ClassicCrimson, false, true, false, true),
+                    new RoomSeat(1, true, "Asha", 2, CosmeticsService.ClassicCrimson, false, true, true, false),
+                    new RoomSeat(2, true, "Bikash", 3, CosmeticsService.ClassicCrimson, false, true, true, false),
+                    new RoomSeat(3, true, "Suman", 4, CosmeticsService.ClassicCrimson, false, true, true, false),
+                };
+                progress?.Report(new MatchmakingProgress(seats, 2.0, false));
+                var search = new TaskCompletionSource<MatchmakingResult>();
+                ct.Register(() => search.TrySetResult(new MatchmakingResult(MatchmakingError.Cancelled)));
+                return search.Task;
+            }
         }
 
         /// <summary>A Quick Match that can never find a table.</summary>

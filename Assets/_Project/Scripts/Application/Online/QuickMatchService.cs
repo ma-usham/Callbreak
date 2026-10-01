@@ -90,13 +90,11 @@ namespace Callbreak.Application.Online
             // itself runs on the Quick Match clocks: 20 s to call, 15 s to play a card (GDD §6).
             var settings = new RoomSettings("Quick Match", _config.Clocks.PlaySeconds);
 
-            // ADR 020, "any card can appear": the whole table is in one deck drawn from the
-            // catalog, the same for all four seats, whatever deck this player chose.
+            // The whole table is in the deck this player chose, every face and back of every seat,
+            // as offline and in a room this player hosts (ADR 025; ADR 020 drew one from the catalog).
             var rng = new Pcg32Random(_seedSource());
-            IReadOnlyList<string> decks = _cosmetics.DeckIds;
-            string tableDeck = decks.Count > 0 ? decks[rng.NextInt(decks.Count)] : null;
             _host = new RoomHost(
-                string.Empty, settings, null, _bots, _names, rng, decks, _seedSource, _timing, clocks: _config.Clocks, tableDeck: tableDeck);
+                string.Empty, settings, null, _bots, _names, rng, _cosmetics.DeckIds, _seedSource, _timing, clocks: _config.Clocks);
             _host.Tick(_now);
             _client = new RoomClient(_host.Local, identity, _host, MatchMode.QuickMatch, _stats, _settings);
             _client.Tick(_now);

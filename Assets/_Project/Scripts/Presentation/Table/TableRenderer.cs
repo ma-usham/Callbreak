@@ -98,10 +98,9 @@ namespace Callbreak.Presentation.Table
                     state.WonBy(seat));
                 seatView.SetStatus(SeatStatus.Text(info, _localization), SeatStatus.IsMet(info));
 
-                // The line stays whoever plays the seat; the connection, or a fill-in bot's tag, is
-                // the chip's. Offline every opponent is a bot and the player knows it: no tag.
-                bool fillInBot = who.IsBot && _session.Mode != MatchMode.Offline;
-                seatView.SetChip(SeatStatus.Chip(who.Connection, fillInBot, _localization), SeatStatus.ChipIsBusy(who.Connection));
+                // The line stays whoever plays the seat; how its player is connected is the chip's.
+                // A bot that fills a seat looks like any other player: no tag (ADR 025).
+                seatView.SetChip(SeatStatus.Chip(who.Connection, _localization), SeatStatus.ChipIsBusy(who.Connection));
                 seatView.SetTurn(turn);
                 if (seatView.Fan != null)
                 {

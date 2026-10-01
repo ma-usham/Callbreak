@@ -48,8 +48,8 @@ namespace Callbreak.Presentation.Table
     /// is met and "· auto" for a call the timer placed. The line is about the seat, not about who
     /// is playing it: it stays when the player is away, reconnecting or gone and a bot plays on,
     /// because what a seat called and has won decides how the others play. How the player is
-    /// connected has its own short chip beside the pill (GDD §8 "What others see"), which is also
-    /// where a fill-in bot carries its BOT tag (GDD §9).
+    /// connected has its own short chip beside the pill (GDD §8 "What others see"). A bot that
+    /// fills a seat has no tag there (ADR 025).
     /// </summary>
     public static class SeatStatus
     {
@@ -63,9 +63,6 @@ namespace Callbreak.Presentation.Table
         public const string AwayKey = "ui.seat.away";
         public const string ReconnectingKey = "ui.seat.reconnecting";
         public const string BotPlayingKey = "ui.seat.bot_playing";
-
-        /// <summary>"BOT", as the Quick Match search marks a seat a bot filled.</summary>
-        public const string BotTagKey = "ui.matchmaking.seat_bot";
 
         public static string Text(in SeatStatusInfo seat, ILocalization localization)
         {
@@ -105,11 +102,11 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>
         /// The chip beside the pill (GDD §8 "What others see"): "Away" after two timeouts,
-        /// "Reconnecting…" while the seat is held, "Bot playing" once a bot has taken it for good;
-        /// for a player who is there, "BOT" when <paramref name="isFillInBot"/> (a bot that fills a
-        /// seat of an online table), and otherwise null: no chip.
+        /// "Reconnecting…" while the seat is held, "Bot playing" once a bot has taken a player's
+        /// seat for good; null for a player who is there: no chip. A bot that fills a seat from the
+        /// start carries no tag either (ADR 025; GDD §9 gave it "BOT" online).
         /// </summary>
-        public static string Chip(SeatConnection connection, bool isFillInBot, ILocalization localization)
+        public static string Chip(SeatConnection connection, ILocalization localization)
         {
             if (localization == null)
             {
@@ -126,7 +123,7 @@ namespace Callbreak.Presentation.Table
                 case SeatConnection.Left:
                     return localization.Get(BotPlayingKey);
                 default:
-                    return isFillInBot ? localization.Get(BotTagKey) : null;
+                    return null;
             }
         }
 

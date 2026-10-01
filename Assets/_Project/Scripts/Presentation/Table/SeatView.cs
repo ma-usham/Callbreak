@@ -13,8 +13,8 @@ namespace Callbreak.Presentation.Table
     /// Opponents also have the fan of face-down cards behind the avatar. A small bubble over the
     /// seat shows a call as it is placed and the quick phrases (emotes). A small chip at the
     /// avatar says how the player is connected ("Away", "Reconnecting…" with a spinner, "Bot
-    /// playing") or, on an online table, that the seat is a fill-in bot ("BOT"); the mockups do
-    /// not draw it, so it is made of the kit's tag pill and hidden until there is something to say.
+    /// playing"); a bot that fills a seat has none (ADR 025). The mockups do not draw it, so it is
+    /// made of the kit's tag pill and hidden until there is something to say.
     /// The chip pops in, and a bubble shrinks and fades away when its time is up (ADR 023).
     /// </summary>
     public sealed class SeatView : MonoBehaviour
@@ -96,9 +96,9 @@ namespace Callbreak.Presentation.Table
         public bool ChipIsBusy => _chip != null && _chip.gameObject.activeSelf && _chipSpinner.activeSelf;
 
         /// <summary>
-        /// The chip at the avatar (GDD §8 "What others see", §9 "a small BOT tag"): "Away",
-        /// "Reconnecting…" (<paramref name="busy"/>: with the spinner), "Bot playing" or "BOT".
-        /// Null or empty hides it. The pill hugs its text.
+        /// The chip at the avatar (GDD §8 "What others see"): "Away", "Reconnecting…"
+        /// (<paramref name="busy"/>: with the spinner) or "Bot playing". Null or empty hides it.
+        /// The pill hugs its text.
         /// </summary>
         public void SetChip(string text, bool busy)
         {
