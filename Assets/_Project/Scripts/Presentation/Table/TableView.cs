@@ -10,7 +10,8 @@ namespace Callbreak.Presentation.Table
     /// GDD §11 screen 08, the table: the HUD (home, round and trump, scores and settings), the four
     /// seats, the trick area, the local hand, the emote button, the turn prompt and the emote
     /// picker. The hand keeps one order, so there is no sort button (ADR 021), and the emote button
-    /// sits in the bottom-right corner where mockup 08 draws that button. It raises one event per
+    /// sits in the bottom-right corner where mockup 08 draws that button; the player's own quick
+    /// phrase shows by it, and it shows the wait before the next one (ADR 024). It raises one event per
     /// intent and hands out its parts; the presenters and the event playback decide what they
     /// show. Seats are indexed by relative position: 0 bottom (you), 1 right, 2 top, 3 left.
     /// </summary>
@@ -35,11 +36,20 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private GameObject _reconnecting;
         [SerializeField] private UnityEngine.UI.Button _imBackButton;
 
+        // The player's own quick phrase shows by the emote button, and the button shows the wait
+        // before the next one (ADR 024).
+        [SerializeField] private RectTransform _phraseBubble;
+        [SerializeField] private TMP_Text _phraseText;
+        [SerializeField] private float _phrasePadding = 40f;
+        [SerializeField] private float _phraseMinWidth = 73f;
+        [SerializeField] private UnityEngine.UI.Image _emoteCooldown;
+
         // The GDD asks for a small "Trick 6 / 13" under the round line; mockup 08 does not draw it.
         [SerializeField] private bool _showTrickCounter;
 
         private MotionHandle _coverMotion;
         private MotionHandle _bannerMotion;
+        private SpeechBubble _phrase;
         private bool _reduceMotion;
 
         /// <summary>Home: opens the match menu; it never leaves the table at once (GDD screen 07, callout 2).</summary>
@@ -96,6 +106,14 @@ namespace Callbreak.Presentation.Table
                 }
             }
         }
+
+        /// <summary>The player's own quick phrase while it shows by the emote button; otherwise null.</summary>
+        public string OwnPhrase => _phraseBubble != null && _phraseBubble.gameObject.activeSelf ? _phraseText.text : null;
+
+        /// <summary>How much of the emote button the wait still fills, 0 to 1 (0: a phrase may be sent).</summary>
+        public float EmoteCooldown => _emoteCooldown != null && _emoteCooldown.enabled ? _emoteCooldown.fillAmount : 0f;
+
+        private SpeechBubble Phrase => _phrase ??= new SpeechBubble(_phraseBubble, _phraseText, _phrasePadding, _phraseMinWidth);
 
         /// <summary>"ROUND 1 / 5".</summary>
         public void SetRound(string text)
@@ -167,6 +185,50 @@ namespace Callbreak.Presentation.Table
             }
         }
 
+        /// <summary>
+        /// The player's own quick phrase, in a bubble just above the emote button it was sent with
+        /// (ADR 024); the others see it over this player's seat.
+        /// </summary>
+        public void ShowOwnPhrase(string text, float seconds, bool reduceMotion)
+        {
+            if (_phraseBubble != null)
+            {
+                Phrase.Show(text, seconds, reduceMotion);
+            }
+        }
+
+        public void HideOwnPhrase()
+        {
+            if (_phraseBubble != null)
+            {
+                Phrase.Hide();
+            }
+        }
+
+        /// <summary>
+        /// The wait before the next quick phrase (ADR 024): the button is covered by the wait's
+        /// colour, which sweeps away clockwise as <paramref name="fraction"/> falls from 1 to 0.
+        /// </summary>
+        public void SetEmoteCooldown(float fraction)
+        {
+            // (A Table prefab built before the cooldown existed has nothing to show it with.)
+            if (_emoteCooldown == null)
+            {
+                return;
+            }
+
+            bool waiting = fraction > 0f;
+            if (_emoteCooldown.enabled != waiting)
+            {
+                _emoteCooldown.enabled = waiting;
+            }
+
+            if (waiting && _emoteCooldown.fillAmount != fraction)
+            {
+                _emoteCooldown.fillAmount = fraction;
+            }
+        }
+
         private void OnEnable()
         {
             _homeButton.onClick.AddListener(OnHome);
@@ -191,6 +253,7 @@ namespace Callbreak.Presentation.Table
             _hand.Touched -= OnTableTap;
             UiMotion.Finish(ref _coverMotion);
             UiMotion.Finish(ref _bannerMotion);
+            _phrase?.Stop();
         }
 
         private void OnHome() => HomeClicked?.Invoke();

@@ -44,17 +44,17 @@ namespace Callbreak.Presentation.Table.Playback
 
     /// <summary>
     /// A finished trick (GDD §6, §14 "Trick won"): the four cards stay on the table for 0.9 s while
-    /// the winning card glows and lifts, then all four sweep to the winner in 0.35 s (InOutCubic),
-    /// shrinking and fading as they arrive. With Reduce motion the sweep is a 150 ms fade. A tap
-    /// skips it. The cards are returned to the pool by the table once the event has played.
+    /// the winning card glows on top of the others, then all four sweep to the winner in 0.35 s
+    /// (InOutCubic), shrinking and fading as they arrive. The winning card keeps its size (ADR 024:
+    /// the GDD's lift made it look larger than the rest). With Reduce motion the sweep is a 150 ms
+    /// fade. A tap skips it. The cards are returned to the pool by the table once the event has
+    /// played.
     /// </summary>
     public static class TrickSweep
     {
         public const float HoldSeconds = 0.9f;
         public const float SweepSeconds = 0.35f;
         public const float ReducedSweepSeconds = 0.15f;
-        private const float LiftSeconds = 0.15f;
-        private const float LiftScale = 1.08f;
         private const float ArriveScale = 0.35f;
 
         /// <param name="trick">The trick area holding the four cards.</param>
@@ -70,11 +70,6 @@ namespace Callbreak.Presentation.Table.Playback
             {
                 winner.Rect.SetAsLastSibling();
                 winner.SetGlow(true);
-                if (!reduceMotion)
-                {
-                    CardPlacement slot = trick.Slot(winnerSlot);
-                    hold.Add(new CardFlight(winner, new CardPlacement(slot.Position, slot.Rotation, slot.Scale * LiftScale, slot.Flat), LiftSeconds, Ease.OutQuad));
-                }
             }
 
             Vector2 target = trick.Area.InverseTransformPoint(winnerAnchor.position);

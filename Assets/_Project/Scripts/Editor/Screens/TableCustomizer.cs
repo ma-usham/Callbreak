@@ -47,7 +47,10 @@ namespace Callbreak.Editor.Screens
             new Vector2(836.2f, 558f), new Vector2(976.3f, 481.3f), new Vector2(836.2f, 404f), new Vector2(697.7f, 480.5f),
         };
 
-        private static readonly float[] TrickTurns = { 0f, 5.5f, 0f, -5.6f };
+        // Mockup 08 turns the side cards 5.5° (the GDD says ±6°). Drawn lying in the table's
+        // perspective, a turned card looked skewed and larger than the others, so every trick card
+        // lies straight (ADR 024).
+        private static readonly float[] TrickTurns = { 0f, 0f, 0f, 0f };
         private const float TrickCardWidth = 128.4f;            // bottom edge; the top edge is 10% narrower
 
         // ---- Opponent fans: a card is 42 px wide on the mockup.
@@ -61,6 +64,11 @@ namespace Callbreak.Editor.Screens
         // The panel opens to the left of the emote button, 112 px in from the right edge (ADR 021).
         private static readonly Rect EmotePanel = new Rect(1112f, 521.6f, 448f, 294.4f);
         private const float BubbleHeight = 33f;
+
+        // The player's own phrase sits this far above the emote button (ADR 024); while the next
+        // phrase has to wait, the button is covered in this colour, which sweeps away as it runs out.
+        private const float OwnPhraseGap = 10f;
+        private static readonly Color EmoteCooldownColor = new Color(0f, 0f, 0f, 0.5f);
         private const float ReconnectingDim = 0.45f;
         private static readonly Vector2 ImBackCentre = new Vector2(836f, 300f);
         private static readonly Vector2 ImBackSize = new Vector2(250f, 66f);
@@ -128,6 +136,8 @@ namespace Callbreak.Editor.Screens
             BuildPrompt(ctx, handLayer, statusStyle);
             BuildTrickLabel(ctx);
             BuildEmotePicker(ctx, statusStyle);
+            BuildOwnPhrase(ctx, nameStyle);
+            BuildEmoteCooldown(ctx);
             BuildImBack(ctx, centre);
             BuildReconnecting(ctx, nameStyle);
 
@@ -542,6 +552,62 @@ namespace Callbreak.Editor.Screens
 
             so.ApplyModifiedPropertiesWithoutUndo();
             ctx.Bound["_emotes"] = picker;
+        }
+
+        /// <summary>
+        /// The player's own quick phrase (ADR 024): the seat bubble's white pill just above the
+        /// emote button, in the button's corner group so it stays by the button on every screen
+        /// shape. Its right edge is the button's, so a longer phrase grows to the left.
+        /// </summary>
+        private static void BuildOwnPhrase(ScreenBuildContext ctx, TMP_Text style)
+        {
+            RectTransform button = ctx.Nodes["EmoteButton"];
+            var bubbleObject = new GameObject("OwnPhrase", typeof(RectTransform));
+            var bubble = (RectTransform)bubbleObject.transform;
+            bubble.SetParent(button.parent, false);
+            bubble.SetSiblingIndex(button.GetSiblingIndex() + 1);
+            bubble.anchorMin = button.anchorMin;
+            bubble.anchorMax = button.anchorMax;
+            bubble.pivot = new Vector2(1f, 0f);
+            bubble.sizeDelta = UiBuildKit.FromMock(90f, BubbleHeight);
+            Vector2 corner = (Vector2)button.localPosition + button.rect.max;
+            bubble.localPosition = corner + new Vector2(0f, OwnPhraseGap * UiBuildKit.ScaleY);
+            Sliced(bubble, LoadTableSprite("UI_NamePlate"));
+            TextMeshProUGUI text = Label("Text", bubble, style, "Namaste!");
+            bubble.gameObject.SetActive(false);
+            ctx.Bound["_phraseBubble"] = bubble;
+            ctx.Bound["_phraseText"] = text;
+        }
+
+        /// <summary>
+        /// The wait before the next quick phrase (ADR 024): the button's own disc, tinted, over the
+        /// button and its icon, filled round from twelve o'clock. As the wait runs out it sweeps
+        /// away clockwise. Hidden while a phrase may be sent; it takes no touches.
+        /// </summary>
+        private static void BuildEmoteCooldown(ScreenBuildContext ctx)
+        {
+            RectTransform button = ctx.Nodes["EmoteButton"];
+            var face = (RectTransform)button.Find("Face");
+            var coverObject = new GameObject("Cooldown", typeof(RectTransform));
+            var cover = (RectTransform)coverObject.transform;
+            cover.SetParent(button, false);
+            cover.SetAsLastSibling();
+            cover.anchorMin = face.anchorMin;
+            cover.anchorMax = face.anchorMax;
+            cover.pivot = face.pivot;
+            cover.anchoredPosition = face.anchoredPosition;
+            cover.sizeDelta = face.sizeDelta;
+            var image = coverObject.AddComponent<Image>();
+            image.sprite = face.GetComponent<Image>().sprite;
+            image.type = Image.Type.Filled;
+            image.fillMethod = Image.FillMethod.Radial360;
+            image.fillOrigin = (int)Image.Origin360.Top;
+            image.fillClockwise = false;
+            image.fillAmount = 1f;
+            image.color = EmoteCooldownColor;
+            image.raycastTarget = false;
+            image.enabled = false;
+            ctx.Bound["_emoteCooldown"] = image;
         }
 
         /// <summary>

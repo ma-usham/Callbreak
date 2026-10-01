@@ -43,14 +43,13 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private float _chipPadding = 26f;
         [SerializeField] private float _chipSpinnerSpace = 26f;
 
-        private MotionHandle _bubbleMotion;
         private MotionHandle _pulseMotion;
         private MotionHandle _chipMotion;
+        private SpeechBubble _speech;
         private int _shownSeconds = int.MinValue;
         private bool _met;
         private bool _muted;
         private bool _chipBusy;
-        private bool _bubbleStill;
 
         /// <summary>The opponent tapped: the presenter mutes or unmutes this seat's emotes.</summary>
         public event Action AvatarClicked;
@@ -63,6 +62,8 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>With Reduce motion the chip only fades in (GDD §14).</summary>
         public bool ReduceMotion { get; set; }
+
+        private SpeechBubble Speech => _speech ??= new SpeechBubble(_bubble, _bubbleText, _bubblePadding, _bubbleMinWidth);
 
         public void SetName(string playerName)
         {
@@ -205,27 +206,10 @@ namespace Callbreak.Presentation.Table
             _timerRing.rectTransform.localScale = Vector3.one;
         }
 
-        /// <summary>Pops a bubble over the seat: the call just placed, or a quick phrase.</summary>
-        public void ShowBubble(string text, float seconds, bool reduceMotion)
-        {
-            Cancel(ref _bubbleMotion);
-            _bubbleStill = reduceMotion;
-            UiMotion.GroupOf(_bubble.gameObject).alpha = 1f;
-            SetText(_bubbleText, text);
-            float width = Mathf.Max(_bubbleMinWidth, Mathf.Ceil(_bubbleText.GetPreferredValues(text).x) + _bubblePadding);
-            _bubble.sizeDelta = new Vector2(width, _bubble.sizeDelta.y);
-            _bubble.gameObject.SetActive(true);
-            _bubble.localScale = reduceMotion ? Vector3.one : new Vector3(0.6f, 0.6f, 1f);
-            MotionBuilder<float, NoOptions, LitMotion.Adapters.FloatMotionAdapter> pop =
-                LMotion.Create(reduceMotion ? 1f : 0.6f, 1f, 0.3f).WithEase(Ease.OutBack).WithOnComplete(() => HoldBubble(seconds));
-            _bubbleMotion = pop.Bind(_bubble, (scale, bubble) => bubble.localScale = new Vector3(scale, scale, 1f));
-        }
+        /// <summary>Pops a bubble over the seat: the call just placed, or another player's quick phrase.</summary>
+        public void ShowBubble(string text, float seconds, bool reduceMotion) => Speech.Show(text, seconds, reduceMotion);
 
-        public void HideBubble()
-        {
-            Cancel(ref _bubbleMotion);
-            HideBubbleNow();
-        }
+        public void HideBubble() => Speech.Hide();
 
         /// <summary>"Won +1": a short pulse on the status pill (GDD §14; the number alone with Reduce motion).</summary>
         public void PulseStatus(bool reduceMotion)
@@ -261,30 +245,6 @@ namespace Callbreak.Presentation.Table
             _avatar.color = color;
         }
 
-        private void HoldBubble(float seconds)
-        {
-            _bubbleMotion = LMotion.Create(0f, 1f, Mathf.Max(0.1f, seconds)).WithOnComplete(FadeBubble).RunWithoutBinding();
-        }
-
-        /// <summary>Its time is up: the bubble shrinks a little as it fades (it only fades with Reduce motion).</summary>
-        private void FadeBubble()
-        {
-            _bubbleMotion = UiMotion.PopOut(_bubble, UiMotion.GroupOf(_bubble.gameObject), _bubbleStill, HideBubbleNow, 0.85f, UiMotion.Short);
-        }
-
-        private void HideBubbleNow()
-        {
-            _bubbleMotion = default;
-
-            // When the scene unloads the bubble may already be gone.
-            if (_bubble != null)
-            {
-                _bubble.gameObject.SetActive(false);
-                _bubble.localScale = Vector3.one;
-                UiMotion.GroupOf(_bubble.gameObject).alpha = 1f;
-            }
-        }
-
         private void OnEnable()
         {
             if (_avatarButton != null)
@@ -300,7 +260,7 @@ namespace Callbreak.Presentation.Table
                 _avatarButton.onClick.RemoveListener(OnAvatarClicked);
             }
 
-            Cancel(ref _bubbleMotion);
+            _speech?.Stop();
             Cancel(ref _pulseMotion);
             UiMotion.Finish(ref _chipMotion);
 

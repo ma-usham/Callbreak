@@ -495,6 +495,9 @@ namespace Callbreak.Editor
             private int _dealSounds;
             private int _shuffleSounds;
             private double _dealBeganAt = -1.0;
+            private int _dealFastFrames;
+            private int _dealMostBehind;
+            private string _dealQueue = string.Empty;
             private PlayerView _lastSummaryView;
             private PlayerView _finalView;
 
@@ -911,6 +914,9 @@ namespace Callbreak.Editor
                 Equal(resume, offline.IsResumed, resume ? "the saved match is resumed" : "a new match is dealt");
                 _session = new SessionProxy(offline);
                 StartOn(_session);
+
+                // As MatchSessionDriver.PostStart does: the session learns the time, then deals.
+                _session.Tick(_clock.Now);
                 _session.Start();
             }
 
@@ -1743,12 +1749,36 @@ namespace Callbreak.Editor
                 Snapshot("Table_emotes");
                 Check(Click(phrases[2]), "a phrase can be tapped");
                 Check(!picker.IsOpen, "choosing a phrase closes the picker");
-                SeatView you = _table.Seat(0);
-                Check(Field<RectTransform>(you, "_bubble").gameObject.activeSelf, "the phrase shows in a bubble over the seat");
-                Equal(_text.Get(TablePresenter.EmoteKeys[2]), Field<TMP_Text>(you, "_bubbleText").text, "the bubble shows the chosen phrase");
 
+                // ADR 024: the player's own phrase shows by the emote button, not over the seat on the left.
+                SeatView you = _table.Seat(0);
+                string chosen = _text.Get(TablePresenter.EmoteKeys[2]);
+                Equal(chosen, _table.OwnPhrase, "the own phrase shows in a bubble by the emote button");
+
+                // (The seat's bubble may still hold the player's call: bubbles never time out here.)
+                string overSeat = Field<RectTransform>(you, "_bubble").gameObject.activeSelf ? Field<TMP_Text>(you, "_bubbleText").text : null;
+                Check(overSeat != chosen, "the own phrase does not show over the local seat", overSeat);
+                Vector3 own = CentreIn(screen, Field<RectTransform>(_table, "_phraseBubble"));
+                Check(
+                    own.y > button.y && Mathf.Abs(own.x - button.x) < screen.rect.width / 8f,
+                    "the own phrase sits just above the emote button",
+                    $"phrase {own}, button {button}");
+
+                // The button shows the wait for the next phrase, and opens nothing until it is over.
+                Check(_table.EmoteCooldown > 0.95f, "right after a phrase the wait covers the emote button", "fill " + _table.EmoteCooldown);
+
+                // (The Editor does not advance the bubble's pop here: finish it; its stay runs on.)
+                Settle(Field<SpeechBubble>(_table, "_phrase"), "_motion");
+                Snapshot("Table_own_phrase");
                 Click(emote);
-                Check(picker.IsOpen && !phrases[0].interactable, "a second phrase within three seconds is held back");
+                Check(!picker.IsOpen, "within three seconds of a phrase the emote button opens nothing");
+                Wait(EmoteLimiter.MinSecondsApart / 2.0);
+                float half = _table.EmoteCooldown;
+                Check(half > 0.4f && half < 0.6f, "half way through the wait, about half of the button is still covered", "fill " + half);
+                Wait(EmoteLimiter.MinSecondsApart / 2.0 + 0.1);
+                Equal(0f, _table.EmoteCooldown, "once the wait is over the emote button is clear");
+                Click(emote);
+                Check(picker.IsOpen && phrases[0].interactable, "after the wait the emote button opens the phrases again");
                 Click(Field<Button>(picker, "_dismiss"));
                 Check(!picker.IsOpen, "a tap outside closes the picker");
 
@@ -1764,7 +1794,7 @@ namespace Callbreak.Editor
                 _session.RaiseEmote(seat, 0);
                 Check(bubble.activeSelf, "an unmuted opponent's phrase is shown");
                 opponent.HideBubble();
-                you.HideBubble();
+                _table.HideOwnPhrase();
             }
 
             /// <summary>The centre of <paramref name="rect"/> in the local space of <paramref name="screen"/> (0 at the middle of the screen).</summary>
@@ -2078,6 +2108,12 @@ namespace Callbreak.Editor
                 Check(!Field<GameObject>(_table, "_reconnecting").activeSelf, "no Reconnecting cover on a running match");
                 Check(!Field<Button>(_table, "_imBackButton").gameObject.activeSelf, "no I'm back banner on a present player");
                 Check(!_table.Emotes.IsOpen, "the emote picker starts closed");
+                Equal(0f, _table.EmoteCooldown, "the emote button starts clear");
+
+                // ADR 024: nobody moves while the table shuffles and deals, or the deal would be rushed.
+                double tableDeal = ShuffleAnimation.Seconds + DealAnimation.Seconds;
+                Check(Math.Abs(BotTiming.Offline.DealSeconds - tableDeal) < 1e-6, "offline bots wait as long as the table shuffles and deals", BotTiming.Offline.DealSeconds + " s");
+                Check(Math.Abs(BotTiming.Hosted.DealSeconds - tableDeal) < 1e-6, "hosted bots wait as long as the table shuffles and deals", BotTiming.Hosted.DealSeconds + " s");
             }
 
             private void VerifyResumed()
@@ -2099,9 +2135,29 @@ namespace Callbreak.Editor
                 Check(!hand.Interactable || state.IsLocalPlayTurn, "the hand takes plays only on the local turn that has been played back");
                 Check(_table.Cards.Created <= CardViewPool.DeckSize, "the pool never holds more than 52 cards", "created " + _table.Cards.Created);
                 Check(_bidding.IsPanelShown == Field<GameObject>(_bidding, "_panel").activeSelf, "once its slide has settled, the call panel is up exactly while it is shown");
+                if (_dealBeganAt >= 0.0)
+                {
+                    // How the deal was played, for when it took the wrong time.
+                    _dealFastFrames += _tablePresenter.Player.Speed > 1f ? 1 : 0;
+                    if (_tablePresenter.Player.Behind > _dealMostBehind)
+                    {
+                        _dealMostBehind = _tablePresenter.Player.Behind;
+                        var waiting = new List<string>();
+                        foreach (MatchEvent queued in Field<Queue<MatchEvent>>(_tablePresenter.Player, "_queue"))
+                        {
+                            waiting.Add(queued.GetType().Name);
+                        }
+
+                        _dealQueue = $"at {_clock.Now - _dealBeganAt:0.00} s: {string.Join(", ", waiting)}";
+                    }
+                }
+
                 if (_tablePresenter.Player.Current is HandDealt dealt && dealt.Seat == Local && _dealBeganAt < 0.0)
                 {
                     _dealBeganAt = _clock.Now;
+                    _dealFastFrames = 0;
+                    _dealMostBehind = _tablePresenter.Player.Behind;
+                    _dealQueue = string.Empty;
                     if (_reduceMotion)
                     {
                         // GDD §14: with Reduce motion the deal is instant, with a 200 ms fade.
@@ -2170,7 +2226,10 @@ namespace Callbreak.Editor
                         {
                             double seconds = _clock.Now - _dealBeganAt;
                             double expected = _reduceMotion ? DealFade.Seconds : ShuffleAnimation.Seconds + DealAnimation.Seconds;
-                            Check(Math.Abs(seconds - expected) <= 2.5 * Frame, "the shuffle and the deal take 2.7 s (0.4 s with Reduce motion)", $"{seconds:0.000} s");
+                            Check(
+                                Math.Abs(seconds - expected) <= 2.5 * Frame,
+                                "the shuffle and the deal take 2.7 s (0.4 s with Reduce motion)",
+                                $"{seconds:0.000} s; {_dealFastFrames} frames at double speed, at most {_dealMostBehind} events behind ({_dealQueue})");
                         }
 
                         _dealBeganAt = -1.0;

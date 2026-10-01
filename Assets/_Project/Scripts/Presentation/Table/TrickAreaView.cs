@@ -4,8 +4,9 @@ namespace Callbreak.Presentation.Table
 {
     /// <summary>
     /// The middle of the table, where the current trick lies (GDD §11 T rules: "Trick cards sit
-    /// toward the player who played them, rotated ±6°"). Four slots by relative seat (0 bottom,
-    /// 1 right, 2 top, 3 left), measured on mockup 08; a later card lies over an earlier one.
+    /// toward the player who played them"). Four slots by relative seat (0 bottom, 1 right, 2 top,
+    /// 3 left), measured on mockup 08, every card the same size and lying straight (ADR 024; the
+    /// GDD turns them ±6°); a later card lies over an earlier one.
     /// It can also show the previous trick in place of the current one for a moment (the peek of
     /// GDD screen 08: "tap the trick area to peek at the previous trick").
     /// </summary>

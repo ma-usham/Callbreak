@@ -269,6 +269,7 @@ namespace Callbreak.Presentation.Table
             _player.Tick(deltaTime);
             TickOptimisticPlay(deltaTime, now);
             TickClock(now);
+            _view.SetEmoteCooldown(_emoteLimiter.Cooldown(now));
         }
 
         // ------------------------------------------------------------------ session
@@ -1097,6 +1098,12 @@ namespace Callbreak.Presentation.Table
                 return;
             }
 
+            // ADR 024: while the button shows the wait, it opens nothing.
+            if (!_emoteLimiter.CanSend(_clock.Now))
+            {
+                return;
+            }
+
             _audio.Play(SoundCue.UiTap);
             _emotePhrases.Clear();
             for (int i = 0; i < EmoteKeys.Count; i++)
@@ -1119,6 +1126,8 @@ namespace Callbreak.Presentation.Table
                 return;
             }
 
+            // The wait shows on the button from this frame on (ADR 024).
+            _view.SetEmoteCooldown(_emoteLimiter.Cooldown(_clock.Now));
             _ = SendEmoteAsync(emoteId);
         }
 
@@ -1144,7 +1153,15 @@ namespace Callbreak.Presentation.Table
                 return;
             }
 
-            _view.Seat(_renderer.RelativeSeat(seat)).ShowBubble(_localization.Get(EmoteKeys[emoteId]), EmoteHoldSeconds, ReduceMotion);
+            // The player's own phrase shows by the emote button it was sent with (ADR 024).
+            string phrase = _localization.Get(EmoteKeys[emoteId]);
+            if (seat == Local)
+            {
+                _view.ShowOwnPhrase(phrase, EmoteHoldSeconds, ReduceMotion);
+                return;
+            }
+
+            _view.Seat(_renderer.RelativeSeat(seat)).ShowBubble(phrase, EmoteHoldSeconds, ReduceMotion);
         }
 
         /// <summary>Tapping an opponent mutes or unmutes their quick phrases for the match (GDD §8).</summary>

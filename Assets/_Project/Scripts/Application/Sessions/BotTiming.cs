@@ -7,7 +7,7 @@ namespace Callbreak.Application.Sessions
     /// </summary>
     public sealed class BotTiming
     {
-        public BotTiming(double thinkMinSeconds = 0.6, double thinkMaxSeconds = 1.4, double forcedSeconds = 0.35, double trickDisplaySeconds = 1.25, double dealSeconds = 1.6)
+        public BotTiming(double thinkMinSeconds = 0.6, double thinkMaxSeconds = 1.4, double forcedSeconds = 0.35, double trickDisplaySeconds = 1.25, double dealSeconds = 2.7)
         {
             ThinkMinSeconds = thinkMinSeconds;
             ThinkMaxSeconds = thinkMaxSeconds;
@@ -16,7 +16,7 @@ namespace Callbreak.Application.Sessions
             DealSeconds = dealSeconds;
         }
 
-        /// <summary>Offline defaults: 0.6-1.4 s think, 0.35 s forced, 0.9 s + 0.35 s sweep, 1.6 s deal.</summary>
+        /// <summary>Offline defaults: 0.6-1.4 s think, 0.35 s forced, 0.9 s + 0.35 s sweep, 2.7 s shuffle and deal.</summary>
         public static BotTiming Offline { get; } = new BotTiming();
 
         /// <summary>
@@ -37,7 +37,11 @@ namespace Callbreak.Application.Sessions
         /// <summary>A completed trick stays 0.9 s, then sweeps for 0.35 s (GDD §6).</summary>
         public double TrickDisplaySeconds { get; }
 
-        /// <summary>The deal animation at the start of a round (GDD §14: 1.6 s).</summary>
+        /// <summary>
+        /// The shuffle and the deal at the start of a round (ADR 022: 1.1 s + 1.6 s; GDD §14 had the
+        /// deal alone). Nobody moves before the table has dealt, so it never falls behind and
+        /// plays the deal at double speed (ADR 024).
+        /// </summary>
         public double DealSeconds { get; }
     }
 }

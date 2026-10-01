@@ -20,6 +20,22 @@ namespace Callbreak.Presentation.Table
             return _sentThisRound < MaxPerRound && now - _lastSentAt >= MinSecondsApart;
         }
 
+        /// <summary>
+        /// How much of the wait for the next emote is left at <paramref name="now"/> (ADR 024): 1 just
+        /// after one is sent, falling evenly to 0 when another may go; 1 while the round's ten are
+        /// used up.
+        /// </summary>
+        public float Cooldown(double now)
+        {
+            if (_sentThisRound >= MaxPerRound)
+            {
+                return 1f;
+            }
+
+            double left = MinSecondsApart - (now - _lastSentAt);
+            return left <= 0.0 ? 0f : (float)System.Math.Min(1.0, left / MinSecondsApart);
+        }
+
         /// <summary>Counts an emote sent at <paramref name="now"/>; false (and nothing counted) when over the limit.</summary>
         public bool TrySend(double now)
         {

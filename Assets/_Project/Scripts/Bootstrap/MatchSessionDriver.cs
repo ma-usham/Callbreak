@@ -7,7 +7,9 @@ namespace Callbreak.Bootstrap
     /// <summary>
     /// Starts the session once every table presenter has subscribed (post-start), then advances
     /// its time-driven work each frame: bot think time, auto actions and the turn clock. The
-    /// match's analytics listen from before the first event.
+    /// match's analytics listen from before the first event. The session is told the time before
+    /// it starts, so what it times from the first deal (the bots' wait while the table shuffles
+    /// and deals) counts from now, not from zero (ADR 024).
     /// </summary>
     public sealed class MatchSessionDriver : IPostStartable, ITickable
     {
@@ -25,6 +27,7 @@ namespace Callbreak.Bootstrap
         public void PostStart()
         {
             _analytics.Start();
+            _session.Tick(_clock.Now);
             _session.Start();
         }
 

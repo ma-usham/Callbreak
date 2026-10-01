@@ -246,6 +246,45 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
         }
 
         [Test]
+        public void FirstRound_NoBotCallsWhileTheTableShufflesAndDeals_CountedFromWhenTheMatchStarts()
+        {
+            // ADR 024: told the time before it deals, the session holds the bots for the whole
+            // shuffle and deal, also when the match starts long after the app did.
+            var timing = new BotTiming(thinkMinSeconds: 0.5, thinkMaxSeconds: 0.5, forcedSeconds: 0.5, trickDisplaySeconds: 0, dealSeconds: 2.7);
+            OfflineMatchSession session = NewSession(timing);
+            const double start = 500.0;
+            double now = start;
+            double firstBotCall = -1.0;
+            session.EventReceived += e =>
+            {
+                if (e is CallPlaced placed && placed.Seat != session.LocalSeat && firstBotCall < 0.0)
+                {
+                    firstBotCall = now;
+                }
+            };
+
+            session.Tick(now);
+            session.Start();
+            for (int step = 0; step < 400 && firstBotCall < 0.0; step++)
+            {
+                now += 0.05;
+                session.Tick(now);
+                ActAsPlayer(session);
+            }
+
+            Assert.GreaterOrEqual(firstBotCall, start + 2.7 + 0.5 - 1e-6, "the first bot calls after the deal and its think time");
+            Assert.Less(firstBotCall, start + 2.7 + 0.5 + 0.2, "and not much later");
+        }
+
+        [Test]
+        public void BotTiming_TheDealWait_CoversTheShuffleAndTheDeal()
+        {
+            // ADR 022 put a 1.1 s shuffle before the 1.6 s deal; the bots wait for both (ADR 024).
+            Assert.AreEqual(2.7, BotTiming.Offline.DealSeconds, 1e-9);
+            Assert.AreEqual(BotTiming.Offline.DealSeconds, BotTiming.Hosted.DealSeconds, 1e-9);
+        }
+
+        [Test]
         public void Pause_BotTurn_NoMovesUntilResumedAndThinkTimeShifts()
         {
             var timing = new BotTiming(thinkMinSeconds: 1.0, thinkMaxSeconds: 1.0, forcedSeconds: 1.0, trickDisplaySeconds: 0, dealSeconds: 0);

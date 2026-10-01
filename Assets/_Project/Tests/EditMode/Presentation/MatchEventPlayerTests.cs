@@ -623,5 +623,35 @@ namespace Callbreak.Tests.EditMode.Presentation
             limiter.ResetRound();
             Assert.IsTrue(limiter.TrySend(now + 100.0));
         }
+
+        [Test]
+        public void Emotes_TheButtonsCooldown_FallsEvenlyFromFullToEmpty_OverTheThreeSeconds()
+        {
+            var limiter = new EmoteLimiter();
+            Assert.AreEqual(0f, limiter.Cooldown(0.0), "nothing sent yet: nothing to wait for");
+            Assert.IsTrue(limiter.TrySend(10.0));
+            Assert.AreEqual(1f, limiter.Cooldown(10.0), 1e-6, "just sent: the whole wait");
+            Assert.AreEqual(0.5f, limiter.Cooldown(11.5), 1e-6, "half way");
+            Assert.AreEqual(0.1f, limiter.Cooldown(12.7), 1e-6);
+            Assert.AreEqual(0f, limiter.Cooldown(13.0), "another may go");
+            Assert.IsTrue(limiter.CanSend(13.0), "empty exactly when another may go");
+            Assert.AreEqual(0f, limiter.Cooldown(60.0));
+        }
+
+        [Test]
+        public void Emotes_TheButtonsCooldown_StaysFull_WhileTheRoundsTenAreUsedUp()
+        {
+            var limiter = new EmoteLimiter();
+            double now = 0.0;
+            for (int i = 0; i < EmoteLimiter.MaxPerRound; i++)
+            {
+                Assert.IsTrue(limiter.TrySend(now));
+                now += 3.0;
+            }
+
+            Assert.AreEqual(1f, limiter.Cooldown(now + 100.0), "the eleventh waits for the next round");
+            limiter.ResetRound();
+            Assert.AreEqual(0f, limiter.Cooldown(now + 100.0), "a new round, a new allowance");
+        }
     }
 }
