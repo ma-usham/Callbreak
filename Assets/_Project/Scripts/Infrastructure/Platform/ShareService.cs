@@ -6,39 +6,36 @@ namespace Callbreak.Infrastructure.Platform
 {
     /// <summary>
     /// <see cref="IShareService"/> (GDD §11 screen 04 "Invite Friends"). On Android it opens the
-    /// system chooser for an ACTION_SEND text intent. Everywhere else, and if Android refuses, the
-    /// text is copied to the clipboard and false is returned so the caller can say so. The JNI
-    /// code compiles on every platform and only runs on an Android player.
+    /// system chooser for an ACTION_SEND text intent. Everywhere else, and if Android refuses, it
+    /// returns false and the caller offers the text another way. The JNI code compiles on every
+    /// platform and only runs on an Android player.
     /// </summary>
     public sealed class ShareService : IShareService
     {
-        private readonly IClipboard _clipboard;
         private readonly bool _android;
 
-        public ShareService(IClipboard clipboard)
+        public ShareService()
         {
-            _clipboard = clipboard ?? throw new ArgumentNullException(nameof(clipboard));
             _android = UnityEngine.Application.platform == RuntimePlatform.Android;
         }
 
         public bool ShareText(string title, string text)
         {
-            text ??= string.Empty;
-            if (_android)
+            if (!_android)
             {
-                try
-                {
-                    OpenAndroidChooser(title ?? string.Empty, text);
-                    return true;
-                }
-                catch (Exception e)
-                {
-                    Debug.LogWarning($"[ShareService] The share sheet failed, copying instead: {e.Message}");
-                }
+                return false;
             }
 
-            _clipboard.SetText(text);
-            return false;
+            try
+            {
+                OpenAndroidChooser(title ?? string.Empty, text ?? string.Empty);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[ShareService] The share sheet failed: {e.Message}");
+                return false;
+            }
         }
 
         private static void OpenAndroidChooser(string title, string text)

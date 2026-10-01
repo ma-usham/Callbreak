@@ -15,7 +15,8 @@ namespace Callbreak.Presentation.Screens
 {
     /// <summary>
     /// GDD §11 screen 04: gather up to four players and start. It mirrors the room session (seats,
-    /// ready flags, code) and turns the taps into intents: copy or share the code, the guest's
+    /// ready flags, code) and turns the taps into intents: copy or share the code (the device's
+    /// share sheet, or where there is none a panel showing the invite with Copy), the guest's
     /// ready toggle, the host's Start (asking first when seats would be filled with bots) and the
     /// host's long-press to remove a player. Leaving the screen leaves the room.
     /// </summary>
@@ -238,7 +239,7 @@ namespace Callbreak.Presentation.Screens
 
         private void OnInvite()
         {
-            if (_room == null)
+            if (_room == null || _asking)
             {
                 return;
             }
@@ -246,8 +247,38 @@ namespace Callbreak.Presentation.Screens
             string text = _localization.Format("ui.private_lobby.invite_text", _room.Code);
             if (!_share.ShareText(_localization.Get("ui.private_lobby.invite_title"), text))
             {
-                // No share sheet on this platform: the invite went to the clipboard instead.
-                _toast.Show(_localization.Get("ui.toast.code_copied"));
+                // No share sheet here (the Editor, a desktop, iOS for now): the invite opens in a
+                // panel of its own, ready to copy.
+                _ = OfferInviteAsync(text);
+            }
+        }
+
+        /// <summary>The invite as it would be sent, with Copy Invite and Close.</summary>
+        private async Task OfferInviteAsync(string text)
+        {
+            _asking = true;
+            try
+            {
+                bool copy = await _dialogs.ConfirmAsync(
+                    new DialogRequest(
+                        _localization.Get("ui.dialog.invite.title"),
+                        text,
+                        _localization.Get("ui.dialog.invite.confirm"),
+                        _localization.Get("ui.dialog.invite.cancel")),
+                    _lifetime.Token);
+                if (copy)
+                {
+                    _clipboard.SetText(text);
+                    _toast.Show(_localization.Get("ui.toast.invite_copied"));
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+            finally
+            {
+                _asking = false;
             }
         }
 

@@ -36,7 +36,32 @@ namespace Callbreak.Editor
             Capture(prefab, 1920, 1440, $"{OutputFolder}/{screenName}_1920x1440.png");
         }
 
-        public static string Capture(string prefabPath, int width, int height, string outputPath)
+        /// <summary>
+        /// Captures the dialog showing these words at 16:9, laid out as the game lays it out, over
+        /// the plain background (its fade does not run outside Play mode, so it is shown finished).
+        /// </summary>
+        public static string CaptureDialog(string title, string body, string confirm, string cancel, string outputPath)
+        {
+            return Capture(DialogBuilder.PrefabPath, 1920, 1080, outputPath, instance =>
+            {
+                // The dialog is a screen-overlay canvas of its own; here it covers the capture canvas.
+                var rect = (RectTransform)instance.transform;
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+                rect.localScale = Vector3.one;
+                rect.localPosition = Vector3.zero;
+
+                var view = instance.GetComponent<Presentation.Framework.DialogView>();
+                view.ReduceMotion = true;
+                view.Show(title, body, confirm, cancel);
+                instance.GetComponent<CanvasGroup>().alpha = 1f;
+            });
+        }
+
+        /// <param name="prepare">Puts a state of the caller's on the instance before it is rendered.</param>
+        public static string Capture(string prefabPath, int width, int height, string outputPath, System.Action<GameObject> prepare = null)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             if (prefab == null)
@@ -88,6 +113,7 @@ namespace Callbreak.Editor
                 System.Type preview = Screens.ScreenLayoutBuilder.FindType($"Callbreak.Editor.Screens.{prefab.name}Preview");
                 preview?.GetMethod("Prepare", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
                     ?.Invoke(null, new object[] { instance });
+                prepare?.Invoke(instance);
 
                 Canvas.ForceUpdateCanvases();
                 foreach (TMP_Text text in instance.GetComponentsInChildren<TMP_Text>(true))
