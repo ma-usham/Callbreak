@@ -22,6 +22,10 @@
   Room for an invite link on a new phone. Until the rules have been seen, How to Play keeps the
   name panel's look: the background and logo dimmed behind the rules, and no back button or
   settings gear (Got It is the way on). Opened later from Settings it looks as before.
+  While the on-screen keyboard is up, the panel rises so the name field stays just above it (on a
+  phone held sideways the keyboard covers its middle); Continue may then be under the keyboard,
+  whose Done sends the name. Android does not tell Unity how tall its keyboard is, so the height
+  is read from the window (`IOnScreenKeyboard`).
   Keeping "Player" is an answer too. The profile remembers the answer (`nameChosen`); a profile
   that already holds a name of its own counts as answered, and one whose name had to fall back to
   "Player" is asked again. The nudge after the first match is gone.

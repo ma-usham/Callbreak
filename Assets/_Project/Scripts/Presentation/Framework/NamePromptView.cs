@@ -12,11 +12,16 @@ namespace Callbreak.Presentation.Framework
     /// Continue. It cannot be dismissed: the backdrop only keeps taps from reaching the menu. It
     /// pops in and fades out like the dialog (<see cref="UiMotion"/>), on its own canvas above it;
     /// its labels come from the UI table, and <see cref="NamePromptPresenter"/> decides when it
-    /// shows and what the line says.
+    /// shows and what the line says. While the on-screen keyboard is up, the panel rises so the
+    /// field stays just above it (<see cref="KeyboardLift"/>; the keyboard's Done sends the name),
+    /// and settles back when it goes.
     /// </summary>
     [RequireComponent(typeof(Canvas), typeof(CanvasGroup))]
     public sealed class NamePromptView : MonoBehaviour
     {
+        // How quickly the panel follows the keyboard: about the time it takes to close most of the way.
+        private const float LiftSmoothing = 0.08f;
+
         [SerializeField] private RectTransform _panel;
         [SerializeField] private TMP_Text _title;
         [SerializeField] private TMP_InputField _field;
@@ -33,10 +38,13 @@ namespace Callbreak.Presentation.Framework
         [SerializeField] private float _messageGap = 12f;
         [SerializeField] private float _buttonGap = 30f;
 
+        private readonly Vector3[] _corners = new Vector3[4];
         private Canvas _canvas;
         private CanvasGroup _group;
         private MotionHandle _motion;
         private MotionHandle _panelMotion;
+        private float _lift;
+        private float _liftSpeed;
 
         /// <summary>The text in the field changed (typed, pasted or cleared).</summary>
         public event Action<string> NameChanged;
@@ -46,8 +54,17 @@ namespace Callbreak.Presentation.Framework
 
         public bool IsShowing { get; private set; }
 
-        /// <summary>With Reduce motion the panel only fades (GDD §14).</summary>
+        /// <summary>With Reduce motion the panel only fades, and moves for the keyboard at once (GDD §14).</summary>
         public bool ReduceMotion { get; set; }
+
+        /// <summary>
+        /// The on-screen keyboard's height in screen pixels, 0 while it is down (the presenter
+        /// gives the device's; without one the panel never moves).
+        /// </summary>
+        public Func<float> KeyboardHeight { get; set; }
+
+        /// <summary>How far the panel is lifted to keep the field above the keyboard, in canvas units.</summary>
+        public float Lift => _lift;
 
         public string Text => _field.text;
 
@@ -142,11 +159,49 @@ namespace Callbreak.Presentation.Framework
             _continueButton.interactable = interactable;
         }
 
+        /// <summary>The panel follows the keyboard: up while it covers the field, back down once it has gone.</summary>
+        private void Update()
+        {
+            float target = IsShowing ? TargetLift() : 0f;
+            if (_lift == target && _liftSpeed == 0f)
+            {
+                return;
+            }
+
+            _lift = ReduceMotion
+                ? target
+                : Mathf.SmoothDamp(_lift, target, ref _liftSpeed, LiftSmoothing, float.PositiveInfinity, Time.unscaledDeltaTime);
+            if (Mathf.Abs(_lift - target) < 0.5f)
+            {
+                _lift = target;
+                _liftSpeed = 0f;
+            }
+
+            _panel.anchoredPosition = new Vector2(_panel.anchoredPosition.x, _lift);
+        }
+
+        /// <summary>The lift that keeps the field above the keyboard, measured with the panel at rest.</summary>
+        private float TargetLift()
+        {
+            float pixels = KeyboardHeight != null ? KeyboardHeight() : 0f;
+            if (pixels <= 0f)
+            {
+                return 0f;
+            }
+
+            Canvas root = Canvas.rootCanvas;
+            var screen = (RectTransform)root.transform;
+            ((RectTransform)_field.transform).GetWorldCorners(_corners);
+            float floor = screen.rect.yMin;
+            float bottom = screen.InverseTransformPoint(_corners[0]).y - floor - _lift;
+            float top = screen.InverseTransformPoint(_corners[1]).y - floor - _lift;
+            return KeyboardLift.For(bottom, top, pixels / root.scaleFactor, screen.rect.height);
+        }
+
         private void Animate(float target, bool deactivate)
         {
             UiMotion.Stop(ref _motion);
             UiMotion.Stop(ref _panelMotion);
-            _panel.anchoredPosition = Vector2.zero;
             float from = Group.alpha;
             _motion = LMotion.Create(from, target, deactivate ? UiMotion.Short : _fadeSeconds)
                 .WithEase(deactivate ? Ease.InCubic : Ease.OutCubic)

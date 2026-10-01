@@ -101,6 +101,33 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator TheKeyboard_LiftsTheQuestion_SoTheFieldStaysAboveIt()
+        {
+            // A phone held sideways: the keyboard covers 60% of the screen, over the middle where the field is.
+            yield return _game.Boot(freshInstall: true);
+            NamePromptView prompt = Prompt();
+            yield return GameFixture.Until(() => prompt.IsShowing, "the name question to open");
+            var field = (RectTransform)prompt.GetComponentInChildren<TMP_InputField>(true).transform;
+            float keyboard = Screen.height * 0.6f;
+            Assert.Less(Edge(field, 0), keyboard, "at rest the keyboard would cover the field");
+
+            prompt.KeyboardHeight = () => keyboard;
+            yield return GameFixture.Until(() => prompt.Lift > 0f && Edge(field, 0) > keyboard, "the question to rise until the field is above the keyboard");
+            Assert.Less(Edge(field, 1), Screen.height, "the field stays on the screen");
+
+            prompt.KeyboardHeight = () => 0f;
+            yield return GameFixture.Until(() => prompt.Lift == 0f, "the question to settle back once the keyboard has gone");
+        }
+
+        /// <summary>The bottom (corner 0) or top (corner 1) of a rect on the overlay canvas, in screen pixels.</summary>
+        private static float Edge(RectTransform rect, int corner)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            return corners[corner].y;
+        }
+
+        [UnityTest]
         public IEnumerator APlayerWithAName_IsNotAsked()
         {
             yield return _game.Boot();

@@ -23,6 +23,7 @@ namespace Callbreak.Presentation.Framework
         private readonly ISettingsService _settings;
         private readonly ILocalization _localization;
         private readonly IAudioService _audio;
+        private readonly IOnScreenKeyboard _keyboard;
 
         private string _draft = string.Empty;
         private bool _started;
@@ -32,13 +33,15 @@ namespace Callbreak.Presentation.Framework
             IProfileService profile,
             ISettingsService settings,
             ILocalization localization,
-            IAudioService audio)
+            IAudioService audio,
+            IOnScreenKeyboard keyboard)
         {
             _view = view;
             _profile = profile;
             _settings = settings;
             _localization = localization;
             _audio = audio;
+            _keyboard = keyboard;
         }
 
         public bool IsOpen => _started && _view.IsShowing;
@@ -49,6 +52,10 @@ namespace Callbreak.Presentation.Framework
             _view.NameChanged += OnNameChanged;
             _view.Submitted += OnSubmitted;
             _localization.LanguageChanged += Render;
+
+            // The panel rises above the device's keyboard, so the field is never under it.
+            IOnScreenKeyboard keyboard = _keyboard;
+            _view.KeyboardHeight = keyboard != null ? () => keyboard.Height : (Func<float>)null;
             if (FirstRun.AsksName(_profile))
             {
                 _draft = string.Empty;

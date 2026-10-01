@@ -70,6 +70,7 @@ namespace Callbreak.Bootstrap
             builder.Register<ClipboardService>(Lifetime.Singleton).As<IClipboard>();
             builder.Register<ShareService>(Lifetime.Singleton).As<IShareService>();
             builder.Register<HapticsService>(Lifetime.Singleton).As<IHaptics>();
+            builder.Register<OnScreenKeyboard>(Lifetime.Singleton).As<IOnScreenKeyboard>();
             builder.Register<LocalAuthService>(Lifetime.Singleton).As<IAuthService>();
             builder.Register<LogAnalytics>(Lifetime.Singleton).As<IAnalytics>();
             builder.Register<AppExit>(Lifetime.Singleton).As<IAppExit>();
