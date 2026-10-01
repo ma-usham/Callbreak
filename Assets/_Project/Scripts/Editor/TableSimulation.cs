@@ -501,6 +501,14 @@ namespace Callbreak.Editor
             private PlayerView _lastSummaryView;
             private PlayerView _finalView;
 
+            // The deal: where each card in the air is flying, and where each card already in an
+            // opponent's fan lay at the last frame.
+            private readonly Dictionary<CardView, CardPlacement> _flownTo = new Dictionary<CardView, CardPlacement>();
+            private readonly Dictionary<CardView, CardPlacement> _dealtPlaces = new Dictionary<CardView, CardPlacement>();
+
+            // The opponent's card whose first frame has been looked at.
+            private MatchEvent _playWatched;
+
             public Runner(bool reduceMotion, bool captures)
             {
                 _reduceMotion = reduceMotion;
@@ -986,9 +994,11 @@ namespace Callbreak.Editor
                 {
                     _table.Seat(rel).Fan.Clear();
                     _table.Seat(rel).HideBubble();
+                    _table.Seat(rel).HideChat();
                 }
 
                 _table.Seat(0).HideBubble();
+                _table.Seat(0).HideChat();
                 _table.Prompt.Hide();
                 Equal(CardViewPool.DeckSize, _table.Cards.Free, "every card is back in the pool after a match");
             }
@@ -1046,8 +1056,39 @@ namespace Callbreak.Editor
                 _tablePresenter.Tick();
                 _roundPresenter?.Tick();
                 _matchPresenter?.Tick();
+                VerifyPlayStartsGlide();
                 SettleTweens();
                 VerifyFrame();
+            }
+
+            /// <summary>
+            /// The frame an opponent beside the player plays (asked before the frame's tweens are
+            /// settled): the rest of its fan starts gliding to its closed-up places, which it is not
+            /// at yet (the cards really move); with Reduce motion it is there at once.
+            /// </summary>
+            private void VerifyPlayStartsGlide()
+            {
+                MatchEventPlayer player = _tablePresenter.Player;
+                if (!(player.Current is CardPlayed played) || ReferenceEquals(played, _playWatched) || played.Seat == Local || !Field<bool>(player, "_begun"))
+                {
+                    return;
+                }
+
+                _playWatched = played;
+                OpponentHandView fan = _table.Seat(played.Seat.RelativeTo(Local)).Fan;
+                if (SidesOf(fan).Length != 1 || fan.Count == 0)
+                {
+                    return;
+                }
+
+                if (_reduceMotion)
+                {
+                    Check(Settled(fan, out string detail), "with Reduce motion, when an opponent beside you plays, the rest of its fan is at its new places at once", detail);
+                }
+                else
+                {
+                    Check(Gliding(fan) && !FanAtItsPlaces(fan, out _), "when an opponent beside you plays, the rest of its fan glides to its new places (the cards really move)", $"{fan.Count} cards left");
+                }
             }
 
             /// <summary>
@@ -1067,6 +1108,12 @@ namespace Callbreak.Editor
                 for (int i = 0; i < TableView.SeatCount; i++)
                 {
                     Settle(_table.Seat(i), "_chipMotion");
+                }
+
+                // The opponents' fans glide when a card leaves or joins them (the local seat has none).
+                for (int i = 1; i < TableView.SeatCount; i++)
+                {
+                    Settle(_table.Seat(i).Fan, "_arrangeMotion");
                 }
 
                 Settle(_bidding, "_panelMotion");
@@ -1303,16 +1350,18 @@ namespace Callbreak.Editor
                     Equal(ScreenId.Gameplay, _router.Current, "the scorecard closes back to the call");
                 }
 
-                // Touching a card while calling only looks at it (GDD screen 07, callout 10).
+                // Touching a card while calling only looks at it (GDD screen 07, callout 10). (A hand
+                // card at rest may be drawn larger than the shared card: its size is the hand's.)
                 if (_table.Hand.Count > 0)
                 {
                     CardView looked = HandCard(FirstOf(state.Hand));
+                    float resting = _table.Hand.PlacementOf(0, _table.Hand.Count).Scale;
                     int plays = _session.PlayCalls;
                     Vector2 point = PointOn(looked);
                     _table.Hand.OnPointerDown(Pointer(point));
-                    Check(looked.Placement.Scale > 1.05f, "a card touched while calling is enlarged", "scale " + looked.Placement.Scale);
+                    Check(looked.Placement.Scale > resting * 1.05f, "a card touched while calling is enlarged", $"scale {looked.Placement.Scale}, at rest {resting}");
                     _table.Hand.OnPointerUp(Pointer(point));
-                    Equal(1f, looked.Placement.Scale, "the enlarged card settles back on release");
+                    Equal(resting, looked.Placement.Scale, "the enlarged card settles back on release");
                     Equal(plays, _session.PlayCalls, "a card cannot be played while calling");
                 }
 
@@ -1651,6 +1700,10 @@ namespace Callbreak.Editor
                 {
                     HandOrder();
                 }
+                else if (state.TricksCompleted >= 4 && Once("fan glide"))
+                {
+                    StageFanGlide();
+                }
                 else if (state.TricksCompleted >= 5 && Once("app pause"))
                 {
                     AppPause();
@@ -1750,25 +1803,30 @@ namespace Callbreak.Editor
                 Check(Click(phrases[2]), "a phrase can be tapped");
                 Check(!picker.IsOpen, "choosing a phrase closes the picker");
 
-                // ADR 024: the player's own phrase shows by the emote button, not over the seat on the left.
+                // ADR 027: every phrase, the player's own too, shows in a speech box just above its
+                // speaker's avatar (the owner's change to ADR 024's phrase by the emote button).
                 SeatView you = _table.Seat(0);
                 string chosen = _text.Get(TablePresenter.EmoteKeys[2]);
-                Equal(chosen, _table.OwnPhrase, "the own phrase shows in a bubble by the emote button");
-
-                // (The seat's bubble may still hold the player's call: bubbles never time out here.)
-                string overSeat = Field<RectTransform>(you, "_bubble").gameObject.activeSelf ? Field<TMP_Text>(you, "_bubbleText").text : null;
-                Check(overSeat != chosen, "the own phrase does not show over the local seat", overSeat);
-                Vector3 own = CentreIn(screen, Field<RectTransform>(_table, "_phraseBubble"));
-                Check(
-                    own.y > button.y && Mathf.Abs(own.x - button.x) < screen.rect.width / 8f,
-                    "the own phrase sits just above the emote button",
-                    $"phrase {own}, button {button}");
+                Equal(chosen, you.ChatText, "the own phrase shows in the local seat's speech box");
 
                 // The button shows the wait for the next phrase, and opens nothing until it is over.
                 Check(_table.EmoteCooldown > 0.95f, "right after a phrase the wait covers the emote button", "fill " + _table.EmoteCooldown);
 
-                // (The Editor does not advance the bubble's pop here: finish it; its stay runs on.)
-                Settle(Field<SpeechBubble>(_table, "_phrase"), "_motion");
+                // (The Editor does not advance the box's pop here: finish it; its stay runs on. A
+                // Table prefab without the speech box shows the phrase in the call bubble instead.)
+                SpeechBubble ownChat = Field<SpeechBubble>(you, "_chatSpeech");
+                if (ownChat != null)
+                {
+                    Settle(ownChat, "_motion");
+                }
+
+                RectTransform chatBox = Field<RectTransform>(you, "_chat");
+                Vector3 avatar = CentreIn(screen, you.Anchor);
+                Vector3 box = chatBox != null ? CentreIn(screen, chatBox) : avatar;
+                Check(
+                    chatBox != null && box.y > avatar.y && box.y - avatar.y < screen.rect.height / 4f && Mathf.Abs(box.x - avatar.x) < screen.rect.width / 8f,
+                    "the speech box sits just above the local avatar",
+                    chatBox == null ? "the local seat has no speech box" : $"box {box}, avatar {avatar}");
                 Snapshot("Table_own_phrase");
                 Click(emote);
                 Check(!picker.IsOpen, "within three seconds of a phrase the emote button opens nothing");
@@ -1782,25 +1840,177 @@ namespace Callbreak.Editor
                 Click(Field<Button>(picker, "_dismiss"));
                 Check(!picker.IsOpen, "a tap outside closes the picker");
 
-                // Muting an opponent (GDD §8): tap the avatar.
+                // An opponent's phrase shows in its own speech box.
                 SeatView opponent = _table.Seat(2);
                 Seat seat = (Seat)(((int)Local + 2) % SeatExtensions.Count);
+                string namaste = _text.Get(TablePresenter.EmoteKeys[0]);
+                Button avatarButton = Field<Button>(opponent, "_avatarButton");
+
+                // (Its call bubble may still hold its call: bubbles never time out here.)
                 GameObject bubble = Field<RectTransform>(opponent, "_bubble").gameObject;
                 opponent.HideBubble();
-                Click(Field<Button>(opponent, "_avatarButton"));
+                opponent.HideChat();
                 _session.RaiseEmote(seat, 0);
-                Check(!bubble.activeSelf, "a muted opponent's phrase is not shown");
-                Click(Field<Button>(opponent, "_avatarButton"));
+                Equal(namaste, opponent.ChatText, "an opponent's phrase shows in its speech box");
+
+                // Muting an opponent (GDD §8): tap the avatar. The phrase it is showing goes, and
+                // the next is not shown (in neither the speech box nor the call bubble).
+                Click(avatarButton);
+                Check(opponent.ChatText == null && !bubble.activeSelf, "muting an opponent hides the phrase it is showing", opponent.ChatText);
                 _session.RaiseEmote(seat, 0);
-                Check(bubble.activeSelf, "an unmuted opponent's phrase is shown");
-                opponent.HideBubble();
-                _table.HideOwnPhrase();
+                Check(opponent.ChatText == null && !bubble.activeSelf, "a muted opponent's phrase is not shown", opponent.ChatText);
+                Click(avatarButton);
+                _session.RaiseEmote(seat, 0);
+                Equal(namaste, opponent.ChatText, "an unmuted opponent's phrase is shown");
+                opponent.HideChat();
+                you.HideChat();
             }
 
             /// <summary>The centre of <paramref name="rect"/> in the local space of <paramref name="screen"/> (0 at the middle of the screen).</summary>
             private static Vector3 CentreIn(RectTransform screen, RectTransform rect)
             {
                 return screen.InverseTransformPoint(rect.TransformPoint(rect.rect.center));
+            }
+
+            /// <summary>
+            /// The fans' glide, staged on the right seat's fan (a side seat's, which closes up around
+            /// its middle, so every card moves when one leaves or joins). A card that leaves or joins
+            /// starts one glide of the cards already there, from where they lie, and settled every
+            /// card is exactly at its place; a card that joins is at its own place at once, wherever
+            /// it arrives; a glide under way ends at its places when the next card leaves, when the
+            /// fan is laid out again and when it is disabled. With Reduce motion every card is at its
+            /// place at once. The fan is then put back as the match left it.
+            /// </summary>
+            private void StageFanGlide()
+            {
+                OpponentHandView fan = _table.Seat(1).Fan;
+                List<CardView> cards = Field<List<CardView>>(fan, "_cards");
+                var taken = new List<CardView>();
+                int held = fan.Count;
+                try
+                {
+                    fan.SetCount(Deck.HandSize);
+                    Check(Settled(fan, out string detail), "a fan laid out again has every card at its place at once", detail);
+
+                    // A card leaves.
+                    CardPlacement[] lay = PlacesOf(cards);
+                    CardView leaving = fan.Take();
+                    taken.Add(leaving);
+                    Check(AtPlace(leaving.Placement, lay[lay.Length - 1], out detail), "the card taken leaves the fan from its place", detail);
+                    if (_reduceMotion)
+                    {
+                        Check(Settled(fan, out detail), "with Reduce motion a fan's cards jump to their places", detail);
+                    }
+                    else
+                    {
+                        Check(Gliding(fan), "when a card leaves a side fan, the rest of it glides");
+                        Check(StillAt(cards, lay, out detail), "a fan's glide starts from where its cards lay", detail);
+                        Settle(fan, "_arrangeMotion");
+                        Check(FanAtItsPlaces(fan, out detail), "after a card leaves and the glide has settled, the rest of the fan lies exactly at its places", detail);
+                    }
+
+                    // A card joins it, arriving where the last card lies, not at its own place.
+                    CardView dealt = taken[0];
+                    taken.RemoveAt(0);
+                    lay = PlacesOf(cards);
+                    dealt.Placement = lay[lay.Length - 1];
+                    fan.Add(dealt);
+                    Check(AtPlace(dealt.Placement, fan.PlacementOf(fan.Count - 1), out detail), "a dealt card is at its own place at once, not pulled by the glide", detail);
+                    if (_reduceMotion)
+                    {
+                        Check(Settled(fan, out detail), "with Reduce motion a fan's cards jump to their places", detail);
+                    }
+                    else
+                    {
+                        Check(Gliding(fan), "when a card joins a side fan, the cards already there glide");
+                        Check(StillAt(cards, lay, out detail), "a fan's glide starts from where its cards lay", detail);
+                        Settle(fan, "_arrangeMotion");
+                        Check(FanAtItsPlaces(fan, out detail), "after a card joins and the glide has settled, every card of the fan lies exactly at its place", detail);
+                        StageGlideInterrupted(fan, cards, taken);
+                    }
+                }
+                finally
+                {
+                    foreach (CardView card in taken)
+                    {
+                        _table.Cards.Return(card);
+                    }
+
+                    fan.SetCount(held);
+                }
+
+                bool back = Settled(fan, out string after);
+                Check(back && fan.Count == held, "the staged fan is put back as the match left it", after ?? $"{fan.Count} cards, not {held}");
+            }
+
+            /// <summary>
+            /// A glide under way ends at its places when the next card leaves (that card leaves from
+            /// where the glide was taking it, and the next glide starts there), when the fan is laid
+            /// out again, and when it is disabled. The cards taken are added to <paramref name="taken"/>.
+            /// </summary>
+            private void StageGlideInterrupted(OpponentHandView fan, List<CardView> cards, List<CardView> taken)
+            {
+                taken.Add(fan.Take());
+                var going = new CardPlacement[fan.Count];
+                for (int i = 0; i < going.Length; i++)
+                {
+                    going[i] = fan.PlacementOf(i);
+                }
+
+                CardView next = fan.Take();
+                taken.Add(next);
+                Check(AtPlace(next.Placement, going[going.Length - 1], out string detail), "a card taken in the middle of a glide leaves from where the glide was taking it", detail);
+                Check(StillAt(cards, going, out detail), "a glide under way ends at its places when the next card leaves", detail);
+                Check(Gliding(fan), "the next card's glide follows");
+
+                fan.SetCount(fan.Count);
+                Check(Settled(fan, out detail), "laying a fan out again ends a glide under way with every card at its place", detail);
+                taken.Add(fan.Take());
+                Check(Gliding(fan), "the next card's glide follows");
+                Invoke(fan, "OnDisable");
+                Check(Settled(fan, out detail), "a fan disabled in the middle of a glide leaves every card at its place", detail);
+            }
+
+            private static bool Gliding(OpponentHandView fan) => Field<MotionHandle>(fan, "_arrangeMotion").IsActive();
+
+            /// <summary>No glide is under way in the fan, and every card of it is at its place.</summary>
+            private static bool Settled(OpponentHandView fan, out string detail)
+            {
+                if (Gliding(fan))
+                {
+                    detail = "a glide is still under way";
+                    return false;
+                }
+
+                return FanAtItsPlaces(fan, out detail);
+            }
+
+            private static CardPlacement[] PlacesOf(List<CardView> cards)
+            {
+                var places = new CardPlacement[cards.Count];
+                for (int i = 0; i < places.Length; i++)
+                {
+                    places[i] = cards[i].Placement;
+                }
+
+                return places;
+            }
+
+            /// <summary>Whether the first cards are still at <paramref name="places"/>, one for each (cards beyond them are not asked about).</summary>
+            private static bool StillAt(List<CardView> cards, CardPlacement[] places, out string detail)
+            {
+                int count = Mathf.Min(cards.Count, places.Length);
+                for (int i = 0; i < count; i++)
+                {
+                    if (!AtPlace(cards[i].Placement, places[i], out detail))
+                    {
+                        detail = $"card {i} of {cards.Count}: {detail}";
+                        return false;
+                    }
+                }
+
+                detail = null;
+                return true;
             }
 
             /// <summary>The hand's one order, ♠ ♥ ♣ ♦ and high to low (ADR 021): there is nothing to press for it.</summary>
@@ -2179,6 +2389,27 @@ namespace Callbreak.Editor
                         Equal(0, hand.Count, "nothing is in the hand before the deal");
                     }
                 }
+
+                // A fan's cards glide to their new places when one leaves or joins; settled, each is exactly there.
+                if (_tablePresenter.Player.Current is CardPlayed played && played.Seat != Local)
+                {
+                    OpponentHandView fan = _table.Seat(played.Seat.RelativeTo(Local)).Fan;
+                    Check(FanAtItsPlaces(fan, out string detail), "after an opponent plays a card, once settled, the rest of its fan lies exactly at its places", detail);
+                    if (SidesOf(fan).Length == 1)
+                    {
+                        Check(CentredOnMiddle(fan, out detail), "after an opponent beside you plays, its fan is centred on the middle angle of the full fan", detail);
+                    }
+                }
+                else if (_tablePresenter.Player.Current is HandDealt dealing && dealing.Seat == Local)
+                {
+                    for (int rel = 1; rel < TableView.SeatCount; rel++)
+                    {
+                        Check(FanAtItsPlaces(_table.Seat(rel).Fan, out string detail), "while the deal fills the fans, once settled, every card dealt lies exactly at its place", detail);
+                    }
+
+                    WatchDealLandings();
+                }
+
                 if (_active.CanPause && _active.Status != SessionStatus.Ended)
                 {
                     ScreenId top = _router.Current;
@@ -2233,6 +2464,8 @@ namespace Callbreak.Editor
                         }
 
                         _dealBeganAt = -1.0;
+                        _flownTo.Clear();
+                        _dealtPlaces.Clear();
                         break;
                     }
 
@@ -2368,6 +2601,117 @@ namespace Callbreak.Editor
             }
 
             private static float AlphaOf(CardView card) => card != null ? Field<CanvasGroup>(card, "_group").alpha : 0f;
+
+            /// <summary>
+            /// Whether every card of an opponent's fan lies exactly where the fan places it as it is
+            /// laid out now (its own layout, asked of it: for the whole hand while a deal fills it).
+            /// </summary>
+            private static bool FanAtItsPlaces(OpponentHandView fan, out string detail)
+            {
+                List<CardView> cards = Field<List<CardView>>(fan, "_cards");
+                for (int i = 0; i < cards.Count; i++)
+                {
+                    if (!AtPlace(cards[i].Placement, fan.PlacementOf(i), out detail))
+                    {
+                        detail = $"card {i} of {cards.Count}: {detail}";
+                        return false;
+                    }
+                }
+
+                detail = null;
+                return true;
+            }
+
+            /// <summary>
+            /// During the deal: a card dealt to an opponent lands where it stays, and the cards
+            /// already in a fan do not move while it fills. A card that joined a fan since the last
+            /// frame is compared with where the deal flew it, the others with where they lay at the
+            /// last frame; then the cards in the air now are noted.
+            /// </summary>
+            private void WatchDealLandings()
+            {
+                try
+                {
+                    for (int rel = 1; rel < TableView.SeatCount; rel++)
+                    {
+                        foreach (CardView card in Field<List<CardView>>(_table.Seat(rel).Fan, "_cards"))
+                        {
+                            CardPlacement now = card.Placement;
+                            if (_flownTo.TryGetValue(card, out CardPlacement flown))
+                            {
+                                _flownTo.Remove(card);
+                                float off = (flown.Position - now.Position).magnitude;
+                                Check(off <= 0.5f, "a card dealt to an opponent lands within half a canvas unit of the place it keeps", $"seat {rel}: {off:0.0} canvas units from it");
+                            }
+                            else if (_dealtPlaces.TryGetValue(card, out CardPlacement before))
+                            {
+                                Check(AtPlace(now, before, out string moved), "while the deal fills a fan, the cards already in it stay where they are", $"seat {rel}: {moved}");
+                            }
+
+                            _dealtPlaces[card] = now;
+                        }
+                    }
+
+                    if (Field<IEventAnimation>(_tablePresenter.Player, "_animation") is InOrder steps)
+                    {
+                        foreach (IEventAnimation step in Field<List<IEventAnimation>>(steps, "_steps"))
+                        {
+                            if (step is DealAnimation deal)
+                            {
+                                foreach (CardFlight flight in Field<List<CardFlight>>(deal, "_flights"))
+                                {
+                                    _flownTo[flight.Card] = Field<CardPlacement>(flight, "_to");
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception e) when (e is MissingFieldException || e is InvalidCastException)
+                {
+                    if (_done.Add("deal landings"))
+                    {
+                        Fail("a card dealt to an opponent lands within half a canvas unit of the place it keeps", "the deal's flights could not be watched: " + e.Message);
+                    }
+                }
+            }
+
+            private static FanShape[] SidesOf(OpponentHandView fan) => Field<FanShape[]>(fan, "_sides");
+
+            /// <summary>
+            /// Whether a side seat's fan lies symmetric about the middle angle of its full fan (the
+            /// start angle plus half the spread), each pair of cards from the two ends within 0.01°.
+            /// </summary>
+            private static bool CentredOnMiddle(OpponentHandView fan, out string detail)
+            {
+                FanShape side = SidesOf(fan)[0];
+                float step = Field<float>(side, "_stepAngle");
+                float middle = Field<float>(side, "_startAngle") + Mathf.Sign(step) * Field<float>(side, "_maxSpread") / 2f;
+                List<CardView> cards = Field<List<CardView>>(fan, "_cards");
+                for (int i = 0, j = cards.Count - 1; i <= j; i++, j--)
+                {
+                    // A card is turned by minus its angle in the fan.
+                    float a = Mathf.DeltaAngle(middle, -cards[i].Placement.Rotation);
+                    float b = Mathf.DeltaAngle(middle, -cards[j].Placement.Rotation);
+                    if (Mathf.Abs(a + b) / 2f > 0.01f)
+                    {
+                        detail = $"cards {i} and {j} of {cards.Count} lie {a:0.000}° and {b:0.000}° from the middle, {middle:0.00}°";
+                        return false;
+                    }
+                }
+
+                detail = null;
+                return true;
+            }
+
+            private static bool AtPlace(in CardPlacement at, in CardPlacement place, out string detail)
+            {
+                bool there = (at.Position - place.Position).sqrMagnitude < 0.0001f
+                    && Mathf.Abs(Mathf.DeltaAngle(at.Rotation, place.Rotation)) < 0.01f
+                    && Mathf.Abs(at.Scale - place.Scale) < 0.0001f
+                    && Mathf.Abs(at.Flat - place.Flat) < 0.0001f;
+                detail = there ? null : $"at {at.Position} {at.Rotation:0.000}° x{at.Scale:0.0000}, its place {place.Position} {place.Rotation:0.000}° x{place.Scale:0.0000}";
+                return there;
+            }
 
             private string StatusOf(Seat seat) => Field<TMP_Text>(_table.Seat(seat.RelativeTo(Local)), "_status").text;
 

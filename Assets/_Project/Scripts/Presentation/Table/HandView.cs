@@ -18,7 +18,8 @@ namespace Callbreak.Presentation.Table
     /// tap plays nothing. Which cards may be played is the presenter's decision; a card it refuses
     /// slides back too. While the hand takes no plays (calling, or another seat's turn) a touched
     /// card still rises and grows a little for a closer look, and is never played (GDD screen 07,
-    /// callout 10).
+    /// callout 10). The hand's cards may be drawn larger than the shared card the trick, the fans
+    /// and the deal use (<see cref="CardScale"/>); the layout's card width is the width as drawn.
     /// </summary>
     public sealed class HandView : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
     {
@@ -32,6 +33,7 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private RectTransform _widthReference;
         [SerializeField] private CardViewPool _pool;
         [SerializeField] private HandLayoutSettings _layout = new HandLayoutSettings();
+        [SerializeField] private float _cardScale = 1f;
         [SerializeField] private float _minStripMillimetres = 7f;
         [SerializeField] private float _arrangeSeconds = 0.25f;
         [SerializeField] private float _inspectScale = 1.12f;
@@ -91,6 +93,9 @@ namespace Callbreak.Presentation.Table
         public RectTransform CardsRoot => _cardsRoot;
 
         public HandLayoutSettings Layout => _layout;
+
+        /// <summary>The size of a resting hand card, against the shared card (1: as large as it).</summary>
+        public float CardScale => _cardScale;
 
         /// <summary>The deck whose faces the hand shows (the player's own, GDD §13); set before the first cards.</summary>
         public void SetDeck(CardSpriteProvider sprites, string deckId)
@@ -187,7 +192,7 @@ namespace Callbreak.Presentation.Table
             EnsureCapacity(count);
             HandLayout.Compute(count, SafeWidth(), EffectiveLayout(), null, -1, _poses);
             CardPose pose = _poses[index];
-            return new CardPlacement(new Vector2(pose.X, pose.Y), pose.Rotation, 1f, 0f);
+            return new CardPlacement(new Vector2(pose.X, pose.Y), pose.Rotation, _cardScale, 0f);
         }
 
         /// <summary>
@@ -442,7 +447,7 @@ namespace Callbreak.Presentation.Table
 
             float pulled = Mathf.Clamp01((eventData.position.y - _pullStart.y) / scale / _throwDistance);
             float rotation = Mathf.LerpAngle(_restRotation, 0f, pulled);
-            card.Placement = new CardPlacement(LocalPoint(eventData) + _holdOffset, rotation, Mathf.Lerp(1f, _heldScale, pulled), 0f);
+            card.Placement = new CardPlacement(LocalPoint(eventData) + _holdOffset, rotation, _cardScale * Mathf.Lerp(1f, _heldScale, pulled), 0f);
         }
 
         private Vector2 LocalPoint(PointerEventData eventData) => LocalPoint(eventData.position, eventData.pressEventCamera);
@@ -528,7 +533,7 @@ namespace Callbreak.Presentation.Table
                 CardView view = _views[i];
                 view.Rect.SetSiblingIndex(i);
                 _from[i] = view.Placement;
-                float scale = _inspecting && i == _hovered ? _inspectScale : 1f;
+                float scale = _cardScale * (_inspecting && i == _hovered ? _inspectScale : 1f);
                 _to[i] = new CardPlacement(new Vector2(_poses[i].X, _poses[i].Y), _poses[i].Rotation, scale, 0f);
             }
 

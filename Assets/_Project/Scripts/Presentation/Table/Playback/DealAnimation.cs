@@ -345,8 +345,10 @@ namespace Callbreak.Presentation.Table.Playback
     /// OutQuad): after the shuffle, the 52 cards leave the top of the deck in the middle of the
     /// table in turn (ADR 022, where the GDD deals from the dealer's seat), starting at the dealer's
     /// right and going round in the direction of play. A card for an opponent joins that seat's fan
-    /// as a back; a card for the local seat turns face up in the hand, which fills from the left in
-    /// sorted order. A tap skips it; the table then shows the dealt state at once.
+    /// as a back: the fans are laid out for the whole hand while they fill, and each card flies
+    /// straight to the place it keeps, though the seat's previous card may still be in the air. A
+    /// card for the local seat turns face up in the hand, which fills from the left in sorted order.
+    /// Cards land in the order they left. A tap skips it; the table then shows the dealt state at once.
     /// </summary>
     public sealed class DealAnimation : IEventAnimation
     {
@@ -379,11 +381,13 @@ namespace Callbreak.Presentation.Table.Playback
         private readonly Action _onCard;
         private readonly List<CardFlight> _flights = new List<CardFlight>(12);
         private readonly List<int> _flightTargets = new List<int>(12);
+        private readonly int[] _inAir;
         private readonly int _total;
         private readonly float _interval;
         private float _elapsed;
         private int _launched;
         private int _handDealt;
+        private bool _begun;
 
         /// <param name="pool">The scene's card views (the deck gives back what it does not deal).</param>
         /// <param name="hand">The local hand.</param>
@@ -414,18 +418,34 @@ namespace Callbreak.Presentation.Table.Playback
             _handCards = handCards;
             _face = face;
             _onCard = onCard;
+            _inAir = new int[targets.Length];
             _total = handCards.Count * targets.Length;
             _interval = _total > 1 ? (Seconds - FlightSeconds) / (_total - 1) : 0f;
         }
 
         public float Duration => Seconds;
 
+        /// <summary>The opponents' fans are laid out for the whole hand each will be dealt.</summary>
         public void Begin()
         {
+            if (_begun)
+            {
+                return;
+            }
+
+            _begun = true;
+            for (int i = 0; i < _targets.Length; i++)
+            {
+                if (_targets[i].Fan != null)
+                {
+                    _targets[i].Fan.BeginDeal(_handCards.Count);
+                }
+            }
         }
 
         public bool Tick(float deltaTime)
         {
+            Begin();
             _elapsed += deltaTime;
             while (_launched < _total && _elapsed >= _launched * _interval)
             {
@@ -433,11 +453,16 @@ namespace Callbreak.Presentation.Table.Playback
                 _launched++;
             }
 
-            for (int i = _flights.Count - 1; i >= 0; i--)
+            // In the order they left, so each card joins its seat at the place it was flown to.
+            for (int i = 0; i < _flights.Count;)
             {
                 if (_flights[i].Tick(deltaTime))
                 {
                     Land(i);
+                }
+                else
+                {
+                    i++;
                 }
             }
 
@@ -452,12 +477,13 @@ namespace Callbreak.Presentation.Table.Playback
 
         public void Finish()
         {
-            // Cards in the air land where they were going; the ones not dealt yet go back to the
-            // pool, and the table puts the dealt state in place when it shows it.
-            for (int i = _flights.Count - 1; i >= 0; i--)
+            // Cards in the air land where they were going, in the order they left; the ones not
+            // dealt yet go back to the pool, and the table puts the dealt state in place when it
+            // shows it.
+            while (_flights.Count > 0)
             {
-                _flights[i].Finish();
-                Land(i);
+                _flights[0].Finish();
+                Land(0);
             }
 
             _deck.Clear();
@@ -487,9 +513,17 @@ namespace Callbreak.Presentation.Table.Playback
             card.ShowBack(seat.Back);
             card.SetShadow(false);
             card.SetAlpha(1f);
-            CardPlacement to = seat.Fan != null ? seat.Fan.NextPlacement() : _hand.PlacementOf(Mathf.Min(_handDealt, _handCards.Count - 1), _handCards.Count);
-            if (seat.Fan == null)
+
+            // A card for a fan flies to the place it will have there: after the cards the fan holds
+            // and those still in the air to it.
+            CardPlacement to;
+            if (seat.Fan != null)
             {
+                to = seat.Fan.PlacementOf(seat.Fan.Count + _inAir[target]);
+            }
+            else
+            {
+                to = _hand.PlacementOf(Mathf.Min(_handDealt, _handCards.Count - 1), _handCards.Count);
                 _handDealt++;
             }
 
@@ -497,15 +531,18 @@ namespace Callbreak.Presentation.Table.Playback
             flight.Begin();
             _flights.Add(flight);
             _flightTargets.Add(target);
+            _inAir[target]++;
             _onCard?.Invoke();
         }
 
         private void Land(int flightIndex)
         {
             CardView card = _flights[flightIndex].Card;
-            Target seat = _targets[_flightTargets[flightIndex]];
+            int target = _flightTargets[flightIndex];
+            Target seat = _targets[target];
             _flights.RemoveAt(flightIndex);
             _flightTargets.RemoveAt(flightIndex);
+            _inAir[target]--;
             if (seat.Fan != null)
             {
                 seat.Fan.Add(card);

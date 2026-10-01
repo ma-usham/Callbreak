@@ -14,13 +14,16 @@ namespace Callbreak.Editor.Screens
     /// areas for cards; this adds what the game fills in at runtime and what the mockup does not
     /// draw:
     /// the layers (table, hand, HUD as nested canvases, GDD §23); the card pool; the hand with its
-    /// touch area, pinned to the bottom edge; the trick slots and the opponents' fans, placed as
-    /// mockup 08 draws them; a <see cref="SeatView"/> per seat, with the timer ring, seconds disc
-    /// and bubble the opponents' seats need (derived from the local seat's); the turn prompt, the
-    /// trick counter, the emote picker, the "Reconnecting…" cover and the "I'm back" banner (derived
-    /// from kit pills, panels and buttons); and each seat's chip for "Away", "Reconnecting…" and "Bot
-    /// playing" (the kit's tag pill, hidden until there is something to say; a bot that fills a
-    /// seat has none, ADR 025). Names get a width: a long one shrinks, then ends in an ellipsis. Controls smaller than
+    /// touch area, pinned to the bottom edge, its cards drawn a little larger than the shared card;
+    /// the trick slots and the opponents' fans, placed as mockup 08 and mockup 07 draw them; a
+    /// <see cref="SeatView"/> per seat, with the timer ring, seconds disc and call bubble the
+    /// opponents' seats need (derived from the local seat's) and the speech box for quick phrases;
+    /// the seats' profiles as the owner arranged them (the side seats lower, the top seat's name
+    /// above its avatar, the local seat's below it); the turn prompt, the trick counter, the emote
+    /// picker, the "Reconnecting…" cover and the "I'm back" banner (derived from kit pills, panels
+    /// and buttons); and each seat's chip for "Away", "Reconnecting…" and "Bot playing" (the kit's
+    /// tag pill, hidden until there is something to say; a bot that fills a seat has none, ADR 025).
+    /// Names get a width: a long one shrinks, then ends in an ellipsis. Controls smaller than
     /// 88 px answer to touches on 88 px (GDD §16) without being drawn any larger.
     /// All mockup measurements are in mockup pixels (1672 × 941), as in the layout.
     /// </summary>
@@ -33,9 +36,15 @@ namespace Callbreak.Editor.Screens
         // this is the even fan that fits its thirteen card corners best, with the tops of the middle
         // cards at y 716.
         private static readonly Vector2 HandCentre = new Vector2(868.6f, 839.05f);
-        private const float HandTouchTop = 684f;
         private const float HandWidthFraction = 0.772f;         // 94.5 px between cards on the mockup; the GDD says 70%
         private const float HandLift = 14.4f;                   // 12.5 mockup px; the GDD says 28
+
+        // The owner asked for slightly bigger cards in the hand (2 Oct 2026): they are drawn 9% larger
+        // than the shared card, which the trick, the fans and the deal keep. The hand keeps its width,
+        // so they overlap a little more; the tops of the middle cards come up to y 705, and the touch
+        // area and the turn prompt (below) went up with them.
+        private const float HandCardScale = 1.09f;
+        private const float HandTouchTop = 673f;
 
         // Half the bend mockup 08 draws (a radius of 3740, end cards leaning 10°): the owner asked for
         // a gentler arc, so a full hand's end cards lean 5° and hang 28 px lower (ADR 021).
@@ -65,25 +74,25 @@ namespace Callbreak.Editor.Screens
         private const float SideFanBottomAngle = 125.9f;
         private const float SideFanStep = 5.35f;
 
-        // The top seat's hangs below its profile, behind the name and the status pill: it turns about
-        // a point 164 px above the avatar's centre, 13 cards 4.77° apart around straight down, the
-        // middle ones in front.
+        // The top seat's hangs below its avatar (its name and status pill are above it since 2 Oct
+        // 2026, so nothing covers the fan): it turns about a point 164 px above the avatar's centre,
+        // 13 cards 4.77° apart around straight down, the middle ones in front.
         private const float TopFanPivotAbove = 163.7f;
         private const float TopFanRadius = 242f;
         private const float TopFanStep = 4.77f;
 
         // ---- Derived pieces (not on the mockup): where they sit.
-        private static readonly Vector2 PromptCentre = new Vector2(869.3f, 662f);
+        private static readonly Vector2 PromptCentre = new Vector2(869.3f, 652f);
         private const float PromptHeight = 38f;
         private static readonly Vector2 TrickLabelCentre = new Vector2(836f, 104f);
         // Six phrases, each an 88 px touch target with 16 px between them (GDD §16): 76.8 and 14 mockup px.
-        // The panel opens to the left of the emote button, 112 px in from the right edge (ADR 021).
-        private static readonly Rect EmotePanel = new Rect(1112f, 521.6f, 448f, 294.4f);
+        // The panel opens to the left of the emote button, 112 px in from the right edge (ADR 021),
+        // and since the side seats came down (ADR 027) it starts below the right seat's status pill.
+        private static readonly Rect EmotePanel = new Rect(1112f, 545.6f, 448f, 294.4f);
         private const float BubbleHeight = 33f;
 
-        // The player's own phrase sits this far above the emote button (ADR 024); while the next
-        // phrase has to wait, the button is covered in this colour, which sweeps away as it runs out.
-        private const float OwnPhraseGap = 10f;
+        // While the next quick phrase has to wait, the emote button is covered in this colour, which
+        // sweeps away as the wait runs out (ADR 024).
         private static readonly Color EmoteCooldownColor = new Color(0f, 0f, 0f, 0.5f);
         private const float ReconnectingDim = 0.45f;
         private static readonly Vector2 ImBackCentre = new Vector2(836f, 300f);
@@ -92,13 +101,81 @@ namespace Callbreak.Editor.Screens
         /// <summary>GDD §16 "Touch targets are ≥ 88 px", in canvas units.</summary>
         public const float MinTouch = 88f;
 
+        // ---- The seats as the owner arranged them on 2 Oct 2026 (mockup px).
+        // The side seats sit lower, nearer the player: the whole seat moves, fan and all.
+        private const float SideSeatDrop = 55f;
+
+        // The top seat's name plate and status pill stand above its avatar, just under the trump
+        // line, and its fan hangs below the avatar where nothing covers it (as mockup 19 draws it):
+        // the avatar comes down to make room.
+        private const float TopProfileGap = 5f;                 // from the trump line to the name plate
+        private const float TopRingGap = 1f;                    // from the status pill to the avatar's ring
+
+        // The local seat's name plate and status pill are below its avatar, centred under it at the
+        // opponents' widths; the pill keeps its place at the bottom and the avatar, its timer ring
+        // and its seconds disc go up to the plate, which lies over the ring's foot as an opponent's.
+        private const float LocalProfileX = 90f;
+
+        // The seconds disc sits on a free side of the avatar (from its centre): the outer top corner
+        // of a side seat; on the left of the top and the local avatar, whose name plates, chips and
+        // speech boxes take the other sides.
+        private static readonly Vector2[] DiscOffsets =
+        {
+            new Vector2(-52f, 0f), new Vector2(29f, -29f), new Vector2(-52f, 0f), new Vector2(-29f, -29f),
+        };
+
+        // The call bubble (a call as it is placed, "auto"), from the avatar's centre: right of the
+        // local avatar, towards the hand; below a side seat's status pill; left of the top avatar,
+        // past its seconds disc (its fan hangs below it, its speech box is on the right).
+        private static readonly Vector2[] BubbleOffsets =
+        {
+            new Vector2(84f, 0f), new Vector2(0f, 123f), new Vector2(-112f, 0f), new Vector2(0f, 123f),
+        };
+
+        // ---- The speech box for quick phrases (ADR 027; the owner's reference image, as mockup 18
+        // draws it): an ivory box with a golden rim and its tail at the bottom-left corner pointing
+        // down at the speaker, the phrase in bold Heading Burgundy. It sits just above the avatar
+        // (to the upper right of the top seat's, whose name and pill are above it) and grows away
+        // from its tail: rightwards, leftwards on the right seat, whose tail is mirrored.
+        // The box is 9-sliced, its soft shadow inside the image: the rim is inset from the image's
+        // edges by these margins (canvas units). The tail is an overlay drawn over the box's foot,
+        // its bottom-left corner this far from the box image's; its tip ends this far from the rim's
+        // bottom-left corner. The image is kept at least 112 wide (the tail's top on the straight
+        // part of the rim) and 71 high (the slices at full size).
+        private const string ChatBoxArt = TableArt + "/UI_ChatBubble.png";
+        private const string ChatTailArt = TableArt + "/UI_ChatBubble_Tail.png";
+        private const float ChatRimSide = 11.58f;
+        private const float ChatRimTop = 5.08f;
+        private const float ChatRimBottom = 17.79f;
+        private static readonly Vector2 ChatTailSize = new Vector2(76f, 72f);
+        private static readonly Vector2 ChatTailCorner = new Vector2(0.5f, -46.5f);
+        private static readonly Vector2 ChatTailTip = new Vector2(2.25f, -48.2f);
+        private const float ChatRimHeight = 62f;                // canvas units: mockup 18's box is 56 mockup px high
+        private const float ChatFontSize = 30f;                 // canvas units: capitals 19 mockup px high, as mockup 18's
+        private const float ChatTextPadding = 52f;              // canvas units from the rim to the words, both sides together
+        private const float ChatMinWidth = 140f;                // canvas units, the image
+        private static readonly Color ChatTextColor = new Color32(0x7A, 0x10, 0x16, 0xFF);    // Heading Burgundy (GDD §12)
+
+        // The tail's tip stops this far outside the avatar's timer ring (mockup px), up and 30° over
+        // to the box's side, so that the tail, which leans 30°, points at the avatar's centre. The
+        // top seat's box stands right of its status pill, its rim's foot this far above the avatar's
+        // centre, its tail reaching down towards the avatar (and clear of the fan below it).
+        private const float ChatTipGap = 8f;
+        private const float ChatTipTurn = 30f;
+        private const float ChatBesideGap = 8f;
+        private const float ChatBesideRise = 30f;
+
+        // The local seat's box leans less and stands a little higher, so that its rim keeps clear of
+        // the tops of the hand's first cards (y 737 to 728 there); its tail then points a little left
+        // of the avatar's centre.
+        private const float LocalChatTipGap = 18f;
+        private const float LocalChatTipTurn = 20f;
+
         // ---- The seat chip ("Away", "Reconnecting…", "Bot playing"): the kit's tag pill on the
-        // top edge of an opponent's avatar; the local seat's sits above its name plate, left of the
-        // hand.
+        // top edge of the avatar (the bottom edge of the top seat's, whose name and pill are above).
         private const float ChipHeight = 24f;
         private const float ChipTextScale = 0.8f;
         private const float ChipSpinnerSize = 15f;
-        private static readonly Vector2 LocalChipCentre = new Vector2(160f, 838f);
 
         // ---- Names: up to 16 characters (GDD §11 screen 14) on a plate that holds about ten. A longer
         // name shrinks to 60% and then ends in an ellipsis; the width is the plate without its caps.
@@ -152,7 +229,6 @@ namespace Callbreak.Editor.Screens
             BuildPrompt(ctx, handLayer, statusStyle);
             BuildTrickLabel(ctx);
             BuildEmotePicker(ctx, statusStyle);
-            BuildOwnPhrase(ctx, nameStyle);
             BuildEmoteCooldown(ctx);
             BuildImBack(ctx, centre);
             BuildReconnecting(ctx, nameStyle);
@@ -254,17 +330,20 @@ namespace Callbreak.Editor.Screens
                 (HandCentre.x - UiBuildKit.MockWidth / 2f) * UiBuildKit.ScaleX,
                 (UiBuildKit.MockHeight - HandCentre.y) * UiBuildKit.ScaleY);
 
+            // The layout spaces the cards as they are drawn, the hand's scale larger than the shared card.
             var hand = touchObject.AddComponent<HandView>();
             var so = new SerializedObject(hand);
             so.FindProperty("_cardsRoot").objectReferenceValue = cards;
             so.FindProperty("_widthReference").objectReferenceValue = ctx.SafeArea;
             so.FindProperty("_pool").objectReferenceValue = pool;
+            so.FindProperty("_cardScale").floatValue = HandCardScale;
+            float cardWidth = HandCardScale * TableCardBuilder.CardWidth;
             SerializedProperty layout = so.FindProperty("_layout");
-            layout.FindPropertyRelative("CardWidth").floatValue = TableCardBuilder.CardWidth;
+            layout.FindPropertyRelative("CardWidth").floatValue = cardWidth;
             layout.FindPropertyRelative("MinWidthFraction").floatValue = HandWidthFraction;
             layout.FindPropertyRelative("MaxWidthFraction").floatValue = 0.86f;
             layout.FindPropertyRelative("MinStrip").floatValue = HandLayout.HardMinStrip;
-            layout.FindPropertyRelative("MaxStrip").floatValue = 0.8f * TableCardBuilder.CardWidth;
+            layout.FindPropertyRelative("MaxStrip").floatValue = 0.8f * cardWidth;
             layout.FindPropertyRelative("Lift").floatValue = HandLift;
             layout.FindPropertyRelative("HoverLift").floatValue = 18f;
             layout.FindPropertyRelative("ArcRadius").floatValue = HandArcRadius;
@@ -279,11 +358,15 @@ namespace Callbreak.Editor.Screens
             Vector2 seatCentre = ctx.CentreOf($"Seat{seat}");
             RectTransform ring = ctx.Nodes[$"SeatRing{seat}"];
             LayoutNode ringNode = ctx.Node($"SeatRing{seat}");
-            Vector2 avatarCentre = ringNode.Centre;
             bool local = seat == 0;
+
+            // The profile as the owner arranged it; everything below is placed from its avatar.
+            Vector2 avatarCentre = ArrangeProfile(ctx, seat);
 
             // The turn ring: the local seat's is on the layout; the others get the same ring, scaled
             // to their avatar (a gold ring around the active seat, GDD §11 T rules).
+            LayoutNode localRing = ctx.Node("SeatRing0"), localTimer = ctx.Node("SeatTimerRing0");
+            float timerSize = ringNode.rect[2] * localTimer.rect[2] / localRing.rect[2];
             RectTransform timerRing;
             if (local)
             {
@@ -291,9 +374,7 @@ namespace Callbreak.Editor.Screens
             }
             else
             {
-                LayoutNode localRing = ctx.Node("SeatRing0"), localTimer = ctx.Node("SeatTimerRing0");
-                float size = ringNode.rect[2] * localTimer.rect[2] / localRing.rect[2];
-                timerRing = UiBuildKit.CreateAt($"SeatTimerRing{seat}", root, avatarCentre, seatCentre, UiBuildKit.FromMock(size, size));
+                timerRing = UiBuildKit.CreateAt($"SeatTimerRing{seat}", root, avatarCentre, seatCentre, UiBuildKit.FromMock(timerSize, timerSize));
                 timerRing.SetSiblingIndex(ring.GetSiblingIndex());
                 RectTransform face = Stretched("Face", timerRing);
                 UiBuildKit.AddImage(face, UiBuildKit.LoadSpriteAt($"{TableArt}/UI_TimerRing.png", 0f), false);
@@ -307,23 +388,21 @@ namespace Callbreak.Editor.Screens
             ringImage.fillAmount = 1f;
             ringImage.enabled = local;      // the mockups show the local seat's turn
 
-            // Seconds disc: the local seat's is on the layout; the others get a copy at a free corner.
+            // Seconds disc: the local seat's is on the layout (moved with its avatar); the others get a
+            // copy at a free corner.
             RectTransform disc = ctx.Nodes["SeatTimerDisc0"];
             if (!local)
             {
-                LayoutNode discNode = ctx.Node("SeatTimerDisc0");
-                Vector2 offset = seat == 2 ? new Vector2(0f, -40f) : new Vector2(seat == 3 ? -29f : 29f, -29f);
                 disc = Object.Instantiate(disc, root);
                 disc.name = $"SeatTimerDisc{seat}";
-                disc.anchoredPosition = FromMock(avatarCentre + offset - seatCentre);
+                disc.anchoredPosition = FromMock(avatarCentre + DiscOffsets[seat] - seatCentre);
                 disc.gameObject.SetActive(false);
             }
 
             TMP_Text timerText = disc.GetComponentInChildren<TMP_Text>(true);
 
-            // Bubble for a call or a quick phrase: the name plate's white pill, below the status pill
-            // (above the name plate for the local seat).
-            Vector2 bubbleCentre = local ? avatarCentre + new Vector2(118f, -76f) : avatarCentre + new Vector2(0f, seat == 2 ? 120f : 123f);
+            // Bubble for a call as it is placed: the name plate's white pill.
+            Vector2 bubbleCentre = avatarCentre + BubbleOffsets[seat];
             RectTransform bubble = UiBuildKit.CreateAt("Bubble", root, bubbleCentre, seatCentre, UiBuildKit.FromMock(90f, BubbleHeight));
             Sliced(bubble, LoadTableSprite("UI_NamePlate"));
             TextMeshProUGUI bubbleText = Label("Text", bubble, nameStyle, "4");
@@ -332,7 +411,8 @@ namespace Callbreak.Editor.Screens
             // The chip: how the seat's player is connected (GDD §8; a fill-in bot has none, ADR 025).
             // It sizes itself to its text; the spinner shows only with "Reconnecting…". ("BOT" is
             // only the sample the prefab is built with.)
-            Vector2 chipCentre = local ? LocalChipCentre : avatarCentre + new Vector2(0f, 2f - ringNode.rect[3] / 2f);
+            float ringEdge = ringNode.rect[3] / 2f - 2f;
+            Vector2 chipCentre = avatarCentre + new Vector2(0f, seat == 2 ? ringEdge : -ringEdge);
             RectTransform chip = UiBuildKit.CreateAt("Chip", root, chipCentre, seatCentre, UiBuildKit.FromMock(56f, ChipHeight));
             Sliced(chip, LoadTableSprite("UI_Pill_Tag"));
             TextMeshProUGUI chipText = Label("Text", chip, statusStyle, "BOT");
@@ -341,6 +421,9 @@ namespace Callbreak.Editor.Screens
             GameObject chipSpinner = BuildSpinner(chip, spinnerSize, 12f + spinnerSize / 2f, chipText.color);
             chipSpinner.SetActive(false);
             chip.gameObject.SetActive(false);
+
+            // The speech box for the seat's quick phrases, over its other parts.
+            (RectTransform chat, TextMeshProUGUI chatText) = BuildChat(root, seat, seatCentre, ChatRimCorner(ctx, seat, avatarCentre, timerSize / 2f));
 
             var view = root.gameObject.AddComponent<SeatView>();
             var so = new SerializedObject(view);
@@ -361,6 +444,10 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_chipSpinner").objectReferenceValue = chipSpinner;
             so.FindProperty("_chipPadding").floatValue = 26f;
             so.FindProperty("_chipSpinnerSpace").floatValue = spinnerSize + 6f;
+            so.FindProperty("_chat").objectReferenceValue = chat;
+            so.FindProperty("_chatText").objectReferenceValue = chatText;
+            so.FindProperty("_chatPadding").floatValue = ChatTextPadding + 2f * ChatRimSide;
+            so.FindProperty("_chatMinWidth").floatValue = ChatMinWidth;
 
             // The kit's ring sprite is orange (#F6960B); the last five seconds multiply it towards
             // crimson (#861018, GDD §12); a met call tints the sand pill gold.
@@ -383,13 +470,189 @@ namespace Callbreak.Editor.Screens
             }
 
             so.ApplyModifiedPropertiesWithoutUndo();
+
+            // A side seat sits lower, nearer the player: everything above is under its root and moves with it.
+            if (seat == 1 || seat == 3)
+            {
+                root.anchoredPosition += FromMock(new Vector2(0f, SideSeatDrop));
+            }
+        }
+
+        /// <summary>
+        /// Puts the parts of a seat's profile where the owner arranged them (2 Oct 2026) and returns
+        /// the avatar's centre (mockup px). A side seat keeps the layout's (the whole seat moves down
+        /// later). The top seat's name plate and status pill stand above its avatar, just under the
+        /// trump line, and its avatar comes down below them (mockup 19). The local seat's plate and
+        /// pill are centred below its avatar at the opponents' widths, their words centred in them,
+        /// the pill keeping its place at the bottom; the avatar, its timer ring and its seconds disc
+        /// go up so that the plate lies over the ring's foot as an opponent's does.
+        /// </summary>
+        private static Vector2 ArrangeProfile(ScreenBuildContext ctx, int seat)
+        {
+            LayoutNode ring = ctx.Node($"SeatRing{seat}"), plate = ctx.Node($"SeatPlate{seat}"), pill = ctx.Node($"SeatPill{seat}");
+            if (seat == 2)
+            {
+                LayoutNode trump = ctx.Node("TrumpLabel"), suit = ctx.Node("TrumpSuit");
+                float top = Mathf.Max(trump.inkBox[3], suit.rect[1] + suit.rect[3]) + TopProfileGap;
+                float pillTop = top + plate.rect[3];
+                MoveNode(ctx, "SeatPlate2", new Vector2(plate.Centre.x, top + plate.rect[3] / 2f));
+                MoveNode(ctx, "SeatPill2", new Vector2(pill.Centre.x, pillTop + pill.rect[3] / 2f));
+                var topAvatar = new Vector2(ring.Centre.x, pillTop + pill.rect[3] + TopRingGap + ring.rect[3] / 2f);
+                MoveNode(ctx, "SeatRing2", topAvatar);
+                return topAvatar;
+            }
+
+            if (seat != 0)
+            {
+                return ring.Centre;
+            }
+
+            // How far an opponent's name plate lies over the foot of its avatar's ring.
+            LayoutNode sideRing = ctx.Node("SeatRing3"), sidePlate = ctx.Node("SeatPlate3"), sidePill = ctx.Node("SeatPill3");
+            float cover = sideRing.rect[1] + sideRing.rect[3] - sidePlate.rect[1];
+            MoveNode(ctx, "SeatPlate0", new Vector2(LocalProfileX, plate.Centre.y), sidePlate.rect[2]);
+            MoveNode(ctx, "SeatPill0", new Vector2(LocalProfileX, pill.Centre.y), sidePill.rect[2]);
+            CentreLabel(ctx, "SeatName0", "SeatPlate0");
+            CentreLabel(ctx, "SeatStatus0", "SeatPill0");
+            var avatar = new Vector2(LocalProfileX, plate.rect[1] + cover - ring.rect[3] / 2f);
+            MoveNode(ctx, "SeatRing0", avatar);
+            MoveNode(ctx, "SeatTimerRing0", avatar);
+            MoveNode(ctx, "SeatTimerDisc0", avatar + DiscOffsets[0]);
+
+            // The plate and the pill lie over the ring, and the seconds disc over everything.
+            ctx.Nodes["SeatPlate0"].SetAsLastSibling();
+            ctx.Nodes["SeatPill0"].SetAsLastSibling();
+            ctx.Nodes["SeatTimerDisc0"].SetAsLastSibling();
+            return avatar;
+        }
+
+        /// <summary>
+        /// Moves a layout node, its children with it, so that its centre is at <paramref name="centre"/>
+        /// (mockup px); a <paramref name="width"/> (mockup px) also resizes it and its art.
+        /// </summary>
+        private static void MoveNode(ScreenBuildContext ctx, string id, Vector2 centre, float width = 0f)
+        {
+            LayoutNode node = ctx.Node(id);
+            RectTransform rect = ctx.Nodes[id];
+            Vector2 parentCentre = string.IsNullOrEmpty(node.parent) ? UiBuildKit.ScreenCentre : ctx.CentreOf(node.parent);
+            rect.anchoredPosition = FromMock(centre - parentCentre);
+            if (width <= 0f)
+            {
+                return;
+            }
+
+            rect.sizeDelta = new Vector2(width * UiBuildKit.ScaleX, rect.sizeDelta.y);
+            foreach (string part in new[] { "Face", "Shadow" })
+            {
+                if (rect.Find(part) is RectTransform art)
+                {
+                    art.sizeDelta = new Vector2(width * UiBuildKit.ScaleX, art.sizeDelta.y);
+                }
+            }
+        }
+
+        /// <summary>Centres a label's words across the plate it is on (its baseline stays).</summary>
+        private static void CentreLabel(ScreenBuildContext ctx, string labelId, string plateId)
+        {
+            LayoutNode label = ctx.Node(labelId);
+            float off = (label.inkBox[0] + label.inkBox[2]) / 2f - ctx.CentreOf(plateId).x;
+            ctx.Nodes[labelId].anchoredPosition -= new Vector2(off * UiBuildKit.ScaleX, 0f);
+        }
+
+        /// <summary>
+        /// Where a seat's speech box goes: the corner of its rim by the tail (the bottom-left; the
+        /// bottom-right on the right seat), in mockup px. Above a side avatar the tail's tip stops
+        /// just outside the timer ring, up and over to the box's side, so that the leaning tail
+        /// points at the avatar's centre; the local seat's stops a little further out and turned
+        /// less, which keeps its box off the hand. The top seat's box stands right of its status
+        /// pill, its foot a little above the avatar's centre and its tail reaching down towards the
+        /// avatar.
+        /// </summary>
+        private static Vector2 ChatRimCorner(ScreenBuildContext ctx, int seat, Vector2 avatarCentre, float timerRadius)
+        {
+            if (seat == 2)
+            {
+                LayoutNode pill = ctx.Node("SeatPill2");
+                return new Vector2(pill.rect[0] + pill.rect[2] + ChatBesideGap, avatarCentre.y - ChatBesideRise);
+            }
+
+            float side = seat == 1 ? -1f : 1f;
+            float turn = (seat == 0 ? LocalChatTipTurn : ChatTipTurn) * Mathf.Deg2Rad;
+            float reach = timerRadius + (seat == 0 ? LocalChatTipGap : ChatTipGap);
+            Vector2 tip = avatarCentre + new Vector2(side * reach * Mathf.Sin(turn), -reach * Mathf.Cos(turn));
+            return tip - new Vector2(side * ChatTailTip.x / UiBuildKit.ScaleX, -ChatTailTip.y / UiBuildKit.ScaleY);
+        }
+
+        /// <summary>
+        /// A seat's speech box for quick phrases (ADR 027), hidden. The box art's image is the rim
+        /// grown by its shadow's margins; its corner by the tail is the pivot, so the box grows away
+        /// from the tail as the phrase gets longer (leftwards on the right seat, whose tail is
+        /// mirrored) and pops out from there. The tail lies over the box's foot; the phrase is
+        /// centred inside the rim.
+        /// </summary>
+        private static (RectTransform box, TextMeshProUGUI text) BuildChat(RectTransform root, int seat, Vector2 seatCentre, Vector2 rimCorner)
+        {
+            bool mirrored = seat == 1;
+            float side = mirrored ? -1f : 1f;
+            Vector2 corner = rimCorner - new Vector2(side * ChatRimSide / UiBuildKit.ScaleX, -ChatRimBottom / UiBuildKit.ScaleY);
+
+            var boxObject = new GameObject("Chat", typeof(RectTransform));
+            var box = (RectTransform)boxObject.transform;
+            box.SetParent(root, false);
+            box.anchorMin = box.anchorMax = new Vector2(0.5f, 0.5f);
+            box.pivot = new Vector2(mirrored ? 1f : 0f, 0f);
+            box.anchoredPosition = FromMock(corner - seatCentre);
+            box.sizeDelta = new Vector2(ChatMinWidth, ChatRimHeight + ChatRimTop + ChatRimBottom);
+
+            // No part of it takes touches: the local box lies over the top of the hand's first cards
+            // for its seconds, and a throw must still reach them. (Its pop and fade use this group.)
+            var group = boxObject.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            group.interactable = false;
+
+            // The box: sliced at its native scale, which the tail's placement is measured against.
+            RectTransform face = Stretched("Box", box);
+            Image boxImage = UiBuildKit.AddImage(face, UiBuildKit.LoadSpriteAt(ChatBoxArt, 0f), false);
+            boxImage.type = Image.Type.Sliced;
+            boxImage.fillCenter = true;
+            boxImage.pixelsPerUnitMultiplier = 1f;
+            boxImage.raycastTarget = false;
+
+            var tailObject = new GameObject("Tail", typeof(RectTransform));
+            var tail = (RectTransform)tailObject.transform;
+            tail.SetParent(box, false);
+            tail.anchorMin = tail.anchorMax = new Vector2(mirrored ? 1f : 0f, 0f);
+            tail.pivot = Vector2.zero;
+            tail.sizeDelta = ChatTailSize;
+            tail.anchoredPosition = new Vector2(side * ChatTailCorner.x, ChatTailCorner.y);
+            tail.localScale = new Vector3(side, 1f, 1f);
+            Image tailImage = UiBuildKit.AddImage(tail, UiBuildKit.LoadSpriteAt(ChatTailArt, 0f), false);
+            tailImage.raycastTarget = false;
+
+            RectTransform textRect = Stretched("Text", box);
+            textRect.offsetMin = new Vector2(ChatRimSide, ChatRimBottom);
+            textRect.offsetMax = new Vector2(-ChatRimSide, -ChatRimTop);
+            var text = textRect.gameObject.AddComponent<TextMeshProUGUI>();
+            text.font = UiBuildKit.LoadFontRole("SansBold");
+            text.fontSize = ChatFontSize;
+            text.color = ChatTextColor;
+            text.alignment = TextAlignmentOptions.Center;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            text.overflowMode = TextOverflowModes.Overflow;
+            text.raycastTarget = false;
+            text.text = "Well played!";
+            float width = Mathf.Ceil(text.GetPreferredValues(text.text).x) + ChatTextPadding + 2f * ChatRimSide;
+            box.sizeDelta = new Vector2(Mathf.Max(ChatMinWidth, width), box.sizeDelta.y);
+
+            boxObject.SetActive(false);
+            return (box, text);
         }
 
         /// <summary>
         /// The face-down fan of an opponent, as the bidding mockup draws it (ADR 026): beside a side
         /// seat's profile, on the table side, a gentle vertical arc of cards pointing away from the
-        /// profile; below the top seat's profile, behind its name and status pill, a shallow arc of
-        /// cards hanging down, half to each side. Fans lie under the avatar, the name and the pill.
+        /// profile; below the top seat's avatar (its name and status pill are above it), a shallow arc
+        /// of cards hanging down, half to each side. Fans lie under the avatar, the name and the pill.
         /// </summary>
         private static OpponentHandView BuildFan(ScreenBuildContext ctx, int seat, CardViewPool pool, Vector2 avatarCentre)
         {
@@ -578,31 +841,6 @@ namespace Callbreak.Editor.Screens
         }
 
         /// <summary>
-        /// The player's own quick phrase (ADR 024): the seat bubble's white pill just above the
-        /// emote button, in the button's corner group so it stays by the button on every screen
-        /// shape. Its right edge is the button's, so a longer phrase grows to the left.
-        /// </summary>
-        private static void BuildOwnPhrase(ScreenBuildContext ctx, TMP_Text style)
-        {
-            RectTransform button = ctx.Nodes["EmoteButton"];
-            var bubbleObject = new GameObject("OwnPhrase", typeof(RectTransform));
-            var bubble = (RectTransform)bubbleObject.transform;
-            bubble.SetParent(button.parent, false);
-            bubble.SetSiblingIndex(button.GetSiblingIndex() + 1);
-            bubble.anchorMin = button.anchorMin;
-            bubble.anchorMax = button.anchorMax;
-            bubble.pivot = new Vector2(1f, 0f);
-            bubble.sizeDelta = UiBuildKit.FromMock(90f, BubbleHeight);
-            Vector2 corner = (Vector2)button.localPosition + button.rect.max;
-            bubble.localPosition = corner + new Vector2(0f, OwnPhraseGap * UiBuildKit.ScaleY);
-            Sliced(bubble, LoadTableSprite("UI_NamePlate"));
-            TextMeshProUGUI text = Label("Text", bubble, style, "Namaste!");
-            bubble.gameObject.SetActive(false);
-            ctx.Bound["_phraseBubble"] = bubble;
-            ctx.Bound["_phraseText"] = text;
-        }
-
-        /// <summary>
         /// The wait before the next quick phrase (ADR 024): the button's own disc, tinted, over the
         /// button and its icon, filled round from twelve o'clock. As the wait runs out it sweeps
         /// away clockwise. Hidden while a phrase may be sent; it takes no touches.
@@ -650,7 +888,7 @@ namespace Callbreak.Editor.Screens
             face.raycastTarget = true;
 
             // 76 px high: it answers to 88. All of the extra is above it, where only the top seat's
-            // pill is; right under it lies the trick area, which answers to taps itself.
+            // fan is; right under it lies the trick area, which answers to taps itself.
             MinimumTouch(face, 0f, MinTouch, 1f);
 
             var button = rect.gameObject.AddComponent<Button>();

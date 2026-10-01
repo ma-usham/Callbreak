@@ -10,8 +10,9 @@ namespace Callbreak.Presentation.Table
     /// <summary>
     /// One seat at the table (GDD §11 screens 07 and 08): avatar in its ring, name plate, status
     /// pill, and while it is the seat's turn the gold ring with the timer arc and the seconds disc.
-    /// Opponents also have the fan of face-down cards behind the avatar. A small bubble over the
-    /// seat shows a call as it is placed and the quick phrases (emotes). A small chip at the
+    /// Opponents also have the fan of face-down cards behind the avatar. A small bubble shows a call
+    /// as it is placed; the quick phrases (emotes) show in a speech box just above the avatar
+    /// (ADR 027). A small chip at the
     /// avatar says how the player is connected ("Away", "Reconnecting…" with a spinner, "Bot
     /// playing"); a bot that fills a seat has none (ADR 025). The mockups do not draw it, so it is
     /// made of the kit's tag pill and hidden until there is something to say.
@@ -34,6 +35,12 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private RectTransform _chip;
         [SerializeField] private TMP_Text _chipText;
         [SerializeField] private GameObject _chipSpinner;
+
+        // The speech box for quick phrases, just above the avatar (ADR 027): it grows from its tail.
+        [SerializeField] private RectTransform _chat;
+        [SerializeField] private TMP_Text _chatText;
+        [SerializeField] private float _chatPadding = 56f;
+        [SerializeField] private float _chatMinWidth = 140f;
         [SerializeField] private Color _pillColor = Color.white;
         [SerializeField] private Color _pillMetColor = new Color(1f, 0.88f, 0.55f, 1f);
         [SerializeField] private Color _ringColor = new Color(0.976f, 0.647f, 0.11f, 1f);
@@ -46,6 +53,7 @@ namespace Callbreak.Presentation.Table
         private MotionHandle _pulseMotion;
         private MotionHandle _chipMotion;
         private SpeechBubble _speech;
+        private SpeechBubble _chatSpeech;
         private int _shownSeconds = int.MinValue;
         private bool _met;
         private bool _muted;
@@ -64,6 +72,37 @@ namespace Callbreak.Presentation.Table
         public bool ReduceMotion { get; set; }
 
         private SpeechBubble Speech => _speech ??= new SpeechBubble(_bubble, _bubbleText, _bubblePadding, _bubbleMinWidth);
+
+        private SpeechBubble Chat => _chatSpeech ??= new SpeechBubble(_chat, _chatText, _chatPadding, _chatMinWidth);
+
+        /// <summary>The quick phrase in the speech box while it shows; otherwise null.</summary>
+        public string ChatText => _chat != null && _chat.gameObject.activeSelf ? _chatText.text : null;
+
+        /// <summary>
+        /// A quick phrase, in the speech box just above the avatar (ADR 027). A Table prefab built
+        /// before the box existed shows it in the call bubble instead.
+        /// </summary>
+        public void ShowChat(string text, float seconds, bool reduceMotion)
+        {
+            if (_chat == null)
+            {
+                ShowBubble(text, seconds, reduceMotion);
+                return;
+            }
+
+            Chat.Show(text, seconds, reduceMotion);
+        }
+
+        public void HideChat()
+        {
+            if (_chat == null)
+            {
+                HideBubble();
+                return;
+            }
+
+            Chat.Hide();
+        }
 
         public void SetName(string playerName)
         {
@@ -206,7 +245,7 @@ namespace Callbreak.Presentation.Table
             _timerRing.rectTransform.localScale = Vector3.one;
         }
 
-        /// <summary>Pops a bubble over the seat: the call just placed, or another player's quick phrase.</summary>
+        /// <summary>Pops the small bubble by the seat: the call just placed.</summary>
         public void ShowBubble(string text, float seconds, bool reduceMotion) => Speech.Show(text, seconds, reduceMotion);
 
         public void HideBubble() => Speech.Hide();
@@ -261,6 +300,7 @@ namespace Callbreak.Presentation.Table
             }
 
             _speech?.Stop();
+            _chatSpeech?.Stop();
             Cancel(ref _pulseMotion);
             UiMotion.Finish(ref _chipMotion);
 

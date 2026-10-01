@@ -1153,15 +1153,9 @@ namespace Callbreak.Presentation.Table
                 return;
             }
 
-            // The player's own phrase shows by the emote button it was sent with (ADR 024).
+            // Every phrase, the player's own too, shows in the speech box just above its speaker's avatar (ADR 027).
             string phrase = _localization.Get(EmoteKeys[emoteId]);
-            if (seat == Local)
-            {
-                _view.ShowOwnPhrase(phrase, EmoteHoldSeconds, ReduceMotion);
-                return;
-            }
-
-            _view.Seat(_renderer.RelativeSeat(seat)).ShowBubble(phrase, EmoteHoldSeconds, ReduceMotion);
+            _view.Seat(_renderer.RelativeSeat(seat)).ShowChat(phrase, EmoteHoldSeconds, ReduceMotion);
         }
 
         /// <summary>Tapping an opponent mutes or unmutes their quick phrases for the match (GDD §8).</summary>
@@ -1180,6 +1174,7 @@ namespace Callbreak.Presentation.Table
             if (muted)
             {
                 seatView.HideBubble();
+                seatView.HideChat();
             }
         }
 
