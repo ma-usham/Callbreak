@@ -84,13 +84,17 @@ namespace Callbreak.Application.Sessions
                 _seed = new CryptoRandom().NextSeed();
                 _rng = new Pcg32Random(_seed);
                 SeatProfile[] seats = SeatRoster.Offline(
-                    profile.DisplayName, profile.AvatarId, cosmetics.SelectedDeckId, cosmetics.DeckIds,
+                    profile.DisplayName, profile.AvatarId, cosmetics.SelectedDeckId,
                     new Pcg32Random(_seed, 7), settings.CompletedMatches == 0);
                 _engine = new MatchEngine(rules, _rng, new MatchSetup("offline-" + _seed.ToString("x16"), seats));
             }
 
             var botSeats = new Dictionary<Seat, IBotStrategy>();
             IReadOnlyList<SeatProfile> profiles = _engine.ViewFor(Seat.South).Seats;
+
+            // ADR 020: the whole table is in the deck the player had when the match was dealt, also
+            // a match saved while bots still drew backs of their own.
+            string deck = profiles[(int)LocalSeat].DeckThemeId;
             for (int s = 0; s < 4; s++)
             {
                 SeatProfile p = profiles[s];
@@ -100,7 +104,7 @@ namespace Callbreak.Application.Sessions
                 }
 
                 int.TryParse(p.AvatarId, out int avatar);
-                _seats[s] = new SessionSeat((Seat)s, p.Name, avatar, p.DeckThemeId, p.IsBot, (Seat)s == LocalSeat, SeatConnection.Connected);
+                _seats[s] = new SessionSeat((Seat)s, p.Name, avatar, deck, p.IsBot, (Seat)s == LocalSeat, SeatConnection.Connected);
             }
 
             _bots = new BotDriver(botSeats, botFactory.Create(BotLevel.Normal), new Pcg32Random(_seed, 11), new Pcg32Random(_seed, 13), timing, botWorker);

@@ -7,8 +7,8 @@ namespace Callbreak.Application.Sessions
 {
     /// <summary>
     /// Who sits where for a match with computer players (GDD §9 "names come from a Nepali pool"):
-    /// the local player at South, bots on the other seats with distinct Nepali names, avatars and
-    /// a random deck back each (GDD §13 "bots use a random back").
+    /// the local player at South, bots on the other seats with distinct Nepali names and avatars.
+    /// Bots have no deck of their own: a table is in one deck (ADR 020).
     /// </summary>
     public static class SeatRoster
     {
@@ -25,10 +25,11 @@ namespace Callbreak.Application.Sessions
         public const int AvatarCount = ProfileService.AvatarPresetCount;
 
         /// <summary>
-        /// Seats for an offline match: the player at South; three bots. The first ever match uses the
-        /// names from the mockups; later ones draw from the pool.
+        /// Seats for an offline match: the player at South; three bots; all four in the player's
+        /// deck, every face and every back (ADR 020). The first ever match uses the names from the
+        /// mockups; later ones draw from the pool.
         /// </summary>
-        public static SeatProfile[] Offline(string playerName, int playerAvatar, string playerDeck, IReadOnlyList<string> deckIds, IRandom rng, bool firstMatch)
+        public static SeatProfile[] Offline(string playerName, int playerAvatar, string playerDeck, IRandom rng, bool firstMatch)
         {
             var seats = new SeatProfile[4];
             seats[(int)Seat.South] = new SeatProfile(playerName, playerAvatar.ToString(), playerDeck, false);
@@ -38,8 +39,7 @@ namespace Callbreak.Application.Sessions
             {
                 string name = firstMatch && !used.Contains(Mockup[i]) ? Mockup[i] : DrawName(rng, used);
                 used.Add(name);
-                string deck = deckIds.Count > 0 ? deckIds[rng.NextInt(deckIds.Count)] : playerDeck;
-                seats[(int)botSeats[i]] = new SeatProfile(name, rng.NextInt(AvatarCount).ToString(), deck, true);
+                seats[(int)botSeats[i]] = new SeatProfile(name, rng.NextInt(AvatarCount).ToString(), playerDeck, true);
             }
 
             return seats;

@@ -17,3 +17,4 @@ of them; the GDD is updated once a decision is confirmed.
 | [017](0017-system-fonts-behind-the-game-fonts.md) | The device's fonts stand behind the game's Latin-only fonts; suit symbols are sprites | Proposed |
 | [018](0018-first-launch-and-rejoin-flows.md) | What the menu starts by itself and in which order: invite link, rejoin, resume, first-run guide | Proposed |
 | [019](0019-menu-states-the-mockups-do-not-show.md) | Menu states no mockup draws: the Resume banner, the fan's sway, failures with Retry, dialogs that can be closed, UI sound cues | Proposed |
+| [020](0020-one-deck-per-table.md) | One deck per table, every face and back: offline the player's deck, a private room the host's, Quick Match one drawn from the catalog (replaces GDD §13's deck per seat) | Accepted (owner) |

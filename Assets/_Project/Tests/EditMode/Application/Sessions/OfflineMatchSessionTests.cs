@@ -104,6 +104,54 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
         }
 
         [Test]
+        public void Start_NewMatch_EverySeatBotsIncludedIsInThePlayersDeck()
+        {
+            // ADR 020, one deck per table: offline it is the deck the player selected.
+            _cosmetics.SelectDeck(CosmeticsService.HimalayanIvory);
+
+            // Every match draws its bots from a seed of its own: several, so no draw passes by luck.
+            for (int match = 0; match < 8; match++)
+            {
+                OfflineMatchSession session = NewSession(BotTiming.Instant);
+                session.Start();
+
+                for (int s = 0; s < 4; s++)
+                {
+                    Assert.AreEqual(CosmeticsService.HimalayanIvory, session.Seats[s].DeckThemeId, $"match {match}: what the table draws for {(Seat)s}");
+                    Assert.AreEqual(CosmeticsService.HimalayanIvory, session.View.Seats[s].DeckThemeId, $"match {match}: the profile {(Seat)s} is saved with");
+                }
+            }
+        }
+
+        [Test]
+        public void Resume_SaveWhoseBotsHaveDecksOfTheirOwn_GoesOnInTheDeckTheMatchWasDealtIn()
+        {
+            // A save from before ADR 020, when bots drew a back of their own; and the player has
+            // chosen another deck since ("Choose a deck for your next match").
+            _cosmetics.SelectDeck(CosmeticsService.KathmanduGold);
+            OfflineMatchSession first = NewSession(BotTiming.Instant);
+            first.Start();
+            double now = 0;
+            PlayUntil(first, ref now, view => view.CompletedTricks.Count >= 1);
+            first.LeaveAsync(CancellationToken.None).Wait();
+            OfflineMatchSave save = _saves.Peek<OfflineMatchSave>(OfflineMatchStore.Key);
+            save.match.seats[(int)Seat.East].deckThemeId = CosmeticsService.ClassicCrimson;
+            save.match.seats[(int)Seat.North].deckThemeId = CosmeticsService.HimalayanIvory;
+            save.match.seats[(int)Seat.West].deckThemeId = CosmeticsService.ClassicCrimson;
+            _saves.Put(OfflineMatchStore.Key, save);
+            _cosmetics.SelectDeck(CosmeticsService.HimalayanIvory);
+
+            OfflineMatchSession second = NewSession(BotTiming.Instant, resume: true);
+            second.Start();
+
+            Assert.IsTrue(second.IsResumed);
+            for (int s = 0; s < 4; s++)
+            {
+                Assert.AreEqual(CosmeticsService.KathmanduGold, second.Seats[s].DeckThemeId, "what the table draws for " + (Seat)s);
+            }
+        }
+
+        [Test]
         public void PlayToEnd_WholeMatch_OnlyVisibleEventsInOrderAndStatsOnce()
         {
             OfflineMatchSession session = NewSession(BotTiming.Instant);

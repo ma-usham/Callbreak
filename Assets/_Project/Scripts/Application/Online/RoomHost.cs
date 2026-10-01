@@ -31,6 +31,7 @@ namespace Callbreak.Application.Online
         private readonly NameFilter _names;
         private readonly IRandom _rng;
         private readonly IReadOnlyList<string> _deckIds;
+        private readonly string _tableDeck;
         private readonly Func<ulong> _seedSource;
         private readonly BotTiming _timing;
         private readonly BotLevel _fillLevel;
@@ -59,6 +60,11 @@ namespace Callbreak.Application.Online
         /// The table's turn clocks and round-results countdown; null runs the room as a private
         /// room, on the turn time of <paramref name="settings"/> (GDD §6).
         /// </param>
+        /// <param name="tableDeck">
+        /// The one deck of this room's tables, every face and every back of every seat (ADR 020):
+        /// Quick Match draws it from the catalog. Null plays in the host player's own deck, as a
+        /// private room does.
+        /// </param>
         public RoomHost(
             string code,
             RoomSettings settings,
@@ -70,7 +76,8 @@ namespace Callbreak.Application.Online
             Func<ulong> seedSource,
             BotTiming timing = null,
             BotLevel fillLevel = BotLevel.Normal,
-            TableClocks clocks = null)
+            TableClocks clocks = null,
+            string tableDeck = null)
         {
             _code = code ?? string.Empty;
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -79,6 +86,7 @@ namespace Callbreak.Application.Online
             _names = names ?? throw new ArgumentNullException(nameof(names));
             _rng = rng ?? throw new ArgumentNullException(nameof(rng));
             _deckIds = deckIds ?? new string[0];
+            _tableDeck = tableDeck != null ? CleanDeck(tableDeck) : null;
             _seedSource = seedSource ?? throw new ArgumentNullException(nameof(seedSource));
             _timing = timing;
             _fillLevel = fillLevel;
@@ -159,7 +167,10 @@ namespace Callbreak.Application.Online
             return people == Seats || fillWithBots;
         }
 
-        /// <summary>Starts the match: every member is told to load the table, and the deal follows once they have.</summary>
+        /// <summary>
+        /// Starts the match: every member is told to load the table, and the deal follows once they
+        /// have. Every seat, the bots' included, is in the table's one deck (ADR 020).
+        /// </summary>
         public bool StartMatch(bool fillWithBots)
         {
             if (!CanStart(fillWithBots))
@@ -178,20 +189,22 @@ namespace Callbreak.Application.Online
                 }
             }
 
+            // The deck Quick Match drew, or else the host's own (seat 0 is always taken here). A
+            // guest's faces are in it too, whatever deck that guest chose.
+            string deck = _tableDeck ?? _members[0].DeckThemeId;
             for (int i = 0; i < Seats; i++)
             {
                 Member m = _members[i];
                 if (m != null)
                 {
                     humans[i] = true;
-                    profiles[i] = new SeatProfile(m.Name, m.AvatarId.ToString(), m.DeckThemeId, false);
+                    profiles[i] = new SeatProfile(m.Name, m.AvatarId.ToString(), deck, false);
                     m.TableReady = false;
                     continue;
                 }
 
                 string name = SeatRoster.DrawName(_rng, used);
                 used.Add(name);
-                string deck = _deckIds.Count > 0 ? _deckIds[_rng.NextInt(_deckIds.Count)] : string.Empty;
                 profiles[i] = new SeatProfile(name, _rng.NextInt(SeatRoster.AvatarCount).ToString(), deck, true);
             }
 

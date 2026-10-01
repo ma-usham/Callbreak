@@ -1134,6 +1134,9 @@ namespace Callbreak.Editor
 
             private CardView HandCard(Card card) => _table.Hand.ViewOf(card);
 
+            /// <summary>The face or back a card view shows.</summary>
+            private static Sprite SpriteOf(CardView card) => Field<Image>(card, "_face").sprite;
+
             // -------------------------------------------------------------- the player
 
             private void Act()
@@ -2343,11 +2346,17 @@ namespace Callbreak.Editor
             {
                 TableState state = State;
                 HandView hand = _table.Hand;
+
+                // ADR 020: every card at the table is in one deck; offline, the one the player selected.
+                string deck = _cosmetics.SelectedDeckId;
+                Sprite back = _cards.Back(deck);
                 Equal(state.Hand.Count, hand.Count, "the hand shows exactly the cards held (after " + KindOf(after) + ")");
                 foreach (Card card in state.Hand)
                 {
                     CardView view = HandCard(card);
                     Check(view != null && view.IsFaceUp, "every card held has a face-up view in the hand");
+                    bool inDeck = view != null && SpriteOf(view) == _cards.Face(deck, card);
+                    Check(inDeck, "every face on the table is in the player's deck (ADR 020)", inDeck ? null : card + " in the hand");
                 }
 
                 int onTable = hand.Count;
@@ -2356,9 +2365,11 @@ namespace Callbreak.Editor
                     Seat seat = (Seat)(((int)Local + rel) % SeatExtensions.Count);
                     OpponentHandView fan = _table.Seat(rel).Fan;
                     Equal(state.HandCountOf(seat), fan.Count, "an opponent's fan shows the cards they have left");
-                    foreach (CardView back in Field<List<CardView>>(fan, "_cards"))
+                    foreach (CardView card in Field<List<CardView>>(fan, "_cards"))
                     {
-                        Check(!back.IsFaceUp, "an opponent's fan holds backs only");
+                        Check(!card.IsFaceUp, "an opponent's fan holds backs only");
+                        bool inDeck = SpriteOf(card) == back;
+                        Check(inDeck, "every back on the table is in the player's deck (ADR 020)", inDeck ? null : seat + "'s fan, whose seat is in " + _active.Seats[(int)seat].DeckThemeId);
                     }
 
                     onTable += fan.Count;
@@ -2370,6 +2381,8 @@ namespace Callbreak.Editor
                 {
                     CardView lying = _table.Trick.CardAt(trick.SeatAt(i).RelativeTo(Local));
                     Check(lying != null && lying.IsFaceUp && lying.Card == trick[i], "each trick card lies in the slot of the seat that played it");
+                    bool inDeck = lying != null && SpriteOf(lying) == _cards.Face(deck, trick[i]);
+                    Check(inDeck, "every face on the table is in the player's deck (ADR 020)", inDeck ? null : trick[i] + " in the trick");
                 }
 
                 onTable += _table.Trick.Count + (_table.Trick.IsPeeking ? 4 : 0);

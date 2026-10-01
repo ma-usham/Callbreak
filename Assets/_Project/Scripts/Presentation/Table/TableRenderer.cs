@@ -39,7 +39,10 @@ namespace Callbreak.Presentation.Table
         /// <summary>The mockups do not draw the GDD's "Trick 6 / 13" line, so it stays off unless this is set.</summary>
         public bool ShowTrickCounter { get; set; }
 
-        /// <summary>The deck whose faces this device shows: the local player's own (GDD §13).</summary>
+        /// <summary>
+        /// The deck whose faces this device shows: the local seat's, which is the table's one deck
+        /// (ADR 020). Every seat carries that deck, so the fans' backs are in it too.
+        /// </summary>
         public string LocalDeck => _session.Seats[(int)_session.LocalSeat].DeckThemeId;
 
         public int RelativeSeat(Seat seat) => seat.RelativeTo(_session.LocalSeat);
