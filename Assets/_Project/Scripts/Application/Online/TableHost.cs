@@ -37,6 +37,7 @@ namespace Callbreak.Application.Online
         private readonly MatchEngine _engine;
         private readonly RoundSeededRandom _shuffle;
         private readonly BotDriver _bots;
+        private readonly BotChatter _chatter;
         private readonly BotTiming _timing;
         private readonly TableClocks _clocks;
         private readonly SeatState[] _seats = new SeatState[SeatExtensions.Count];
@@ -86,6 +87,13 @@ namespace Callbreak.Application.Online
             // The bots' choices and think times are seen by everyone, so their generators owe
             // nothing to any shuffle: timing a bot tells nobody anything about a deal.
             _bots = new BotDriver(botSeats, botFactory.Create(BotLevel.Normal), new Pcg32Random(setup.Seeds()), new Pcg32Random(setup.Seeds()), _timing);
+
+            // What the bots say tells nobody anything either, and its generator comes from the match
+            // id, so the table draws its seeds as it did before the bots spoke (ADR 026).
+            if (setup.BotsChat)
+            {
+                _chatter = new BotChatter(seat => !_seats[(int)seat].Human, new Pcg32Random(StableHash(setup.MatchId)), setup.Rules.Rounds);
+            }
         }
 
         /// <summary>A payload for the member in a seat. The room routes it to that member's connection.</summary>
@@ -153,6 +161,11 @@ namespace Callbreak.Application.Online
                 }
 
                 Flush(now);
+            }
+
+            if (_chatter != null && _chatter.TryTake(now, out Seat speaker, out int phrase))
+            {
+                ShowEmote(speaker, phrase, now);
             }
 
             if (_summaryOpen && _engine.Phase == Phase.RoundSummary && now >= _summaryDeadline)
@@ -243,7 +256,11 @@ namespace Callbreak.Application.Online
                     return;
 
                 case ClientMessageKind.Emote:
-                    ShowEmote(seat, emote, now);
+                    if (ShowEmote(seat, emote, now))
+                    {
+                        _chatter?.Heard(seat, emote, now);
+                    }
+
                     break;
 
                 case ClientMessageKind.TableReady:
@@ -409,14 +426,15 @@ namespace Callbreak.Application.Online
             Flush(now);
         }
 
-        private void ShowEmote(Seat seat, int emoteId, double now)
+        /// <summary>Sends a seat's quick phrase to everyone at the table, within the limits (GDD §8); false when it was held back.</summary>
+        private bool ShowEmote(Seat seat, int emoteId, double now)
         {
             SeatState state = _seats[(int)seat];
             if (emoteId >= EmoteCount
                 || now - state.LastEmoteAt < Protocol.EmoteIntervalSeconds
                 || state.EmotesThisRound >= Protocol.EmotesPerRound)
             {
-                return;
+                return false;
             }
 
             state.LastEmoteAt = now;
@@ -429,6 +447,21 @@ namespace Callbreak.Application.Online
                     Outbound?.Invoke((Seat)s, payload);
                 }
             }
+
+            return true;
+        }
+
+        /// <summary>FNV-1a over the text: the same match id always gives the same seed.</summary>
+        private static ulong StableHash(string text)
+        {
+            ulong hash = 14695981039346656037UL;
+            foreach (char c in text)
+            {
+                hash ^= c;
+                hash *= 1099511628211UL;
+            }
+
+            return hash;
         }
 
         /// <summary>
@@ -447,6 +480,7 @@ namespace Callbreak.Application.Online
                 {
                     MatchEvent e = _outbox[examined];
                     _bots.Observe(e, now);
+                    _chatter?.Observe(e, now);
                     switch (e)
                     {
                         case TrickCompleted _:

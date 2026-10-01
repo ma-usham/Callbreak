@@ -29,7 +29,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
         /// <param name="clocks">The table's clocks; null runs it as a private room on <paramref name="turnSeconds"/>.</param>
         /// <param name="seeds">The host's seed source; null always answers 42.</param>
-        public RoomFixture(int turnSeconds = 0, BotTiming timing = null, TableClocks clocks = null, Func<ulong> seeds = null)
+        /// <param name="botsChat">The bots say quick phrases (ADR 026); off, so the tests that count messages see only the people's.</param>
+        public RoomFixture(int turnSeconds = 0, BotTiming timing = null, TableClocks clocks = null, Func<ulong> seeds = null, bool botsChat = false)
         {
             Network = new InMemoryNetwork();
             HostLink = Network.HostAsync(Code, CancellationToken.None).Result.Link;
@@ -43,7 +44,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 new[] { "classic-crimson", "himalayan-ivory", "kathmandu-gold" },
                 seeds ?? (() => 42UL),
                 timing ?? BotTiming.Instant,
-                clocks: clocks);
+                clocks: clocks,
+                botsChat: botsChat);
             HostMember = Add(Host.Local, "player-host", "Hari", Host);
             Assert.AreEqual(RoomError.None, HostMember.Client.JoinAsync(CancellationToken.None).Result);
         }

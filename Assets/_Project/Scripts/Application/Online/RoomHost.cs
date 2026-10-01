@@ -35,6 +35,7 @@ namespace Callbreak.Application.Online
         private readonly BotTiming _timing;
         private readonly BotLevel _fillLevel;
         private readonly TableClocks _clocks;
+        private readonly bool _botsChat;
         private readonly LocalLink _local;
         private readonly Member[] _members = new Member[Seats];
         private readonly Dictionary<PeerId, int> _seatOfPeer = new Dictionary<PeerId, int>();
@@ -59,6 +60,7 @@ namespace Callbreak.Application.Online
         /// The table's turn clocks and round-results countdown; null runs the room as a private
         /// room, on the turn time of <paramref name="settings"/> (GDD §6).
         /// </param>
+        /// <param name="botsChat">The bots that fill seats say a quick phrase now and then (ADR 026).</param>
         public RoomHost(
             string code,
             RoomSettings settings,
@@ -70,8 +72,10 @@ namespace Callbreak.Application.Online
             Func<ulong> seedSource,
             BotTiming timing = null,
             BotLevel fillLevel = BotLevel.Normal,
-            TableClocks clocks = null)
+            TableClocks clocks = null,
+            bool botsChat = true)
         {
+            _botsChat = botsChat;
             _code = code ?? string.Empty;
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _remote = remote;
@@ -205,7 +209,7 @@ namespace Callbreak.Application.Online
             // its own, and the table draws a fresh seed for each round as it deals it.
             string matchId = "room-" + _code + "-" + _seedSource().ToString("x16");
             TableClocks clocks = _clocks ?? TableClocks.PrivateRoom(_settings.TurnSeconds);
-            var setup = new TableHostSetup(RuleSet.NepaliStandard, matchId, profiles, humans, clocks, _seedSource, _fillLevel, _timing);
+            var setup = new TableHostSetup(RuleSet.NepaliStandard, matchId, profiles, humans, clocks, _seedSource, _fillLevel, _timing, _botsChat);
             if (_table != null)
             {
                 _table.Outbound -= OnTableOutbound;

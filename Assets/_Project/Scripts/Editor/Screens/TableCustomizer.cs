@@ -53,8 +53,24 @@ namespace Callbreak.Editor.Screens
         private static readonly float[] TrickTurns = { 0f, 0f, 0f, 0f };
         private const float TrickCardWidth = 128.4f;            // bottom edge; the top edge is 10% narrower
 
-        // ---- Opponent fans: a card is 42 px wide on the mockup.
-        private const float FanCardWidth = 42f;
+        // ---- Opponent fans, as the bidding mockup draws them since 2 Oct 2026 (ADR 026; measured on
+        // 07-bidding.png). Its card backs are 46 px long; at a real card's shape that is 29 wide.
+        private const float FanCardWidth = 29f;
+
+        // A side seat's fan turns about a point behind the profile (from the avatar's centre: away
+        // from the table, and down): 13 cards 5.35° apart, from 126° (the bottom card, in front)
+        // up to 62°, measured clockwise from straight up on the left seat.
+        private static readonly Vector2 SideFanPivot = new Vector2(63.8f, 36.2f);
+        private const float SideFanRadius = 158f;
+        private const float SideFanBottomAngle = 125.9f;
+        private const float SideFanStep = 5.35f;
+
+        // The top seat's hangs below its profile, behind the name and the status pill: it turns about
+        // a point 164 px above the avatar's centre, 13 cards 4.77° apart around straight down, the
+        // middle ones in front.
+        private const float TopFanPivotAbove = 163.7f;
+        private const float TopFanRadius = 242f;
+        private const float TopFanStep = 4.77f;
 
         // ---- Derived pieces (not on the mockup): where they sit.
         private static readonly Vector2 PromptCentre = new Vector2(869.3f, 662f);
@@ -370,8 +386,10 @@ namespace Callbreak.Editor.Screens
         }
 
         /// <summary>
-        /// The face-down fan behind an opponent's avatar, as mockup 08 draws it: to the table side of
-        /// the side seats, and to both sides of the top seat.
+        /// The face-down fan of an opponent, as the bidding mockup draws it (ADR 026): beside a side
+        /// seat's profile, on the table side, a gentle vertical arc of cards pointing away from the
+        /// profile; below the top seat's profile, behind its name and status pill, a shallow arc of
+        /// cards hanging down, half to each side. Fans lie under the avatar, the name and the pill.
         /// </summary>
         private static OpponentHandView BuildFan(ScreenBuildContext ctx, int seat, CardViewPool pool, Vector2 avatarCentre)
         {
@@ -380,13 +398,17 @@ namespace Callbreak.Editor.Screens
             var sides = new List<(Vector2 pivot, float radius, float start, float step, float spread)>();
             if (seat == 2)
             {
-                sides.Add((avatarCentre + new Vector2(-27f, 171f), 180f, -3f, -7f, 27f));
-                sides.Add((avatarCentre + new Vector2(27f, 171f), 180f, 3f, 7f, 27f));
+                // Cards alternate between the halves from the middle out, so the middle ones lie on top.
+                Vector2 pivot = avatarCentre + new Vector2(0f, -TopFanPivotAbove);
+                sides.Add((pivot, TopFanRadius, 180f + (TopFanStep / 2f), TopFanStep, 6f * TopFanStep));
+                sides.Add((pivot, TopFanRadius, 180f - (TopFanStep / 2f), -TopFanStep, 6f * TopFanStep));
             }
             else
             {
+                // Seat 3 is on the left (its cards point right), seat 1 its mirror image.
                 float side = seat == 3 ? 1f : -1f;
-                sides.Add((avatarCentre + new Vector2(36.5f * side, 196f), 214f, 0f, 6f * side, 30f));
+                Vector2 pivot = avatarCentre + new Vector2(-SideFanPivot.x * side, SideFanPivot.y);
+                sides.Add((pivot, SideFanRadius, SideFanBottomAngle * side, -SideFanStep * side, 12f * SideFanStep));
             }
 
             var fan = area.gameObject.AddComponent<OpponentHandView>();

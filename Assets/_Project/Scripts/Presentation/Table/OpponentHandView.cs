@@ -5,10 +5,10 @@ using UnityEngine;
 namespace Callbreak.Presentation.Table
 {
     /// <summary>
-    /// One side of an opponent's fan: backs turn about a point below the avatar. The top seat has
-    /// two of these, mirrored, so its cards spread to both sides of the avatar (mockup 08).
-    /// Lengths are canvas units from the centre of the fan's rectangle; angles are degrees,
-    /// clockwise from straight up.
+    /// One side of an opponent's fan: backs turn about a pivot, each pointing away from it. A side
+    /// seat has one, beside its profile; the top seat has two, from the middle out, so its middle
+    /// cards lie on top (ADR 026). Lengths are canvas units from the centre of the fan's
+    /// rectangle; angles are degrees, clockwise from straight up.
     /// </summary>
     [Serializable]
     public sealed class FanShape

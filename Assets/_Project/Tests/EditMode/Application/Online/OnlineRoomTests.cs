@@ -443,6 +443,26 @@ namespace Callbreak.Tests.EditMode.Application.Online
         }
 
         [Test]
+        public void BotsThatFillTheTable_SayAQuickPhraseNowAndThen_FromTheirOwnSeats()
+        {
+            // ADR 026: over a whole match the bots speak a few times, never for a person, and everyone hears the same.
+            var room = new RoomFixture(botsChat: true);
+            RoomFixture.Member guest = room.Join("p1", "Asha");
+            room.StartMatch();
+            room.PlayToEnd();
+
+            var people = new HashSet<int> { (int)room.HostMember.Session.LocalSeat, (int)guest.Session.LocalSeat };
+            Assert.Greater(guest.Emotes.Count, 0, "the bots said something in five rounds");
+            foreach (int emote in guest.Emotes)
+            {
+                Assert.IsFalse(people.Contains(emote / 100), "only the bots' seats speak: " + emote);
+                Assert.Less(emote % 100, TableHost.EmoteCount);
+            }
+
+            CollectionAssert.AreEqual(room.HostMember.Emotes, guest.Emotes, "everyone hears the same phrases");
+        }
+
+        [Test]
         public void Flood_FromOneConnection_IsDroppedWithoutHurtingTheTable()
         {
             var room = new RoomFixture();

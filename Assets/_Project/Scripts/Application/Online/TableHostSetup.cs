@@ -50,6 +50,7 @@ namespace Callbreak.Application.Online
         /// generators, each drawn when it is needed. A CSPRNG in production (GDD §22).
         /// </param>
         /// <param name="timing">How the bots pace themselves; null gives the hosted defaults.</param>
+        /// <param name="botsChat">The bots say a quick phrase now and then (ADR 026); off for tests that count messages.</param>
         public TableHostSetup(
             RuleSet rules,
             string matchId,
@@ -58,8 +59,10 @@ namespace Callbreak.Application.Online
             TableClocks clocks,
             Func<ulong> seeds,
             BotLevel fillLevel = BotLevel.Normal,
-            BotTiming timing = null)
+            BotTiming timing = null,
+            bool botsChat = false)
         {
+            BotsChat = botsChat;
             Rules = rules ?? throw new ArgumentNullException(nameof(rules));
             MatchId = matchId ?? throw new ArgumentNullException(nameof(matchId));
             if (seats == null || seats.Length != SeatExtensions.Count)
@@ -92,6 +95,9 @@ namespace Callbreak.Application.Online
 
         /// <summary>The table's clocks: one for call turns, one for play turns, one for the round results.</summary>
         public TableClocks Clocks { get; }
+
+        /// <summary>The bots that fill seats say a quick phrase now and then (<see cref="BotChatter"/>).</summary>
+        public bool BotsChat { get; }
 
         /// <summary>The call timer in seconds (GDD §6); 0 runs call turns without a clock.</summary>
         public int CallSeconds => Clocks.CallSeconds;
