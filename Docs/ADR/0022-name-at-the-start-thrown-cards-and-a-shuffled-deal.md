@@ -15,9 +15,11 @@
   in the dialog's style: "What's your name?", a name field with the Profile screen's rules and
   messages, and Continue. It cannot be dismissed, and Android back does nothing while it is up.
   It sits above the menu and its dialogs (canvas order 55, the dialog's is 50), so whatever else
-  the menu starts by itself (an invite link, a resume offer) waits underneath. The rules primer
-  does not open until the name is answered, so it never shows behind the panel; then it opens as
-  before (and on the way to Join Room, for an invite link on a new phone).
+  the menu starts by itself (an invite link, a resume offer) waits underneath. On a first launch
+  the app opens on How to Play's background and logo, without the rules or its buttons, under
+  the panel; once the name is answered the rules appear, and the main menu (with the practice
+  offer) comes after "Got It". The rules never show behind the panel, also on the way to Join
+  Room for an invite link on a new phone.
   Keeping "Player" is an answer too. The profile remembers the answer (`nameChosen`); a profile
   that already holds a name of its own counts as answered, and one whose name had to fall back to
   "Player" is asked again. The nudge after the first match is gone.

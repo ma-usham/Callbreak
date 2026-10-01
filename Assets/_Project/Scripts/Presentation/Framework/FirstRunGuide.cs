@@ -6,6 +6,7 @@ using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
 using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
+using Callbreak.Presentation.Screens;
 using UnityEngine;
 using VContainer.Unity;
 
@@ -15,8 +16,9 @@ namespace Callbreak.Presentation.Framework
     /// GDD §15 "First-time experience" in the menu: the first time the app opens, How to Play
     /// comes up by itself and, once it is closed, an easy practice match is offered. It only ever
     /// acts on the bare main menu, so an invite link or a rejoin goes first. The player's name is
-    /// asked before all of it, by <see cref="NamePromptPresenter"/> (ADR 022): How to Play waits
-    /// until the name is answered, so it never shows behind the name panel.
+    /// asked before all of it, by <see cref="NamePromptPresenter"/> (ADR 022). On that first launch
+    /// the menu opens on How to Play's background and logo, without the rules, under the name
+    /// panel; once the name is answered the rules appear, and the main menu comes after them.
     /// </summary>
     public sealed class FirstRunGuide : IStartable, IDisposable
     {
@@ -30,7 +32,7 @@ namespace Callbreak.Presentation.Framework
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private bool _primerOpen;
-        private bool _primerWaitsForName;
+        private bool _welcome;
         private bool _disposed;
 
         public FirstRunGuide(
@@ -59,16 +61,20 @@ namespace Callbreak.Presentation.Framework
                 return;
             }
 
+            bool opening = _flow.PreviousState == AppState.Boot && _flow.PendingMenuEntry == MenuEntry.MainMenu;
+            if (opening && FirstRun.AsksName(_profile) && _router.Has(ScreenId.HowToPlay))
+            {
+                // The name panel is up: underneath it the app opens on How to Play's background and
+                // logo, and the rules follow the answer.
+                _welcome = true;
+                _router.Get<HowToPlayView>(ScreenId.HowToPlay)?.SetRulesVisible(false);
+                _router.ShowStack(new[] { ScreenId.MainMenu, ScreenId.HowToPlay });
+                _profile.Changed += OnProfileChanged;
+                return;
+            }
+
             if (FirstRun.ShowsPrimer(_settings, _flow.PreviousState, _flow.PendingMenuEntry) && _router.Has(ScreenId.HowToPlay))
             {
-                if (FirstRun.AsksName(_profile))
-                {
-                    // The name panel is up: How to Play follows once it is answered.
-                    _primerWaitsForName = true;
-                    _profile.Changed += OnProfileChanged;
-                    return;
-                }
-
                 OpenPrimer();
             }
         }
@@ -93,18 +99,35 @@ namespace Callbreak.Presentation.Framework
             _router.Push(ScreenId.HowToPlay);
         }
 
+        /// <summary>The name is answered: the rules appear under the name panel as it fades; the main menu comes after them.</summary>
         private void OnProfileChanged()
         {
-            if (!_primerWaitsForName || FirstRun.AsksName(_profile))
+            if (!_welcome || FirstRun.AsksName(_profile))
             {
                 return;
             }
 
-            _primerWaitsForName = false;
+            _welcome = false;
             _profile.Changed -= OnProfileChanged;
-            if (!_disposed && !_settings.HowToPlaySeen && _router.Current == ScreenId.MainMenu && !_dialogs.IsOpen)
+            if (_disposed)
             {
-                OpenPrimer();
+                return;
+            }
+
+            _router.Get<HowToPlayView>(ScreenId.HowToPlay)?.SetRulesVisible(true);
+            if (_router.Current != ScreenId.HowToPlay)
+            {
+                // Something else took the screen meanwhile (an invite link): it leads on from there.
+                return;
+            }
+
+            if (_settings.HowToPlaySeen)
+            {
+                _router.Pop();
+            }
+            else
+            {
+                _primerOpen = true;
             }
         }
 

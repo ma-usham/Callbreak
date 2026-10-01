@@ -1,5 +1,6 @@
 using System.Collections;
 using Callbreak.Application.Profile;
+using Callbreak.Application.Settings;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Screens;
 using NUnit.Framework;
@@ -32,16 +33,19 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator FirstLaunch_AsksTheName_ThenTheMainMenuShowsIt()
+        public IEnumerator FirstLaunch_AsksTheName_ThenTheRules_ThenTheMainMenuShowsIt()
         {
             yield return _game.Boot(freshInstall: true);
             NamePromptView prompt = Prompt();
             yield return GameFixture.Until(() => prompt.IsShowing, "the name question to open");
+            ScreenRouter router = _game.MenuRouter;
+            HowToPlayView rules = router.Get<HowToPlayView>(ScreenId.HowToPlay);
 
             Button next = Continue(prompt);
             Assert.IsFalse(next.interactable, "Continue waits for a name");
             yield return null;
-            Assert.AreEqual(ScreenId.MainMenu, _game.MenuRouter.Current, "How to Play does not open behind the name question");
+            Assert.AreEqual(ScreenId.HowToPlay, router.Current, "the app opens on How to Play's background and logo, not the main menu");
+            Assert.IsFalse(rules.RulesVisible, "the rules do not show behind the name question");
             Assert.IsTrue(_game.Menu.Container.Resolve<NamePromptPresenter>().HandleBack(), "Android back cannot close the question");
             Assert.IsTrue(prompt.IsShowing);
 
@@ -60,7 +64,13 @@ namespace Callbreak.Tests.PlayMode
             Assert.IsTrue(profile.HasChosenName);
             Assert.AreEqual("Asha", MainMenuName(), "the main menu shows the chosen name");
             Assert.IsFalse(_game.Menu.Container.Resolve<NamePromptPresenter>().HandleBack(), "back reaches the menu again");
-            yield return GameFixture.Until(() => _game.MenuRouter.Current == ScreenId.HowToPlay, "How to Play to open once the name is answered");
+            Assert.AreEqual(ScreenId.HowToPlay, router.Current);
+            Assert.IsTrue(rules.RulesVisible, "the rules appear once the name is answered");
+
+            GameFixture.Press(router, "GotItButton");
+            yield return null;
+            Assert.AreEqual(ScreenId.MainMenu, router.Current, "the main menu comes after the rules");
+            Assert.IsTrue(_game.Settings.HowToPlaySeen);
         }
 
         [UnityTest]

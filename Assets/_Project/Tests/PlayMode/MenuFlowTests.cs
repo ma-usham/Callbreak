@@ -7,6 +7,7 @@ using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
 using Callbreak.Infrastructure.Platform;
 using Callbreak.Presentation.Framework;
+using Callbreak.Presentation.Screens;
 using Callbreak.Presentation.Widgets;
 using NUnit.Framework;
 using UnityEngine;
@@ -221,7 +222,9 @@ namespace Callbreak.Tests.PlayMode
             yield return null;
             NamePromptView prompt = UnityEngine.Object.FindFirstObjectByType<NamePromptView>(FindObjectsInactive.Include);
             Assert.IsTrue(prompt != null && prompt.IsShowing, "a new player is asked for a name");
-            Assert.AreNotEqual(ScreenId.HowToPlay, _game.MenuRouter.Current, "the primer does not open behind the name question");
+            ScreenRouter router = _game.MenuRouter;
+            bool rulesShowing = router.Current == ScreenId.HowToPlay && router.Get<HowToPlayView>(ScreenId.HowToPlay).RulesVisible;
+            Assert.IsFalse(rulesShowing, "the rules do not show behind the name question");
             prompt.GetComponentInChildren<TMPro.TMP_InputField>(true).text = name;
             GameFixture.PressIn(prompt, "ContinueButton");
             yield return null;
