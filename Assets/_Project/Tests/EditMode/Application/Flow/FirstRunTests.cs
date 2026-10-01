@@ -6,7 +6,7 @@ using NUnit.Framework;
 
 namespace Callbreak.Tests.EditMode.Application.Flow
 {
-    /// <summary>GDD §15 "First-time experience": the primer at the first launch, the name nudge after the first match.</summary>
+    /// <summary>GDD §15 "First-time experience": the primer at the first launch, and the name asked when the game starts (ADR 022).</summary>
     public sealed class FirstRunTests
     {
         private InMemorySaveStore _saves;
@@ -43,47 +43,36 @@ namespace Callbreak.Tests.EditMode.Application.Flow
             Assert.IsFalse(FirstRun.ShowsPrimer(_settings, previous, entry));
         }
 
-        [Test]
-        public void NudgesName_BackFromTheFirstMatchStillCalledPlayer_IsTrue()
-        {
-            _settings.IncrementCompletedMatches();
+        // The name is asked when the game starts, until the player has chosen one (ADR 022).
 
-            Assert.IsTrue(FirstRun.NudgesName(_settings, _profile, AppState.InMatch, MenuEntry.MainMenu));
+        [Test]
+        public void AsksName_ANewPlayer_IsTrue()
+        {
+            Assert.IsTrue(FirstRun.AsksName(_profile));
         }
 
         [Test]
-        public void NudgesName_NoMatchFinishedYet_IsFalse()
+        public void AsksName_OnceAName_IsChosen_IsFalse()
         {
-            Assert.IsFalse(FirstRun.NudgesName(_settings, _profile, AppState.InMatch, MenuEntry.MainMenu));
+            Assert.AreEqual(NameCheck.Ok, _profile.ChooseName("Asha"));
+
+            Assert.IsFalse(FirstRun.AsksName(_profile));
         }
 
         [Test]
-        public void NudgesName_AlreadyNamed_IsFalse()
+        public void AsksName_KeepingPlayer_IsAnAnswerToo()
         {
-            _settings.IncrementCompletedMatches();
-            Assert.AreEqual(NameCheck.Ok, _profile.TrySetDisplayName("Asha"));
+            Assert.AreEqual(NameCheck.Unchanged, _profile.ChooseName("Player"));
 
-            Assert.IsFalse(FirstRun.NudgesName(_settings, _profile, AppState.InMatch, MenuEntry.MainMenu));
+            Assert.IsFalse(FirstRun.AsksName(_profile));
         }
 
         [Test]
-        public void NudgesName_AlreadyAsked_IsFalse()
+        public void AsksName_NamedOnTheProfileScreen_IsFalse()
         {
-            _settings.IncrementCompletedMatches();
-            _settings.MarkNameNudgeSeen();
+            Assert.AreEqual(NameCheck.Ok, _profile.TrySetDisplayName("Bikash"));
 
-            Assert.IsFalse(FirstRun.NudgesName(_settings, _profile, AppState.InMatch, MenuEntry.MainMenu));
-        }
-
-        [TestCase(AppState.Boot, MenuEntry.MainMenu)]
-        [TestCase(AppState.InMatch, MenuEntry.PrivateLobby)]
-        [TestCase(AppState.InMatch, MenuEntry.Matchmaking)]
-        [TestCase(AppState.InMatch, MenuEntry.OfflineSetup)]
-        public void NudgesName_OnlyOnTheMainMenuAfterAMatch(AppState previous, MenuEntry entry)
-        {
-            _settings.IncrementCompletedMatches();
-
-            Assert.IsFalse(FirstRun.NudgesName(_settings, _profile, previous, entry));
+            Assert.IsFalse(FirstRun.AsksName(_profile));
         }
     }
 }

@@ -17,6 +17,9 @@ namespace Callbreak.Bootstrap
     {
         [SerializeField] private UIScreen[] _screens;
 
+        // The name question when the game starts (ADR 022), on its own canvas above the screens.
+        [SerializeField] private NamePromptView _namePrompt;
+
         protected override void Awake()
         {
             base.Awake();
@@ -54,6 +57,13 @@ namespace Callbreak.Bootstrap
 
             // Last, so every presenter is already listening when the first screen opens.
             builder.RegisterEntryPoint<MenuEntryPoint>();
+
+            // Above everything the menu does by itself: it also hears Android back first.
+            if (_namePrompt != null)
+            {
+                builder.RegisterComponent(_namePrompt);
+                builder.RegisterEntryPoint<NamePromptPresenter>().AsSelf();
+            }
 
             // After the first screen is up; an invite link outranks the rejoin offer, which
             // outranks the offer to resume an offline match.

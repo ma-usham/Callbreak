@@ -3,6 +3,7 @@ using System.Collections;
 using System.IO;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Ports;
+using Callbreak.Application.Profile;
 using Callbreak.Application.Settings;
 using Callbreak.Bootstrap;
 using Callbreak.Infrastructure.Persistence;
@@ -52,7 +53,7 @@ namespace Callbreak.Tests.PlayMode
         /// <summary>
         /// Boots the game and waits until the menu is on screen.
         /// </summary>
-        /// <param name="freshInstall">False (the default) starts as a player who has already seen the rules primer.</param>
+        /// <param name="freshInstall">False (the default) starts as a player who has already seen the rules primer and answered the name question (still called "Player").</param>
         /// <param name="seed">Writes further save files before the game starts.</param>
         /// <param name="extra">Extra registrations for the project scope (they win over the game's own).</param>
         public IEnumerator Boot(bool freshInstall = false, Action<ISaveStore> seed = null, Action<IContainerBuilder> extra = null)
@@ -62,6 +63,7 @@ namespace Callbreak.Tests.PlayMode
             if (!freshInstall)
             {
                 new SettingsService(saves).MarkHowToPlaySeen();
+                new ProfileService(saves, new NameFilter()).ChooseName(ProfileService.DefaultDisplayName);
             }
 
             seed?.Invoke(saves);

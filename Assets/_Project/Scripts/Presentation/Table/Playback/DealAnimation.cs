@@ -63,11 +63,290 @@ namespace Callbreak.Presentation.Table.Playback
     }
 
     /// <summary>
-    /// The deal (GDD §6, §14 "Deal: cards fly from the dealer to each seat, one at a time", about
-    /// 1.6 s, OutQuad): 52 cards leave the dealer's seat in turn, starting at the dealer's right and
-    /// going round in the direction of play. A card for an opponent joins that seat's fan as a back;
-    /// a card for the local seat turns face up in the hand, which fills from the left in sorted
-    /// order. A tap skips it; the table then shows the dealt state at once.
+    /// The deck in the middle of the table while a round is dealt (ADR 022): the cards of the deal,
+    /// face down on the felt in the table's perspective, each a hair above the one below. The
+    /// shuffle riffles them; the deal takes them from the top, one at a time, so the deck gets
+    /// smaller as the hands fill.
+    /// </summary>
+    public sealed class DeckPile
+    {
+        /// <summary>Height between two cards of the stack, canvas units.</summary>
+        public const float Thickness = 0.35f;
+
+        private readonly CardViewPool _pool;
+        private readonly List<CardView> _cards;
+
+        /// <param name="pool">The scene's card views.</param>
+        /// <param name="area">Where the deck lies (the middle of the table); its centre is the deck's.</param>
+        /// <param name="back">The table deck's back.</param>
+        /// <param name="count">Cards in the deal (52).</param>
+        /// <param name="scale">Card size on the table (that of the trick's cards).</param>
+        public DeckPile(CardViewPool pool, RectTransform area, Sprite back, int count, float scale)
+        {
+            _pool = pool;
+            Area = area;
+            Scale = scale;
+            _cards = new List<CardView>(count);
+            for (int i = 0; i < count; i++)
+            {
+                CardView card = pool.Rent(area);
+                card.ShowBack(back);
+
+                // One shadow under the whole deck, not 52 stacked into a blot.
+                card.SetShadow(i == 0);
+                card.Placement = Resting(i);
+                _cards.Add(card);
+            }
+        }
+
+        public RectTransform Area { get; }
+
+        public float Scale { get; }
+
+        public int Count => _cards.Count;
+
+        /// <summary>The card at <paramref name="index"/> from the bottom.</summary>
+        public CardView this[int index] => _cards[index];
+
+        /// <summary>Where the card <paramref name="index"/> from the bottom lies in a squared deck: a hair higher each, and very slightly askew.</summary>
+        public CardPlacement Resting(int index)
+        {
+            float askew = (((index * 37) % 7) - 3) * 0.4f;
+            return new CardPlacement(new Vector2(0f, index * Thickness), askew, Scale, 1f);
+        }
+
+        /// <summary>Puts the cards in a new order, bottom first (after a riffle), and draws them in it.</summary>
+        public void Reorder(IReadOnlyList<CardView> bottomFirst)
+        {
+            _cards.Clear();
+            _cards.AddRange(bottomFirst);
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                _cards[i].Rect.SetAsLastSibling();
+                _cards[i].SetShadow(i == 0);
+            }
+        }
+
+        /// <summary>Takes the top card off the deck. It keeps its place on screen and now belongs to the caller.</summary>
+        public CardView TakeTop()
+        {
+            if (_cards.Count == 0)
+            {
+                return null;
+            }
+
+            CardView card = _cards[_cards.Count - 1];
+            _cards.RemoveAt(_cards.Count - 1);
+            if (_cards.Count > 0)
+            {
+                _cards[0].SetShadow(true);
+            }
+
+            return card;
+        }
+
+        /// <summary>The cards not dealt go back to the pool (a skipped deal: the table shows the dealt state itself).</summary>
+        public void Clear()
+        {
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                _pool.Return(_cards[i]);
+            }
+
+            _cards.Clear();
+        }
+    }
+
+    /// <summary>
+    /// The shuffle before the deal (ADR 022): the deck appears in the middle of the table, splits
+    /// into two halves that slide apart and turn a little, and the halves riffle back together,
+    /// one card from each side in turn, to the shuffle's sound; then it squares up. The cards end in
+    /// their new order, ready to be dealt from the top. A tap skips it with the deal.
+    /// </summary>
+    public sealed class ShuffleAnimation : IEventAnimation
+    {
+        public const float Seconds = 1.1f;
+
+        private const float AppearEnd = 0.15f;
+        private const float SplitEnd = 0.4f;
+        private const float RiffleEnd = 0.85f;
+        private const float DropSeconds = 0.12f;
+        private const float Spread = 92f;
+        private const float Turn = 7f;
+        private const float Lift = 18f;
+
+        private readonly DeckPile _pile;
+        private readonly Action _onRiffle;
+        private readonly List<CardView> _order = new List<CardView>(52);
+        private readonly List<CardPlacement> _split = new List<CardPlacement>(52);
+        private float _elapsed;
+        private bool _riffled;
+        private bool _finished;
+        private int _landed;
+
+        /// <param name="pile">The deck in the middle, already laid out.</param>
+        /// <param name="onRiffle">Called once as the halves start to riffle together (the shuffle sound).</param>
+        public ShuffleAnimation(DeckPile pile, Action onRiffle)
+        {
+            _pile = pile;
+            _onRiffle = onRiffle;
+        }
+
+        public float Duration => Seconds;
+
+        public void Begin()
+        {
+            // The interleaved order: one card from the bottom half, one from the top half, in turn.
+            int count = _pile.Count, half = count / 2;
+            _order.Clear();
+            for (int i = 0; i < half || half + i < count; i++)
+            {
+                if (i < half)
+                {
+                    _order.Add(_pile[i]);
+                }
+
+                if (half + i < count)
+                {
+                    _order.Add(_pile[half + i]);
+                }
+            }
+
+            // Each half's place once it has slid aside: its own little stack, turned a little, with
+            // a shadow of its own.
+            if (half < count)
+            {
+                _pile[half].SetShadow(true);
+            }
+
+            _split.Clear();
+            for (int i = 0; i < count; i++)
+            {
+                bool left = i < half;
+                int inHalf = left ? i : i - half;
+                CardPlacement rest = _pile.Resting(inHalf);
+                _split.Add(new CardPlacement(rest.Position + new Vector2(left ? -Spread : Spread, 0f), left ? Turn : -Turn, rest.Scale, rest.Flat));
+            }
+
+            Apply(0f);
+        }
+
+        public bool Tick(float deltaTime)
+        {
+            _elapsed += deltaTime;
+            Apply(_elapsed);
+            if (_elapsed < Seconds)
+            {
+                return false;
+            }
+
+            Finish();
+            return true;
+        }
+
+        public void Finish()
+        {
+            if (_finished)
+            {
+                return;
+            }
+
+            _finished = true;
+            if (_order.Count == 0)
+            {
+                Begin();
+            }
+
+            _pile.Reorder(_order);
+            for (int i = 0; i < _pile.Count; i++)
+            {
+                _pile[i].SetAlpha(1f);
+                _pile[i].Placement = _pile.Resting(i);
+            }
+        }
+
+        private void Apply(float time)
+        {
+            int count = _pile.Count;
+            if (time < AppearEnd)
+            {
+                // The deck drops onto the felt as it fades in.
+                float t = EaseUtility.Evaluate(time / AppearEnd, Ease.OutQuad);
+                for (int i = 0; i < count; i++)
+                {
+                    CardPlacement rest = _pile.Resting(i);
+                    _pile[i].SetAlpha(t);
+                    _pile[i].Placement = new CardPlacement(rest.Position + new Vector2(0f, Lift * (1f - t)), rest.Rotation, rest.Scale, rest.Flat);
+                }
+
+                return;
+            }
+
+            if (time < SplitEnd)
+            {
+                float t = EaseUtility.Evaluate((time - AppearEnd) / (SplitEnd - AppearEnd), Ease.OutCubic);
+                for (int i = 0; i < count; i++)
+                {
+                    _pile[i].SetAlpha(1f);
+                    _pile[i].Placement = CardPlacement.Lerp(_pile.Resting(i), _split[i], t);
+                }
+
+                return;
+            }
+
+            if (!_riffled)
+            {
+                _riffled = true;
+                _onRiffle?.Invoke();
+            }
+
+            // The riffle: card k of the new order drops from its half onto the middle in turn.
+            float step = count > 1 ? (RiffleEnd - SplitEnd - DropSeconds) / (count - 1) : 0f;
+            for (int k = 0; k < _order.Count; k++)
+            {
+                CardView card = _order[k];
+                int from = IndexInPile(card);
+                card.SetAlpha(1f);
+                float start = SplitEnd + (k * step);
+                if (time < start)
+                {
+                    card.Placement = _split[from];
+                    continue;
+                }
+
+                if (k >= _landed)
+                {
+                    // Each card that starts to fall lands on top of the ones before it.
+                    card.Rect.SetAsLastSibling();
+                    _landed = k + 1;
+                }
+
+                float t = EaseUtility.Evaluate(Mathf.Clamp01((time - start) / DropSeconds), Ease.OutQuad);
+                card.Placement = CardPlacement.Lerp(_split[from], _pile.Resting(k), t);
+            }
+        }
+
+        private int IndexInPile(CardView card)
+        {
+            for (int i = 0; i < _pile.Count; i++)
+            {
+                if (_pile[i] == card)
+                {
+                    return i;
+                }
+            }
+
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// The deal (GDD §6, §14 "Deal: cards fly … to each seat, one at a time", about 1.6 s,
+    /// OutQuad): after the shuffle, the 52 cards leave the top of the deck in the middle of the
+    /// table in turn (ADR 022, where the GDD deals from the dealer's seat), starting at the dealer's
+    /// right and going round in the direction of play. A card for an opponent joins that seat's fan
+    /// as a back; a card for the local seat turns face up in the hand, which fills from the left in
+    /// sorted order. A tap skips it; the table then shows the dealt state at once.
     /// </summary>
     public sealed class DealAnimation : IEventAnimation
     {
@@ -91,7 +370,7 @@ namespace Callbreak.Presentation.Table.Playback
 
         private readonly CardViewPool _pool;
         private readonly HandView _hand;
-        private readonly RectTransform _dealer;
+        private readonly DeckPile _deck;
         private readonly Target[] _targets;
         private readonly int _firstTarget;
         private readonly int _step;
@@ -106,19 +385,19 @@ namespace Callbreak.Presentation.Table.Playback
         private int _launched;
         private int _handDealt;
 
-        /// <param name="pool">Where the cards come from.</param>
+        /// <param name="pool">The scene's card views (the deck gives back what it does not deal).</param>
         /// <param name="hand">The local hand.</param>
-        /// <param name="dealer">The dealer's avatar: every card starts here.</param>
+        /// <param name="deck">The shuffled deck in the middle of the table: every card leaves its top.</param>
         /// <param name="targets">The four seats by relative position (0 is the local seat).</param>
         /// <param name="firstTarget">Relative seat that gets the first card (the dealer's right).</param>
         /// <param name="step">+1 when play goes to the next relative seat (anticlockwise), +3 when clockwise.</param>
         /// <param name="handCards">The local hand in display order.</param>
         /// <param name="face">The face sprite of a card in the local deck.</param>
-        /// <param name="onCard">Called as each card leaves the dealer (the deal sound).</param>
+        /// <param name="onCard">Called as each card leaves the deck (the deal sound).</param>
         public DealAnimation(
             CardViewPool pool,
             HandView hand,
-            RectTransform dealer,
+            DeckPile deck,
             Target[] targets,
             int firstTarget,
             int step,
@@ -128,7 +407,7 @@ namespace Callbreak.Presentation.Table.Playback
         {
             _pool = pool;
             _hand = hand;
-            _dealer = dealer;
+            _deck = deck;
             _targets = targets;
             _firstTarget = firstTarget;
             _step = step;
@@ -162,19 +441,26 @@ namespace Callbreak.Presentation.Table.Playback
                 }
             }
 
-            return _launched >= _total && _flights.Count == 0;
+            bool done = _launched >= _total && _flights.Count == 0;
+            if (done)
+            {
+                _deck.Clear();
+            }
+
+            return done;
         }
 
         public void Finish()
         {
-            // Cards in the air land where they were going; the ones not dealt yet are put in place
-            // by the table when it shows the dealt state.
+            // Cards in the air land where they were going; the ones not dealt yet go back to the
+            // pool, and the table puts the dealt state in place when it shows it.
             for (int i = _flights.Count - 1; i >= 0; i--)
             {
                 _flights[i].Finish();
                 Land(i);
             }
 
+            _deck.Clear();
             _launched = _total;
         }
 
@@ -183,14 +469,24 @@ namespace Callbreak.Presentation.Table.Playback
             int target = (_firstTarget + index * _step) % _targets.Length;
             Target seat = _targets[target];
             RectTransform parent = seat.Fan != null ? seat.Fan.Area : _hand.CardsRoot;
-            CardView card = _pool.Rent(parent);
+
+            // The top card of the deck in the middle leaves it where it lies.
+            CardView card = _deck.TakeTop();
+            if (card != null)
+            {
+                card.Rect.SetParent(parent, true);
+                card.Rect.SetAsLastSibling();
+            }
+            else
+            {
+                card = _pool.Rent(parent);
+                Vector2 middle = parent.InverseTransformPoint(_deck.Area.position);
+                card.Placement = new CardPlacement(middle, 0f, _deck.Scale, 1f);
+            }
+
             card.ShowBack(seat.Back);
             card.SetShadow(false);
-
-            // Every card starts as a small back at the dealer's avatar.
-            float fanScale = FanScale();
-            Vector2 start = parent.InverseTransformPoint(_dealer.position);
-            card.Placement = new CardPlacement(start, 0f, fanScale, 0f);
+            card.SetAlpha(1f);
             CardPlacement to = seat.Fan != null ? seat.Fan.NextPlacement() : _hand.PlacementOf(Mathf.Min(_handDealt, _handCards.Count - 1), _handCards.Count);
             if (seat.Fan == null)
             {
@@ -229,19 +525,6 @@ namespace Callbreak.Presentation.Table.Playback
             {
                 _pool.Return(card);
             }
-        }
-
-        private float FanScale()
-        {
-            for (int i = 0; i < _targets.Length; i++)
-            {
-                if (_targets[i].Fan != null)
-                {
-                    return _targets[i].Fan.CardScale;
-                }
-            }
-
-            return 0.27f;
         }
     }
 }

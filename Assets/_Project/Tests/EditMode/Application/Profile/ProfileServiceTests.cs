@@ -107,6 +107,74 @@ namespace Callbreak.Tests.EditMode.Application
             Assert.AreEqual(0, _store.SaveCount);
         }
 
+        // ------------------------------------------------------------------ the name asked at the start (ADR 022)
+
+        [Test]
+        public void NoFile_HasNotChosenAName()
+        {
+            Assert.IsFalse(_profile.HasChosenName);
+        }
+
+        [Test]
+        public void ChooseName_ANewName_SavesIt_AndCountsAsChosen()
+        {
+            int changed = 0;
+            _profile.Changed += () => changed++;
+
+            NameCheck result = _profile.ChooseName("  Asha ");
+
+            Assert.AreEqual(NameCheck.Ok, result);
+            Assert.AreEqual("Asha", _profile.DisplayName);
+            Assert.IsTrue(_profile.HasChosenName);
+            Assert.AreEqual(1, changed);
+            Assert.IsTrue(new ProfileService(_store, new NameFilter()).HasChosenName, "the choice survives a restart");
+        }
+
+        [Test]
+        public void ChooseName_KeepingPlayer_CountsAsChosen()
+        {
+            NameCheck result = _profile.ChooseName("Player");
+
+            Assert.AreEqual(NameCheck.Unchanged, result);
+            Assert.AreEqual("Player", _profile.DisplayName);
+            Assert.IsTrue(_profile.HasChosenName);
+            Assert.AreEqual(1, _store.SaveCount);
+            Assert.IsTrue(new ProfileService(_store, new NameFilter()).HasChosenName, "a player who keeps \"Player\" is not asked again");
+        }
+
+        [TestCase("Ra")]
+        [TestCase("Ram!")]
+        [TestCase("ABCDEFGHIJKLMNOPQ")]
+        [TestCase("B1tch")]
+        public void ChooseName_Rejected_ChangesNothing(string candidate)
+        {
+            NameCheck result = _profile.ChooseName(candidate);
+
+            Assert.AreNotEqual(NameCheck.Ok, result);
+            Assert.AreNotEqual(NameCheck.Unchanged, result);
+            Assert.AreEqual("Player", _profile.DisplayName);
+            Assert.IsFalse(_profile.HasChosenName);
+            Assert.AreEqual(0, _store.SaveCount);
+        }
+
+        [Test]
+        public void TrySetDisplayName_Ok_CountsAsChosen()
+        {
+            _profile.TrySetDisplayName("Bikash");
+
+            Assert.IsTrue(_profile.HasChosenName);
+        }
+
+        [Test]
+        public void ASaveFromBeforeTheQuestion_WithItsOwnName_CountsAsChosen()
+        {
+            _store.Put(ProfileService.SaveKey, new ProfileData { displayName = "Suman" });
+            Assert.IsTrue(new ProfileService(_store, new NameFilter()).HasChosenName);
+
+            _store.Put(ProfileService.SaveKey, new ProfileData { displayName = "Player" });
+            Assert.IsFalse(new ProfileService(_store, new NameFilter()).HasChosenName, "still called Player: the question comes");
+        }
+
         [Test]
         public void NameAndAvatar_SurviveARestart()
         {

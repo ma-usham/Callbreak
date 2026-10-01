@@ -20,7 +20,7 @@ saying what it did):
 | Call | What it does |
 | --- | --- |
 | `Callbreak.Editor.PlayDriver.Press("StartButton")` | Presses a button by object name on the open dialog, or else on the top screen. `PressIn(root, name)`, `Back()`, `CloseDialog()` and `Where()` complete it. |
-| `Callbreak.Editor.AutoPlayer.Start()` | Plays the local seat through the real views: the call chips, a tap on the lowest legal card, Next Round. `Report()` and `Stop()`. |
+| `Callbreak.Editor.AutoPlayer.Start()` | Plays the local seat through the real views: the call chips, a throw of the lowest legal card (pulled up out of the hand), Next Round. `Report()` and `Stop()`. |
 | `Callbreak.Editor.RelayCheck.Start()` | With the running game hosting a room, joins it as a second player in the same process over its own relay connection and plays that seat. `Report()` says where both sides stand and whether they agree; `Stop()`. |
 | `Callbreak.Editor.TableSimulation.Run(reduceMotion, captures)` | Outside Play mode: whole offline matches through the real prefabs and presenters, with a report in `Temp/TableSimulation`. |
 

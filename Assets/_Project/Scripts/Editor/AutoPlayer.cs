@@ -16,7 +16,7 @@ namespace Callbreak.Editor
 {
     /// <summary>
     /// Plays the local seat in Play mode, for end-to-end checks (Tools/Unity/playcheck.sh): it
-    /// makes the call with the chips, taps the lowest legal card whenever the table shows the
+    /// makes the call with the chips, throws the lowest legal card whenever the table shows the
     /// local turn and presses Next Round on the round results, all through the real views, as a
     /// player would. <c>Start()</c> from an eval step, <c>Report()</c> to read what it did.
     /// </summary>
@@ -187,21 +187,24 @@ namespace Callbreak.Editor
                 return;
             }
 
+            // Cards are thrown (ADR 022): press the card's top edge, pull it up and let go well above the hand.
             var corners = new Vector3[4];
             ((RectTransform)view.transform).GetWorldCorners(corners);
             Vector2 position = (corners[1] + corners[2]) * 0.5f;
             position.y -= 30f;
-            var pointer = new PointerEventData(EventSystem.current)
-            {
-                position = position,
-                pressPosition = position,
-                button = PointerEventData.InputButton.Left,
-            };
-            hand.OnPointerDown(pointer);
-            hand.OnPointerUp(pointer);
+            float pull = 260f * ((RectTransform)view.transform).lossyScale.y;
+            hand.OnPointerDown(Pointer(position));
+            hand.OnDrag(Pointer(position + new Vector2(0f, pull * 0.25f)));
+            hand.OnDrag(Pointer(position + new Vector2(0f, pull)));
+            hand.OnPointerUp(Pointer(position + new Vector2(0f, pull)));
             _lastTapAt = now;
             _lastTapHandCount = handCount;
             _taps++;
+        }
+
+        private static PointerEventData Pointer(Vector2 position)
+        {
+            return new PointerEventData(EventSystem.current) { position = position, pressPosition = position, button = PointerEventData.InputButton.Left };
         }
 
         private static bool CanPress(Component root, string buttonName)

@@ -180,6 +180,7 @@ namespace Callbreak.Presentation.Table
             _lastNow = _clock.Now;
             _started = true;
             _router.ReduceMotion = ReduceMotion;
+            _view.Hand.ReduceMotion = ReduceMotion;
             if (_router.Has(ScreenId.Gameplay) && _router.Current == ScreenId.None)
             {
                 _router.Show(ScreenId.Gameplay);
@@ -417,6 +418,7 @@ namespace Callbreak.Presentation.Table
         private void OnSettingsChanged()
         {
             _router.ReduceMotion = ReduceMotion;
+            _view.Hand.ReduceMotion = ReduceMotion;
         }
 
         private void OnLanguageChanged()
@@ -476,13 +478,13 @@ namespace Callbreak.Presentation.Table
                 case HandDealt dealt when dealt.Seat == Local:
                     // The round start has already cleared the table; the deal fills the fans and the hand.
                     State.Apply(e);
-                    _audio.Play(SoundCue.CardShuffle);
                     if (!ReduceMotion)
                     {
                         return CreateDeal();
                     }
 
                     // Nothing flies: the dealt table is there at once and fades in (GDD §14).
+                    _audio.Play(SoundCue.CardShuffle);
                     RenderAll(false);
                     return new DealFade(_view.Hand, Fans());
 
@@ -616,6 +618,11 @@ namespace Callbreak.Presentation.Table
             return new CardFlight(card, _view.Trick.Slot(rel), seconds);
         }
 
+        /// <summary>
+        /// The shuffle in the middle of the table, then the deal from that deck (ADR 022): the
+        /// scene's 52 cards lie there face down, are riffled to the shuffle's sound, and leave the
+        /// top of the deck one at a time.
+        /// </summary>
         private IEventAnimation CreateDeal()
         {
             HandSorter.Sort(State.Hand, _dealOrder);
@@ -630,17 +637,15 @@ namespace Callbreak.Presentation.Table
             int first = _renderer.RelativeSeat(State.Dealer.Next(direction));
             int step = _renderer.RelativeSeat(Local.Next(direction));
             _dealSoundAt = double.NaN;
-            return new DealAnimation(
-                _view.Cards,
-                _view.Hand,
-                _view.Seat(_renderer.RelativeSeat(State.Dealer)).Anchor,
-                targets,
-                first,
-                step,
-                _dealOrder,
-                FaceOf,
-                OnCardDealt);
+            var deck = new DeckPile(
+                _view.Cards, _view.Trick.Area, _skin.Back(_renderer.LocalDeck), _dealOrder.Count * TableView.SeatCount, _view.Trick.Slot(0).Scale);
+            var deal = new DealAnimation(_view.Cards, _view.Hand, deck, targets, first, step, _dealOrder, FaceOf, OnCardDealt);
+            return new InOrder()
+                .Then(new ShuffleAnimation(deck, PlayShuffleSound))
+                .Then(deal);
         }
+
+        private void PlayShuffleSound() => _audio.Play(SoundCue.CardShuffle);
 
         private Sprite FaceOf(Card card) => _skin.Face(_renderer.LocalDeck, card);
 

@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Ports;
-using Callbreak.Application.Profile;
 using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
 using UnityEngine;
@@ -13,9 +12,9 @@ namespace Callbreak.Presentation.Framework
 {
     /// <summary>
     /// GDD §15 "First-time experience" in the menu: the first time the app opens, How to Play
-    /// comes up by itself and, once it is closed, an easy practice match is offered; back from the
-    /// first finished match, a player still called "Player" is asked once to pick a name and
-    /// avatar. It only ever acts on the bare main menu, so an invite link or a rejoin goes first.
+    /// comes up by itself and, once it is closed, an easy practice match is offered. It only ever
+    /// acts on the bare main menu, so an invite link or a rejoin goes first. The player's name is
+    /// asked before all of it, by <see cref="NamePromptPresenter"/> (ADR 022).
     /// </summary>
     public sealed class FirstRunGuide : IStartable, IDisposable
     {
@@ -23,7 +22,6 @@ namespace Callbreak.Presentation.Framework
         private readonly MatchLauncher _launcher;
         private readonly IAppFlow _flow;
         private readonly ISettingsService _settings;
-        private readonly IProfileService _profile;
         private readonly IDialogs _dialogs;
         private readonly ILocalization _localization;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
@@ -36,7 +34,6 @@ namespace Callbreak.Presentation.Framework
             MatchLauncher launcher,
             IAppFlow flow,
             ISettingsService settings,
-            IProfileService profile,
             IDialogs dialogs,
             ILocalization localization)
         {
@@ -44,7 +41,6 @@ namespace Callbreak.Presentation.Framework
             _launcher = launcher;
             _flow = flow;
             _settings = settings;
-            _profile = profile;
             _dialogs = dialogs;
             _localization = localization;
         }
@@ -61,10 +57,6 @@ namespace Callbreak.Presentation.Framework
             {
                 _primerOpen = true;
                 _router.Push(ScreenId.HowToPlay);
-            }
-            else if (FirstRun.NudgesName(_settings, _profile, _flow.PreviousState, _flow.PendingMenuEntry) && _router.Has(ScreenId.Profile))
-            {
-                _ = NudgeNameAsync();
             }
         }
 
@@ -119,27 +111,5 @@ namespace Callbreak.Presentation.Framework
             }
         }
 
-        private async Task NudgeNameAsync()
-        {
-            try
-            {
-                _settings.MarkNameNudgeSeen();
-                bool choose = await _dialogs.ConfirmAsync(
-                    new DialogRequest(
-                        _localization.Get("ui.dialog.name_nudge.title"),
-                        _localization.Get("ui.dialog.name_nudge.body"),
-                        _localization.Get("ui.dialog.name_nudge.confirm"),
-                        _localization.Get("ui.dialog.name_nudge.cancel")),
-                    _lifetime.Token);
-                if (choose && !_disposed && _router.Current == ScreenId.MainMenu)
-                {
-                    _router.Push(ScreenId.Profile);
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-            }
-        }
     }
 }

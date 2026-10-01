@@ -18,7 +18,7 @@ namespace Callbreak.Presentation.Screens
     /// <summary>
     /// GDD §11 screen 00: one tap to every mode. The card fan shows the four aces of the player's
     /// deck. Online entry points need a connection; without one a toast points to Play Offline. While an unfinished offline match exists a banner offers
-    /// "Resume match"; the match is also offered back ("Resume your match?") once when the app
+    /// "Resume match"; the match is also offered back ("Resume your offline match?") once when the app
     /// opens and whenever Play Offline is tapped. Android back asks "Exit Callbreak?".
     /// </summary>
     public sealed class MainMenuPresenter : IStartable, IDisposable

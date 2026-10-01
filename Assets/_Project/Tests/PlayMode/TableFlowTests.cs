@@ -39,7 +39,7 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator OfflineMatch_CallWithTheChipsThenPlayATrickByTappingACard()
+        public IEnumerator OfflineMatch_CallWithTheChipsThenPlayATrickByThrowingACard()
         {
             yield return StartOfflineMatch();
             IMatchSession session = Session();
@@ -58,10 +58,15 @@ namespace Callbreak.Tests.PlayMode
             HandView hand = UnityEngine.Object.FindFirstObjectByType<HandView>();
             yield return GameFixture.Until(() => shown.State.TryGetObligation(out _) && hand.Interactable, "the table to show my first turn to play", TurnTimeout);
             Card card = session.View.LegalCards().Lowest();
-            Tap(hand, card);
+
+            // ADR 022: a tap plays nothing; the card is thrown.
+            Swipe(hand, card, 0f);
+            yield return null;
+            Assert.IsTrue(session.View.Hand.Contains(card) && hand.ViewOf(card) != null, "a tapped card stays in the hand");
+            Swipe(hand, card, 260f);
 
             yield return GameFixture.Until(() => session.View.CompletedTricks.Count >= 1, "the first trick to finish", TurnTimeout);
-            Assert.IsFalse(session.View.Hand.Contains(card), "the tapped card left the hand");
+            Assert.IsFalse(session.View.Hand.Contains(card), "the thrown card left the hand");
             Assert.AreEqual(12, session.View.Hand.Count);
             Assert.AreEqual(ScreenId.Gameplay, _game.TableRouter.Current, "nothing covers the table during play");
         }
@@ -189,8 +194,11 @@ namespace Callbreak.Tests.PlayMode
 
         private IMatchSession Session() => _game.Table.Container.Resolve<IMatchSession>();
 
-        /// <summary>A tap on the visible top of a card in the hand, as the pointer events deliver it.</summary>
-        private static void Tap(HandView hand, Card card)
+        /// <summary>
+        /// A touch on the visible top of a card in the hand, pulled up <paramref name="pull"/> canvas
+        /// units before it lets go, as the pointer events deliver it: 0 is a tap.
+        /// </summary>
+        private static void Swipe(HandView hand, Card card, float pull)
         {
             CardView view = hand.ViewOf(card);
             Assert.IsNotNull(view, "the hand shows " + card);
@@ -198,14 +206,25 @@ namespace Callbreak.Tests.PlayMode
             ((RectTransform)view.transform).GetWorldCorners(corners);
             Vector2 position = (corners[1] + corners[2]) * 0.5f;
             position.y -= 30f;
-            var pointer = new PointerEventData(EventSystem.current)
+            Vector2 end = position + new Vector2(0f, pull * view.transform.lossyScale.y);
+            hand.OnPointerDown(Pointer(position, position));
+            if (pull > 0f)
+            {
+                hand.OnDrag(Pointer(Vector2.Lerp(position, end, 0.25f), position));
+                hand.OnDrag(Pointer(end, position));
+            }
+
+            hand.OnPointerUp(Pointer(end, position));
+        }
+
+        private static PointerEventData Pointer(Vector2 position, Vector2 pressPosition)
+        {
+            return new PointerEventData(EventSystem.current)
             {
                 position = position,
-                pressPosition = position,
+                pressPosition = pressPosition,
                 button = PointerEventData.InputButton.Left,
             };
-            hand.OnPointerDown(pointer);
-            hand.OnPointerUp(pointer);
         }
     }
 }

@@ -24,6 +24,19 @@ namespace Callbreak.Application.Profile
         /// <summary>Validates, and saves when the result is <see cref="NameCheck.Ok"/>.</summary>
         NameCheck TrySetDisplayName(string candidate);
 
+        /// <summary>
+        /// True once the player has picked a name: answered the question at the start (ADR 022) or
+        /// saved one on the Profile screen. A file that already held a name of its own counts too.
+        /// </summary>
+        bool HasChosenName { get; }
+
+        /// <summary>
+        /// The answer to the name question: like <see cref="TrySetDisplayName"/>, but keeping the
+        /// current name (<see cref="NameCheck.Unchanged"/>) is an answer too. Either way the name
+        /// counts as chosen and is saved; any other result changes nothing.
+        /// </summary>
+        NameCheck ChooseName(string candidate);
+
         void SetAvatar(int avatarId);
     }
 }

@@ -5,7 +5,7 @@ namespace Callbreak.Application.Ports
 {
     /// <summary>
     /// A modal question over any screen (GDD §23 "Popups" layer): "Leave match?", "Exit Callbreak?",
-    /// "Resume your match?". Text is already localised by the caller.
+    /// "Resume your offline match?". Text is already localised by the caller.
     /// </summary>
     public sealed class DialogRequest
     {

@@ -11,11 +11,14 @@ namespace Callbreak.Presentation.Table
     /// <summary>
     /// The local hand (GDD §11 T rules "LOCAL HAND", §12 "Cards on screen"): up to 13 cards on an
     /// arc laid out by <see cref="HandLayout"/>, legal cards lifted with a gold glow, the others
-    /// subdued. Input is one touch area over the whole hand, so a finger can slide along it
-    /// (tap-and-slide): the card under the finger rises, and releasing on a card, or flicking one
-    /// upwards, chooses it. Which cards may be played is the presenter's decision. While the hand
-    /// takes no plays (calling, or another seat's turn) a touched card still rises and grows a
-    /// little for a closer look, and is never played (GDD screen 07, callout 10).
+    /// subdued. Input is one touch area over the whole hand, so a finger can slide along it: the
+    /// card under the finger rises. A card is played by throwing it (ADR 022, in place of the
+    /// GDD's tap): pulled up out of the hand it follows the finger, and let go far enough above
+    /// the hand, or flicked upwards, it is chosen; let go sooner it slides back into its place. A
+    /// tap plays nothing. Which cards may be played is the presenter's decision; a card it refuses
+    /// slides back too. While the hand takes no plays (calling, or another seat's turn) a touched
+    /// card still rises and grows a little for a closer look, and is never played (GDD screen 07,
+    /// callout 10).
     /// </summary>
     public sealed class HandView : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
     {
@@ -30,9 +33,16 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private CardViewPool _pool;
         [SerializeField] private HandLayoutSettings _layout = new HandLayoutSettings();
         [SerializeField] private float _minStripMillimetres = 7f;
-        [SerializeField] private float _flickDistance = 70f;
         [SerializeField] private float _arrangeSeconds = 0.25f;
         [SerializeField] private float _inspectScale = 1.12f;
+
+        // Throwing a card (canvas units at the 1080p reference). A card leaves the hand once it is
+        // pulled up this far, more up than sideways; it is thrown when let go this far above where
+        // the pull began, or when it is still going up this fast.
+        [SerializeField] private float _pullDistance = 24f;
+        [SerializeField] private float _throwDistance = 110f;
+        [SerializeField] private float _throwSpeed = 900f;
+        [SerializeField] private float _heldScale = 1.06f;
 
         private readonly List<CardView> _views = new List<CardView>(Deck.HandSize);
         private readonly List<CardView> _previous = new List<CardView>(Deck.HandSize);
@@ -47,21 +57,33 @@ namespace Callbreak.Presentation.Table
         private int _hovered = -1;
         private int _shakeIndex = -1;
         private CardView _grabbed;
-        private Vector2 _pressPosition;
+        private CardView _held;
+        private Vector2 _pullStart;
+        private Vector2 _holdOffset;
+        private float _restRotation;
+        private Vector2 _lastPointer;
+        private float _lastPointerTime;
+        private float _riseSpeed;
         private bool _pressed;
         private bool _inspecting;
         private MotionHandle _arrangeMotion;
         private MotionHandle _shakeMotion;
         private Canvas _canvas;
 
-        /// <summary>A card was chosen: released under the finger, or flicked upwards.</summary>
+        /// <summary>A card was thrown: let go far enough above the hand, or flicked upwards. It is where the finger left it.</summary>
         public event Action<Card> CardChosen;
 
         /// <summary>The hand was touched while it takes no input, or beside every card (a tap that may skip an animation).</summary>
         public event Action Touched;
 
-        /// <summary>While false, touches only raise <see cref="Touched"/>.</summary>
+        /// <summary>While false, touches only raise <see cref="Touched"/> and a touched card is only looked at.</summary>
         public bool Interactable { get; set; }
+
+        /// <summary>With Reduce motion a card that is not thrown goes back to its place at once.</summary>
+        public bool ReduceMotion { get; set; }
+
+        /// <summary>The card following the finger, if any.</summary>
+        public CardView Held => _held;
 
         public int Count => _views.Count;
 
@@ -118,6 +140,12 @@ namespace Callbreak.Presentation.Table
             for (int i = 0; i < _previous.Count; i++)
             {
                 _pool.Return(_previous[i]);
+            }
+
+            // A held card that is no longer in the hand (the clock played it) is let go.
+            if (_held != null && !_views.Contains(_held))
+            {
+                _held = null;
             }
 
             _previous.Clear();
@@ -180,6 +208,11 @@ namespace Callbreak.Presentation.Table
                 _grabbed = null;
             }
 
+            if (_held == view)
+            {
+                _held = null;
+            }
+
             view.SetGlow(false);
             view.SetDimmed(false);
             _hovered = -1;
@@ -210,11 +243,14 @@ namespace Callbreak.Presentation.Table
             }
         }
 
-        /// <summary>The refusal of an illegal tap: three quick sideways shakes (GDD §14, 240 ms).</summary>
+        /// <summary>
+        /// The refusal of an illegal card: three quick sideways shakes (GDD §14, 240 ms). A card that
+        /// was thrown slides back into its place instead, which says the same.
+        /// </summary>
         public void Shake(Card card)
         {
             int index = IndexOf(card);
-            if (index < 0)
+            if (index < 0 || _views[index] == _held)
             {
                 return;
             }
@@ -239,10 +275,12 @@ namespace Callbreak.Presentation.Table
             _dimmedCards = CardSet.Empty;
             _hovered = -1;
             _grabbed = null;
+            _held = null;
         }
 
         public void OnPointerDown(PointerEventData eventData)
         {
+            _held = null;
             if (!Interactable)
             {
                 // Not a play: the card under the finger is only looked at.
@@ -256,9 +294,10 @@ namespace Callbreak.Presentation.Table
 
             _pressed = true;
             _inspecting = false;
-            _pressPosition = eventData.position;
             int index = IndexAt(eventData);
             _grabbed = index >= 0 ? _views[index] : null;
+            _pullStart = eventData.position;
+            _riseSpeed = 0f;
             if (index < 0)
             {
                 Touched?.Invoke();
@@ -269,18 +308,45 @@ namespace Callbreak.Presentation.Table
 
         public void OnDrag(PointerEventData eventData)
         {
-            if (!_pressed || (!Interactable && !_inspecting))
+            if (!_pressed)
             {
                 return;
             }
 
-            int index = IndexAt(eventData);
-            if (index >= 0 && !_inspecting)
+            if (_held != null)
             {
-                _grabbed = _views[index];
+                Follow(eventData);
+                return;
             }
 
-            SetHovered(index);
+            if (_inspecting || !Interactable)
+            {
+                SetHovered(IndexAt(eventData));
+                return;
+            }
+
+            // Pulled up out of the hand: the card under the finger leaves it and follows.
+            float scale = CanvasScale();
+            float up = (eventData.position.y - _pullStart.y) / scale;
+            float sideways = Mathf.Abs(eventData.position.x - _pullStart.x) / scale;
+            if (_grabbed != null && _views.Contains(_grabbed) && up >= _pullDistance && up >= sideways)
+            {
+                Hold(_grabbed, eventData);
+                return;
+            }
+
+            // Sliding along the hand: the pull is measured from the card the finger is on now.
+            int index = IndexAt(eventData);
+            if (index >= 0 && _views[index] != _grabbed)
+            {
+                _grabbed = _views[index];
+                _pullStart = eventData.position;
+            }
+
+            if (index >= 0)
+            {
+                SetHovered(index);
+            }
         }
 
         public void OnPointerUp(PointerEventData eventData)
@@ -299,18 +365,30 @@ namespace Callbreak.Presentation.Table
                 return;
             }
 
-            int index = IndexAt(eventData);
-            CardView chosen = index >= 0 ? _views[index] : null;
-            if (chosen == null && _grabbed != null && _views.Contains(_grabbed) && Flicked(eventData))
+            CardView held = _held;
+            _grabbed = null;
+            if (held == null)
             {
-                chosen = _grabbed;
+                // A tap, or a slide along the hand: nothing is played.
+                SetHovered(-1);
+                return;
             }
 
-            _grabbed = null;
-            SetHovered(-1);
-            if (chosen != null && Interactable)
+            Follow(eventData);
+            _held = null;
+            _hovered = -1;
+            float up = (eventData.position.y - _pullStart.y) / CanvasScale();
+            bool thrown = up >= _throwDistance || (up >= _pullDistance && _riseSpeed >= _throwSpeed);
+            if (thrown && Interactable)
             {
-                CardChosen?.Invoke(chosen.Card);
+                // The presenter takes the card from here, or refuses it.
+                CardChosen?.Invoke(held.Card);
+            }
+
+            if (_views.Contains(held))
+            {
+                // Not thrown, or refused: it slides back into its place.
+                Arrange(!ReduceMotion);
             }
         }
 
@@ -321,6 +399,58 @@ namespace Callbreak.Presentation.Table
             _pressed = false;
             _inspecting = false;
             _grabbed = null;
+            if (_held != null)
+            {
+                _held = null;
+                Arrange(false);
+            }
+        }
+
+        /// <summary>The card leaves the hand and follows the finger, the spot that was touched staying under it.</summary>
+        private void Hold(CardView card, PointerEventData eventData)
+        {
+            _held = card;
+            _restRotation = card.Placement.Rotation;
+            _holdOffset = card.Placement.Position - LocalPoint(_pullStart, eventData.pressEventCamera);
+            _lastPointer = eventData.position;
+            _lastPointerTime = Time.unscaledTime;
+            CancelShake();
+            card.Rect.SetAsLastSibling();
+            Follow(eventData);
+        }
+
+        /// <summary>
+        /// The held card under the finger: it straightens and grows a little as it is pulled up.
+        /// How fast the finger rises is kept for the flick.
+        /// </summary>
+        private void Follow(PointerEventData eventData)
+        {
+            CardView card = _held;
+            if (card == null)
+            {
+                return;
+            }
+
+            float scale = CanvasScale();
+            float now = Time.unscaledTime;
+            if (now > _lastPointerTime)
+            {
+                _riseSpeed = (eventData.position.y - _lastPointer.y) / scale / (now - _lastPointerTime);
+                _lastPointerTime = now;
+                _lastPointer = eventData.position;
+            }
+
+            float pulled = Mathf.Clamp01((eventData.position.y - _pullStart.y) / scale / _throwDistance);
+            float rotation = Mathf.LerpAngle(_restRotation, 0f, pulled);
+            card.Placement = new CardPlacement(LocalPoint(eventData) + _holdOffset, rotation, Mathf.Lerp(1f, _heldScale, pulled), 0f);
+        }
+
+        private Vector2 LocalPoint(PointerEventData eventData) => LocalPoint(eventData.position, eventData.pressEventCamera);
+
+        private Vector2 LocalPoint(Vector2 screenPoint, Camera eventCamera)
+        {
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(_cardsRoot, screenPoint, eventCamera, out Vector2 local);
+            return local;
         }
 
         private void OnRectTransformDimensionsChange()
@@ -330,12 +460,6 @@ namespace Callbreak.Presentation.Table
             {
                 Arrange(false);
             }
-        }
-
-        private bool Flicked(PointerEventData eventData)
-        {
-            float scale = CanvasScale();
-            return (eventData.position.y - _pressPosition.y) / scale >= _flickDistance;
         }
 
         private int IndexAt(PointerEventData eventData)
@@ -408,6 +532,12 @@ namespace Callbreak.Presentation.Table
                 _to[i] = new CardPlacement(new Vector2(_poses[i].X, _poses[i].Y), _poses[i].Rotation, scale, 0f);
             }
 
+            // A held card stays under the finger, on top of the rest.
+            if (_held != null)
+            {
+                _held.Rect.SetAsLastSibling();
+            }
+
             if (!animate || !isActiveAndEnabled || count == 0)
             {
                 ApplyBlend(1f);
@@ -424,7 +554,10 @@ namespace Callbreak.Presentation.Table
             float eased = OutBack(t);
             for (int i = 0; i < count; i++)
             {
-                _views[i].Placement = t >= 1f ? _to[i] : CardPlacement.Lerp(_from[i], _to[i], eased);
+                if (_views[i] != _held)
+                {
+                    _views[i].Placement = t >= 1f ? _to[i] : CardPlacement.Lerp(_from[i], _to[i], eased);
+                }
             }
         }
 

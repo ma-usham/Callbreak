@@ -159,12 +159,29 @@ namespace Callbreak.Editor
                 }
             }
 
+            // The name question when the game starts (ADR 022): its own canvas, above the screens.
+            var namePromptPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(NamePromptBuilder.PrefabPath);
+            GameObject namePrompt = namePromptPrefab != null ? (GameObject)PrefabUtility.InstantiatePrefab(namePromptPrefab, scene) : null;
+            if (namePrompt == null)
+            {
+                missing.Add("NamePrompt");
+            }
+
             GameObject scopeObject = Create(scene, "MenuLifetimeScope", null);
             scopeObject.SetActive(false);
             var scope = scopeObject.AddComponent<MenuLifetimeScope>();
             scope.parentReference = ParentReference.Create<ProjectLifetimeScope>();
             var so = new SerializedObject(scope);
-            SetAutoInject(so, canvas);
+            if (namePrompt != null)
+            {
+                SetAutoInject(so, canvas, namePrompt);
+                so.FindProperty("_namePrompt").objectReferenceValue = namePrompt.GetComponent<NamePromptView>();
+            }
+            else
+            {
+                SetAutoInject(so, canvas);
+            }
+
             SerializedProperty list = so.FindProperty("_screens");
             list.arraySize = screens.Count;
             for (int i = 0; i < screens.Count; i++)

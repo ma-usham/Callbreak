@@ -5,8 +5,9 @@ namespace Callbreak.Application.Flow
 {
     /// <summary>
     /// GDD §15 "First-time experience": what the menu does by itself on a player's first visits.
-    /// The primer opens once, the first time the app reaches the main menu; after the first
-    /// finished match a player still called "Player" is asked, once, to pick a name and avatar.
+    /// The menu asks for the player's name until one is chosen (ADR 022, in place of the GDD's
+    /// nudge after the first match), and the primer opens once, the first time the app reaches the
+    /// main menu.
     /// </summary>
     public static class FirstRun
     {
@@ -16,14 +17,10 @@ namespace Callbreak.Application.Flow
             return previous == AppState.Boot && entry == MenuEntry.MainMenu && !settings.HowToPlaySeen;
         }
 
-        /// <summary>True when the menu should ask for a display name and avatar.</summary>
-        public static bool NudgesName(ISettingsService settings, IProfileService profile, AppState previous, MenuEntry entry)
+        /// <summary>True when the menu should ask for the player's name: until one is chosen.</summary>
+        public static bool AsksName(IProfileService profile)
         {
-            return previous == AppState.InMatch
-                && entry == MenuEntry.MainMenu
-                && settings.CompletedMatches >= 1
-                && !settings.NameNudgeSeen
-                && profile.DisplayName == ProfileService.DefaultDisplayName;
+            return !profile.HasChosenName;
         }
     }
 }

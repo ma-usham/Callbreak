@@ -14,5 +14,8 @@ namespace Callbreak.Application.Profile
         public int schemaVersion = CurrentVersion;
         public string displayName = ProfileService.DefaultDisplayName;
         public int avatarId;
+
+        /// <summary>The player has answered the name question at the start (ADR 022), even with "Player".</summary>
+        public bool nameChosen;
     }
 }

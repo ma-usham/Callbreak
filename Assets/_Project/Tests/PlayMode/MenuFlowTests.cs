@@ -182,8 +182,9 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator NameNudge_BackFromTheFirstFinishedMatch_AsksOnceAndOpensTheProfile()
+        public IEnumerator BackFromTheFirstFinishedMatch_NothingAsksForTheName_ItWasAskedAtTheStart()
         {
+            // ADR 022: the name question when the game starts replaces GDD 15's nudge after the first match.
             yield return _game.Boot(
                 seed: saves => new SettingsService(saves).IncrementCompletedMatches(),
                 extra: builder => builder.RegisterInstance<INetworkStatus>(new Network(online: true)));
@@ -195,11 +196,11 @@ namespace Callbreak.Tests.PlayMode
             yield return _game.UntilMenu();
             yield return null;
 
-            Assert.IsTrue(_game.Dialogs.IsOpen, "GDD 15: a nudge to pick a name and avatar");
-            Assert.IsTrue(_game.Settings.NameNudgeSeen);
-            _game.PressDialog(confirm: true);
-            yield return null;
-            Assert.AreEqual(ScreenId.Profile, _game.MenuRouter.Current);
+            Assert.IsFalse(_game.Dialogs.IsOpen, "no nudge to pick a name after the first match");
+            Assert.AreEqual(ScreenId.MainMenu, _game.MenuRouter.Current);
+            NamePromptView prompt = UnityEngine.Object.FindFirstObjectByType<NamePromptView>(FindObjectsInactive.Include);
+            Assert.IsNotNull(prompt, "the Menu scene has the name question");
+            Assert.IsFalse(prompt.IsShowing, "the name was answered when the game started");
         }
 
         private IEnumerator Boot(bool freshInstall = false)

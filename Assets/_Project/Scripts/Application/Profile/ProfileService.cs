@@ -53,15 +53,36 @@ namespace Callbreak.Application.Profile
             return Validate(candidate, out _);
         }
 
+        public bool HasChosenName => _data.nameChosen;
+
         public NameCheck TrySetDisplayName(string candidate)
         {
             NameCheck check = Validate(candidate, out string name);
             if (check == NameCheck.Ok)
             {
                 _data.displayName = name;
+                _data.nameChosen = true;
                 Commit();
             }
 
+            return check;
+        }
+
+        public NameCheck ChooseName(string candidate)
+        {
+            NameCheck check = Validate(candidate, out string name);
+            if (check == NameCheck.Ok)
+            {
+                _data.displayName = name;
+            }
+            else if (check != NameCheck.Unchanged)
+            {
+                return check;
+            }
+
+            // Keeping the name it already has ("Player") is an answer too.
+            _data.nameChosen = true;
+            Commit();
             return check;
         }
 
@@ -260,12 +281,18 @@ namespace Callbreak.Application.Profile
             Changed?.Invoke();
         }
 
-        /// <summary>A stored name or avatar that is no longer valid falls back to the default.</summary>
+        /// <summary>
+        /// A stored name or avatar that is no longer valid falls back to the default, and a player
+        /// whose name fell back is asked again. A file from before the question was asked counts as
+        /// answered when it holds a name of the player's own.
+        /// </summary>
         private void Repair(ProfileData data)
         {
             data.schemaVersion = ProfileData.CurrentVersion;
             string name = NormalizeName(data.displayName);
-            data.displayName = CheckShape(name) == NameCheck.Ok ? name : DefaultDisplayName;
+            bool valid = CheckShape(name) == NameCheck.Ok;
+            data.displayName = valid ? name : DefaultDisplayName;
+            data.nameChosen = valid && (data.nameChosen || !string.Equals(name, DefaultDisplayName, StringComparison.Ordinal));
             if (data.avatarId < 0 || data.avatarId >= AvatarPresetCount)
             {
                 data.avatarId = 0;

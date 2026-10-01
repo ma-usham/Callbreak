@@ -29,6 +29,7 @@ using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Overlays;
 using Callbreak.Presentation.Screens;
 using Callbreak.Presentation.Table;
+using Callbreak.Presentation.Table.Playback;
 using Callbreak.Presentation.Widgets;
 using LitMotion;
 using TMPro;
@@ -492,6 +493,7 @@ namespace Callbreak.Editor
             private string _expectedError;
             private int _assistAsks;
             private int _dealSounds;
+            private int _shuffleSounds;
             private double _dealBeganAt = -1.0;
             private PlayerView _lastSummaryView;
             private PlayerView _finalView;
@@ -1132,6 +1134,18 @@ namespace Callbreak.Editor
                 SettleTweens();
             }
 
+            /// <summary>Plays a card as a player does (ADR 022): press it, pull it up out of the hand and let go well above it.</summary>
+            private void Throw(CardView card)
+            {
+                Vector2 point = PointOn(card);
+                float unit = card.Rect.lossyScale.y;
+                _table.Hand.OnPointerDown(Pointer(point));
+                _table.Hand.OnDrag(Pointer(point + new Vector2(0f, 60f * unit)));
+                _table.Hand.OnDrag(Pointer(point + new Vector2(0f, 260f * unit)));
+                _table.Hand.OnPointerUp(Pointer(point + new Vector2(0f, 260f * unit)));
+                SettleTweens();
+            }
+
             private CardView HandCard(Card card) => _table.Hand.ViewOf(card);
 
             /// <summary>The face or back a card view shows.</summary>
@@ -1387,17 +1401,43 @@ namespace Callbreak.Editor
                     return;
                 }
 
-                // An illegal tap: refused and explained, nothing is sent (GDD screen 08, callout 9).
-                if (!illegal.IsEmpty && Once("illegal tap"))
+                // An illegal card thrown: refused and explained, nothing is sent (GDD screen 08, callout 9).
+                if (!illegal.IsEmpty && Once("illegal throw"))
                 {
                     int plays = _session.PlayCalls, warnings = _haptics.Count(HapticPattern.Warning);
                     int held = hand.Count;
-                    Tap(HandCard(FirstOf(illegal)));
+                    CardView thrown = HandCard(FirstOf(illegal));
+                    Throw(thrown);
                     Equal(plays, _session.PlayCalls, "an illegal card is never sent");
                     Equal(held, hand.Count, "an illegal card stays in the hand");
-                    Equal(warnings + 1, _haptics.Count(HapticPattern.Warning), "an illegal tap gives a warning nudge");
+                    Equal(warnings + 1, _haptics.Count(HapticPattern.Warning), "an illegal throw gives a warning nudge");
                     Check(_table.Prompt.IsShowing, "the prompt that explains the refusal is showing");
                     Check(_table.Trick.CardAt(0) == null, "an illegal card does not reach the trick");
+                    Check(hand.Held == null && thrown.Rect.parent == hand.CardsRoot, "a refused card slides back into the hand");
+                    _nextTapAt = _clock.Now + 0.3;
+                    return;
+                }
+
+                // A tap, or a card let go just above the hand, plays nothing (ADR 022).
+                if (Once("tap and short pull"))
+                {
+                    int plays = _session.PlayCalls, held = hand.Count;
+                    CardView tapped = HandCard(FirstOf(legal));
+                    Tap(tapped);
+                    Equal(plays, _session.PlayCalls, "a tap plays no card");
+                    Equal(held, hand.Count, "a tapped card stays in the hand");
+
+                    Vector2 point = PointOn(tapped);
+                    float unit = tapped.Rect.lossyScale.y;
+                    float restY = tapped.Placement.Position.y;
+                    hand.OnPointerDown(Pointer(point));
+                    hand.OnDrag(Pointer(point + new Vector2(0f, 60f * unit)));
+                    Check(hand.Held == tapped, "a card pulled up out of the hand follows the finger");
+                    Check(tapped.Placement.Position.y > restY + 30f, "the held card rises with the finger", "y " + tapped.Placement.Position.y + " from " + restY);
+                    hand.OnPointerUp(Pointer(point + new Vector2(0f, 60f * unit)));
+                    SettleTweens();
+                    Equal(plays, _session.PlayCalls, "a card let go just above the hand is not played");
+                    Check(hand.Held == null && HandCard(FirstOf(legal)) == tapped, "a card let go too soon goes back into the hand");
                     _nextTapAt = _clock.Now + 0.3;
                     return;
                 }
@@ -1415,7 +1455,7 @@ namespace Callbreak.Editor
                 {
                     int plays = _session.PlayCalls, held = hand.Count;
                     _session.RejectNextPlay = true;
-                    Tap(view);
+                    Throw(view);
                     Equal(plays + 1, _session.PlayCalls, "the refused play was sent once");
                     Equal(held, hand.Count, "a refused card is back in the hand");
                     Check(_table.Trick.CardAt(0) == null, "a refused card leaves the trick");
@@ -1430,7 +1470,7 @@ namespace Callbreak.Editor
                 {
                     int plays = _session.PlayCalls, held = hand.Count;
                     _session.SwallowNextPlay = true;
-                    Tap(view);
+                    Throw(view);
                     Equal(plays + 1, _session.PlayCalls, "the unanswered play was sent once");
                     Equal(held - 1, hand.Count, "the card left the hand at once");
                     Check(!hand.Interactable, "input is locked while a play is unanswered");
@@ -1438,7 +1478,7 @@ namespace Callbreak.Editor
                     CardSet others = state.Hand - CardSet.Of(card);
                     if (!others.IsEmpty)
                     {
-                        Tap(HandCard(FirstOf(others)));
+                        Throw(HandCard(FirstOf(others)));
                     }
 
                     Equal(plays + 1, _session.PlayCalls, "nothing else can be played while locked");
@@ -1465,7 +1505,7 @@ namespace Callbreak.Editor
                 }
                 else if (legal.Count > 1 && Once("slide"))
                 {
-                    // Tap-and-slide: press one card, slide to another, release there.
+                    // Slide along the hand to another card, then throw that one.
                     Card second = default;
                     int index = 0;
                     foreach (Card candidate in legal)
@@ -1476,19 +1516,23 @@ namespace Callbreak.Editor
                         }
                     }
 
+                    Vector2 there = PointOn(HandCard(second));
+                    float unit = view.Rect.lossyScale.y;
                     hand.OnPointerDown(Pointer(PointOn(view)));
-                    hand.OnDrag(Pointer(PointOn(HandCard(second))));
-                    hand.OnPointerUp(Pointer(PointOn(HandCard(second))));
+                    hand.OnDrag(Pointer(there));
+                    hand.OnDrag(Pointer(there + new Vector2(0f, 60f * unit)));
+                    hand.OnDrag(Pointer(there + new Vector2(0f, 260f * unit)));
+                    hand.OnPointerUp(Pointer(there + new Vector2(0f, 260f * unit)));
                     SettleTweens();
                     card = second;
                     view = _table.Trick.CardAt(0);
-                    Equal(before + 1, _session.PlayCalls, "sliding to a card and releasing plays that card");
+                    Equal(before + 1, _session.PlayCalls, "sliding to a card and throwing it plays that card");
                 }
                 else
                 {
-                    Tap(view);
-                    Tap(view);
-                    Equal(before + 1, _session.PlayCalls, "a double tap sends one card");
+                    Throw(view);
+                    Throw(view);
+                    Equal(before + 1, _session.PlayCalls, "a card thrown twice is sent once");
                 }
 
                 CardView flying = _table.Trick.CardAt(0);
@@ -1510,9 +1554,9 @@ namespace Callbreak.Editor
                 _router.Push(ScreenId.Scorecard);
                 SettleTweens();
                 Equal(ScreenId.Scorecard, _router.Current, "the scorecard opens over the local turn");
-                Tap(HandCard(legal));
-                Equal(plays, _session.PlayCalls, "a card tapped under the scorecard is not played");
-                Equal(held, _table.Hand.Count, "a card tapped under the scorecard stays in the hand");
+                Throw(HandCard(legal));
+                Equal(plays, _session.PlayCalls, "a card thrown under the scorecard is not played");
+                Equal(held, _table.Hand.Count, "a card thrown under the scorecard stays in the hand");
                 Click(Field<Button>(_table, "_emoteButton"));
                 Check(!_table.Emotes.IsOpen, "the emote button under the scorecard does nothing");
                 Click(Field<Button>(_table, "_trickTap"));
@@ -2049,6 +2093,20 @@ namespace Callbreak.Editor
                         Equal(13, hand.Count, "with Reduce motion the dealt hand is there at once");
                         Check(hand.Count > 0 && AlphaOf(HandCard(FirstOf(State.Hand))) < 1f, "with Reduce motion the dealt hand fades in");
                     }
+                    else
+                    {
+                        // ADR 022: the whole deck lies face down in the middle before it is shuffled and dealt.
+                        int inMiddle = 0, faceUp = 0;
+                        foreach (CardView card in _table.Trick.Area.GetComponentsInChildren<CardView>(false))
+                        {
+                            inMiddle++;
+                            faceUp += card.IsFaceUp ? 1 : 0;
+                        }
+
+                        Equal(CardViewPool.DeckSize, inMiddle, "the deal begins with the whole deck in the middle of the table");
+                        Equal(0, faceUp, "the deck in the middle lies face down");
+                        Equal(0, hand.Count, "nothing is in the hand before the deal");
+                    }
                 }
                 if (_active.CanPause && _active.Status != SessionStatus.Ended)
                 {
@@ -2067,6 +2125,7 @@ namespace Callbreak.Editor
                 {
                     case RoundStarted _:
                         _dealSounds = _audio.Count(SoundCue.CardDeal);
+                        _shuffleSounds = _audio.Count(SoundCue.CardShuffle);
                         break;
 
                     case HandDealt dealt when dealt.Seat == Local:
@@ -2080,6 +2139,8 @@ namespace Callbreak.Editor
                         }
 
                         Check(opaque, "after the deal every card of the hand is fully visible");
+                        Equal(0, _table.Trick.Area.GetComponentsInChildren<CardView>(false).Length, "after the deal nothing is left in the middle of the table");
+                        Equal(_shuffleSounds + 1, _audio.Count(SoundCue.CardShuffle), "every deal is shuffled once, to the shuffle's sound");
                         int sounds = _audio.Count(SoundCue.CardDeal) - _dealSounds;
                         if (_reduceMotion)
                         {
@@ -2093,8 +2154,8 @@ namespace Callbreak.Editor
                         if (_dealBeganAt >= 0.0)
                         {
                             double seconds = _clock.Now - _dealBeganAt;
-                            double expected = _reduceMotion ? 0.4 : 1.6;
-                            Check(Math.Abs(seconds - expected) <= 2.5 * Frame, "the deal takes 1.6 s (0.4 s with Reduce motion)", $"{seconds:0.000} s");
+                            double expected = _reduceMotion ? DealFade.Seconds : ShuffleAnimation.Seconds + DealAnimation.Seconds;
+                            Check(Math.Abs(seconds - expected) <= 2.5 * Frame, "the shuffle and the deal take 2.7 s (0.4 s with Reduce motion)", $"{seconds:0.000} s");
                         }
 
                         _dealBeganAt = -1.0;
