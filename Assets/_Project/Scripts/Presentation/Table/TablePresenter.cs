@@ -31,7 +31,7 @@ namespace Callbreak.Presentation.Table
     /// input stays locked until that play's own event has played, the session refuses it, or two
     /// seconds pass, when the card rolls back; an illegal tap shakes the card and flashes the prompt
     /// that says what the rules ask for. It also drives the HUD, the turn prompt, the turn clock,
-    /// emotes, the sort button, the peek at the previous trick and the way into the match menu,
+    /// emotes, the peek at the previous trick and the way into the match menu,
     /// scorecard and settings, and pauses an offline match while one of those covers the table.
     /// While a page covers the table, nothing on the table answers a touch (<see cref="TableInput"/>).
     /// An event whose playback throws ends like a resync: the error is logged and the table is
@@ -163,7 +163,6 @@ namespace Callbreak.Presentation.Table
             _view.ScoresClicked += OnScores;
             _view.SettingsClicked += OnSettings;
             _view.EmoteClicked += OnEmoteButton;
-            _view.SortClicked += OnSort;
             _view.TableTapped += OnTableTapped;
             _view.TrickTapped += OnTrickTapped;
             _view.ImBackClicked += OnImBack;
@@ -226,7 +225,6 @@ namespace Callbreak.Presentation.Table
                 _view.ScoresClicked -= OnScores;
                 _view.SettingsClicked -= OnSettings;
                 _view.EmoteClicked -= OnEmoteButton;
-                _view.SortClicked -= OnSort;
                 _view.TableTapped -= OnTableTapped;
                 _view.TrickTapped -= OnTrickTapped;
                 _view.ImBackClicked -= OnImBack;
@@ -620,7 +618,7 @@ namespace Callbreak.Presentation.Table
 
         private IEventAnimation CreateDeal()
         {
-            HandSorter.Sort(State.Hand, _settings.SortOrder, _dealOrder);
+            HandSorter.Sort(State.Hand, _dealOrder);
             var targets = new DealAnimation.Target[TableView.SeatCount];
             for (int rel = 0; rel < targets.Length; rel++)
             {
@@ -905,18 +903,6 @@ namespace Callbreak.Presentation.Table
         {
             _optimistic = null;
             _playLock.Release();
-        }
-
-        private void OnSort()
-        {
-            if (!TableIsOpen)
-            {
-                return;
-            }
-
-            _audio.Play(SoundCue.UiTap);
-            _settings.SetSortOrder(HandSorter.Toggle(_settings.SortOrder));
-            RenderHandOnly(true);
         }
 
         private void OnTableTapped()

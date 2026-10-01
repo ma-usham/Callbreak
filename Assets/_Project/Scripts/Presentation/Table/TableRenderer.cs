@@ -162,7 +162,7 @@ namespace Callbreak.Presentation.Table
         public void RenderHand(TableState state, Card? pendingPlay, bool interactable, bool animate)
         {
             HandView hand = _view.Hand;
-            HandSorter.Sort(state.Hand, _settings.SortOrder, _hand);
+            HandSorter.Sort(state.Hand, _hand);
             if (pendingPlay.HasValue)
             {
                 _hand.Remove(pendingPlay.Value);

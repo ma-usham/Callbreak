@@ -1501,21 +1501,18 @@ namespace Callbreak.Editor
             /// <summary>
             /// The scorecard over the local turn (online the match runs on under it, GDD §11 screen 16).
             /// The page takes every touch; the table's own handlers are the second lock: a touch that
-            /// got through plays no card, flips no sort order, opens no emotes, mutes nobody, peeks at
-            /// nothing and opens nothing from the HUD.
+            /// got through plays no card, opens no emotes, mutes nobody, peeks at nothing and opens
+            /// nothing from the HUD.
             /// </summary>
             private void StageCoveredTable(Card legal)
             {
                 int plays = _session.PlayCalls, held = _table.Hand.Count;
-                HandSortOrder order = _settings.SortOrder;
                 _router.Push(ScreenId.Scorecard);
                 SettleTweens();
                 Equal(ScreenId.Scorecard, _router.Current, "the scorecard opens over the local turn");
                 Tap(HandCard(legal));
                 Equal(plays, _session.PlayCalls, "a card tapped under the scorecard is not played");
                 Equal(held, _table.Hand.Count, "a card tapped under the scorecard stays in the hand");
-                Click(Field<Button>(_table, "_sortButton"));
-                Equal(order, _settings.SortOrder, "the sort button under the scorecard does nothing");
                 Click(Field<Button>(_table, "_emoteButton"));
                 Check(!_table.Emotes.IsOpen, "the emote button under the scorecard does nothing");
                 Click(Field<Button>(_table, "_trickTap"));
@@ -1585,9 +1582,9 @@ namespace Callbreak.Editor
                 {
                     Emotes();
                 }
-                else if (state.TricksCompleted >= 4 && Once("sort"))
+                else if (state.TricksCompleted >= 4 && Once("hand order"))
                 {
-                    Sort();
+                    HandOrder();
                 }
                 else if (state.TricksCompleted >= 5 && Once("app pause"))
                 {
@@ -1672,6 +1669,13 @@ namespace Callbreak.Editor
                 Click(emote);
                 Check(picker.IsOpen, "the emote button opens the picker");
                 Equal(6, phrases.Length, "the picker has six phrases");
+
+                // ADR 021: the button sits in the bottom-right corner, and the phrases open beside it.
+                var screen = (RectTransform)_table.GetComponentInParent<Canvas>().rootCanvas.transform;
+                Vector3 button = CentreIn(screen, (RectTransform)emote.transform);
+                Vector3 panel = CentreIn(screen, (RectTransform)picker.transform.Find("Panel/Card"));
+                Check(button.x > screen.rect.width / 4f && button.y < -screen.rect.height / 4f, "the emote button sits in the bottom-right corner", button.ToString());
+                Check(panel.x > 0f, "the phrases open on the right, by the button", panel.ToString());
                 for (int i = 0; i < labels.Length && i < TablePresenter.EmoteKeys.Count; i++)
                 {
                     Equal(_text.Get(TablePresenter.EmoteKeys[i]), labels[i].text, "a phrase comes from the Emotes table");
@@ -1704,12 +1708,16 @@ namespace Callbreak.Editor
                 you.HideBubble();
             }
 
-            private void Sort()
+            /// <summary>The centre of <paramref name="rect"/> in the local space of <paramref name="screen"/> (0 at the middle of the screen).</summary>
+            private static Vector3 CentreIn(RectTransform screen, RectTransform rect)
             {
-                HandSortOrder before = _settings.SortOrder;
-                Click(Field<Button>(_table, "_sortButton"));
-                Check(_settings.SortOrder != before, "the sort button toggles the saved order");
-                HandSorter.Sort(State.Hand, _settings.SortOrder, _sorted);
+                return screen.InverseTransformPoint(rect.TransformPoint(rect.rect.center));
+            }
+
+            /// <summary>The hand's one order, ♠ ♥ ♣ ♦ and high to low (ADR 021): there is nothing to press for it.</summary>
+            private void HandOrder()
+            {
+                HandSorter.Sort(State.Hand, _sorted);
                 bool inOrder = _sorted.Count == _table.Hand.Count;
                 for (int i = 0; inOrder && i < _sorted.Count; i++)
                 {
@@ -1717,7 +1725,14 @@ namespace Callbreak.Editor
                     inOrder = view != null && view.Rect.GetSiblingIndex() == i;
                 }
 
-                Check(inOrder, "the hand is laid out in the chosen order");
+                Check(inOrder, "the hand is laid out spades, hearts, clubs, diamonds, high to low");
+                bool sortButton = false;
+                foreach (Transform child in _table.GetComponentsInChildren<Transform>(true))
+                {
+                    sortButton |= child.name == "SortButton";
+                }
+
+                Check(!sortButton, "the table has no sort button");
             }
 
             private void AppPause()
@@ -2906,7 +2921,6 @@ namespace Callbreak.Editor
                     _settings.SetMusic(!_settings.Music);
                     _settings.SetSoundEffects(!_settings.SoundEffects);
                     _settings.SetReduceMotion(!_settings.ReduceMotion);
-                    _settings.SetSortOrder(HandSorter.Toggle(_settings.SortOrder));
                     _settings.SetReduceMotion(_reduceMotion);
                 }
                 catch (Exception e)

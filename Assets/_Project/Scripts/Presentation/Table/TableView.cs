@@ -7,10 +7,11 @@ namespace Callbreak.Presentation.Table
 {
     /// <summary>
     /// GDD §11 screen 08, the table: the HUD (home, round and trump, scores and settings), the four
-    /// seats, the trick area, the local hand, the emote and sort buttons, the turn prompt and the
-    /// emote picker. It raises one event per intent and hands out its parts; the presenters and the
-    /// event playback decide what they show. Seats are indexed by relative position: 0 bottom
-    /// (you), 1 right, 2 top, 3 left.
+    /// seats, the trick area, the local hand, the emote button, the turn prompt and the emote
+    /// picker. The hand keeps one order, so there is no sort button (ADR 021), and the emote button
+    /// sits in the bottom-right corner where mockup 08 draws that button. It raises one event per
+    /// intent and hands out its parts; the presenters and the event playback decide what they
+    /// show. Seats are indexed by relative position: 0 bottom (you), 1 right, 2 top, 3 left.
     /// </summary>
     public sealed class TableView : UIScreen
     {
@@ -20,7 +21,6 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private UnityEngine.UI.Button _scoresButton;
         [SerializeField] private UnityEngine.UI.Button _settingsButton;
         [SerializeField] private UnityEngine.UI.Button _emoteButton;
-        [SerializeField] private UnityEngine.UI.Button _sortButton;
         [SerializeField] private UnityEngine.UI.Button _tableTap;
         [SerializeField] private UnityEngine.UI.Button _trickTap;
         [SerializeField] private TMP_Text _roundLabel;
@@ -45,8 +45,6 @@ namespace Callbreak.Presentation.Table
         public event Action SettingsClicked;
 
         public event Action EmoteClicked;
-
-        public event Action SortClicked;
 
         /// <summary>A tap on the table itself, beside every control: skips a long animation.</summary>
         public event Action TableTapped;
@@ -131,7 +129,6 @@ namespace Callbreak.Presentation.Table
             _scoresButton.onClick.AddListener(OnScores);
             _settingsButton.onClick.AddListener(OnSettings);
             _emoteButton.onClick.AddListener(OnEmote);
-            _sortButton.onClick.AddListener(OnSort);
             _tableTap.onClick.AddListener(OnTableTap);
             _trickTap.onClick.AddListener(OnTrickTap);
             _imBackButton.onClick.AddListener(OnImBack);
@@ -144,7 +141,6 @@ namespace Callbreak.Presentation.Table
             _scoresButton.onClick.RemoveListener(OnScores);
             _settingsButton.onClick.RemoveListener(OnSettings);
             _emoteButton.onClick.RemoveListener(OnEmote);
-            _sortButton.onClick.RemoveListener(OnSort);
             _tableTap.onClick.RemoveListener(OnTableTap);
             _trickTap.onClick.RemoveListener(OnTrickTap);
             _imBackButton.onClick.RemoveListener(OnImBack);
@@ -158,8 +154,6 @@ namespace Callbreak.Presentation.Table
         private void OnSettings() => SettingsClicked?.Invoke();
 
         private void OnEmote() => EmoteClicked?.Invoke();
-
-        private void OnSort() => SortClicked?.Invoke();
 
         private void OnTableTap() => TableTapped?.Invoke();
 

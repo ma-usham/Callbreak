@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Callbreak.Application.Sessions;
-using Callbreak.Application.Settings;
 using Callbreak.Core.Cards;
 using Callbreak.Core.Match;
 using Callbreak.Core.Rules;
@@ -211,36 +210,35 @@ namespace Callbreak.Tests.EditMode.Presentation
 
         // ------------------------------------------------------------------ hand order
 
-        private static string Sorted(string hand, HandSortOrder order)
+        private static string Sorted(string hand)
         {
             var cards = new List<Card>();
-            HandSorter.Sort(CardSet.Parse(hand), order, cards);
+            HandSorter.Sort(CardSet.Parse(hand), cards);
             return string.Join(" ", cards);
         }
 
         [Test]
-        public void Hand_SortsBySuitThenHighToLow_AsMockup08()
+        public void Hand_IsSpadesHeartsClubsDiamonds_ThenHighToLow()
         {
+            // The owner's one order (ADR 021): the colours alternate, so the table has no Sort button.
             Assert.AreEqual(
-                "A♠ K♠ 9♠ 6♠ 2♠ A♥ 8♥ 4♥ K♦ 5♦ 2♦ 7♣ 3♣",
-                Sorted("3♣ 7♣ 2♦ 5♦ K♦ 4♥ 8♥ A♥ 2♠ 6♠ 9♠ K♠ A♠", HandSortOrder.BySuit));
+                "A♠ K♠ 9♠ 6♠ 2♠ A♥ 8♥ 4♥ 7♣ 3♣ K♦ 5♦ 2♦",
+                Sorted("3♣ 7♣ 2♦ 5♦ K♦ 4♥ 8♥ A♥ 2♠ 6♠ 9♠ K♠ A♠"));
         }
 
         [Test]
-        public void Hand_AlternatingColours_PutsClubsBetweenTheRedSuits()
+        public void Hand_PutsClubsBeforeDiamonds_WhateverIsMissing()
         {
-            Assert.AreEqual(
-                "A♠ K♠ 9♠ 6♠ 2♠ A♥ 8♥ 4♥ 7♣ 3♣ K♦ 5♦ 2♦",
-                Sorted("3♣ 7♣ 2♦ 5♦ K♦ 4♥ 8♥ A♥ 2♠ 6♠ 9♠ K♠ A♠", HandSortOrder.AlternatingColours));
-            Assert.AreEqual(HandSortOrder.AlternatingColours, HandSorter.Toggle(HandSortOrder.BySuit));
-            Assert.AreEqual(HandSortOrder.BySuit, HandSorter.Toggle(HandSortOrder.AlternatingColours));
+            Assert.AreEqual("Q♣ 4♦", Sorted("4♦ Q♣"));
+            Assert.AreEqual("2♠ A♥ 3♦", Sorted("3♦ A♥ 2♠"));
+            Assert.AreEqual("J♥ 5♣", Sorted("5♣ J♥"));
         }
 
         [Test]
         public void Sort_HandlesEmptyAndSingleSuitHands()
         {
-            Assert.AreEqual(string.Empty, Sorted("-", HandSortOrder.BySuit));
-            Assert.AreEqual("K♥ 10♥ 2♥", Sorted("2♥ K♥ 10♥", HandSortOrder.AlternatingColours));
+            Assert.AreEqual(string.Empty, Sorted("-"));
+            Assert.AreEqual("K♥ 10♥ 2♥", Sorted("2♥ K♥ 10♥"));
         }
     }
 }

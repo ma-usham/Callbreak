@@ -36,7 +36,10 @@ namespace Callbreak.Editor.Screens
         private const float HandTouchTop = 684f;
         private const float HandWidthFraction = 0.772f;         // 94.5 px between cards on the mockup; the GDD says 70%
         private const float HandLift = 14.4f;                   // 12.5 mockup px; the GDD says 28
-        private const float HandArcRadius = 3740f;
+
+        // Half the bend mockup 08 draws (a radius of 3740, end cards leaning 10°): the owner asked for
+        // a gentler arc, so a full hand's end cards lean 5° and hang 28 px lower (ADR 021).
+        private const float HandArcRadius = 7480f;
 
         // ---- Trick slots by relative seat (0 bottom, 1 right, 2 top, 3 left): centre and turn.
         private static readonly Vector2[] TrickSlots =
@@ -55,7 +58,8 @@ namespace Callbreak.Editor.Screens
         private const float PromptHeight = 38f;
         private static readonly Vector2 TrickLabelCentre = new Vector2(836f, 104f);
         // Six phrases, each an 88 px touch target with 16 px between them (GDD §16): 76.8 and 14 mockup px.
-        private static readonly Rect EmotePanel = new Rect(112f, 521.6f, 448f, 294.4f);
+        // The panel opens to the left of the emote button, 112 px in from the right edge (ADR 021).
+        private static readonly Rect EmotePanel = new Rect(1112f, 521.6f, 448f, 294.4f);
         private const float BubbleHeight = 33f;
         private const float ReconnectingDim = 0.45f;
         private static readonly Vector2 ImBackCentre = new Vector2(836f, 300f);
@@ -65,8 +69,8 @@ namespace Callbreak.Editor.Screens
         public const float MinTouch = 88f;
 
         // ---- The seat chip ("Away", "Reconnecting…", "Bot playing", "BOT"): the kit's tag pill on the
-        // top edge of an opponent's avatar; the local seat's sits above its name plate, between the
-        // emote button and the hand.
+        // top edge of an opponent's avatar; the local seat's sits above its name plate, left of the
+        // hand.
         private const float ChipHeight = 24f;
         private const float ChipTextScale = 0.8f;
         private const float ChipSpinnerSize = 15f;
@@ -128,7 +132,7 @@ namespace Callbreak.Editor.Screens
             BuildReconnecting(ctx, nameStyle);
 
             // The emote button is 83 px across; the other HUD buttons are 88 or more already.
-            foreach (string id in new[] { "HomeButton", "ScoresButton", "SettingsButton", "EmoteButton", "SortButton" })
+            foreach (string id in new[] { "HomeButton", "ScoresButton", "SettingsButton", "EmoteButton" })
             {
                 MinimumTouch(ctx.Nodes[id].GetComponent<Button>().targetGraphic, MinTouch, MinTouch);
             }
@@ -292,7 +296,7 @@ namespace Callbreak.Editor.Screens
             TMP_Text timerText = disc.GetComponentInChildren<TMP_Text>(true);
 
             // Bubble for a call or a quick phrase: the name plate's white pill, below the status pill
-            // (beside the emote button for the local seat).
+            // (above the name plate for the local seat).
             Vector2 bubbleCentre = local ? avatarCentre + new Vector2(118f, -76f) : avatarCentre + new Vector2(0f, seat == 2 ? 120f : 123f);
             RectTransform bubble = UiBuildKit.CreateAt("Bubble", root, bubbleCentre, seatCentre, UiBuildKit.FromMock(90f, BubbleHeight));
             Sliced(bubble, LoadTableSprite("UI_NamePlate"));
@@ -464,12 +468,14 @@ namespace Callbreak.Editor.Screens
             dismiss.targetGraphic = dismissImage;
             NoNavigation(dismiss);
 
-            // Pinned to the bottom-left corner like the emote button it belongs to.
+            // Pinned to the bottom-right corner like the emote button it belongs to.
             var card = new GameObject("Card", typeof(RectTransform));
             var cardRect = (RectTransform)card.transform;
             cardRect.SetParent(panelRoot, false);
-            cardRect.anchorMin = cardRect.anchorMax = cardRect.pivot = new Vector2(0f, 0f);
-            cardRect.anchoredPosition = new Vector2(EmotePanel.x * UiBuildKit.ScaleX, (UiBuildKit.MockHeight - EmotePanel.yMax) * UiBuildKit.ScaleY);
+            cardRect.anchorMin = cardRect.anchorMax = cardRect.pivot = new Vector2(1f, 0f);
+            cardRect.anchoredPosition = new Vector2(
+                -(UiBuildKit.MockWidth - EmotePanel.xMax) * UiBuildKit.ScaleX,
+                (UiBuildKit.MockHeight - EmotePanel.yMax) * UiBuildKit.ScaleY);
             cardRect.sizeDelta = UiBuildKit.FromMock(EmotePanel.width, EmotePanel.height);
 
             Sprite panelShadow = UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Common/UI_Panel_Card_Shadow.png", 0f);

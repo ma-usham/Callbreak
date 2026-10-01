@@ -89,11 +89,9 @@ namespace Callbreak.Editor.Screens
             you.SetTurn(true);
             you.SetTimer(1f, playing ? 18 : 20, false, 0f);
 
+            // The mockups' hands, in the game's one order: ♠ ♥ ♣ ♦ (ADR 021), where they draw ♦ before ♣.
             var hand = new List<Card>();
-            foreach (string card in (playing ? "A♠ K♠ 9♠ 6♠ 2♠ A♥ 8♥ 4♥ K♦ 5♦ 2♦ 7♣ 3♣" : "A♠ K♠ J♠ 9♠ 4♠ A♥ J♥ 8♥ K♦ 10♦ 5♦ Q♣ 7♣").Split(' '))
-            {
-                hand.Add(Card.Parse(card));
-            }
+            HandSorter.Sort(CardSet.Parse(playing ? "A♠ K♠ 9♠ 6♠ 2♠ A♥ 8♥ 4♥ K♦ 5♦ 2♦ 7♣ 3♣" : "A♠ K♠ J♠ 9♠ 4♠ A♥ J♥ 8♥ K♦ 10♦ 5♦ Q♣ 7♣"), hand);
 
             view.Hand.Clear();
             view.Hand.SetDeck(skin.Cards, Deck);

@@ -1,7 +1,7 @@
 {
   // Screen 08 - Gameplay, the table (GDD §11 T rules + screen 08). Rects are mockup pixels on 08-gameplay.png.
   // Everything is shared kit (ArtSource/Kit/*.map.csv): header discs and their shadows, the logo, the home /
-  // scorecard / settings / emote / sort icons, the trump spade, avatar ring and avatar, the name plate and the
+  // scorecard / settings / emote icons, the trump spade, avatar ring and avatar, the name plate and the
   // status pill (sliced left and right, scaled to each seat's height), the timer ring (a radial fill at runtime)
   // and its seconds badge, and the round ornament (one sprite; the customizer mirrors the right one). Icons are
   // placed at the rects the icons map gives (the whole texture, no shape). The header divider is a drawn hairline.
@@ -80,10 +80,6 @@
     { "id": "SettingsIcon", "parent": "SettingsButton", "shape": "ink", "rect": [1568, 42, 50, 51], "use": "UI/Icons/Icon_Settings.png" },
     { "id": "SettingsLabel", "kind": "label", "group": "HeaderRight", "text": "Settings", "font": "SansMedium", "rect": [1556, 109.5, 74, 23.5], "key": "ui.table.settings" },
 
-    { "id": "EmoteButton", "kind": "button", "group": "BottomLeft", "shape": "ellipse", "rect": [28.5, 743.8, 72.2, 71.8], "grow": 9,
-      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
-    { "id": "EmoteIcon", "parent": "EmoteButton", "rect": [46.26, 760.29, 37.37, 38.24], "use": "UI/Icons/Icon_Emote.png" },
-
     { "id": "Seat0", "kind": "group", "group": "BottomLeft", "rect": [18, 828, 224, 106] },
     { "id": "SeatPlate0", "parent": "Seat0", "shape": "pill", "rect": [66, 853.3, 166.1, 32.8], "use": "UI/Table/UI_NamePlate.png" },
     { "id": "SeatName0", "kind": "label", "parent": "SeatPlate0", "text": "You", "font": "SansSemiBold", "rect": [144, 858, 44, 24], "key": "ui.table.you" },
@@ -95,8 +91,11 @@
     { "id": "SeatTimerDisc0", "parent": "Seat0", "shape": "ellipse", "rect": [43.6, 893.7, 42.3, 35.3], "use": "UI/Table/UI_TimerDisc.png" },
     { "id": "SeatTimerText0", "kind": "label", "parent": "SeatTimerDisc0", "text": "18", "font": "SansBold", "ink": "light", "rect": [52, 899, 26, 21] },
 
-    { "id": "SortButton", "kind": "button", "group": "BottomRight", "shape": "ellipse", "rect": [1562.7, 832.3, 83.0, 83.2], "grow": 9,
+    // ADR 021: the hand keeps one order, so the table has no sort button, and the emote button sits where
+    // mockup 08 draws it (centred on [1562.7, 832.3, 83.0, 83.2]); mockup 08 has the emote button at
+    // [28.5, 743.8, 72.2, 71.8], above the local avatar.
+    { "id": "EmoteButton", "kind": "button", "group": "BottomRight", "shape": "ellipse", "rect": [1568.1, 838.0, 72.2, 71.8], "grow": 9,
       "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
-    { "id": "SortIcon", "parent": "SortButton", "rect": [1580.79, 850.93, 45.20, 46.07], "use": "UI/Icons/Icon_Sort.png" }
+    { "id": "EmoteIcon", "parent": "EmoteButton", "rect": [1585.86, 854.49, 37.37, 38.24], "use": "UI/Icons/Icon_Emote.png" }
   ]
 }

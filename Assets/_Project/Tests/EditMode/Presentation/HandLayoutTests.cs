@@ -203,17 +203,19 @@ namespace Callbreak.Tests.EditMode.Presentation
         }
 
         [Test]
-        public void TheTablesOwnNumbers_FromMockup08_FitToo()
+        public void TheTablesOwnNumbers_FitToo()
         {
-            // The table prefab overrides the width and the lift with what mockup 08 draws.
-            var settings = new HandLayoutSettings { MinWidthFraction = 0.772f, Lift = 14.4f, ArcRadius = 3740f };
+            // The table prefab overrides the width and the lift with what mockup 08 draws, and bends
+            // the hand half as much as the mockup does: the owner asked for a gentler arc (ADR 021).
+            var settings = new HandLayoutSettings { MinWidthFraction = 0.772f, Lift = 14.4f, ArcRadius = 7480f };
             float strip = HandLayout.Strip(13, Reference, settings);
             Assert.AreEqual(108.5f, strip, 0.1f);
             float fraction = HandLayout.Width(13, Reference, settings) / Reference;
             Assert.GreaterOrEqual(fraction, 0.70f);
             Assert.LessOrEqual(fraction, 0.86f);
             CardPose[] poses = Layout(13, Reference, settings);
-            Assert.AreEqual(10f, poses[0].Rotation, 0.5f, "the end cards lean about 10 degrees, as drawn");
+            Assert.AreEqual(5f, poses[0].Rotation, 0.25f, "the end cards lean about 5 degrees, half of mockup 08's 10");
+            Assert.AreEqual(-28.3f, poses[0].Y, 0.5f, "and hang about 28 px below the middle card");
         }
     }
 }
