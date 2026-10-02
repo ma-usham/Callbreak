@@ -86,6 +86,12 @@ namespace Callbreak.Application.Online
         /// <summary>The running or last match of this room; null before the first start.</summary>
         public IMatchSession Match => _match;
 
+        /// <summary>
+        /// A Quick Match table that is full and locked: when its match starts, by this member's clock
+        /// (the host says it as the time from then); NaN while the table is open (ADR 029).
+        /// </summary>
+        public double StartsAt { get; private set; } = double.NaN;
+
         /// <summary>Introduces this player to the host. None when seated; otherwise why not.</summary>
         public Task<RoomError> JoinAsync(CancellationToken ct)
         {
@@ -440,6 +446,7 @@ namespace Callbreak.Application.Online
             _code = snapshot.Code;
             _roomSettings = snapshot.Settings;
             InMatch = snapshot.InMatch;
+            StartsAt = snapshot.StartsInMs >= 0 ? _now + (snapshot.StartsInMs / 1000.0) : double.NaN;
             for (int i = 0; i < _seats.Length; i++)
             {
                 RoomSnapshot.Member m = snapshot.Seats[i];

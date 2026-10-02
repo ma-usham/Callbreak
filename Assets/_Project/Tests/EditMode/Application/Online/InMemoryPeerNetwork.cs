@@ -30,6 +30,14 @@ namespace Callbreak.Tests.EditMode.Application.Online
     /// directory unreachable for it, hold every answer back, list a code elsewhere, and make new
     /// listings take a while to show in lookups (with the network's clock, <see cref="Now"/>).
     /// </para>
+    /// <para>
+    /// It also keeps the directory of Quick Match tables (<see cref="IQuickTableDirectory"/>), as the
+    /// adapter does: a table is dated by the time its first listing gave (its host's tap), and keeps
+    /// that date when it is listed again after a loss; it shows in searches after <see cref="ListingDelaySeconds"/>
+    /// like any listing, only with a seat free, oldest first; a change of its free seats shows after
+    /// <see cref="FreeSeatsDelaySeconds"/>; its device's own table is among them; and a table taken
+    /// down while its listing was still on its way is never listed.
+    /// </para>
     /// </summary>
     public sealed class InMemoryPeerNetwork
     {
@@ -42,6 +50,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
         private readonly Dictionary<string, Device> _devices = new Dictionary<string, Device>();
         private readonly Dictionary<string, string> _listings = new Dictionary<string, string>();
         private readonly Dictionary<string, double> _shownAt = new Dictionary<string, double>();
+        private readonly Dictionary<string, QuickListing> _quick = new Dictionary<string, QuickListing>();
         private readonly Dictionary<string, Link> _links = new Dictionary<string, Link>();
         private readonly HashSet<string> _closing = new HashSet<string>();
         private readonly Queue<Action> _queue = new Queue<Action>();
@@ -64,6 +73,15 @@ namespace Callbreak.Tests.EditMode.Application.Online
         /// a lookup of its code finds nothing. A listing taken over with <see cref="Take"/> shows at once.
         /// </summary>
         public double ListingDelaySeconds { get; set; }
+
+        /// <summary>
+        /// How long a change of a Quick Match table's free seats takes to show in searches (EOS: 0.3 to
+        /// 1.7 s, measured): until then a full table may still be found, and its host turns the joiner away.
+        /// </summary>
+        public double FreeSeatsDelaySeconds { get; set; }
+
+        /// <summary>The network's clock as the wall clock the directory dates tables by: ms since 1970, the test's zero being 1970.</summary>
+        public long UnixMs => (long)Math.Round(Now * 1000.0);
 
         /// <summary>
         /// While set, every answer of the services (sign-in, listing, look-up) waits, as from a
@@ -118,6 +136,37 @@ namespace Callbreak.Tests.EditMode.Application.Online
             return device;
         }
 
+        /// <summary>The Quick Match table <paramref name="roomCode"/>'s free seats in the directory, shown in searches yet or not; -1 when nobody lists it.</summary>
+        public int QuickFreeSeats(string roomCode)
+        {
+            foreach (QuickListing listing in _quick.Values)
+            {
+                if (listing.Code == roomCode)
+                {
+                    return listing.FreeAt(Now);
+                }
+            }
+
+            return -1;
+        }
+
+        /// <summary>The date the Quick Match table <paramref name="roomCode"/> is listed with (its host's tap, UTC ms); -1 when nobody lists it.</summary>
+        public long QuickOpenedAt(string roomCode)
+        {
+            foreach (QuickListing listing in _quick.Values)
+            {
+                if (listing.Code == roomCode)
+                {
+                    return listing.OpenedAtUnixMs;
+                }
+            }
+
+            return -1;
+        }
+
+        /// <summary>The Quick Match tables in the directory, shown in searches yet or not, open or full.</summary>
+        public int QuickTables => _quick.Count;
+
         /// <summary>The address that lists <paramref name="roomCode"/>, shown in lookups yet or not; null when nobody does.</summary>
         public string ListedBy(string roomCode) => _listings.TryGetValue(roomCode, out string address) ? address : null;
 
@@ -152,6 +201,26 @@ namespace Callbreak.Tests.EditMode.Application.Online
             if (_devices.TryGetValue(address, out Device owner))
             {
                 _queue.Enqueue(() => owner.RaiseListingLost(roomCode));
+            }
+        }
+
+        /// <summary>The directory drops the Quick Match table <paramref name="roomCode"/>, as when its device lost the network for a moment; that device hears of it.</summary>
+        public void LoseQuickListing(string roomCode)
+        {
+            foreach (KeyValuePair<string, QuickListing> pair in _quick)
+            {
+                if (pair.Value.Code != roomCode)
+                {
+                    continue;
+                }
+
+                _quick.Remove(pair.Key);
+                if (_devices.TryGetValue(pair.Value.Address, out Device owner))
+                {
+                    _queue.Enqueue(() => owner.RaiseListingLost(roomCode));
+                }
+
+                return;
             }
         }
 
@@ -226,6 +295,91 @@ namespace Callbreak.Tests.EditMode.Application.Online
             {
                 _queue.Enqueue(answer);
             }
+        }
+
+        private static string QuickKey(Device device, string roomCode) => device.Address + "\n" + roomCode;
+
+        private RoomError ListQuick(Device device, string roomCode, int freeSeats, long openedAtUnixMs)
+        {
+            if (!device.IsSignedIn)
+            {
+                return RoomError.Unknown;
+            }
+
+            if (device.DirectoryError != RoomError.None)
+            {
+                return device.DirectoryError;
+            }
+
+            string key = QuickKey(device, roomCode);
+            if (_quick.TryGetValue(key, out QuickListing listed))
+            {
+                // Listing a table that is listed already only sets its free seats.
+                listed.SetFree(freeSeats, Now, Now + FreeSeatsDelaySeconds);
+                return RoomError.None;
+            }
+
+            _quick[key] = new QuickListing(device.Address, roomCode, freeSeats, openedAtUnixMs, Now + ListingDelaySeconds);
+            return RoomError.None;
+        }
+
+        private void SetQuickFree(Device device, string roomCode, int freeSeats)
+        {
+            if (_quick.TryGetValue(QuickKey(device, roomCode), out QuickListing listing))
+            {
+                listing.SetFree(freeSeats, Now, Now + FreeSeatsDelaySeconds);
+            }
+        }
+
+        private void UnlistQuick(Device device, string roomCode) => _quick.Remove(QuickKey(device, roomCode));
+
+        private string QuickCodeOf(Device device)
+        {
+            foreach (QuickListing listing in _quick.Values)
+            {
+                if (listing.Address == device.Address)
+                {
+                    return listing.Code;
+                }
+            }
+
+            return null;
+        }
+
+        private QuickTableSearch FindQuick(Device device)
+        {
+            if (!device.IsSignedIn)
+            {
+                return new QuickTableSearch(null, RoomError.Unknown);
+            }
+
+            if (device.DirectoryError != RoomError.None)
+            {
+                return new QuickTableSearch(null, device.DirectoryError);
+            }
+
+            var shown = new List<QuickListing>();
+            foreach (QuickListing listing in _quick.Values)
+            {
+                if (listing.FreeAt(Now) > 0 && Now >= listing.ShownAt)
+                {
+                    shown.Add(listing);
+                }
+            }
+
+            shown.Sort((a, b) =>
+            {
+                int byAge = a.OpenedAtUnixMs.CompareTo(b.OpenedAtUnixMs);
+                return byAge != 0 ? byAge : string.CompareOrdinal(a.Code, b.Code);
+            });
+            var tables = new List<QuickTable>();
+            for (int i = 0; i < shown.Count && i < 10; i++)
+            {
+                QuickListing listing = shown[i];
+                tables.Add(new QuickTable(listing.Code, listing.Address, listing.FreeAt(Now), listing.OpenedAtUnixMs));
+            }
+
+            return new QuickTableSearch(tables, RoomError.None);
         }
 
         private RoomError List(Device device, string roomCode)
@@ -432,8 +586,11 @@ namespace Callbreak.Tests.EditMode.Application.Online
         }
 
         /// <summary>One device on the network: what the app's peer-to-peer adapter would be.</summary>
-        public sealed class Device : IPeerNetwork
+        public sealed class Device : IPeerNetwork, IQuickTableDirectory
         {
+            private readonly Dictionary<string, int> _quickTakenDown = new Dictionary<string, int>();
+            private readonly Dictionary<string, long> _quickOpened = new Dictionary<string, long>();
+
             private readonly InMemoryPeerNetwork _network;
             private readonly Queue<(string Address, string Channel, byte[] Packet)> _inbox = new Queue<(string Address, string Channel, byte[] Packet)>();
 
@@ -474,6 +631,13 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
             public int LookUpCalls { get; private set; }
 
+            public int QuickListCalls { get; private set; }
+
+            /// <summary>The code of the Quick Match table this device lists, shown in searches yet or not; null when it lists none.</summary>
+            public string QuickCode => _network.QuickCodeOf(this);
+
+            public int QuickSearches { get; private set; }
+
             /// <summary>Packets delivered that the device has not taken yet.</summary>
             public int Waiting => _inbox.Count;
 
@@ -513,6 +677,81 @@ namespace Callbreak.Tests.EditMode.Application.Online
             }
 
             public void Unlist(string roomCode) => _network.Unlist(this, roomCode);
+
+            /// <summary>Dated by <paramref name="openedAtUnixMs"/> (its host's tap) the first time its code is listed, as the adapter's are.</summary>
+            public Task<RoomError> ListQuickAsync(string roomCode, int freeSeats, long openedAtUnixMs, CancellationToken ct)
+            {
+                if (string.IsNullOrEmpty(roomCode))
+                {
+                    throw new ArgumentException("A room code is required.", nameof(roomCode));
+                }
+
+                if (freeSeats < 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(freeSeats));
+                }
+
+                QuickListCalls++;
+                if (!_quickOpened.TryGetValue(roomCode, out long openedAt))
+                {
+                    // A code keeps the date it was first listed with, as the adapter's does.
+                    openedAt = openedAtUnixMs;
+                    _quickOpened[roomCode] = openedAt;
+                }
+                int takenDown = TakenDown(roomCode);
+                var answer = Pending(ct, RoomError.Unknown);
+                _network.Answer(() =>
+                {
+                    if (answer.Task.IsCompleted || IsUnplugged)
+                    {
+                        return;
+                    }
+
+                    // Taken down while the listing was on its way: it never shows.
+                    answer.TrySetResult(TakenDown(roomCode) != takenDown ? RoomError.Unknown : _network.ListQuick(this, roomCode, freeSeats, openedAt));
+                });
+                return answer.Task;
+            }
+
+            public void SetQuickFreeSeats(string roomCode, int freeSeats)
+            {
+                if (freeSeats < 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(freeSeats));
+                }
+
+                if (!IsUnplugged)
+                {
+                    _network.SetQuickFree(this, roomCode, freeSeats);
+                }
+            }
+
+            public void UnlistQuick(string roomCode)
+            {
+                if (roomCode == null || IsUnplugged)
+                {
+                    return;
+                }
+
+                // Taken down on purpose: the table's date goes with it, as with the adapter.
+                _quickTakenDown[roomCode] = TakenDown(roomCode) + 1;
+                _quickOpened.Remove(roomCode);
+                _network.UnlistQuick(this, roomCode);
+            }
+
+            public Task<QuickTableSearch> FindQuickTablesAsync(CancellationToken ct)
+            {
+                QuickSearches++;
+                var answer = Pending(ct, new QuickTableSearch(null, RoomError.Unknown));
+                _network.Answer(() =>
+                {
+                    if (!answer.Task.IsCompleted && !IsUnplugged)
+                    {
+                        answer.TrySetResult(_network.FindQuick(this));
+                    }
+                });
+                return answer.Task;
+            }
 
             public Task<PeerLookup> LookUpAsync(string roomCode, CancellationToken ct)
             {
@@ -598,6 +837,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
             internal void RaiseListingLost(string roomCode) => ListingLost?.Invoke(roomCode);
 
             /// <summary>An answer to come; cancelled first, it is the call's failure at once.</summary>
+            private int TakenDown(string roomCode) => _quickTakenDown.TryGetValue(roomCode, out int count) ? count : 0;
+
             private static TaskCompletionSource<T> Pending<T>(CancellationToken ct, T cancelled)
             {
                 var answer = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -616,6 +857,49 @@ namespace Callbreak.Tests.EditMode.Application.Online
                     throw new InvalidOperationException("The device is not signed in.");
                 }
             }
+        }
+
+        private sealed class QuickListing
+        {
+            private int _free;
+            private int _shownFree;
+            private double _freeShowsAt;
+
+            public QuickListing(string address, string code, int free, long openedAtUnixMs, double shownAt)
+            {
+                Address = address;
+                Code = code;
+                _free = free;
+                _shownFree = free;
+                OpenedAtUnixMs = openedAtUnixMs;
+                ShownAt = shownAt;
+            }
+
+            public string Address { get; }
+
+            public string Code { get; }
+
+            /// <summary>The free seats searches find at <paramref name="now"/>: the latest number once it shows, the one before until then.</summary>
+            public int FreeAt(double now) => now >= _freeShowsAt ? _free : _shownFree;
+
+            public void SetFree(int free, double now, double showsAt)
+            {
+                if (free == _free)
+                {
+                    return;
+                }
+
+                // Searches keep finding what they found until the new number shows; one still on its
+                // way when the next is set never shows.
+                _shownFree = FreeAt(now);
+                _free = free;
+                _freeShowsAt = showsAt;
+            }
+
+            public long OpenedAtUnixMs { get; }
+
+            /// <summary>When the listing starts to show in searches.</summary>
+            public double ShownAt { get; }
         }
 
         private sealed class Link

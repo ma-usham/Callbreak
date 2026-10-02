@@ -162,6 +162,109 @@ namespace Callbreak.Tests.EditMode.Application.Online
             Assert.IsNull(world.ListedBy("ABCDEF"), "a cancelled listing lists nothing");
         }
 
+        [Test]
+        public void QuickTables_ShowAfterTheDelay_OldestFirst_OnlyWithASeatFree()
+        {
+            var world = new InMemoryPeerNetwork { ListingDelaySeconds = 2.0 };
+            InMemoryPeerNetwork.Device a = SignedIn(world);
+            InMemoryPeerNetwork.Device b = SignedIn(world);
+            InMemoryPeerNetwork.Device c = SignedIn(world);
+            world.Now = 1.0;
+            a.ListQuickAsync("BBBBBB", 3, 1000, CancellationToken.None);
+            world.Pump();
+            world.Now = 1.5;
+            c.ListQuickAsync("CCCCCC", 1, 1500, CancellationToken.None);
+            b.ListQuickAsync("AAAAAA", 2, 1500, CancellationToken.None);
+            world.Pump();
+
+            Task<QuickTableSearch> early = a.FindQuickTablesAsync(CancellationToken.None);
+            world.Pump();
+            world.Now = 3.5;
+            c.SetQuickFreeSeats("CCCCCC", 0);
+            Task<QuickTableSearch> later = a.FindQuickTablesAsync(CancellationToken.None);
+            world.Pump();
+
+            Assert.AreEqual(RoomError.None, early.Result.Error);
+            Assert.AreEqual(0, early.Result.Tables.Count, "nothing shows before the delay");
+            Assert.AreEqual(2, later.Result.Tables.Count, "a full table is hidden");
+            Assert.AreEqual("BBBBBB", later.Result.Tables[0].RoomCode, "the oldest first, the device's own among them");
+            Assert.AreEqual(a.Address, later.Result.Tables[0].HostAddress);
+            Assert.AreEqual(1000, later.Result.Tables[0].OpenedAtUnixMs);
+            Assert.AreEqual("AAAAAA", later.Result.Tables[1].RoomCode);
+            Assert.AreEqual(2, later.Result.Tables[1].FreeSeats);
+        }
+
+        [Test]
+        public void QuickTable_TakenDownWhileItsListingIsOnItsWay_NeverShows()
+        {
+            var world = new InMemoryPeerNetwork();
+            InMemoryPeerNetwork.Device a = SignedIn(world);
+
+            Task<RoomError> listing = a.ListQuickAsync("ABCDEF", 3, 0, CancellationToken.None);
+            a.UnlistQuick("ABCDEF");
+            world.Pump();
+
+            Assert.AreNotEqual(RoomError.None, listing.Result);
+            Assert.AreEqual(0, world.QuickTables);
+        }
+
+        [Test]
+        public void QuickTable_ListedAgainAfterALoss_KeepsTheDateItWasFirstListedWith()
+        {
+            var world = new InMemoryPeerNetwork();
+            InMemoryPeerNetwork.Device a = SignedIn(world);
+            world.Now = 1.0;
+            a.ListQuickAsync("ABCDEF", 3, 1000, CancellationToken.None);
+            world.Pump();
+            world.LoseQuickListing("ABCDEF");
+            world.Now = 5.0;
+            a.ListQuickAsync("ABCDEF", 3, 5000, CancellationToken.None);
+            world.Pump();
+
+            Task<QuickTableSearch> found = a.FindQuickTablesAsync(CancellationToken.None);
+            world.Pump();
+
+            Assert.AreEqual(1000, found.Result.Tables[0].OpenedAtUnixMs);
+        }
+
+        [Test]
+        public void QuickFreeSeats_AChangeShowsInSearchesAfterTheDelay()
+        {
+            var world = new InMemoryPeerNetwork { FreeSeatsDelaySeconds = 1.7 };
+            InMemoryPeerNetwork.Device a = SignedIn(world);
+            a.ListQuickAsync("ABCDEF", 1, 0, CancellationToken.None);
+            world.Pump();
+            world.Now = 10.0;
+            a.SetQuickFreeSeats("ABCDEF", 0);
+
+            world.Now = 11.0;
+            Task<QuickTableSearch> soon = a.FindQuickTablesAsync(CancellationToken.None);
+            world.Pump();
+            world.Now = 11.8;
+            Task<QuickTableSearch> later = a.FindQuickTablesAsync(CancellationToken.None);
+            world.Pump();
+
+            Assert.AreEqual(1, soon.Result.Tables.Count, "still found for a moment");
+            Assert.AreEqual(1, soon.Result.Tables[0].FreeSeats);
+            Assert.AreEqual(0, later.Result.Tables.Count, "then hidden");
+        }
+
+        [Test]
+        public void QuickDirectory_Unreachable_SaysSo()
+        {
+            var world = new InMemoryPeerNetwork();
+            InMemoryPeerNetwork.Device a = SignedIn(world);
+            a.DirectoryError = RoomError.Offline;
+
+            Task<RoomError> listing = a.ListQuickAsync("ABCDEF", 3, 0, CancellationToken.None);
+            Task<QuickTableSearch> found = a.FindQuickTablesAsync(CancellationToken.None);
+            world.Pump();
+
+            Assert.AreEqual(RoomError.Offline, listing.Result);
+            Assert.AreEqual(RoomError.Offline, found.Result.Error);
+            Assert.AreEqual(0, world.QuickTables);
+        }
+
         private static InMemoryPeerNetwork.Device SignedIn(InMemoryPeerNetwork world)
         {
             InMemoryPeerNetwork.Device device = world.AddDevice();

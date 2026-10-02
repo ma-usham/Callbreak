@@ -1,6 +1,7 @@
 using System;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Widgets;
+using LitMotion;
 using TMPro;
 using UnityEngine;
 
@@ -8,15 +9,17 @@ namespace Callbreak.Presentation.Screens
 {
     /// <summary>
     /// GDD §11 screen 05: Quick Match search. The crimson arc spins around the still spade while
-    /// the presenter reports progress, fills the four seats as players connect and ticks the honest
-    /// elapsed time. Cancel withdraws the ticket. A button that is not interactable shows its
-    /// disabled look with its label dimmed.
+    /// the presenter reports progress, fills the four seats as players connect (the player's own
+    /// first) and ticks the time in the pill: the search's countdown, then the table's start
+    /// countdown (ADR 029), or the honest elapsed time. Cancel withdraws the ticket. A button that is
+    /// not interactable shows its disabled look with its label dimmed.
     /// </summary>
     public sealed class MatchmakingView : UIScreen
     {
         private const float DimmedAlpha = 0.5f;
 
         [SerializeField] private UnityEngine.UI.Button _backButton;
+        [SerializeField] private UnityEngine.UI.Image _backIcon;
         [SerializeField] private UnityEngine.UI.Button _profileButton;
         [SerializeField] private UnityEngine.UI.Button _settingsButton;
         [SerializeField] private UnityEngine.UI.Button _shopButton;
@@ -28,6 +31,12 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private TMP_Text _statusSubtitle;
         [SerializeField] private MatchmakingSeat[] _seat;
         [SerializeField] private TMP_Text _elapsed;
+
+        private bool _reduceMotion;
+        private int _clockShown;
+        private int _rollFrom;
+        private int _rollTo;
+        private MotionHandle _roll;
 
         public event Action BackClicked;
         public event Action ProfileClicked;
@@ -51,6 +60,24 @@ namespace Callbreak.Presentation.Screens
             }
         }
 
+        /// <summary>
+        /// The whole screen for one search report: the seats, the status lines, the pill, and
+        /// whether Cancel and the back arrow can be used (not while a found table counts down).
+        /// </summary>
+        public void Show(MatchmakingScreenState state)
+        {
+            for (int i = 0; i < _seat.Length && i < state.Seats.Count; i++)
+            {
+                MatchmakingScreenState.Seat seat = state.Seats[i];
+                SetSeat(i, seat.Filled, seat.Name, seat.Status);
+            }
+
+            SetStatus(state.Title, state.Subtitle);
+            SetClock(state.ClockSeconds, state.Clock);
+            SetCancelInteractable(state.CanLeave);
+            SetBackInteractable(state.CanLeave);
+        }
+
         /// <summary>"Finding players..." · "3 of 4 players connected" (or "Table found", an error line...).</summary>
         public void SetStatus(string title, string subtitle)
         {
@@ -64,25 +91,65 @@ namespace Callbreak.Presentation.Screens
             _seat[index].Show(filled, playerName, status);
         }
 
-        /// <summary>With Reduce motion a seat that fills only fades its player in (GDD §14).</summary>
+        /// <summary>With Reduce motion a seat that fills only fades its player in, and the pill's time just changes (GDD §14).</summary>
         public void SetReduceMotion(bool on)
         {
+            _reduceMotion = on;
             foreach (MatchmakingSeat seat in _seat)
             {
                 seat.ReduceMotion = on;
             }
         }
 
-        /// <summary>The elapsed time, already formatted ("00:12").</summary>
-        public void SetElapsed(string elapsed)
+        /// <summary>
+        /// The time in the pill, "00:20". When the table's start countdown takes over from an own
+        /// countdown further away, the pill counts down to it quickly instead of jumping
+        /// (<see cref="MatchmakingDisplay.RollsDown"/>); a count already on its way finishes.
+        /// </summary>
+        public void SetClock(int seconds, MatchmakingDisplay.ClockKind clock)
         {
-            SetText(_elapsed, elapsed);
+            if (_roll.IsActive())
+            {
+                if (seconds == _rollTo)
+                {
+                    return;
+                }
+
+                UiMotion.Stop(ref _roll);
+            }
+
+            if (MatchmakingDisplay.RollsDown(_clockShown, seconds, clock, _reduceMotion) && isActiveAndEnabled)
+            {
+                _rollFrom = _clockShown;
+                _rollTo = seconds;
+                _roll = LMotion.Create(0f, 1f, UiMotion.Medium)
+                    .Bind(this, (t, view) => view.ShowClock(MatchmakingDisplay.RollStep(view._rollFrom, view._rollTo, t)));
+                return;
+            }
+
+            ShowClock(seconds);
+        }
+
+        private void ShowClock(int seconds)
+        {
+            _clockShown = seconds;
+            SetText(_elapsed, MatchmakingDisplay.FormatClock(seconds));
         }
 
         public void SetCancelInteractable(bool interactable)
         {
             _cancelButton.interactable = interactable;
             SetAlpha(_cancelLabel, interactable ? 1f : DimmedAlpha);
+        }
+
+        /// <summary>The back arrow, greyed like the other disabled buttons (its disc tinted, its arrow dimmed).</summary>
+        public void SetBackInteractable(bool interactable)
+        {
+            _backButton.interactable = interactable;
+            if (_backIcon != null)
+            {
+                SetAlpha(_backIcon, interactable ? 1f : DimmedAlpha);
+            }
         }
 
         private void OnEnable()
@@ -101,6 +168,7 @@ namespace Callbreak.Presentation.Screens
             _settingsButton.onClick.RemoveListener(OnSettings);
             _shopButton.onClick.RemoveListener(OnShop);
             _cancelButton.onClick.RemoveListener(OnCancel);
+            UiMotion.Finish(ref _roll);
         }
 
         private static void SetText(TMP_Text label, string text)

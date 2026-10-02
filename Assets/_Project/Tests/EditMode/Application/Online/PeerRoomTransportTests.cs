@@ -620,6 +620,89 @@ namespace Callbreak.Tests.EditMode.Application.Online
             CollectionAssert.AreEqual(new[] { "received 7" }, pair.GuestLog.Events, "only the new peer is reached");
         }
 
+        [Test]
+        public void Open_HostsWithoutAListing_AndAGuestJoinsAtItsAddress()
+        {
+            PeerRoomTransport host = NewTransport(out InMemoryPeerNetwork.Device hostDevice);
+            PeerRoomTransport guest = NewTransport(out InMemoryPeerNetwork.Device guestDevice);
+
+            Task<HostLinkResult> opening = host.OpenAsync(Code, CancellationToken.None);
+            Settle();
+            var hostLog = new HostLog(opening.Result.Link);
+            Task<ClientLinkResult> joining = guest.JoinAtAsync(Code, hostDevice.Address, CancellationToken.None);
+            Settle();
+            joining.Result.Link.Send(Bytes(5, 30));
+            Settle();
+
+            Assert.IsTrue(opening.Result.Succeeded);
+            Assert.IsNull(_world.ListedBy(Code), "nothing is listed under the code");
+            Assert.AreEqual(0, hostDevice.ListCalls);
+            Assert.IsTrue(joining.Result.Succeeded);
+            Assert.AreEqual(0, guestDevice.LookUpCalls, "nothing was looked up");
+            CollectionAssert.AreEqual(new[] { "connected 1", "received 1: 5" }, hostLog.Events);
+            Assert.AreEqual(hostDevice.Address, host.LocalAddress);
+        }
+
+        [Test]
+        public void JoinAt_DeviceThatHostsNoSuchRoom_IsNotFoundAtOnce()
+        {
+            NewTransport(out InMemoryPeerNetwork.Device other);
+            PeerRoomTransport guest = NewTransport(out _);
+
+            Task<ClientLinkResult> joining = guest.JoinAtAsync(Code, other.Address, CancellationToken.None);
+            Settle(0.5);
+
+            Assert.IsTrue(joining.IsCompleted, "turned down at once");
+            Assert.AreEqual(RoomError.NotFound, joining.Result.Error);
+            Assert.AreEqual(0, _world.Links);
+        }
+
+        [Test]
+        public void JoinAt_ThisDevicesOwnAddressOrNone_IsNotFound()
+        {
+            PeerRoomTransport device = NewTransport(out InMemoryPeerNetwork.Device me);
+
+            Task<ClientLinkResult> own = device.JoinAtAsync(Code, me.Address, CancellationToken.None);
+            Settle();
+
+            Assert.AreEqual(RoomError.NotFound, own.Result.Error, "a device never connects to itself");
+            Assert.AreEqual(RoomError.NotFound, device.JoinAtAsync(Code, null, CancellationToken.None).Result.Error);
+        }
+
+        [Test]
+        public void ListingLost_OfAListingThatIsNotTheTransports_IsPassedOnAndNotListedAgain()
+        {
+            PeerRoomTransport host = NewTransport(out InMemoryPeerNetwork.Device device);
+            var lost = new List<string>();
+            host.ListingLost += lost.Add;
+            Task<HostLinkResult> opening = host.OpenAsync(Code, CancellationToken.None);
+            Settle();
+            Assert.IsTrue(opening.Result.Succeeded);
+            device.ListQuickAsync(Code, 3, 0, CancellationToken.None);
+            Settle();
+
+            _world.LoseQuickListing(Code);
+            Settle();
+
+            CollectionAssert.AreEqual(new[] { Code }, lost, "whoever listed it hears of it");
+            Assert.AreEqual(0, device.ListCalls, "the transport lists nothing of its own");
+        }
+
+        [Test]
+        public void ListingLost_OfTheTransportsOwnRoom_IsNotPassedOn()
+        {
+            PeerRoomTransport host = NewTransport(out _);
+            var lost = new List<string>();
+            host.ListingLost += lost.Add;
+            Assert.IsTrue(Host(host).Succeeded);
+
+            _world.LoseListing(Code);
+            Settle();
+
+            Assert.That(lost, Is.Empty, "the transport lists its room again itself");
+            Assert.IsNotNull(_world.ListedBy(Code));
+        }
+
         private static void AssertSame(List<byte[]> sent, List<byte[]> received)
         {
             Assert.AreEqual(sent.Count, received.Count, "every message arrived, once");

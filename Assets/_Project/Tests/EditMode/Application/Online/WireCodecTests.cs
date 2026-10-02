@@ -251,6 +251,30 @@ namespace Callbreak.Tests.EditMode.Application.Online
         }
 
         [Test]
+        public void RoomSnapshot_LockedQuickTable_SaysWhenItStarts()
+        {
+            var seats = new[]
+            {
+                new RoomSnapshot.Member(true, "Hari", 2, "kathmandu-gold", true, true, false, true),
+                new RoomSnapshot.Member(true, "Sita", 5, "kathmandu-gold", false, true, true, true),
+                RoomSnapshot.Member.Empty,
+                RoomSnapshot.Member.Empty,
+            };
+            var locked = new WireWriter();
+            new RoomSnapshot("AB2CDE", new RoomSettings("Quick Match", 15), seats, false, 2750).WriteTo(locked);
+            var open = new WireWriter();
+            new RoomSnapshot("AB2CDE", new RoomSettings("Quick Match", 15), seats, false).WriteTo(open);
+
+            RoomSnapshot lockedBack = RoomSnapshot.Read(new WireReader(locked.ToArray()));
+            RoomSnapshot openBack = RoomSnapshot.Read(new WireReader(open.ToArray()));
+
+            Assert.AreEqual(2750, lockedBack.StartsInMs);
+            Assert.AreEqual(-1, openBack.StartsInMs, "an open table (and a private room) says nothing");
+            Assert.IsTrue(lockedBack.Seats[1].IsBot, "a bot sitting in the lobby");
+            Assert.IsTrue(lockedBack.Seats[1].IsReady);
+        }
+
+        [Test]
         public void TableStatus_RoundTrips()
         {
             var connections = new[] { SeatConnection.Connected, SeatConnection.Away, SeatConnection.Reconnecting, SeatConnection.Left };

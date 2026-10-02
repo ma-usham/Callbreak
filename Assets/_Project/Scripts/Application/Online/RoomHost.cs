@@ -36,6 +36,7 @@ namespace Callbreak.Application.Online
         private readonly BotLevel _fillLevel;
         private readonly TableClocks _clocks;
         private readonly bool _botsChat;
+        private readonly bool _quickTable;
         private readonly LocalLink _local;
         private readonly Member[] _members = new Member[Seats];
         private readonly Dictionary<PeerId, int> _seatOfPeer = new Dictionary<PeerId, int>();
@@ -52,6 +53,8 @@ namespace Callbreak.Application.Online
         private double _tableStartDeadline;
         private bool _pumping;
         private bool _closed;
+        private bool _locked;
+        private double _startsAt;
 
         /// <param name="remote">The relay's host end; null for a room nobody else can reach (Quick Match filled with bots).</param>
         /// <param name="seedSource">Draws each match's shuffle seed (a CSPRNG in production, GDD §22).</param>
@@ -61,6 +64,11 @@ namespace Callbreak.Application.Online
         /// room, on the turn time of <paramref name="settings"/> (GDD §6).
         /// </param>
         /// <param name="botsChat">The bots that fill seats say a quick phrase now and then (ADR 026).</param>
+        /// <param name="quickTable">
+        /// A Quick Match table (ADR 029): nobody has a Ready button, so every member is ready from
+        /// the moment they sit down; bots can take seats in the lobby (<see cref="SeatBot"/>); and the
+        /// table can be locked for its start (<see cref="Lock"/>).
+        /// </param>
         public RoomHost(
             string code,
             RoomSettings settings,
@@ -73,9 +81,11 @@ namespace Callbreak.Application.Online
             BotTiming timing = null,
             BotLevel fillLevel = BotLevel.Normal,
             TableClocks clocks = null,
-            bool botsChat = true)
+            bool botsChat = true,
+            bool quickTable = false)
         {
             _botsChat = botsChat;
+            _quickTable = quickTable;
             _code = code ?? string.Empty;
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _remote = remote;
@@ -106,6 +116,45 @@ namespace Callbreak.Application.Online
 
         /// <summary>The running or last match, for tests and diagnostics.</summary>
         public TableHost Table => _table;
+
+        /// <summary>The seats people took over the network: the host's own player and bots do not count.</summary>
+        public int Guests
+        {
+            get
+            {
+                int guests = 0;
+                for (int i = 1; i < Seats; i++)
+                {
+                    if (_members[i] != null && !_members[i].IsBot)
+                    {
+                        guests++;
+                    }
+                }
+
+                return guests;
+            }
+        }
+
+        /// <summary>The seats nobody has taken, person or bot.</summary>
+        public int FreeSeats
+        {
+            get
+            {
+                int free = 0;
+                for (int i = 0; i < Seats; i++)
+                {
+                    if (_members[i] == null)
+                    {
+                        free++;
+                    }
+                }
+
+                return free;
+            }
+        }
+
+        /// <summary>True once a Quick Match table is locked for its start (<see cref="Lock"/>).</summary>
+        public bool IsLocked => _locked;
 
         /// <summary>
         /// Drives the table's time and hands out what is queued. Throws, after all of that, the first
@@ -191,6 +240,13 @@ namespace Callbreak.Application.Online
             for (int i = 0; i < Seats; i++)
             {
                 Member m = _members[i];
+                if (m != null && m.IsBot)
+                {
+                    // A bot that sat down in a Quick Match lobby plays the seat under the name it showed there.
+                    profiles[i] = new SeatProfile(m.Name, m.AvatarId.ToString(), deck, true);
+                    continue;
+                }
+
                 if (m != null)
                 {
                     humans[i] = true;
@@ -224,7 +280,7 @@ namespace Callbreak.Application.Online
             TableStatus status = _table.StatusAt(_now);
             for (int i = 0; i < Seats; i++)
             {
-                if (_members[i] != null)
+                if (_members[i] != null && !_members[i].IsBot)
                 {
                     Send(_members[i].Peer, HostMessages.MatchStarting(_table.ViewFor((Seat)i), status));
                 }
@@ -249,7 +305,7 @@ namespace Callbreak.Application.Online
                 _removed.Add(m.Identity);
             }
 
-            if (m.Connected)
+            if (m.Connected && !m.IsBot)
             {
                 // A dropped member's old connection id may belong to someone else by now.
                 Send(m.Peer, HostMessages.RoomClosed(RoomError.Kicked));
@@ -257,6 +313,62 @@ namespace Callbreak.Application.Online
             }
 
             RemoveMember(seatIndex, leftOnPurpose: true);
+            Broadcast();
+            Pump();
+        }
+
+        /// <summary>
+        /// Quick Match (ADR 029): a bot takes the first empty seat of the lobby, under a name nobody at
+        /// the table has, and every member sees it at once; at the start it plays that seat. False when
+        /// no seat is empty, the match is on, or this is not a Quick Match table.
+        /// </summary>
+        public bool SeatBot()
+        {
+            if (!_quickTable || _closed || InMatch || _members[0] == null)
+            {
+                return false;
+            }
+
+            int seat = -1;
+            var used = new HashSet<string>();
+            for (int i = 0; i < Seats; i++)
+            {
+                if (_members[i] != null)
+                {
+                    used.Add(_members[i].Name);
+                }
+                else if (seat < 0)
+                {
+                    seat = i;
+                }
+            }
+
+            if (seat < 0)
+            {
+                return false;
+            }
+
+            // In the host's deck, as every seat of the table is (ADR 025).
+            _members[seat] = Member.Bot(SeatRoster.DrawName(_rng, used), _rng.NextInt(SeatRoster.AvatarCount), _members[0].DeckThemeId);
+            Broadcast();
+            Pump();
+            return true;
+        }
+
+        /// <summary>
+        /// Quick Match (ADR 029): the table is full and its match starts at <paramref name="startsAt"/>,
+        /// by this host's clock. Nobody new joins any more, and every member is told how long it is
+        /// until the start.
+        /// </summary>
+        public void Lock(double startsAt)
+        {
+            if (!_quickTable || _closed || InMatch)
+            {
+                return;
+            }
+
+            _locked = true;
+            _startsAt = startsAt;
             Broadcast();
             Pump();
         }
@@ -271,7 +383,7 @@ namespace Callbreak.Application.Online
 
             for (int i = 1; i < Seats; i++)
             {
-                if (_members[i] != null && _members[i].Connected)
+                if (_members[i] != null && _members[i].Connected && !_members[i].IsBot)
                 {
                     Send(_members[i].Peer, HostMessages.RoomClosed(RoomError.HostLeft));
                 }
@@ -622,6 +734,13 @@ namespace Callbreak.Application.Online
                 return;
             }
 
+            if (_locked)
+            {
+                // A locked Quick Match table is full and starting (ADR 029): nobody new sits down.
+                Refuse(peer, RoomError.Full);
+                return;
+            }
+
             int free = -1;
             for (int i = 0; i < Seats; i++)
             {
@@ -653,6 +772,7 @@ namespace Callbreak.Application.Online
             }
 
             _members[free] = new Member(peer, hello.Identity, CleanName(hello.Name, free), CleanAvatar(hello.AvatarId), CleanDeck(hello.DeckThemeId));
+            _members[free].Ready = _quickTable;
             _seatOfPeer[peer] = free;
             Send(peer, HostMessages.Welcome(free, Snapshot()));
             Broadcast();
@@ -696,7 +816,7 @@ namespace Callbreak.Application.Online
                 return;
             }
 
-            if (m.Connected)
+            if (m.Connected && !m.IsBot)
             {
                 ForgetPeer(m.Peer, seat);
             }
@@ -770,7 +890,7 @@ namespace Callbreak.Application.Online
             for (int i = 0; i < Seats; i++)
             {
                 Member m = _members[i];
-                if (m != null && m.Connected && !m.TableReady)
+                if (m != null && !m.IsBot && m.Connected && !m.TableReady)
                 {
                     return false;
                 }
@@ -800,7 +920,7 @@ namespace Callbreak.Application.Online
         private void OnTableOutbound(Seat seat, byte[] payload)
         {
             Member m = _members[(int)seat];
-            if (m != null && m.Connected)
+            if (m != null && m.Connected && !m.IsBot)
             {
                 Send(m.Peer, payload);
             }
@@ -862,10 +982,11 @@ namespace Callbreak.Application.Online
                 Member m = _members[i];
                 seats[i] = m == null
                     ? RoomSnapshot.Member.Empty
-                    : new RoomSnapshot.Member(true, m.Name, m.AvatarId, m.DeckThemeId, i == 0, m.Ready, false, m.Connected);
+                    : new RoomSnapshot.Member(true, m.Name, m.AvatarId, m.DeckThemeId, i == 0, m.Ready, m.IsBot, m.Connected);
             }
 
-            return new RoomSnapshot(_code, _settings, seats, InMatch);
+            int startsInMs = _locked ? (int)Math.Round(Math.Max(0.0, _startsAt - _now) * 1000.0) : -1;
+            return new RoomSnapshot(_code, _settings, seats, InMatch, startsInMs);
         }
 
         private void Broadcast()
@@ -873,7 +994,7 @@ namespace Callbreak.Application.Online
             byte[] payload = HostMessages.RoomState(Snapshot());
             for (int i = 0; i < Seats; i++)
             {
-                if (_members[i] != null && _members[i].Connected)
+                if (_members[i] != null && _members[i].Connected && !_members[i].IsBot)
                 {
                     Send(_members[i].Peer, payload);
                 }
@@ -943,6 +1064,9 @@ namespace Callbreak.Application.Online
 
             public PeerId Peer { get; set; }
 
+            /// <summary>A bot sitting in a Quick Match lobby: no connection, always ready.</summary>
+            public bool IsBot { get; private set; }
+
             /// <summary>The member's <see cref="RoomIdentity"/>: how a rejoin finds this seat again.</summary>
             public string Identity { get; }
 
@@ -957,6 +1081,9 @@ namespace Callbreak.Application.Online
             public bool Ready { get; set; }
 
             public bool TableReady { get; set; }
+
+            public static Member Bot(string name, int avatarId, string deckThemeId) =>
+                new Member(default, null, name, avatarId, deckThemeId) { IsBot = true, Ready = true };
         }
 
         /// <summary>The end of a match, kept for a player who was reconnecting when it came, until their seat hold is over.</summary>

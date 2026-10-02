@@ -124,8 +124,10 @@ namespace Callbreak.Bootstrap
         {
             if (EosPlatform.IsConfigured() && EosPlatform.Start())
             {
+                // One EOS network: rooms by code, and the directory of Quick Match tables (ADR 029).
                 builder.Register(resolver => new EosPeerNetwork(() => resolver.Resolve<IProfileService>().DisplayName), Lifetime.Singleton)
-                    .As<IPeerNetwork>();
+                    .As<IPeerNetwork>()
+                    .As<IQuickTableDirectory>();
                 builder.Register(resolver => new PeerRoomTransport(resolver.Resolve<IPeerNetwork>(), Debug.LogException), Lifetime.Singleton)
                     .As<IRoomTransport>();
                 Debug.Log("Online rooms: Epic Online Services (peer to peer).");
@@ -161,8 +163,14 @@ namespace Callbreak.Bootstrap
                 analytics: resolver.Resolve<IAnalytics>());
         }
 
+        /// <summary>
+        /// Quick Match meets real players at tables in the directory when there is one (EOS) and the
+        /// transport can reach them; otherwise every match is at a table of the device's own, with
+        /// bots (ADR 029).
+        /// </summary>
         private static QuickMatchService CreateQuickMatch(IObjectResolver resolver)
         {
+            resolver.TryResolve(out IQuickTableDirectory directory);
             return new QuickMatchService(
                 new QuickMatchConfig(),
                 resolver.Resolve<IProfileService>(),
@@ -173,7 +181,10 @@ namespace Callbreak.Bootstrap
                 resolver.Resolve<ISettingsService>(),
                 resolver.Resolve<INetworkStatus>(),
                 resolver.Resolve<NameFilter>(),
-                NextSeed);
+                NextSeed,
+                transport: resolver.Resolve<IRoomTransport>() as IQuickMatchTransport,
+                directory: directory,
+                utcNow: () => System.DateTime.UtcNow);
         }
 
         /// <summary>GDD §22: shuffle seeds come from the OS's secure random source.</summary>

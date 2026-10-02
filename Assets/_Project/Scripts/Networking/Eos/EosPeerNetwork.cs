@@ -28,6 +28,10 @@ namespace Callbreak.Networking.Eos
     /// protocol version's bucket, with the room code in its CODE attribute and no presence,
     /// invites, host migration or voice room. A lookup searches the bucket for that code and answers
     /// the lobby owner's Product User ID.</item>
+    /// <item>Quick Match tables (<see cref="IQuickTableDirectory"/>): lobbies of the same kind in a
+    /// bucket of their own, so a private room never shows among them. Each lobby has the public
+    /// attributes CODE, FREE (its free seats; 0 hides it from searches) and OPENED (when its host
+    /// opened it, UTC ms). A search finds tables with free seats, oldest first.</item>
     /// <item>Packets: EOS P2P, reliable and ordered, on channel 0 of a socket named after the
     /// channel, with NAT traversal and Epic's relays as the fallback.</item>
     /// </list>
@@ -41,7 +45,7 @@ namespace Callbreak.Networking.Eos
     /// room code or a credential.
     /// </para>
     /// </summary>
-    public sealed class EosPeerNetwork : IPeerNetwork, IDisposable
+    public sealed class EosPeerNetwork : IPeerNetwork, IQuickTableDirectory, IDisposable
     {
         /// <summary>
         /// How long a close of this side's may wait for the SDK to report it. After that,
@@ -52,14 +56,30 @@ namespace Callbreak.Networking.Eos
         /// <summary>The lobby attribute that holds a room's code.</summary>
         private const string CodeKey = "CODE";
 
+        /// <summary>The lobby attribute that holds a Quick Match table's free seats. Searches skip 0.</summary>
+        private const string FreeKey = "FREE";
+
+        /// <summary>The lobby attribute that holds when a Quick Match table opened, by its host's clock (UTC ms since 1970).</summary>
+        private const string OpenedKey = "OPENED";
+
         /// <summary>
-        /// Nobody joins a listing: guests look the code up and connect straight to the host. So the
-        /// capacity only has to leave room in it, in case a search skips full lobbies.
+        /// Nobody joins a listing: guests look the code up (or find the table) and connect straight
+        /// to the host. So the capacity only has to leave room in it, in case a search skips full
+        /// lobbies. It is a table's four seats.
         /// </summary>
         private const uint ListingCapacity = 4;
 
         /// <summary>How many lobbies a lookup reads. More than one only when two hosts drew the same code.</summary>
         private const uint SearchLimit = 8;
+
+        /// <summary>How many open Quick Match tables a search returns at most.</summary>
+        private const uint QuickSearchLimit = 10;
+
+        /// <summary>How often an update of a table's free seats is tried before it is given up.</summary>
+        private const int FreeUpdateAttempts = 3;
+
+        /// <summary>The pause before a failed update of a table's free seats is tried again.</summary>
+        private const double FreeRetrySeconds = 1.0;
 
         /// <summary>One pump reads at most this many packets from the SDK; the rest wait for the next.</summary>
         private const int DrainLimit = 256;
@@ -76,6 +96,9 @@ namespace Callbreak.Networking.Eos
         /// </summary>
         private static readonly string Bucket = "callbreak-rooms:v" + Protocol.Version;
 
+        /// <summary>The bucket of Quick Match tables, apart from private rooms (and from other protocol versions).</summary>
+        private static readonly string QuickBucket = "callbreak-quick:v" + Protocol.Version;
+
         private readonly Func<string> _displayName;
         private readonly Stopwatch _clock = Stopwatch.StartNew();
 
@@ -88,7 +111,19 @@ namespace Callbreak.Networking.Eos
         /// <summary>The packets of one pump, while the events are put in order with them.</summary>
         private readonly List<Item> _drained = new List<Item>();
 
+        /// <summary>Private rooms this device lists, by room code.</summary>
         private readonly Dictionary<string, Listing> _listings = new Dictionary<string, Listing>(StringComparer.Ordinal);
+
+        /// <summary>Quick Match tables this device lists, by room code.</summary>
+        private readonly Dictionary<string, Listing> _quickListings = new Dictionary<string, Listing>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// When each of this device's tables opened, until it is unlisted. A table listed again after
+        /// its listing was lost keeps its age, and with it its place among the oldest.
+        /// </summary>
+        private readonly Dictionary<string, long> _quickOpened = new Dictionary<string, long>(StringComparer.Ordinal);
+
+        /// <summary>Both kinds, by lobby id, for the lobby service's news.</summary>
         private readonly Dictionary<string, Listing> _listingsByLobby = new Dictionary<string, Listing>(StringComparer.Ordinal);
         private readonly Dictionary<Link, LinkState> _links = new Dictionary<Link, LinkState>();
 
@@ -209,7 +244,7 @@ namespace Callbreak.Networking.Eos
                 return listing.Live ? Task.FromResult(RoomError.None) : ListedAsync(listing, ct);
             }
 
-            listing = new Listing(roomCode);
+            listing = new Listing(roomCode, false);
             _listings.Add(roomCode, listing);
             listing.Making = MakeListingAsync(listing, ct);
             return ListedAsync(listing, ct);
@@ -237,6 +272,92 @@ namespace Callbreak.Networking.Eos
             }
 
             return Abandonable(LookUpCoreAsync(roomCode, ct), ct, new PeerLookup(null, RoomError.Unknown));
+        }
+
+        /// <summary>
+        /// Lists this device's Quick Match table, opened at <paramref name="openedAtUnixMs"/> (its
+        /// host's tap, by this device's clock). A code listed again after its lobby was lost keeps the
+        /// time it was first listed with. A call that is cancelled before it answers None leaves
+        /// nothing listed, as with <see cref="ListAsync"/>. Listing a table that is listed already
+        /// only sets its free seats.
+        /// </summary>
+        public Task<RoomError> ListQuickAsync(string roomCode, int freeSeats, long openedAtUnixMs, CancellationToken ct)
+        {
+            if (string.IsNullOrEmpty(roomCode))
+            {
+                throw new ArgumentException("A room code is required.", nameof(roomCode));
+            }
+
+            if (freeSeats < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(freeSeats), "Free seats cannot be negative.");
+            }
+
+            if (_disposed)
+            {
+                return Task.FromResult(RoomError.Unknown);
+            }
+
+            if (_quickListings.TryGetValue(roomCode, out Listing listing))
+            {
+                listing.Free = freeSeats;
+                PushFree(listing);
+                return listing.Live ? Task.FromResult(RoomError.None) : ListedAsync(listing, ct);
+            }
+
+            if (!_quickOpened.TryGetValue(roomCode, out long openedAt))
+            {
+                openedAt = openedAtUnixMs;
+                _quickOpened[roomCode] = openedAt;
+            }
+
+            listing = new Listing(roomCode, true) { Free = freeSeats, OpenedAtUnixMs = openedAt };
+            _quickListings.Add(roomCode, listing);
+            listing.Making = MakeListingAsync(listing, ct);
+            return ListedAsync(listing, ct);
+        }
+
+        /// <summary>
+        /// Sets the table's free seats in the directory. The latest number wins: while one update is on
+        /// its way, a newer number waits for it and follows. 0 hides the table from searches, as fast as
+        /// the directory allows (EosCheck measures it).
+        /// </summary>
+        public void SetQuickFreeSeats(string roomCode, int freeSeats)
+        {
+            if (freeSeats < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(freeSeats), "Free seats cannot be negative.");
+            }
+
+            if (roomCode != null && _quickListings.TryGetValue(roomCode, out Listing listing))
+            {
+                listing.Free = freeSeats;
+                PushFree(listing);
+            }
+        }
+
+        public void UnlistQuick(string roomCode)
+        {
+            if (roomCode != null && _quickListings.TryGetValue(roomCode, out Listing listing))
+            {
+                // A table still being listed is destroyed by its making as soon as its lobby exists.
+                Withdraw(listing);
+            }
+        }
+
+        /// <summary>
+        /// The open tables with free seats, oldest first, at most ten. This device's own table is among
+        /// them while it is open (its <see cref="QuickTable.HostAddress"/> is <see cref="LocalAddress"/>).
+        /// None with no tables is a normal answer.
+        /// </summary>
+        public Task<QuickTableSearch> FindQuickTablesAsync(CancellationToken ct)
+        {
+            if (_disposed)
+            {
+                return Task.FromResult(new QuickTableSearch(null, RoomError.Unknown));
+            }
+
+            return Abandonable(FindQuickCoreAsync(ct), ct, new QuickTableSearch(null, RoomError.Unknown));
         }
 
         /// <summary>
@@ -426,7 +547,7 @@ namespace Callbreak.Networking.Eos
             }
 
             _disposed = true;
-            foreach (Listing listing in new List<Listing>(_listings.Values))
+            foreach (Listing listing in AllListings())
             {
                 Withdraw(listing);
             }
@@ -1219,7 +1340,7 @@ namespace Callbreak.Networking.Eos
             _links.Clear();
             _closing.Clear();
             _allowed.Clear();
-            foreach (Listing listing in new List<Listing>(_listings.Values))
+            foreach (Listing listing in AllListings())
             {
                 if (listing.Live)
                 {
@@ -1228,6 +1349,14 @@ namespace Callbreak.Networking.Eos
 
                 Forget(listing);
             }
+        }
+
+        /// <summary>A copy of every listing of this device's, private rooms and Quick Match tables.</summary>
+        private List<Listing> AllListings()
+        {
+            var all = new List<Listing>(_listings.Values);
+            all.AddRange(_quickListings.Values);
+            return all;
         }
 
         private static bool TryLinkOf(ProductUserId remote, SocketId? socket, out Link link)
@@ -1253,6 +1382,12 @@ namespace Callbreak.Networking.Eos
             return answer;
         }
 
+        /// <summary>
+        /// Makes the listing's lobby in its bucket, then gives it its attributes in one update. A
+        /// private room first checks that no other device lists its code. A Quick Match table skips
+        /// that search: its code is drawn at random and never typed, and the search would cost
+        /// seconds of the table's countdown.
+        /// </summary>
         private async Task<RoomError> MakeListingAsync(Listing listing, CancellationToken ct)
         {
             try
@@ -1268,26 +1403,29 @@ namespace Callbreak.Networking.Eos
                     return RoomError.Unknown;
                 }
 
-                // A code another device lists already is taken: the caller draws another.
-                Search search = await SearchAsync(listing.Code);
-                if (Abandoned(listing, ct))
+                if (!listing.Quick)
                 {
-                    return RoomError.Unknown;
+                    // A code another device lists already is taken: the caller draws another.
+                    Search search = await SearchAsync(listing.Code);
+                    if (Abandoned(listing, ct))
+                    {
+                        return RoomError.Unknown;
+                    }
+
+                    if (search.Error == RoomError.None && search.ListedByAnotherThan(_localAddress))
+                    {
+                        Forget(listing);
+                        return RoomError.AlreadyStarted;
+                    }
+
+                    if (search.Error != RoomError.None && search.Error != RoomError.NotFound)
+                    {
+                        Forget(listing);
+                        return search.Error;
+                    }
                 }
 
-                if (search.Error == RoomError.None && search.ListedByAnotherThan(_localAddress))
-                {
-                    Forget(listing);
-                    return RoomError.AlreadyStarted;
-                }
-
-                if (search.Error != RoomError.None && search.Error != RoomError.NotFound)
-                {
-                    Forget(listing);
-                    return search.Error;
-                }
-
-                Made made = await CreateLobbyAsync();
+                Made made = await CreateLobbyAsync(listing.Quick ? QuickBucket : Bucket);
                 if (made.Error != RoomError.None)
                 {
                     Forget(listing);
@@ -1302,14 +1440,19 @@ namespace Callbreak.Networking.Eos
                     return RoomError.Unknown;
                 }
 
-                RoomError tagged = await TagLobbyAsync(made.LobbyId, listing.Code);
+                int free = listing.Free;
+                RoomError tagged = await PutAttributesAsync(made.LobbyId, AttributesOf(listing, free));
                 if (tagged != RoomError.None || Abandoned(listing, ct))
                 {
                     Withdraw(listing);
                     return tagged != RoomError.None ? tagged : RoomError.Unknown;
                 }
 
+                listing.SentFree = free;
                 listing.Live = true;
+
+                // The free seats may have changed while the lobby was being made.
+                PushFree(listing);
                 return RoomError.None;
             }
             catch (Exception e)
@@ -1317,6 +1460,73 @@ namespace Callbreak.Networking.Eos
                 Debug.LogException(e);
                 Withdraw(listing);
                 return RoomError.Unknown;
+            }
+        }
+
+        /// <summary>The attributes a listing's lobby carries: its code, and a table's free seats and opening time.</summary>
+        private static AttributeData[] AttributesOf(Listing listing, int free)
+        {
+            if (!listing.Quick)
+            {
+                return new[] { Text(CodeKey, listing.Code) };
+            }
+
+            return new[] { Text(CodeKey, listing.Code), Number(FreeKey, free), Number(OpenedKey, listing.OpenedAtUnixMs) };
+        }
+
+        private static AttributeData Text(string key, string value) => new AttributeData { Key = key, Value = value };
+
+        private static AttributeData Number(string key, long value) => new AttributeData { Key = key, Value = new AttributeDataValue { AsInt64 = value } };
+
+        /// <summary>
+        /// Sends the table's newest number of free seats, unless an update is on its way already: that
+        /// one sends it next.
+        /// </summary>
+        private void PushFree(Listing listing)
+        {
+            if (listing.Quick && listing.Live && !listing.Withdrawn && !listing.Updating && listing.SentFree != listing.Free)
+            {
+                _ = UpdateFreeAsync(listing);
+            }
+        }
+
+        /// <summary>
+        /// Updates FREE until the directory holds the newest number, one update at a time. A failed
+        /// update is tried again after a pause, a few times. After that the directory keeps the last
+        /// number it took, and the room logic still refuses whoever comes to a full table.
+        /// </summary>
+        private async Task UpdateFreeAsync(Listing listing)
+        {
+            listing.Updating = true;
+            int failures = 0;
+            try
+            {
+                while (!listing.Withdrawn && !_disposed && listing.SentFree != listing.Free)
+                {
+                    int free = listing.Free;
+                    RoomError result = await PutAttributesAsync(listing.LobbyId, Number(FreeKey, free));
+                    if (result == RoomError.None)
+                    {
+                        listing.SentFree = free;
+                        failures = 0;
+                        continue;
+                    }
+
+                    if (++failures >= FreeUpdateAttempts)
+                    {
+                        break;
+                    }
+
+                    await Task.Delay(TimeSpan.FromSeconds(FreeRetrySeconds));
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+            finally
+            {
+                listing.Updating = false;
             }
         }
 
@@ -1335,19 +1545,28 @@ namespace Callbreak.Networking.Eos
             return true;
         }
 
-        /// <summary>Takes the listing down: forgotten, and its lobby destroyed (now, or by its making once it exists).</summary>
+        /// <summary>
+        /// Takes the listing down on purpose: forgotten, and its lobby destroyed (now, or by its making
+        /// once it exists). A table's age goes with it.
+        /// </summary>
         private void Withdraw(Listing listing)
         {
             Forget(listing);
             Destroy(listing);
+            if (listing.Quick)
+            {
+                _quickOpened.Remove(listing.Code);
+            }
         }
 
+        /// <summary>Forgets the listing (taken down, or lost with its lobby); its lobby is not touched.</summary>
         private void Forget(Listing listing)
         {
             listing.Withdrawn = true;
-            if (_listings.TryGetValue(listing.Code, out Listing current) && current == listing)
+            Dictionary<string, Listing> byCode = listing.Quick ? _quickListings : _listings;
+            if (byCode.TryGetValue(listing.Code, out Listing current) && current == listing)
             {
-                _listings.Remove(listing.Code);
+                byCode.Remove(listing.Code);
             }
 
             if (listing.LobbyId != null && _listingsByLobby.TryGetValue(listing.LobbyId, out current) && current == listing)
@@ -1451,12 +1670,156 @@ namespace Callbreak.Networking.Eos
             }
         }
 
-        private static Result SetEqual(LobbySearch search, Utf8String key, string value)
+        /// <summary>
+        /// The Quick Match tables with free seats, oldest first. The search keeps FREE != 0, which for
+        /// seat counts is FREE >= 1 and leaves no doubt about which side the SDK compares. It also asks
+        /// for OPENED nearest to 0, so that the ten tables that come back are the ten oldest. They are
+        /// put in order here again, and anything without its attributes is skipped.
+        /// </summary>
+        private async Task<QuickTableSearch> FindQuickCoreAsync(CancellationToken ct)
+        {
+            try
+            {
+                if (!await SignInAsync(ct))
+                {
+                    return new QuickTableSearch(null, ct.IsCancellationRequested ? RoomError.Unknown : _signInError);
+                }
+
+                LobbyInterface lobbies = Platform?.GetLobbyInterface();
+                ProductUserId user = _localUser;
+                if (lobbies == null || user == null)
+                {
+                    return new QuickTableSearch(null, RoomError.Unknown);
+                }
+
+                var create = new CreateLobbySearchOptions { MaxResults = QuickSearchLimit };
+                Result made = lobbies.CreateLobbySearch(ref create, out LobbySearch search);
+                if (made != Result.Success || search == null)
+                {
+                    return new QuickTableSearch(null, FailedAs("a table search could not be made", made));
+                }
+
+                try
+                {
+                    Result set = SetEqual(search, LobbyInterface.SEARCH_BUCKET_ID, QuickBucket);
+                    if (set == Result.Success)
+                    {
+                        set = SetParameter(search, FreeKey, new AttributeDataValue { AsInt64 = 0 }, ComparisonOp.Notequal);
+                    }
+
+                    if (set != Result.Success)
+                    {
+                        return new QuickTableSearch(null, FailedAs("a table search could not be set up", set));
+                    }
+
+                    Result ordered = SetParameter(search, OpenedKey, new AttributeDataValue { AsInt64 = 0 }, ComparisonOp.Distance);
+                    if (ordered != Result.Success)
+                    {
+                        // The search still finds tables, only not necessarily the oldest ten.
+                        Failed("a table search could not be ordered", ordered);
+                    }
+
+                    Result found = await FindAsync(search, user);
+                    if (found == Result.NotFound)
+                    {
+                        return new QuickTableSearch(Array.Empty<QuickTable>(), RoomError.None);
+                    }
+
+                    if (found != Result.Success)
+                    {
+                        return new QuickTableSearch(null, FailedAs("a table search failed", found));
+                    }
+
+                    List<QuickTable> tables = TablesOf(search);
+                    tables.Sort(OldestFirst);
+                    return new QuickTableSearch(tables, RoomError.None);
+                }
+                finally
+                {
+                    search.Release();
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return new QuickTableSearch(null, RoomError.Unknown);
+            }
+        }
+
+        /// <summary>The search's results as tables: each with an owner, a code, free seats and an opening time.</summary>
+        private static List<QuickTable> TablesOf(LobbySearch search)
+        {
+            var tables = new List<QuickTable>();
+            var countOptions = new LobbySearchGetSearchResultCountOptions();
+            uint count = search.GetSearchResultCount(ref countOptions);
+            for (uint i = 0; i < count; i++)
+            {
+                var index = new LobbySearchCopySearchResultByIndexOptions { LobbyIndex = i };
+                if (search.CopySearchResultByIndex(ref index, out LobbyDetails details) != Result.Success || details == null)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var ownerOptions = new LobbyDetailsGetLobbyOwnerOptions();
+                    ProductUserId owner = details.GetLobbyOwner(ref ownerOptions);
+                    string code = TextOf(details, CodeKey);
+                    long? free = NumberOf(details, FreeKey);
+                    long? opened = NumberOf(details, OpenedKey);
+                    if (owner != null && owner.IsValid() && !string.IsNullOrEmpty(code) && free.HasValue && free.Value >= 1 && opened.HasValue)
+                    {
+                        tables.Add(new QuickTable(code, owner.ToString(), (int)Math.Min(free.Value, int.MaxValue), opened.Value));
+                    }
+                }
+                finally
+                {
+                    details.Release();
+                }
+            }
+
+            return tables;
+        }
+
+        private static string TextOf(LobbyDetails details, string key)
+        {
+            AttributeDataValue? value = ValueOf(details, key);
+            return value.HasValue && value.Value.ValueType == AttributeType.String ? (string)value.Value.AsUtf8 : null;
+        }
+
+        private static long? NumberOf(LobbyDetails details, string key)
+        {
+            AttributeDataValue? value = ValueOf(details, key);
+            return value.HasValue && value.Value.ValueType == AttributeType.Int64 ? value.Value.AsInt64 : null;
+        }
+
+        private static AttributeDataValue? ValueOf(LobbyDetails details, string key)
+        {
+            var options = new LobbyDetailsCopyAttributeByKeyOptions { AttrKey = key };
+            if (details.CopyAttributeByKey(ref options, out var attribute) != Result.Success || !attribute.HasValue || !attribute.Value.Data.HasValue)
+            {
+                return null;
+            }
+
+            return attribute.Value.Data.Value.Value;
+        }
+
+        /// <summary>Oldest first; two tables that opened in the same millisecond by their codes.</summary>
+        private static int OldestFirst(QuickTable a, QuickTable b)
+        {
+            int byAge = a.OpenedAtUnixMs.CompareTo(b.OpenedAtUnixMs);
+            return byAge != 0 ? byAge : string.CompareOrdinal(a.RoomCode, b.RoomCode);
+        }
+
+        private static Result SetEqual(LobbySearch search, Utf8String key, string value) =>
+            SetParameter(search, key, value, ComparisonOp.Equal);
+
+        private static Result SetParameter(LobbySearch search, Utf8String key, AttributeDataValue value, ComparisonOp comparison)
         {
             var options = new LobbySearchSetParameterOptions
             {
                 Parameter = new AttributeData { Key = key, Value = value },
-                ComparisonOp = ComparisonOp.Equal,
+                ComparisonOp = comparison,
             };
             return search.SetParameter(ref options);
         }
@@ -1506,7 +1869,7 @@ namespace Callbreak.Networking.Eos
             return owners;
         }
 
-        private Task<Made> CreateLobbyAsync()
+        private Task<Made> CreateLobbyAsync(string bucket)
         {
             LobbyInterface lobbies = Platform?.GetLobbyInterface();
             if (lobbies == null || _localUser == null)
@@ -1522,7 +1885,7 @@ namespace Callbreak.Networking.Eos
                 PermissionLevel = LobbyPermissionLevel.Publicadvertised,
                 PresenceEnabled = false,
                 AllowInvites = false,
-                BucketId = Bucket,
+                BucketId = bucket,
                 DisableHostMigration = true,
                 EnableRTCRoom = false,
                 LocalRTCOptions = null,
@@ -1547,11 +1910,14 @@ namespace Callbreak.Networking.Eos
             return done.Task;
         }
 
-        /// <summary>Puts the room code on the lobby, as a public attribute searches can match.</summary>
-        private async Task<RoomError> TagLobbyAsync(string lobbyId, string roomCode)
+        /// <summary>
+        /// Sets public attributes on the lobby, which searches can match, all in one update. An
+        /// attribute that is there already takes the new value.
+        /// </summary>
+        private async Task<RoomError> PutAttributesAsync(string lobbyId, params AttributeData[] attributes)
         {
             LobbyInterface lobbies = Platform?.GetLobbyInterface();
-            if (lobbies == null || _localUser == null)
+            if (lobbies == null || _localUser == null || lobbyId == null)
             {
                 return RoomError.Unknown;
             }
@@ -1565,15 +1931,14 @@ namespace Callbreak.Networking.Eos
 
             try
             {
-                var attribute = new LobbyModificationAddAttributeOptions
+                foreach (AttributeData data in attributes)
                 {
-                    Attribute = new AttributeData { Key = CodeKey, Value = roomCode },
-                    Visibility = LobbyAttributeVisibility.Public,
-                };
-                Result added = modification.AddAttribute(ref attribute);
-                if (added != Result.Success)
-                {
-                    return FailedAs("a room code could not be put on its listing", added);
+                    var attribute = new LobbyModificationAddAttributeOptions { Attribute = data, Visibility = LobbyAttributeVisibility.Public };
+                    Result added = modification.AddAttribute(ref attribute);
+                    if (added != Result.Success)
+                    {
+                        return FailedAs("an attribute could not be put on a room listing", added);
+                    }
                 }
 
                 Result updated = await UpdateLobbyAsync(lobbies, modification);
@@ -1599,15 +1964,31 @@ namespace Callbreak.Networking.Eos
             return done.Task;
         }
 
-        /// <summary>One room code this device lists, from the moment it was asked for.</summary>
+        /// <summary>One room code this device lists (a private room or a Quick Match table), from the moment it was asked for.</summary>
         private sealed class Listing
         {
-            public Listing(string code)
+            public Listing(string code, bool quick)
             {
                 Code = code;
+                Quick = quick;
             }
 
             public string Code { get; }
+
+            /// <summary>True for a Quick Match table, false for a private room.</summary>
+            public bool Quick { get; }
+
+            /// <summary>A table's free seats as the room logic last said.</summary>
+            public int Free { get; set; }
+
+            /// <summary>A table's free seats as the directory last took them; -1 before it took any.</summary>
+            public int SentFree { get; set; } = -1;
+
+            /// <summary>True while an update of a table's free seats is on its way.</summary>
+            public bool Updating { get; set; }
+
+            /// <summary>When a table opened, by this device's clock (UTC ms since 1970).</summary>
+            public long OpenedAtUnixMs { get; set; }
 
             /// <summary>The making of the listing, for a second ListAsync of the same code while it runs.</summary>
             public Task<RoomError> Making { get; set; }

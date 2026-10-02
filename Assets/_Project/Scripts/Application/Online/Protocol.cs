@@ -12,8 +12,10 @@ namespace Callbreak.Application.Online
         /// and a member's payload a size limit; a clock's time left may be longer than the clock
         /// (it starts after the table's display hold, see <see cref="TableStatus"/>); and a player
         /// back after the match ended is sent its SyncState before the lobby answers.
+        /// 3: the lobby says when a full Quick Match table starts (RoomSnapshot.StartsInMs), and the
+        /// bots that fill a Quick Match table sit in its lobby (ADR 029).
         /// </summary>
-        public const ushort Version = 2;
+        public const ushort Version = 3;
 
         /// <summary>GDD §25 anti-abuse: a connection may send this many intents per second.</summary>
         public const int IntentsPerSecond = 10;

@@ -26,20 +26,39 @@ namespace Callbreak.Application.Matchmaking
 
     public sealed class MatchmakingProgress
     {
-        public MatchmakingProgress(IReadOnlyList<RoomSeat> seats, double elapsedSeconds, bool tableFound)
+        /// <param name="secondsLeft">This player's own countdown while the search runs (ADR 029); NaN when there is none.</param>
+        /// <param name="startsInSeconds">While <paramref name="tableFound"/>: the time until the match starts, the same on every player's screen; NaN otherwise.</param>
+        public MatchmakingProgress(
+            IReadOnlyList<RoomSeat> seats,
+            double elapsedSeconds,
+            bool tableFound,
+            double secondsLeft = double.NaN,
+            double startsInSeconds = double.NaN)
         {
             Seats = seats;
             ElapsedSeconds = elapsedSeconds;
             TableFound = tableFound;
+            SecondsLeft = secondsLeft;
+            StartsInSeconds = startsInSeconds;
         }
 
-        /// <summary>Four entries; unfilled seats have Occupied = false.</summary>
+        /// <summary>
+        /// Four entries in the table's seat order (the host's seat first); unfilled seats have
+        /// Occupied = false, and the player looking at the screen has IsLocal = true. The screen
+        /// puts that player first (ADR 029).
+        /// </summary>
         public IReadOnlyList<RoomSeat> Seats { get; }
 
         public double ElapsedSeconds { get; }
 
-        /// <summary>True for the short "Table found" beat before the table loads.</summary>
+        /// <summary>True once every seat is filled and the table is locked: the "Table found" countdown before the table loads.</summary>
         public bool TableFound { get; }
+
+        /// <summary>This player's own countdown from the moment they started the search; NaN when the search has none.</summary>
+        public double SecondsLeft { get; }
+
+        /// <summary>While <see cref="TableFound"/>: the time until the match starts, shared by every player at the table; NaN otherwise.</summary>
+        public double StartsInSeconds { get; }
     }
 
     public enum MatchmakingError

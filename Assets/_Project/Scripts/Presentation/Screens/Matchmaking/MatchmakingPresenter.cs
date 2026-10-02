@@ -1,12 +1,9 @@
 using System;
-using System.Collections.Generic;
-using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Callbreak.Application.Matchmaking;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
-using Callbreak.Application.Rooms;
 using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
 using Callbreak.Presentation.Feedback;
@@ -18,9 +15,11 @@ namespace Callbreak.Presentation.Screens
 {
     /// <summary>
     /// GDD §11 screen 05: find a Quick Match table. The search starts when the screen opens, the
-    /// seats fill in as they are found, the elapsed time is the real one, Cancel withdraws at once,
-    /// and a found table goes straight to the table after its "Table found" beat. A search that
-    /// fails asks "Couldn't join the table · Retry / Play Offline".
+    /// seats fill in as they are found with the player always in the first circle, the pill counts
+    /// the search down and then the table's start (ADR 029; the real elapsed time when the search
+    /// has no countdown), Cancel withdraws at once, and a found table goes straight to the table
+    /// after its "Table found" countdown. A search that fails asks "Couldn't join the table · Retry /
+    /// Play Offline".
     /// </summary>
     public sealed class MatchmakingPresenter : IStartable, IDisposable
     {
@@ -38,6 +37,10 @@ namespace Callbreak.Presentation.Screens
         private CancellationTokenSource _search;
         private bool _asking;
         private bool _disposed;
+
+        // A found table counts down to its start on every screen at the table: nobody leaves then,
+        // by Cancel, the back arrow or Android back (ADR 029). Cleared when the search resumes.
+        private bool _leaveLocked;
 
         public MatchmakingPresenter(
             MatchmakingView view,
@@ -114,8 +117,14 @@ namespace Callbreak.Presentation.Screens
 
         private void OnShop() => _router.Push(ScreenId.CardCollection);
 
+        /// <summary>Cancel, the back arrow and Android back all leave the search, except during a found table's start countdown.</summary>
         private void OnCancel()
         {
+            if (_leaveLocked)
+            {
+                return;
+            }
+
             StopSearch();
             if (_router.Current == ScreenId.Matchmaking)
             {
@@ -138,7 +147,6 @@ namespace Callbreak.Presentation.Screens
         {
             var search = new CancellationTokenSource();
             _search = search;
-            _view.SetCancelInteractable(true);
             Render(null);
             try
             {
@@ -152,7 +160,10 @@ namespace Callbreak.Presentation.Screens
                 search.Dispose();
                 if (result.Found)
                 {
+                    // The table starts: there is nothing left to leave.
+                    _leaveLocked = true;
                     _view.SetCancelInteractable(false);
+                    _view.SetBackInteractable(false);
                     _launcher.Launch(new MatchLaunchRequest(MatchMode.QuickMatch, _settings.Difficulty));
                     return;
                 }
@@ -186,8 +197,11 @@ namespace Callbreak.Presentation.Screens
                 return;
             }
 
+            // The search is over: nothing to cancel, and nothing holds the player any more.
             _asking = true;
+            _leaveLocked = false;
             _view.SetCancelInteractable(false);
+            _view.SetBackInteractable(true);
             DialogChoice choice = DialogChoice.Dismissed;
             try
             {
@@ -230,34 +244,18 @@ namespace Callbreak.Presentation.Screens
             }
         }
 
-        /// <summary>Four seat circles, the status lines and the honest elapsed time.</summary>
+        /// <summary>
+        /// The four seat circles with the player first, the status lines and the time in the pill
+        /// (<see cref="MatchmakingDisplay"/>). Every player found reads "Ready", a bot that fills the
+        /// table too (ADR 025). While a found table counts down, Cancel and the back arrow are
+        /// greyed and Android back is ignored; a search that resumes frees them again.
+        /// </summary>
         private void Render(MatchmakingProgress progress)
         {
+            MatchmakingScreenState state = MatchmakingDisplay.StateOf(progress, _localization, _view.SeatCount);
+            _leaveLocked = !state.CanLeave;
             _view.SetReduceMotion(_settings.ReduceMotion);
-            int connected = 0;
-            for (int i = 0; i < _view.SeatCount; i++)
-            {
-                RoomSeat seat = progress != null && i < progress.Seats.Count ? progress.Seats[i] : null;
-                bool local = i == 0;
-                if (local || (seat != null && seat.Occupied))
-                {
-                    connected++;
-                    // Every player found reads "Ready", a bot that fills the table too (ADR 025).
-                    string name = local ? _localization.Get("ui.common.you") : seat.Name;
-                    _view.SetSeat(i, true, name, _localization.Get("ui.matchmaking.seat_ready"));
-                }
-                else
-                {
-                    _view.SetSeat(i, false, string.Empty, _localization.Get("ui.matchmaking.seat_searching"));
-                }
-            }
-
-            bool found = progress != null && progress.TableFound;
-            _view.SetStatus(
-                _localization.Get(found ? "ui.matchmaking.table_found" : "ui.matchmaking.finding"),
-                _localization.Format("ui.matchmaking.connected", connected));
-            int seconds = progress != null ? (int)progress.ElapsedSeconds : 0;
-            _view.SetElapsed((seconds / 60).ToString("00", CultureInfo.InvariantCulture) + ":" + (seconds % 60).ToString("00", CultureInfo.InvariantCulture));
+            _view.Show(state);
         }
 
         /// <summary>Progress arrives on the main thread, straight from the service's tick.</summary>

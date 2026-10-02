@@ -26,8 +26,13 @@ namespace Callbreak.Application.Online
     /// lost lists its code again every <see cref="RelistSeconds"/> until it is back, so guests that
     /// reconnect find the table; its guests' connections do not depend on the listing.
     /// </para>
+    /// <para>
+    /// Quick Match (<see cref="IQuickMatchTransport"/>, ADR 029) opens tables that are listed in its
+    /// own directory instead (<see cref="OpenAsync"/>), and joins a table's host at the address that
+    /// directory gave (<see cref="JoinAtAsync"/>).
+    /// </para>
     /// </summary>
-    public sealed class PeerRoomTransport : ITickedRoomTransport, IDisposable
+    public sealed class PeerRoomTransport : ITickedRoomTransport, IQuickMatchTransport, IDisposable
     {
         /// <summary>
         /// How long hosting may take, and each step of joining: signing in, one lookup, and
@@ -106,6 +111,22 @@ namespace Callbreak.Application.Online
             HostReceived,
             ClientReceived,
             ClientClosed,
+            ListingLost,
+        }
+
+        /// <summary>
+        /// The directory dropped a listing this transport does not keep itself, such as a Quick Match
+        /// table's (the room code). Raised from <see cref="Tick"/>, in order with everything else.
+        /// </summary>
+        public event Action<string> ListingLost;
+
+        /// <summary>This device's address once it is signed in; null before.</summary>
+        public string LocalAddress => _network.LocalAddress;
+
+        /// <summary>Signs this device in if it is not yet (the table directory needs it); false when the network cannot be reached.</summary>
+        public Task<bool> SignInAsync(CancellationToken ct)
+        {
+            return _disposed ? Task.FromResult(false) : Call(() => _network.SignInAsync(ct));
         }
 
         /// <summary>
@@ -115,7 +136,38 @@ namespace Callbreak.Application.Online
         /// at once when <paramref name="ct"/> is cancelled. One room is hosted at a time: a new call
         /// ends the attempt before it and lets go of the room hosted before.
         /// </summary>
-        public Task<HostLinkResult> HostAsync(string roomCode, CancellationToken ct)
+        public Task<HostLinkResult> HostAsync(string roomCode, CancellationToken ct) => Host(roomCode, listed: true, ct);
+
+        /// <summary>
+        /// Signs in and hosts <paramref name="roomCode"/> without listing it: only a guest that knows
+        /// this device's address joins (Quick Match lists its tables in a directory of their own).
+        /// Offline when the device cannot sign in; Unknown otherwise, as <see cref="HostAsync"/>.
+        /// </summary>
+        public Task<HostLinkResult> OpenAsync(string roomCode, CancellationToken ct) => Host(roomCode, listed: false, ct);
+
+        /// <summary>
+        /// Signs in, looks <paramref name="roomCode"/> up and connects to its host. A code not found
+        /// is looked up again, after a pause, until <see cref="LookUpBudgetSeconds"/> have gone by:
+        /// then it is NotFound. NotFound also when the device that lists the code turns the
+        /// connection down; Offline when the device cannot sign in or the directory says so, at
+        /// once; Unknown otherwise, when a step takes longer than <see cref="ConnectTimeoutSeconds"/>
+        /// (the connection's own clock starts once the host is found), or at once when
+        /// <paramref name="ct"/> is cancelled. One connection to a host at a time: a new call ends
+        /// the attempt before it and lets go of the connection made before.
+        /// </summary>
+        public Task<ClientLinkResult> JoinAsync(string roomCode, CancellationToken ct) => Join(roomCode, null, ct);
+
+        /// <summary>
+        /// Signs in and connects to the host at <paramref name="hostAddress"/> on
+        /// <paramref name="roomCode"/>'s channel, with no lookup. NotFound when that device turns
+        /// the connection down or is this one; otherwise as <see cref="JoinAsync"/>.
+        /// </summary>
+        public Task<ClientLinkResult> JoinAtAsync(string roomCode, string hostAddress, CancellationToken ct)
+        {
+            return string.IsNullOrEmpty(hostAddress) ? Task.FromResult(JoinFailed(RoomError.NotFound)) : Join(roomCode, hostAddress, ct);
+        }
+
+        private Task<HostLinkResult> Host(string roomCode, bool listed, CancellationToken ct)
         {
             if (_disposed || !RoomCode.IsValid(roomCode))
             {
@@ -128,7 +180,7 @@ namespace Callbreak.Application.Online
                 _host.Dispose();
             }
 
-            var attempt = new HostAttempt(roomCode);
+            var attempt = new HostAttempt(roomCode, listed);
             _hosting = attempt;
             if (ct.IsCancellationRequested)
             {
@@ -150,17 +202,8 @@ namespace Callbreak.Application.Online
             return attempt.Result.Task;
         }
 
-        /// <summary>
-        /// Signs in, looks <paramref name="roomCode"/> up and connects to its host. A code not found
-        /// is looked up again, after a pause, until <see cref="LookUpBudgetSeconds"/> have gone by:
-        /// then it is NotFound. NotFound also when the device that lists the code turns the
-        /// connection down; Offline when the device cannot sign in or the directory says so, at
-        /// once; Unknown otherwise, when a step takes longer than <see cref="ConnectTimeoutSeconds"/>
-        /// (the connection's own clock starts once the host is found), or at once when
-        /// <paramref name="ct"/> is cancelled. One connection to a host at a time: a new call ends
-        /// the attempt before it and lets go of the connection made before.
-        /// </summary>
-        public Task<ClientLinkResult> JoinAsync(string roomCode, CancellationToken ct)
+        /// <param name="knownAddress">The host's address when it is known already; null looks the code up.</param>
+        private Task<ClientLinkResult> Join(string roomCode, string knownAddress, CancellationToken ct)
         {
             if (_disposed)
             {
@@ -178,7 +221,7 @@ namespace Callbreak.Application.Online
                 _client.Dispose();
             }
 
-            var attempt = new JoinAttempt(roomCode);
+            var attempt = new JoinAttempt(roomCode, knownAddress);
             _joining = attempt;
             if (ct.IsCancellationRequested)
             {
@@ -294,6 +337,15 @@ namespace Callbreak.Application.Online
                     return;
                 }
 
+                if (!attempt.Listed)
+                {
+                    // A room that is not listed is hosted as soon as the device is signed in.
+                    var unlisted = new HostLink(this, attempt.Code, attempt.Channel, listed: false);
+                    _host = unlisted;
+                    EndHosting(attempt, new HostLinkResult(unlisted, RoomError.None));
+                    return;
+                }
+
                 attempt.List = Call(() => _network.ListAsync(attempt.Code, attempt.Abort.Token));
             }
 
@@ -302,7 +354,7 @@ namespace Callbreak.Application.Online
                 RoomError listed = Answered(attempt.List, out RoomError answer) ? answer : RoomError.Unknown;
                 if (listed == RoomError.None)
                 {
-                    var link = new HostLink(this, attempt.Code, attempt.Channel);
+                    var link = new HostLink(this, attempt.Code, attempt.Channel, listed: true);
                     _host = link;
                     if (attempt.ListingLost)
                     {
@@ -391,6 +443,11 @@ namespace Callbreak.Application.Online
         /// </summary>
         private bool LookUp(JoinAttempt attempt, double now)
         {
+            if (attempt.KnownAddress != null)
+            {
+                return Connect(attempt, attempt.KnownAddress, now);
+            }
+
             if (attempt.LookUp == null && now >= attempt.NextLookUpAt)
             {
                 if (double.IsNaN(attempt.LookUpUntil))
@@ -429,15 +486,21 @@ namespace Callbreak.Application.Online
                 return false;
             }
 
-            if (lookup.Address == _network.LocalAddress)
+            return Connect(attempt, lookup.Address, now);
+        }
+
+        /// <summary>Asks the host at <paramref name="address"/> for a connection. False when that ended the attempt.</summary>
+        private bool Connect(JoinAttempt attempt, string address, double now)
+        {
+            if (address == _network.LocalAddress)
             {
-                // This device's own listing, of a room it is leaving: nobody else hosts the code.
+                // This device's own room, which it is leaving: nobody else hosts the code here.
                 EndJoining(attempt, JoinFailed(RoomError.NotFound));
                 return false;
             }
 
             // The connection's clock starts now that the host is found.
-            attempt.Address = lookup.Address;
+            attempt.Address = address;
             attempt.Deadline = now + ConnectTimeoutSeconds;
             if (!Accept(attempt.Address, attempt.Channel) || !Send(attempt.Address, attempt.Channel, PacketFramer.OpenPacket()))
             {
@@ -681,13 +744,19 @@ namespace Callbreak.Application.Online
                 return;
             }
 
-            if (_host != null && roomCode == _host.Code)
+            // A room that is not listed has no listing to lose (a Quick Match table's is not this transport's).
+            if (_host != null && _host.Listed && roomCode == _host.Code)
             {
                 _host.LoseListing(_now);
             }
-            else if (_hosting != null && roomCode == _hosting.Code)
+            else if (_hosting != null && _hosting.Listed && roomCode == _hosting.Code)
             {
                 _hosting.ListingLost = true;
+            }
+            else
+            {
+                // Not a listing of this transport's: whoever listed it hears of it.
+                Enqueue(new Notice(this, roomCode));
             }
         }
 
@@ -727,6 +796,8 @@ namespace Callbreak.Application.Online
                 // The fault handler failed too; there is nowhere left to report it.
             }
         }
+
+        private void RaiseListingLost(string roomCode) => ListingLost?.Invoke(roomCode);
 
         /// <summary>A peer id for a new connection: never <see cref="PeerId.Local"/>, never one handed out before.</summary>
         private PeerId NextPeer()
@@ -851,6 +922,8 @@ namespace Callbreak.Application.Online
             private readonly ClientLink _client;
             private readonly PeerId _peer;
             private readonly byte[] _payload;
+            private readonly PeerRoomTransport _transport;
+            private readonly string _code;
 
             public Notice(NoticeKind kind, HostLink host, ClientLink client, PeerId peer, byte[] payload)
             {
@@ -859,6 +932,20 @@ namespace Callbreak.Application.Online
                 _client = client;
                 _peer = peer;
                 _payload = payload;
+                _transport = null;
+                _code = null;
+            }
+
+            /// <summary>A listing that is not the transport's was lost.</summary>
+            public Notice(PeerRoomTransport transport, string roomCode)
+            {
+                _kind = NoticeKind.ListingLost;
+                _host = null;
+                _client = null;
+                _peer = default;
+                _payload = null;
+                _transport = transport;
+                _code = roomCode;
             }
 
             public void Raise()
@@ -880,6 +967,9 @@ namespace Callbreak.Application.Online
                     case NoticeKind.ClientClosed:
                         _client.RaiseClosed();
                         break;
+                    case NoticeKind.ListingLost:
+                        _transport.RaiseListingLost(_code);
+                        break;
                 }
             }
         }
@@ -898,16 +988,20 @@ namespace Callbreak.Application.Online
             public Task<RoomError> Listing { get; }
         }
 
-        /// <summary>One call to <see cref="HostAsync"/>, until it has its answer.</summary>
+        /// <summary>One call to <see cref="HostAsync"/> or <see cref="OpenAsync"/>, until it has its answer.</summary>
         private sealed class HostAttempt
         {
-            public HostAttempt(string code)
+            public HostAttempt(string code, bool listed)
             {
                 Code = code;
                 Channel = ChannelPrefix + code;
+                Listed = listed;
             }
 
             public string Code { get; }
+
+            /// <summary>The room is listed under its code (<see cref="HostAsync"/>), not only opened (<see cref="OpenAsync"/>).</summary>
+            public bool Listed { get; }
 
             public string Channel { get; }
 
@@ -930,16 +1024,20 @@ namespace Callbreak.Application.Online
             public bool Ended { get; set; }
         }
 
-        /// <summary>One call to <see cref="JoinAsync"/>, until it has its answer.</summary>
+        /// <summary>One call to <see cref="JoinAsync"/> or <see cref="JoinAtAsync"/>, until it has its answer.</summary>
         private sealed class JoinAttempt
         {
-            public JoinAttempt(string code)
+            public JoinAttempt(string code, string knownAddress)
             {
                 Code = code;
                 Channel = ChannelPrefix + code;
+                KnownAddress = knownAddress;
             }
 
             public string Code { get; }
+
+            /// <summary>The host's address given with <see cref="JoinAtAsync"/>: nothing is looked up.</summary>
+            public string KnownAddress { get; }
 
             public string Channel { get; }
 
@@ -1012,11 +1110,12 @@ namespace Callbreak.Application.Online
             private double _relistAt;
             private bool _unlisted;
 
-            public HostLink(PeerRoomTransport owner, string code, string channel)
+            public HostLink(PeerRoomTransport owner, string code, string channel, bool listed)
             {
                 _owner = owner;
                 Code = code;
                 Channel = channel;
+                Listed = listed;
             }
 
             public event Action<PeerId> PeerConnected;
@@ -1028,6 +1127,9 @@ namespace Callbreak.Application.Online
             public string Code { get; }
 
             public string Channel { get; }
+
+            /// <summary>Listed under its code: a lost listing is listed again, and the listing goes with the room.</summary>
+            public bool Listed { get; }
 
             public bool IsDisposed { get; private set; }
 
@@ -1108,7 +1210,7 @@ namespace Callbreak.Application.Online
             /// <summary>The directory dropped the room's listing: it is listed again from the next tick on.</summary>
             public void LoseListing(double now)
             {
-                if (IsDisposed)
+                if (IsDisposed || !Listed)
                 {
                     return;
                 }
@@ -1225,7 +1327,11 @@ namespace Callbreak.Application.Online
                     _owner._host = null;
                 }
 
-                _owner.Unlist(Code);
+                if (Listed)
+                {
+                    _owner.Unlist(Code);
+                }
+
                 if (_relistAbort != null)
                 {
                     _owner.Abandon(_relistAbort);

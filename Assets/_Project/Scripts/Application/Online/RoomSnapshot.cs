@@ -5,7 +5,8 @@ namespace Callbreak.Application.Online
 {
     /// <summary>
     /// The lobby as the host publishes it (GDD §11 screen 04): code, settings and four seats. Sent
-    /// whole on every change, so every member shows the same thing within one message.
+    /// whole on every change, so every member shows the same thing within one message. A Quick
+    /// Match table that is full and locked also says when its match starts (ADR 029).
     /// </summary>
     public sealed class RoomSnapshot
     {
@@ -13,7 +14,8 @@ namespace Callbreak.Application.Online
 
         private readonly Member[] _seats;
 
-        public RoomSnapshot(string code, RoomSettings settings, IReadOnlyList<Member> seats, bool inMatch)
+        /// <param name="startsInMs">A locked Quick Match table: the time until its match starts, in ms from when this is sent; -1 otherwise.</param>
+        public RoomSnapshot(string code, RoomSettings settings, IReadOnlyList<Member> seats, bool inMatch, int startsInMs = -1)
         {
             Code = code ?? string.Empty;
             Settings = settings;
@@ -24,6 +26,7 @@ namespace Callbreak.Application.Online
             }
 
             InMatch = inMatch;
+            StartsInMs = startsInMs < 0 ? -1 : startsInMs;
         }
 
         public string Code { get; }
@@ -36,6 +39,13 @@ namespace Callbreak.Application.Online
         /// <summary>True while the room's match is running (late joiners are turned away).</summary>
         public bool InMatch { get; }
 
+        /// <summary>
+        /// A Quick Match table that is full and locked: the time until its match starts, in ms from
+        /// when the snapshot was sent, the same for every member; -1 while the table is open (and
+        /// always for a private room).
+        /// </summary>
+        public int StartsInMs { get; }
+
         public void WriteTo(WireWriter w)
         {
             w.String(Code);
@@ -43,6 +53,7 @@ namespace Callbreak.Application.Online
             w.Byte((byte)Settings.TurnSeconds);
             w.Byte((byte)Settings.Rounds);
             w.Bool(InMatch);
+            w.Int32(StartsInMs);
             for (int i = 0; i < SeatCount; i++)
             {
                 Member m = _seats[i];
@@ -64,6 +75,7 @@ namespace Callbreak.Application.Online
             int turnSeconds = r.Byte();
             int rounds = r.Byte();
             bool inMatch = r.Bool();
+            int startsInMs = r.Int32();
             var seats = new Member[SeatCount];
             for (int i = 0; i < SeatCount; i++)
             {
@@ -78,7 +90,7 @@ namespace Callbreak.Application.Online
                 seats[i] = new Member(occupied, memberName, avatar, deck, isHost, isReady, isBot, isConnected);
             }
 
-            return new RoomSnapshot(code, new RoomSettings(name, turnSeconds, rounds), seats, inMatch);
+            return new RoomSnapshot(code, new RoomSettings(name, turnSeconds, rounds), seats, inMatch, startsInMs);
         }
 
         /// <summary>One lobby seat on the wire.</summary>
