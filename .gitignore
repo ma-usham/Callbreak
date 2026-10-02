@@ -135,3 +135,22 @@ InitTestScene*.unity*
 
 # Held only while a designer agent moves a ChatGPT download into place
 /ArtSource/Working/_download.lock/
+
+# EOS plugin config (EOS Plugin > EOS Configuration). The product config keeps the client
+# credentials (ClientId, ClientSecret, EncryptionKey) and every platform config copies them, so
+# none of these files is committed: a fresh clone sets EOS up again (Docs/Setup/EOS.md).
+/[Aa]ssets/[Ss]treaming[Aa]ssets/EOS/eos_*config.json
+/[Aa]ssets/[Ss]treaming[Aa]ssets/EOS/eos_*config.json.meta
+/[Aa]ssets/[Ss]treaming[Aa]ssets/EOS/EpicOnlineServicesConfig.json
+/[Aa]ssets/[Ss]treaming[Aa]ssets/EOS/EpicOnlineServicesConfig.json.meta
+/[Aa]ssets/[Ss]treaming[Aa]ssets/EOS.meta
+
+# EOS plugin Android build output: its pre-build copies these from the package on every Android
+# build, and eos_dependencies.androidlib/res/values/eos_values.xml carries the client ID.
+/[Aa]ssets/[Pp]lugins/[Aa]ndroid/EOS/
+/[Aa]ssets/[Pp]lugins/[Aa]ndroid/EOS.meta
+/[Aa]ssets/[Pp]lugins/[Aa]ndroid/aar/
+/[Aa]ssets/[Pp]lugins/[Aa]ndroid/aar.meta
+
+# The EOS plugin's code-signing settings (a PFX path and password once filled in).
+/etc/config/eos_plugin_signing_config.json

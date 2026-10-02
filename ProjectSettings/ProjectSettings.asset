@@ -829,7 +829,10 @@ PlayerSettings:
   webGLCloseOnQuit: 0
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
-  scriptingDefineSymbols: {}
+  scriptingDefineSymbols:
+    Android: EOS_DO_NOT_UNLOAD_SDK_ON_SHUTDOWN
+    Standalone: EOS_DO_NOT_UNLOAD_SDK_ON_SHUTDOWN
+    iPhone: EOS_DO_NOT_UNLOAD_SDK_ON_SHUTDOWN
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

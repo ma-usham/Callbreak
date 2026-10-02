@@ -16,6 +16,7 @@ using Callbreak.Infrastructure.Persistence;
 using Callbreak.Infrastructure.Platform;
 using Callbreak.Infrastructure.Services;
 using Callbreak.Networking;
+using Callbreak.Networking.Eos;
 using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
 using PurrNet.Transports;
@@ -103,21 +104,44 @@ namespace Callbreak.Bootstrap
             // The optional beginner assist asks the bots' estimator for a call (GDD §11 screen 07).
             builder.Register<BotCallAdvisor>(Lifetime.Singleton);
             builder.Register<TableCallAdvisor>(Lifetime.Singleton).As<Callbreak.Presentation.Table.ICallAdvisor>();
-            if (_roomTransport != null)
-            {
-                GenericTransport relay = _roomTransport;
-                builder.Register(_ => new PurrRoomTransport(relay), Lifetime.Singleton).As<IRoomTransport>();
-            }
-            else
-            {
-                builder.Register<NoRoomTransport>(Lifetime.Singleton).As<IRoomTransport>();
-            }
+            RegisterRoomTransport(builder);
 
             builder.Register(CreateRoomService, Lifetime.Singleton).As<IRoomService>().AsSelf();
             builder.Register(CreateQuickMatch, Lifetime.Singleton).As<IMatchmakingService>().AsSelf();
             builder.RegisterEntryPoint<OnlineTicker>();
 
             builder.RegisterEntryPoint<GameEntryPoint>();
+        }
+
+        /// <summary>
+        /// Online rooms (ADR 016). Epic Online Services, peer to peer, once its config holds the
+        /// client credentials (Docs/Setup/EOS.md). EOS then starts here and runs until the app
+        /// quits: the plugin's EOSManager object is its own and is never destroyed. Otherwise the
+        /// PurrNet relay, for development, when the Boot scene sets one. Otherwise none. The log
+        /// says which, never with a credential.
+        /// </summary>
+        private void RegisterRoomTransport(IContainerBuilder builder)
+        {
+            if (EosPlatform.IsConfigured() && EosPlatform.Start())
+            {
+                builder.Register(resolver => new EosPeerNetwork(() => resolver.Resolve<IProfileService>().DisplayName), Lifetime.Singleton)
+                    .As<IPeerNetwork>();
+                builder.Register(resolver => new PeerRoomTransport(resolver.Resolve<IPeerNetwork>(), Debug.LogException), Lifetime.Singleton)
+                    .As<IRoomTransport>();
+                Debug.Log("Online rooms: Epic Online Services (peer to peer).");
+                return;
+            }
+
+            if (_roomTransport != null)
+            {
+                GenericTransport relay = _roomTransport;
+                builder.Register(_ => new PurrRoomTransport(relay), Lifetime.Singleton).As<IRoomTransport>();
+                Debug.Log("Online rooms: PurrNet relay (development fallback: EOS is not set up, or did not start).");
+                return;
+            }
+
+            builder.Register<NoRoomTransport>(Lifetime.Singleton).As<IRoomTransport>();
+            Debug.Log("Online rooms: off (EOS is not set up, or did not start, and no relay is set).");
         }
 
         private static RoomService CreateRoomService(IObjectResolver resolver)

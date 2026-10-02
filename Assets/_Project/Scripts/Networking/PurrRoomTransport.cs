@@ -23,7 +23,7 @@ namespace Callbreak.Networking
     /// transport's receive loop, which swallows it and delivers nothing more on that connection.
     /// </para>
     /// </summary>
-    public sealed class PurrRoomTransport : IRoomTransport, IDisposable
+    public sealed class PurrRoomTransport : ITickedRoomTransport, IDisposable
     {
         /// <summary>How long hosting or joining may take before it counts as failed.</summary>
         public const double ConnectTimeoutSeconds = 15.0;

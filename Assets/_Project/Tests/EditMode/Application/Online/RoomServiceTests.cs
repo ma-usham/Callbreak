@@ -491,7 +491,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
                     d.Rooms.Tick(_now);
                 }
 
-                _network.Pump();
+                Pump();
             }
             while (_now < until);
         }
@@ -526,7 +526,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 Settle();
                 RoomFixture.Act(a);
                 RoomFixture.Act(b);
-                _network.Pump();
+                Pump();
             }
         }
 
@@ -553,8 +553,10 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
         private sealed class Device
         {
-            public Device(InMemoryNetwork network, string name, ulong seed, InMemorySaveStore saves, Func<DateTime> utcNow)
+            /// <param name="network">The in-memory relay, or a transport of the device's own that is ticked (<see cref="Transport"/>).</param>
+            public Device(IRoomTransport network, string name, ulong seed, InMemorySaveStore saves, Func<DateTime> utcNow)
             {
+                Transport = network as ITickedRoomTransport;
                 Saves = saves;
                 Stats = new StatsService(saves);
                 Tickets = new RejoinStore(saves, utcNow, Stats);
@@ -570,6 +572,9 @@ namespace Callbreak.Tests.EditMode.Application.Online
             }
 
             public EventNames Tracked { get; } = new EventNames();
+
+            /// <summary>The device's own transport when it needs ticking (the peer-to-peer one); null on the relay.</summary>
+            public ITickedRoomTransport Transport { get; }
 
             public InMemorySaveStore Saves { get; }
 
