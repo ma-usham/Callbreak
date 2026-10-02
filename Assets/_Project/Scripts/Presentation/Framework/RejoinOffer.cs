@@ -11,12 +11,13 @@ namespace Callbreak.Presentation.Framework
 {
     /// <summary>
     /// GDD §27: after an app kill, the next launch offers "Rejoin match" while the match this
-    /// device was playing as a guest may still be running. Rejoining takes the seat back through
-    /// the lobby, which goes straight on to the table; the host refuses once the seat hold is over
-    /// and a bot has the seat for good, and the match then counts as left (GDD §8). A room that is
-    /// gone records nothing. "Not now", closing the offer, or a connection problem keeps the
-    /// ticket: it is offered again at the next launch while it lasts, and the match counts as left
-    /// once it runs out.
+    /// device was playing may still be running: as a guest, or as a host whose match the next host
+    /// in line took over (ADR 030), where it comes back as a player. Rejoining takes the seat back
+    /// through the lobby, which goes straight on to the table; the host refuses once the seat hold
+    /// is over and a bot has the seat for good, and the match then counts as left (GDD §8). A room
+    /// that is gone records nothing. "Not now", closing the offer, or a connection problem keeps
+    /// the ticket: it is offered again at the next launch while it lasts, and the match counts as
+    /// left once it runs out.
     /// </summary>
     public sealed class RejoinOffer : IStartable, IDisposable
     {

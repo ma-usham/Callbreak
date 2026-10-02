@@ -338,14 +338,15 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>
         /// GDD §8 "What others see": a returning player is welcomed back. A player who leaves, the
-        /// host included, goes without a word (the owner, 3 Oct 2026): a bot plays the seat on.
+        /// host included, goes without a word (the owner, 3 Oct 2026): a bot plays the seat on. So
+        /// does one who drops in Quick Match, and comes back without a word (<see cref="SeatStatus.Shown"/>).
         /// </summary>
         private void AnnounceConnections()
         {
             for (int i = 0; i < _connections.Length; i++)
             {
                 SeatConnection before = _connections[i];
-                SeatConnection now = _session.Seats[i].Connection;
+                SeatConnection now = SeatStatus.Shown(_session.Seats[i].Connection, _session.Mode);
                 _connections[i] = now;
                 if (before == now)
                 {
@@ -363,7 +364,7 @@ namespace Callbreak.Presentation.Table
         {
             for (int i = 0; i < _connections.Length; i++)
             {
-                _connections[i] = _session.Seats[i].Connection;
+                _connections[i] = SeatStatus.Shown(_session.Seats[i].Connection, _session.Mode);
             }
         }
 

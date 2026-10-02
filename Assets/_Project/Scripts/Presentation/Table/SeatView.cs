@@ -12,10 +12,10 @@ namespace Callbreak.Presentation.Table
     /// pill, and while it is the seat's turn the gold ring with the timer arc and the seconds disc.
     /// Opponents also have the fan of face-down cards behind the avatar. A small bubble shows a call
     /// as it is placed; the quick phrases (emotes) show in a speech box just above the avatar
-    /// (ADR 027). A small chip at the
-    /// avatar says how the player is connected ("Away", "Reconnecting…" with a spinner, "Bot
-    /// playing"); a bot that fills a seat has none (ADR 025). The mockups do not draw it, so it is
-    /// made of the kit's tag pill and hidden until there is something to say.
+    /// (ADR 027). A small chip at the avatar says how the player is connected ("Away",
+    /// "Reconnecting…" with a spinner); a bot that fills a seat has none (ADR 025), nor has a seat
+    /// a bot took over (ADR 031). The mockups do not draw it, so it is made of the kit's tag pill
+    /// and hidden until there is something to say.
     /// The chip pops in, and a bubble shrinks and fades away when its time is up (ADR 023).
     /// </summary>
     public sealed class SeatView : MonoBehaviour
@@ -26,6 +26,13 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private TMP_Text _name;
         [SerializeField] private TMP_Text _status;
         [SerializeField] private Image _statusPill;
+
+        // The status pill hugs its words (the owner, 3 Oct 2026): "3-7" in a short pill, "Choosing
+        // bid" in a longer one. This is the pill as a whole: its art and its words' area span it, so
+        // only its width changes, round its centre; every one-digit "won-bid" fills the narrowest.
+        [SerializeField] private RectTransform _statusPillRoot;
+        [SerializeField] private float _statusPadding = 46f;
+        [SerializeField] private float _statusMinWidth = 84f;
         [SerializeField] private Image _timerRing;
         [SerializeField] private GameObject _timerDisc;
         [SerializeField] private TMP_Text _timerText;
@@ -55,6 +62,7 @@ namespace Callbreak.Presentation.Table
         private SpeechBubble _speech;
         private SpeechBubble _chatSpeech;
         private int _shownSeconds = int.MinValue;
+        private string _fittedStatus;
         private bool _met;
         private bool _muted;
         private bool _chipBusy;
@@ -117,10 +125,14 @@ namespace Callbreak.Presentation.Table
             }
         }
 
-        /// <summary>The status pill: "Waiting", "Bid 3 · Won 1", …; gold once the call is met.</summary>
+        /// <summary>
+        /// The status pill: "Waiting", "Choosing bid", "0-3", …; gold once the call is met. The pill
+        /// hugs its words.
+        /// </summary>
         public void SetStatus(string status, bool met)
         {
             SetText(_status, status);
+            FitStatus();
             if (_met != met || _statusPill.color != (met ? _pillMetColor : _pillColor))
             {
                 _met = met;
@@ -138,8 +150,8 @@ namespace Callbreak.Presentation.Table
         public bool ChipIsBusy => _chip != null && _chip.gameObject.activeSelf && _chipSpinner.activeSelf;
 
         /// <summary>
-        /// The chip at the avatar (GDD §8 "What others see"): "Away", "Reconnecting…"
-        /// (<paramref name="busy"/>: with the spinner) or "Bot playing". Null or empty hides it.
+        /// The chip at the avatar (GDD §8 "What others see"): "Away" or "Reconnecting…"
+        /// (<paramref name="busy"/>: with the spinner). Null or empty hides it.
         /// The pill hugs its text.
         /// </summary>
         public void SetChip(string text, bool busy)
@@ -315,6 +327,24 @@ namespace Callbreak.Presentation.Table
         }
 
         private void OnAvatarClicked() => AvatarClicked?.Invoke();
+
+        /// <summary>
+        /// The pill's width for its words: their width and the pill's margins, and never narrower
+        /// than <see cref="_statusMinWidth"/>, so that "0-3" and "3-7" are as wide. It grows round
+        /// its centre; its height stays.
+        /// </summary>
+        private void FitStatus()
+        {
+            // A Table prefab built before the pill hugged its words keeps its width.
+            if (_statusPillRoot == null || _fittedStatus == _status.text)
+            {
+                return;
+            }
+
+            _fittedStatus = _status.text;
+            float width = Mathf.Max(_statusMinWidth, Mathf.Ceil(_status.GetPreferredValues(_fittedStatus).x) + _statusPadding);
+            _statusPillRoot.sizeDelta = new Vector2(width, _statusPillRoot.sizeDelta.y);
+        }
 
         private static void SetText(TMP_Text label, string text)
         {

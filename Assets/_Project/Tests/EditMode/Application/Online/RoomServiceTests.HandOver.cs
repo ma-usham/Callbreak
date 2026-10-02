@@ -458,6 +458,211 @@ namespace Callbreak.Tests.EditMode.Application.Online
             Assert.That(_peerFaults, Is.Empty);
         }
 
+        /// <summary>
+        /// On the peer-to-peer network a private room's host keeps a rejoin ticket as its guests do (owner,
+        /// 3 Oct 2026): its match is handed over rather than lost with it. Its app killed, the next launch
+        /// finds the ticket, the code leads to the new host, and that host seats the player in the seat it
+        /// held for it, so "Reconnecting…" there was true.
+        /// </summary>
+        [Test]
+        public void HandOver_PrivateRoom_HostAppKilledMidTrick_ItsTicketTakesItBackToItsSeatAtTheNewHost()
+        {
+            UsePeers();
+            Device host = NewPeerDevice("Hari");
+            Device asha = NewPeerDevice("Asha");
+            Device suman = NewPeerDevice("Suman");
+            string code = OpenPeerRoom(host, asha, suman);
+            StartPeerMatch(host, asha, suman);
+            PlayPeersUntil(() => MidTrick(host.Rooms.Host, 2), host, asha, suman);
+            RoomHost table = host.Rooms.Host;
+            int hostSeat = table.HostSeat;
+            string matchId = host.Rooms.Current.Match.View.MatchId;
+            Device next = DeviceAt(table.NextHost.NextSeat, asha, suman);
+            Device other = next == asha ? suman : asha;
+            AssertTicket(host, code, matchId, "the host keeps a ticket: its match would be handed over, not lost with its app");
+
+            Unplug(host);
+            SettleUntil(() => next.Rooms.Host != null && Running(asha, suman), 20);
+            Assert.AreEqual(SeatConnection.Reconnecting, next.Rooms.Current.Match.Seats[hostSeat].Connection, "the killed host's seat is held for it");
+            AssertTicket(next, code, matchId, "the new host keeps a ticket in turn, for the same room and match");
+            PlayPeers(10, asha, suman);
+
+            Device back = NewPeerDevice(host.Profile.DisplayName, host.Saves);
+            Assert.IsTrue(back.Tickets.TryGet(out string ticket), "the next launch offers Rejoin match");
+            Assert.AreEqual(code, ticket);
+            Task<RoomResult> rejoining = back.Rooms.JoinRoomAsync(ticket, CancellationToken.None);
+            SettleUntil(() => rejoining.IsCompleted, 20);
+
+            Assert.IsTrue(rejoining.Result.Succeeded, "rejoined at the new host");
+            Assert.IsFalse(back.Rooms.Current.IsHost, "as a player");
+            Assert.AreEqual(hostSeat, (int)back.Rooms.Current.Match.LocalSeat, "in its own seat");
+            Assert.AreEqual(matchId, back.Rooms.Current.Match.View.MatchId, "of the same match");
+            back.Rooms.Current.Match.Start();
+            Settle();
+            Assert.AreEqual(SeatConnection.Connected, next.Rooms.Current.Match.Seats[hostSeat].Connection, "back in its seat");
+            AssertTicket(back, code, matchId, "a player now, it keeps the ticket");
+            PlayPeers(20000, next, other, back);
+            foreach (Device d in new[] { next, other, back })
+            {
+                Assert.AreEqual(SessionStatus.Ended, d.Rooms.Current.Match.Status, d.Profile.DisplayName + " played the match to its end");
+                Assert.AreEqual(1, d.Stats.Current.gamesPlayed, d.Profile.DisplayName + "'s match counts once");
+                for (int s = 0; s < 4; s++)
+                {
+                    Assert.AreEqual(next.Rooms.Current.Match.View.Scores.TotalOf((Seat)s), d.Rooms.Current.Match.View.Scores.TotalOf((Seat)s), d.Profile.DisplayName + " ends on the same score for seat " + s);
+                }
+            }
+
+            Settle(2);
+            Assert.IsFalse(back.Tickets.TryGet(out _), "the match is over: nothing to rejoin");
+            Assert.IsFalse(next.Tickets.TryGet(out _));
+            Assert.That(_peerFaults, Is.Empty);
+        }
+
+        /// <param name="appCloses">The host's app closes (its service is disposed); otherwise it taps Leave in the match menu.</param>
+        [TestCase(false)]
+        [TestCase(true)]
+        public void HandOver_PrivateRoom_HostLeavesMidMatch_KeepsNoTicket_TheNewHostKeepsOne(bool appCloses)
+        {
+            UsePeers();
+            Device host = NewPeerDevice("Hari");
+            Device asha = NewPeerDevice("Asha");
+            Device suman = NewPeerDevice("Suman");
+            string code = OpenPeerRoom(host, asha, suman);
+            StartPeerMatch(host, asha, suman);
+            PlayPeersUntil(() => MidTrick(host.Rooms.Host, 1), host, asha, suman);
+            int hostSeat = host.Rooms.Host.HostSeat;
+            string matchId = host.Rooms.Current.Match.View.MatchId;
+            Device next = DeviceAt(host.Rooms.Host.NextHost.NextSeat, asha, suman);
+            AssertTicket(host, code, matchId, "mid-match the host holds a ticket");
+
+            if (appCloses)
+            {
+                host.Rooms.Dispose();
+                _devices.Remove(host);
+            }
+            else
+            {
+                host.Rooms.Current.Match.LeaveAsync(CancellationToken.None);
+            }
+
+            Assert.IsFalse(host.Tickets.TryGet(out _), "left on purpose: its seat is a bot's for good, so there is nothing to rejoin");
+            SettleUntil(() => next.Rooms.Host != null && Running(asha, suman), 5);
+
+            Assert.AreEqual(SeatConnection.Left, next.Rooms.Current.Match.Seats[hostSeat].Connection);
+            Assert.IsFalse(host.Tickets.TryGet(out _), "nor later");
+            AssertTicket(next, code, matchId, "the new host keeps one: its match would be handed over in turn");
+            Assert.That(_peerFaults, Is.Empty);
+        }
+
+        /// <param name="aloneFromTheStart">The host started its room's match with bots only; otherwise its one guest left during the match.</param>
+        [TestCase(true)]
+        [TestCase(false)]
+        public void HandOver_PrivateRoom_HostAloneWithBots_KeepsNoTicket_NobodyWouldTakeItsMatchOver(bool aloneFromTheStart)
+        {
+            UsePeers();
+            Device host = NewPeerDevice("Hari");
+            if (aloneFromTheStart)
+            {
+                Task<RoomResult> creating = host.Rooms.CreateRoomAsync(new RoomSettings("Hari's Table", 0), CancellationToken.None);
+                SettleUntil(() => creating.IsCompleted, 30);
+                Assert.IsTrue(creating.Result.Succeeded, "the room was created");
+                StartPeerMatch(host);
+            }
+            else
+            {
+                Device asha = NewPeerDevice("Asha");
+                OpenPeerRoom(host, asha);
+                StartPeerMatch(host, asha);
+                PlayPeers(20, host, asha);
+                Assert.IsTrue(host.Tickets.TryGet(out _), "with another person at the table, its match would be handed over");
+                int left = asha.Rooms.Current.LocalSeatIndex;
+                asha.Rooms.Current.Match.LeaveAsync(CancellationToken.None);
+                Settle(1);
+                Assert.AreEqual(SeatConnection.Left, host.Rooms.Current.Match.Seats[left].Connection, "the guest's seat is a bot's for good");
+            }
+
+            PlayPeers(20, host);
+
+            Assert.AreEqual(SessionStatus.Running, host.Rooms.Current.Match.Status);
+            Assert.IsFalse(host.Tickets.TryGet(out _), "alone with bots its match would die with its app: nothing to rejoin");
+            Assert.That(_peerFaults, Is.Empty);
+        }
+
+        [Test]
+        public void HandOver_PrivateRoom_HostPausedAndBackAsAPlayer_KeepsItsTicketFreshForTheSameRoomAndMatch()
+        {
+            UsePeers();
+            Device host = NewPeerDevice("Hari");
+            Device asha = NewPeerDevice("Asha");
+            Device suman = NewPeerDevice("Suman");
+            string code = OpenPeerRoom(host, asha, suman);
+            StartPeerMatch(host, asha, suman);
+            PlayPeersUntil(() => MidTrick(host.Rooms.Host, 1), host, asha, suman);
+            string matchId = host.Rooms.Current.Match.View.MatchId;
+            Device next = DeviceAt(host.Rooms.Host.NextHost.NextSeat, asha, suman);
+
+            _peers.Pause(_peerOf[host]);
+            SettleUntil(() => next.Rooms.Host != null && Running(asha, suman), 20);
+            _peers.Resume(_peerOf[host]);
+            SettleUntil(() => host.Rooms.Host == null && Running(host), 15);
+            Settle(RejoinStore.LifetimeSeconds + 30);
+
+            Assert.AreEqual(SessionStatus.Running, host.Rooms.Current.Match.Status, "the match still waits for its people");
+            Assert.IsTrue(host.Tickets.TryGet(out string ticket), "a player at the new host, it keeps its ticket fresh");
+            Assert.AreEqual(code, ticket, "for the same room: the code stays with the room");
+            AssertTicket(host, code, matchId, "and the same match");
+            Assert.That(_peerFaults, Is.Empty);
+        }
+
+        /// <summary>
+        /// ADR 030's known limit: with the host and the next host in line lost together nobody takes the
+        /// match over, so the last player waits out the seat hold and its room closes with ConnectionLost,
+        /// as before. Its service gives up cleanly: no tick throws on the way.
+        /// </summary>
+        [Test]
+        public void HandOver_PrivateRoom_HostAndNextInLineLostTogether_TheLastPlayerGivesUpAfterTheHoldWithoutAFault()
+        {
+            UsePeers();
+            Device host = NewPeerDevice("Hari");
+            Device asha = NewPeerDevice("Asha");
+            Device suman = NewPeerDevice("Suman");
+            OpenPeerRoom(host, asha, suman);
+            StartPeerMatch(host, asha, suman);
+            PlayPeersUntil(() => MidTrick(host.Rooms.Host, 1), host, asha, suman);
+            Device next = DeviceAt(host.Rooms.Host.NextHost.NextSeat, asha, suman);
+            Device last = next == asha ? suman : asha;
+            var session = (OnlineMatchSession)last.Rooms.Current.Match;
+            var closed = new List<RoomError>();
+            double closedAt = double.NaN;
+            last.Rooms.Current.Closed += reason =>
+            {
+                closed.Add(reason);
+                closedAt = _now;
+            };
+
+            double lostAt = _now;
+            Unplug(host);
+            Unplug(next);
+            Assert.DoesNotThrow(() => Settle(Protocol.SeatHoldSeconds + 30.0), "the service gives up without a fault from its tick");
+
+            CollectionAssert.AreEqual(new[] { RoomError.ConnectionLost }, closed, "the room closes once, the connection lost");
+            Assert.That(closedAt - lostAt, Is.InRange(Protocol.SeatHoldSeconds, Protocol.SeatHoldSeconds + 10.0), "after waiting out the seat hold");
+            Assert.AreEqual(SessionStatus.Failed, session.Status);
+            Assert.AreEqual(RoomError.ConnectionLost, session.FailureReason);
+            Assert.IsNull(last.Rooms.Current);
+            Assert.IsFalse(last.Tickets.TryGet(out _), "nothing to rejoin");
+            Assert.That(_peerFaults, Is.Empty);
+        }
+
+        /// <summary>The device holds a rejoin ticket for the room <paramref name="code"/> and its match <paramref name="matchId"/>.</summary>
+        private static void AssertTicket(Device device, string code, string matchId, string message)
+        {
+            RejoinTicket ticket = device.Saves.Peek<RejoinTicket>(RejoinStore.Key);
+            Assert.IsNotNull(ticket, message);
+            Assert.AreEqual(code, ticket.roomCode, message);
+            Assert.AreEqual(matchId, ticket.matchId, message);
+        }
+
         /// <summary>The host creates a room over the peer-to-peer network and every guest joins it by its code, which is returned.</summary>
         private string OpenPeerRoom(Device host, params Device[] guests)
         {

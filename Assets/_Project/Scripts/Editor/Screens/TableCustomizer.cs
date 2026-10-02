@@ -23,6 +23,7 @@ namespace Callbreak.Editor.Screens
     /// picker, the "Reconnecting…" cover and the "I'm back" banner (derived from kit pills, panels
     /// and buttons); and each seat's chip for "Away", "Reconnecting…" and "Bot playing" (the kit's
     /// tag pill, hidden until there is something to say; a bot that fills a seat has none, ADR 025).
+    /// The status pills hug their words ("3-7" in a short pill, "Choosing bid" in a longer one).
     /// Names get a width: a long one shrinks, then ends in an ellipsis. Controls smaller than
     /// 88 px answer to touches on 88 px (GDD §16) without being drawn any larger.
     /// All mockup measurements are in mockup pixels (1672 × 941), as in the layout.
@@ -178,6 +179,14 @@ namespace Callbreak.Editor.Screens
         private const float ChipHeight = 24f;
         private const float ChipTextScale = 0.8f;
         private const float ChipSpinnerSize = 15f;
+
+        // ---- The status pill hugs its words (the owner, 3 Oct 2026: the pill drawn for "Bid 3 • Won 1"
+        // was too big for "3-7"). It keeps its centre under the name plate and its height. The words
+        // keep about the margins mockup 08 draws round "Bid 3 • Won 1" (22 canvas units a side there,
+        // 23 here, which keeps them clear of the round ends). The narrowest pill holds the widest
+        // one-digit line, "4-4", so "0-3" and "3-7" are as wide; "Choosing bid" or "10-8" widen it.
+        private const float StatusPadding = 46f;                // canvas units, both sides together
+        private const float StatusMinWidth = 84f;               // canvas units
 
         // ---- Names: up to 16 characters (GDD §11 screen 14) on a plate that holds about ten. A longer
         // name shrinks to 60% and then ends in an ellipsis; the width is the plate without its caps.
@@ -436,6 +445,7 @@ namespace Callbreak.Editor.Screens
 
             // The speech box for the seat's quick phrases, over its other parts.
             (RectTransform chat, TextMeshProUGUI chatText) = BuildChat(root, seat, seatCentre, ChatRimCorner(ctx, seat, avatarCentre, timerSize / 2f));
+            RectTransform statusPill = BuildStatusPill(ctx, seat);
 
             var view = root.gameObject.AddComponent<SeatView>();
             var so = new SerializedObject(view);
@@ -443,7 +453,10 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_avatar").objectReferenceValue = ctx.Nodes[$"SeatAvatar{seat}"].Find("Face").GetComponent<Image>();
             so.FindProperty("_name").objectReferenceValue = ctx.Nodes[$"SeatName{seat}"].GetComponent<TMP_Text>();
             so.FindProperty("_status").objectReferenceValue = ctx.Nodes[$"SeatStatus{seat}"].GetComponent<TMP_Text>();
-            so.FindProperty("_statusPill").objectReferenceValue = ctx.Nodes[$"SeatPill{seat}"].Find("Face").GetComponent<Image>();
+            so.FindProperty("_statusPill").objectReferenceValue = statusPill.Find("Face").GetComponent<Image>();
+            so.FindProperty("_statusPillRoot").objectReferenceValue = statusPill;
+            so.FindProperty("_statusPadding").floatValue = StatusPadding;
+            so.FindProperty("_statusMinWidth").floatValue = StatusMinWidth;
             so.FindProperty("_timerRing").objectReferenceValue = ringImage;
             so.FindProperty("_timerDisc").objectReferenceValue = disc.gameObject;
             so.FindProperty("_timerText").objectReferenceValue = timerText;
@@ -569,6 +582,69 @@ namespace Callbreak.Editor.Screens
             LayoutNode label = ctx.Node(labelId);
             float off = (label.inkBox[0] + label.inkBox[2]) / 2f - ctx.CentreOf(plateId).x;
             ctx.Nodes[labelId].anchoredPosition -= new Vector2(off * UiBuildKit.ScaleX, 0f);
+        }
+
+        /// <summary>
+        /// A seat's status pill, readied to hug its words (<see cref="HugWords"/>; the seat's view
+        /// sets its width as they change) and sized here to the words it is built with.
+        /// </summary>
+        private static RectTransform BuildStatusPill(ScreenBuildContext ctx, int seat)
+        {
+            RectTransform pill = ctx.Nodes[$"SeatPill{seat}"];
+            TMP_Text words = ctx.Nodes[$"SeatStatus{seat}"].GetComponent<TMP_Text>();
+            if (words.rectTransform.parent != pill)
+            {
+                ctx.Warnings.Add($"SeatStatus{seat} is not on SeatPill{seat}: its words do not follow the pill's width");
+            }
+
+            HugWords(pill, words);
+            float width = Mathf.Max(StatusMinWidth, Mathf.Ceil(words.GetPreferredValues(words.text).x) + StatusPadding);
+            pill.sizeDelta = new Vector2(width, pill.sizeDelta.y);
+            return pill;
+        }
+
+        /// <summary>
+        /// Readies a pill to hug its words, where its view then sets only the pill's width: its art
+        /// (every other child: the face, a shadow or a rim) follows the width with the margins it has
+        /// now, and the words, when they are on the pill, span it from side to side, centred, on
+        /// their baseline. The pill keeps its centre and its height.
+        /// </summary>
+        public static void HugWords(RectTransform pill, TMP_Text words)
+        {
+            RectTransform area = words.rectTransform;
+            foreach (RectTransform part in pill)
+            {
+                if (part != area)
+                {
+                    FollowWidth(part);
+                }
+            }
+
+            if (area.parent != pill)
+            {
+                return;
+            }
+
+            area.anchorMin = new Vector2(0f, area.anchorMin.y);
+            area.anchorMax = new Vector2(1f, area.anchorMax.y);
+            area.offsetMin = new Vector2(0f, area.offsetMin.y);
+            area.offsetMax = new Vector2(0f, area.offsetMax.y);
+        }
+
+        /// <summary>
+        /// From now on <paramref name="part"/> follows its parent's width: its anchors span the
+        /// parent from side to side, with the margins it has now; its height and where it sits
+        /// up and down stay as they are.
+        /// </summary>
+        private static void FollowWidth(RectTransform part)
+        {
+            var parent = (RectTransform)part.parent;
+            float left = part.localPosition.x + part.rect.xMin - parent.rect.xMin;
+            float right = part.localPosition.x + part.rect.xMax - parent.rect.xMax;
+            part.anchorMin = new Vector2(0f, part.anchorMin.y);
+            part.anchorMax = new Vector2(1f, part.anchorMax.y);
+            part.offsetMin = new Vector2(left, part.offsetMin.y);
+            part.offsetMax = new Vector2(right, part.offsetMax.y);
         }
 
         /// <summary>

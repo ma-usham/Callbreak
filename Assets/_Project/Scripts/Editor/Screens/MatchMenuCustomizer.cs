@@ -1,5 +1,6 @@
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Widgets;
+using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,8 +10,9 @@ namespace Callbreak.Editor.Screens
     /// <summary>
     /// Screen 13, the match menu: adds the dim between the table and the panel (the whole screen on
     /// every aspect ratio; it also keeps taps off the table), turns the Sound switch into a
-    /// <see cref="ToggleSwitch"/> drawn by the Controls kit's ON and OFF looks, and makes every
-    /// control answer to at least 88 px (GDD §16) without drawing it any larger.
+    /// <see cref="ToggleSwitch"/> drawn by the Controls kit's ON and OFF looks, makes every
+    /// control answer to at least 88 px (GDD §16) without drawing it any larger, and readies the
+    /// mode tag to hug its words.
     /// </summary>
     public static class MatchMenuCustomizer
     {
@@ -33,6 +35,9 @@ namespace Callbreak.Editor.Screens
 
             BuildToggle(ctx, ctx.Node("SoundToggle"));
             GrowTouchAreas(ctx);
+
+            // The mode tag hugs its words (the owner, 3 Oct 2026): MatchMenuView sets its width.
+            TableCustomizer.HugWords(ctx.Nodes["ModePill"], ctx.Nodes["ModeLabel"].GetComponent<TMP_Text>());
         }
 
         /// <summary>

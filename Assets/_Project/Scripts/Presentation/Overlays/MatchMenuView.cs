@@ -23,6 +23,12 @@ namespace Callbreak.Presentation.Overlays
         [SerializeField] private UnityEngine.UI.Button _leaveButton;
         [SerializeField] private ToggleSwitch _soundToggle;
         [SerializeField] private TMP_Text _modeLabel;
+
+        // The mode tag hugs its words (the owner, 3 Oct 2026: "Online game" sat in the pill drawn for
+        // "Offline match · Paused"). Its art and its words' area span the tag, so only its width
+        // changes, round its centre. The margins are mockup 13's: the offline tag keeps its width.
+        [SerializeField] private RectTransform _modePill;
+        [SerializeField] private float _modePadding = 49f;
         [SerializeField] private GameObject _pausedNote;
 
         private MotionHandle _panelMotion;
@@ -46,13 +52,20 @@ namespace Callbreak.Presentation.Overlays
         /// <summary>The Sound switch was flipped: its new state.</summary>
         public event Action<bool> SoundChanged;
 
-        /// <summary>"Offline match · Paused" or "Online game".</summary>
+        /// <summary>"Offline match · Paused" or "Online game"; the tag hugs its words.</summary>
         public void SetMode(string text)
         {
             text ??= string.Empty;
             if (_modeLabel.text != text)
             {
                 _modeLabel.text = text;
+            }
+
+            // A MatchMenu prefab built before the tag hugged its words keeps its width.
+            if (_modePill != null)
+            {
+                float width = Mathf.Ceil(_modeLabel.GetPreferredValues(text).x) + _modePadding;
+                _modePill.sizeDelta = new Vector2(width, _modePill.sizeDelta.y);
             }
         }
 

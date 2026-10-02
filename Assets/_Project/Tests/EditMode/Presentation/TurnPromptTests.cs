@@ -100,7 +100,7 @@ namespace Callbreak.Tests.EditMode.Presentation
                 TurnPrompt.LeadAnyKey, TurnPrompt.BeatKey, TurnPrompt.FollowKey, TurnPrompt.TrumpKey, TurnPrompt.AnyCardKey,
                 TurnPrompt.WaitingForKey, TurnPrompt.WinsTrickKey, TurnPrompt.YouWinTrickKey, TurnPrompt.YouLeadKey, TurnPrompt.CallingKey,
                 SeatStatus.WaitingKey, SeatStatus.CallingKey, SeatStatus.ChoosingBidKey, SeatStatus.WonBidKey,
-                SeatStatus.AwayKey, SeatStatus.ReconnectingKey, SeatStatus.BotPlayingKey,
+                SeatStatus.AwayKey, SeatStatus.ReconnectingKey,
             })
             {
                 Assert.IsTrue(_text.Has(key), key);
@@ -178,11 +178,12 @@ namespace Callbreak.Tests.EditMode.Presentation
             Assert.IsNull(SeatStatus.Chip(SeatConnection.Connected, _text), "a player who is there has no chip");
             Assert.AreEqual("Away", SeatStatus.Chip(SeatConnection.Away, _text));
             Assert.AreEqual("Reconnecting…", SeatStatus.Chip(SeatConnection.Reconnecting, _text));
-            Assert.AreEqual("Bot playing", SeatStatus.Chip(SeatConnection.BotControlled, _text), "not back in time: a bot took the seat over");
 
             // The owner (3 Oct 2026): a player who left on purpose, a host who left and handed the
-            // table over too, leaves no chip; a bot plays the seat on silently.
+            // table over too, leaves no chip, and neither does one who was not back in time; a bot
+            // plays the seat on silently.
             Assert.IsNull(SeatStatus.Chip(SeatConnection.Left, _text), "a player who left has no chip");
+            Assert.IsNull(SeatStatus.Chip(SeatConnection.BotControlled, _text), "not back in time: no \"Bot playing\" chip either");
 
             // Only "Reconnecting…" has the spinner.
             Assert.IsTrue(SeatStatus.ChipIsBusy(SeatConnection.Reconnecting));
@@ -193,13 +194,42 @@ namespace Callbreak.Tests.EditMode.Presentation
         }
 
         [Test]
-        public void StatusPill_IsNotGold_WhileTheSeatIsNotPlayingItself()
+        public void ConnectionChip_InQuickMatch_ADroppedSeatShowsNothing()
         {
-            // A seat that met its call and then went away keeps its line, but not the gold.
+            // The owner (3 Oct 2026): a seat says "Reconnecting…" only where its player can come back.
+            // In Quick Match an app that was killed keeps no rejoin ticket, and nobody can tell it
+            // from one in the background, so a dropped seat shows nothing there: a bot plays it on.
+            SeatConnection shown = SeatStatus.Shown(SeatConnection.Reconnecting, MatchMode.QuickMatch);
+            Assert.IsNull(SeatStatus.Chip(shown, _text), "no Reconnecting chip in Quick Match");
+            Assert.IsFalse(SeatStatus.ChipIsBusy(shown), "and no spinner");
+
+            // In a private room anyone can come back by opening the app again ("Rejoin your match?").
+            shown = SeatStatus.Shown(SeatConnection.Reconnecting, MatchMode.PrivateRoom);
+            Assert.AreEqual("Reconnecting…", SeatStatus.Chip(shown, _text));
+            Assert.IsTrue(SeatStatus.ChipIsBusy(shown));
+
+            // Everything else shows the same in every mode.
+            foreach (MatchMode mode in new[] { MatchMode.Offline, MatchMode.PrivateRoom, MatchMode.QuickMatch })
+            {
+                foreach (SeatConnection connection in new[] { SeatConnection.Connected, SeatConnection.Away, SeatConnection.BotControlled, SeatConnection.Left })
+                {
+                    Assert.AreEqual(connection, SeatStatus.Shown(connection, mode), $"{connection} in {mode}");
+                }
+            }
+        }
+
+        [Test]
+        public void StatusPill_TurnsGold_WhoeverPlaysTheSeat()
+        {
+            // The owner (3 Oct 2026): the gold is about the seat's call, so a seat whose player is
+            // away, reconnecting or gone, a player who left included, turns gold once it is met.
             foreach (SeatConnection connection in NotAtTheTable)
             {
-                var gone = new SeatStatusInfo(false, connection, false, 3, false, true, 4);
-                Assert.IsFalse(SeatStatus.IsMet(gone), connection.ToString());
+                string seat = connection.ToString();
+                Assert.IsTrue(SeatStatus.IsMet(new SeatStatusInfo(false, connection, false, 3, false, true, 4)), seat + ": over");
+                Assert.IsTrue(SeatStatus.IsMet(new SeatStatusInfo(false, connection, false, 3, false, true, 3)), seat + ": met");
+                Assert.IsFalse(SeatStatus.IsMet(new SeatStatusInfo(false, connection, false, 3, false, true, 2)), seat + ": short");
+                Assert.IsFalse(SeatStatus.IsMet(new SeatStatusInfo(false, connection, false, 1, false, false, 0)), seat + ": before play");
             }
 
             Assert.IsTrue(SeatStatus.IsMet(new SeatStatusInfo(true, SeatConnection.Connected, false, 3, false, true, 4)));

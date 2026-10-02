@@ -1475,6 +1475,11 @@ namespace Callbreak.Editor
                     StagePrompts();
                 }
 
+                if (Once("status pills"))
+                {
+                    StageStatusPills();
+                }
+
                 if (_scorecard != null && Once("covered table"))
                 {
                     StageCoveredTable(FirstOf(legal));
@@ -1752,6 +1757,7 @@ namespace Callbreak.Editor
                 Check(_active.IsPaused, "offline, the match pauses under the menu");
                 Equal(_text.Get("ui.match_menu.mode_offline"), Field<TMP_Text>(_menu, "_modeLabel").text, "the menu says \"Offline match · Paused\"");
                 Check(Field<GameObject>(_menu, "_pausedNote").activeSelf, "\"Your match is paused.\" shows offline");
+                VerifyModeTag();
                 Snapshot("MatchMenu");
 
                 int events = _session.Events.Count;
@@ -1787,6 +1793,175 @@ namespace Callbreak.Editor
                 Equal(ScreenId.Gameplay, _router.Current, "the close button returns to the table");
                 Check(!_active.IsPaused, "the match runs again after closing the menu");
             }
+
+            // -------------------------------------------------------------- pills that hug their words
+
+            /// <summary>
+            /// The owner (3 Oct 2026): the match menu's mode tag hugs its words, offline and online.
+            /// It is as wide as its words and mockup 13's margins, and keeps what
+            /// <see cref="VerifyHug"/> asks, centred on the menu as the mockup centres it.
+            /// </summary>
+            private void VerifyModeTag()
+            {
+                RectTransform pill = Field<RectTransform>(_menu, "_modePill");
+                if (pill == null)
+                {
+                    Fail("the match menu's mode tag hugs its words", "the MatchMenu prefab was built before the tag hugged its words: rebuild it");
+                    return;
+                }
+
+                TMP_Text words = Field<TMP_Text>(_menu, "_modeLabel");
+                string which = "\"" + words.text + "\"";
+                float want = Mathf.Ceil(words.GetPreferredValues(words.text).x) + Field<float>(_menu, "_modePadding");
+                Check(Mathf.Abs(pill.rect.width - want) < 0.5f, "the match menu's mode tag hugs its words", $"{which}: {pill.rect.width:0.0} wide for {want:0.0}");
+                VerifyHug(pill, pill.Find("Face") as RectTransform, words, pill.parent as RectTransform, "the match menu's mode tag", which);
+            }
+
+            /// <summary>Every seat's status pill (see <see cref="VerifyStatusPill"/>), after every event.</summary>
+            private void VerifyStatusPills()
+            {
+                for (int rel = 0; rel < TableView.SeatCount; rel++)
+                {
+                    VerifyStatusPill(rel);
+                }
+            }
+
+            /// <summary>
+            /// The owner (3 Oct 2026): a seat's status pill hugs its words. It is as wide as its words
+            /// and their margins, never narrower than its narrowest (which holds every one-digit
+            /// "won-bid"); it keeps what <see cref="VerifyHug"/> asks, centred under the seat's name
+            /// plate; and it stays on the screen.
+            /// </summary>
+            private void VerifyStatusPill(int rel)
+            {
+                SeatView seat = _table.Seat(rel);
+                RectTransform pill = Field<RectTransform>(seat, "_statusPillRoot");
+                if (pill == null)
+                {
+                    Fail("a status pill hugs its words", "the Table prefab was built before the pills hugged their words: rebuild it");
+                    return;
+                }
+
+                TMP_Text words = Field<TMP_Text>(seat, "_status");
+                string which = $"seat {rel}, \"{words.text}\"";
+                float want = Mathf.Max(Field<float>(seat, "_statusMinWidth"), Mathf.Ceil(words.GetPreferredValues(words.text).x) + Field<float>(seat, "_statusPadding"));
+                Check(Mathf.Abs(pill.rect.width - want) < 0.5f, "a status pill hugs its words", $"{which}: {pill.rect.width:0.0} wide for {want:0.0}");
+                VerifyHug(pill, Field<Image>(seat, "_statusPill").rectTransform, words, seat.transform.Find("SeatPlate" + rel) as RectTransform, "a status pill", which);
+
+                Vector3 min = _canvas.InverseTransformPoint(pill.TransformPoint(pill.rect.min));
+                Vector3 max = _canvas.InverseTransformPoint(pill.TransformPoint(pill.rect.max));
+                Check(min.x >= _canvas.rect.xMin && max.x <= _canvas.rect.xMax, "a status pill stays on the screen", $"{which}: {min.x:0.0} to {max.x:0.0}");
+            }
+
+            /// <summary>
+            /// What a pill that hugs its words keeps: its art as wide as it and on its centre, its
+            /// words inside it and clear of its round ends, and its centre on the centre of
+            /// <paramref name="under"/> (the name plate above a status pill, the menu round the tag).
+            /// </summary>
+            private void VerifyHug(RectTransform pill, RectTransform art, TMP_Text words, RectTransform under, string what, string which)
+            {
+                Rect box = pill.rect;
+                Check(
+                    art != null && Mathf.Abs(art.rect.width - box.width) < 0.5f && Mathf.Abs(CentreIn(pill, art).x) < 0.5f,
+                    what + "'s art follows its width",
+                    art == null ? which + ": no art" : $"{which}: art {art.rect.width:0.0} wide, {CentreIn(pill, art).x:0.0} off its centre; the pill {box.width:0.0}");
+
+                words.ForceMeshUpdate(true, true);
+                Bounds ink = words.textBounds;
+                float left = pill.InverseTransformPoint(words.transform.TransformPoint(new Vector3(ink.min.x, ink.center.y, 0f))).x;
+                float right = pill.InverseTransformPoint(words.transform.TransformPoint(new Vector3(ink.max.x, ink.center.y, 0f))).x;
+                float end = box.height / 2f;
+                Check(
+                    left >= box.xMin + end - 0.01f && right <= box.xMax - end + 0.01f,
+                    what + "'s words lie inside it, clear of its round ends",
+                    $"{which}: ink {left:0.0} to {right:0.0} in {box.xMin:0.0} to {box.xMax:0.0}, ends {end:0.0}");
+
+                float off = under != null ? CentreIn(under, pill).x - under.rect.center.x : float.NaN;
+                Check(Mathf.Abs(off) <= 1f, what + " keeps its centre", $"{which}: {off:0.00} canvas units off the centre of {(under != null ? under.name : "nothing")}");
+            }
+
+            /// <summary>
+            /// Every kind of line on each seat's pill, staged: every one-digit "won-bid" ("0-3",
+            /// "3-7") fills the same short pill, narrower than the name plate above it; "Waiting",
+            /// "Calling…", "Choosing bid" and the longest "won-bid" the rules allow make it wider and
+            /// still fit in it; a gold pill is as wide as a plain one. Then two pictures, of the calls
+            /// and of the tricks won (two calls met), and the pills get their own lines back.
+            /// </summary>
+            private void StageStatusPills()
+            {
+                RuleSet rules = _active.Rules;
+                var lines = new string[TableView.SeatCount];
+                var gold = new bool[TableView.SeatCount];
+                for (int rel = 0; rel < TableView.SeatCount; rel++)
+                {
+                    SeatView seat = _table.Seat(rel);
+                    lines[rel] = Field<TMP_Text>(seat, "_status").text;
+                    gold[rel] = Field<bool>(seat, "_met");
+                    if (Field<RectTransform>(seat, "_statusPillRoot") == null)
+                    {
+                        // (VerifyStatusPill reports a Table prefab built before the pills hugged their words.)
+                        continue;
+                    }
+
+                    string which = "seat " + rel;
+                    float compact = StagedWidth(rel, WonBid(3, 7), false);
+                    float narrowest = compact, widest = compact;
+                    for (int won = 0; won <= 9; won++)
+                    {
+                        for (int call = rules.MinCall; call <= Math.Min(9, rules.MaxCall); call++)
+                        {
+                            float width = StagedWidth(rel, WonBid(won, call), false);
+                            narrowest = Mathf.Min(narrowest, width);
+                            widest = Mathf.Max(widest, width);
+                        }
+                    }
+
+                    Check(widest - narrowest < 0.01f, "every one-digit \"won-bid\" pill is as wide, \"0-3\" as \"3-7\"", $"{which}: {narrowest:0.0} to {widest:0.0}");
+                    var plate = seat.transform.Find("SeatPlate" + rel) as RectTransform;
+                    Check(plate != null && compact < plate.rect.width, "a \"3-7\" pill is narrower than the name plate above it", $"{which}: {compact:0.0} against {(plate != null ? plate.rect.width : 0f):0.0}");
+                    Check(Mathf.Abs(StagedWidth(rel, WonBid(3, 3), true) - compact) < 0.01f, "a gold pill is as wide as a plain one", which);
+                    foreach (string key in new[] { SeatStatus.WaitingKey, SeatStatus.CallingKey, SeatStatus.ChoosingBidKey })
+                    {
+                        float width = StagedWidth(rel, _text.Get(key), false);
+                        Check(width > compact, "\"Waiting\", \"Calling…\" and \"Choosing bid\" pills are wider than a \"3-7\" one", $"{which}, \"{_text.Get(key)}\": {width:0.0} against {compact:0.0}");
+                    }
+
+                    float longest = StagedWidth(rel, WonBid(Deck.HandSize, rules.MaxCall), false);
+                    Check(longest > compact, "the longest \"won-bid\" the rules allow widens its pill", $"{which}: {longest:0.0} against {compact:0.0}");
+                }
+
+                // The pictures. The calls: the local seat chooses, the others wait, call and have called.
+                StageLines(
+                    new[] { _text.Get(SeatStatus.ChoosingBidKey), _text.Get(SeatStatus.WaitingKey), _text.Get(SeatStatus.CallingKey), WonBid(0, 3) },
+                    new bool[TableView.SeatCount]);
+                Snapshot("Table_status_calls");
+
+                // The tricks won: the top and the left seats have met their calls.
+                StageLines(new[] { WonBid(0, 3), WonBid(3, 7), WonBid(10, rules.MaxCall), WonBid(4, 3) }, new[] { false, false, true, true });
+                Snapshot("Table_status_won");
+                StageLines(lines, gold);
+            }
+
+            /// <summary>A line staged on a seat's pill, checked, and the width the pill took for it.</summary>
+            private float StagedWidth(int rel, string line, bool met)
+            {
+                SeatView seat = _table.Seat(rel);
+                seat.SetStatus(line, met);
+                VerifyStatusPill(rel);
+                return Field<RectTransform>(seat, "_statusPillRoot").rect.width;
+            }
+
+            /// <summary>Puts these lines on the seats' pills, from the local seat round, gold where the call is met.</summary>
+            private void StageLines(string[] lines, bool[] met)
+            {
+                for (int rel = 0; rel < TableView.SeatCount; rel++)
+                {
+                    _table.Seat(rel).SetStatus(lines[rel], met[rel]);
+                    VerifyStatusPill(rel);
+                }
+            }
+
+            private string WonBid(int won, int call) => _text.Format(SeatStatus.WonBidKey, won, call);
 
             private void Emotes()
             {
@@ -2433,6 +2608,7 @@ namespace Callbreak.Editor
                 _playedEvents++;
                 TableState state = State;
                 VerifyTable(e.GetType().Name);
+                VerifyStatusPills();
                 switch (e)
                 {
                     case RoundStarted _:
@@ -2935,39 +3111,63 @@ namespace Callbreak.Editor
                 Check(!cover.activeSelf, "the cover goes once reconnected");
 
                 // Seat chips (GDD §8 "What others see"): the pill keeps the seat's line, the chip says the rest.
+                // In a private room, where anyone whose app was killed can come back ("Rejoin your match?").
+                _session.ModeOverride = MatchMode.PrivateRoom;
+                _session.RaiseSeatsChanged();
                 Seat opponent = (Seat)(((int)Local + 1) % SeatExtensions.Count);
                 SeatView opponentView = _table.Seat(1);
                 Image opponentPill = Field<Image>(opponentView, "_statusPill");
-                Color plainPill = Field<Color>(opponentView, "_pillColor");
+                Color pillAtTheTable = opponentPill.color;
                 string before = StatusOf(opponent);
                 int toasts = _toasts.Shown.Count;
-                Check(opponentView.Chip == null, "offline, the bots carry no tag (everyone knows)");
+                Check(opponentView.Chip == null, "the bots carry no tag");
                 StageConnection(opponent, SeatConnection.Away);
                 Equal(before, StatusOf(opponent), "an Away seat keeps its bid line");
                 Equal(_text.Get("ui.seat.away"), opponentView.Chip, "an Away seat shows the Away chip");
                 Check(!opponentView.ChipIsBusy, "the Away chip has no spinner");
-                Check(opponentPill.color == plainPill, "an Away seat's pill is not gold");
+                Check(opponentPill.color == pillAtTheTable, "an Away seat's pill keeps its colour: the gold is about the call, whoever plays it");
                 StageConnection(opponent, SeatConnection.Reconnecting);
                 Equal(before, StatusOf(opponent), "a reconnecting seat keeps its bid line");
                 Equal(_text.Get("ui.seat.reconnecting"), opponentView.Chip, "a reconnecting seat shows the Reconnecting chip");
                 Check(opponentView.ChipIsBusy, "the Reconnecting chip has its spinner");
+                Check(opponentPill.color == pillAtTheTable, "a reconnecting seat's pill keeps its colour");
                 Drawable(Field<TMP_Text>(opponentView, "_chipText"), "every character of a seat chip can be drawn");
                 Equal(toasts, _toasts.Shown.Count, "no toast while a seat is away or reconnecting");
                 StageConnection(opponent, SeatConnection.Connected);
                 Equal(before, StatusOf(opponent), "the line is the same when the player is back");
                 Check(opponentView.Chip == null, "the chip clears when the player is back");
                 Equal(_text.Get("ui.toast.welcome_back"), LastToast(), "a returning player is welcomed back");
+
+                // The owner (3 Oct 2026): a player who was not back in time, or who left, the host
+                // included, goes without a toast and leaves no chip; a bot plays the seat on silently,
+                // and its pill still turns gold when its call is met.
+                int toastsBeforeLeave = _toasts.Shown.Count;
                 StageConnection(opponent, SeatConnection.BotControlled);
                 Equal(before, StatusOf(opponent), "a seat a bot took over keeps its bid line");
-                Equal(_text.Get("ui.seat.bot_playing"), opponentView.Chip, "a seat a bot took over shows \"Bot playing\"");
-                // The owner (3 Oct 2026): a player who leaves, the host included, goes without a toast
-                // and leaves no chip; a bot plays the seat on silently.
-                int toastsBeforeLeave = _toasts.Shown.Count;
+                Check(opponentView.Chip == null, "a seat a bot took over shows no chip, no \"Bot playing\"", opponentView.Chip);
+                Check(opponentPill.color == pillAtTheTable, "a seat a bot took over keeps its pill's colour");
                 StageConnection(opponent, SeatConnection.Left);
                 Equal(toastsBeforeLeave, _toasts.Shown.Count, "a leaving player is not announced");
                 Check(opponentView.Chip == null, "a seat whose player left shows no chip");
                 Equal(before, StatusOf(opponent), "a seat whose player left keeps its bid line");
+                Check(opponentPill.color == pillAtTheTable, "a seat whose player left keeps its pill's colour");
                 StageConnection(opponent, SeatConnection.Connected);
+
+                // In Quick Match a killed app cannot come back, and looks the same as one in the
+                // background: a dropped seat shows nothing, and its player comes back without a word.
+                _session.ModeOverride = MatchMode.QuickMatch;
+                _session.RaiseSeatsChanged();
+                int toastsBeforeDrop = _toasts.Shown.Count;
+                StageConnection(opponent, SeatConnection.Reconnecting);
+                Check(opponentView.Chip == null, "in Quick Match a dropped seat shows no chip", opponentView.Chip);
+                Equal(before, StatusOf(opponent), "in Quick Match a dropped seat keeps its bid line");
+                StageConnection(opponent, SeatConnection.Connected);
+                Equal(toastsBeforeDrop, _toasts.Shown.Count, "in Quick Match a dropped player's return is not announced");
+                StageConnection(opponent, SeatConnection.Away);
+                Equal(_text.Get("ui.seat.away"), opponentView.Chip, "in Quick Match an Away seat still shows the Away chip");
+                StageConnection(opponent, SeatConnection.Connected);
+                _session.ModeOverride = null;
+                _session.RaiseSeatsChanged();
 
                 // The local seat marked Away: the chip everybody sees, and in place of the "I'm back"
                 // banner a catcher over the whole table that takes the next touch (the owner, 3 Oct 2026).
@@ -3013,7 +3213,8 @@ namespace Callbreak.Editor
             /// <summary>
             /// ADR 025: on an online table a bot that fills a seat looks like any other player, with
             /// no tag (GDD §9 gave it "BOT"). The same bots, on a table that is not offline; the
-            /// picture has a reconnecting and an away seat beside them.
+            /// picture, a private room's, has a reconnecting and an away seat beside them (in Quick
+            /// Match the reconnecting one would show nothing).
             /// </summary>
             private void StageBotTags()
             {
@@ -3029,7 +3230,13 @@ namespace Callbreak.Editor
                 Check(_table.Seat(0).Chip == null, "the local seat has no tag");
                 StageConnection((Seat)(((int)Local + 2) % SeatExtensions.Count), SeatConnection.Reconnecting);
                 StageConnection((Seat)(((int)Local + 3) % SeatExtensions.Count), SeatConnection.Away);
-                Check(_table.Seat(2).ChipIsBusy, "a reconnecting seat still shows its chip and spinner");
+                Check(_table.Seat(2).Chip == null, "in Quick Match a dropped seat shows no chip", _table.Seat(2).Chip);
+                Check(_table.Seat(3).Chip != null, "an Away seat shows its chip");
+
+                // The picture: a private room's, where a dropped seat says it is reconnecting.
+                _session.ModeOverride = MatchMode.PrivateRoom;
+                _session.RaiseSeatsChanged();
+                Check(_table.Seat(2).ChipIsBusy, "in a private room a reconnecting seat shows its chip and spinner");
                 Snapshot("Table_seat_chips");
                 _session.ModeOverride = null;
                 _session.SeatsOverride = null;
@@ -3201,6 +3408,8 @@ namespace Callbreak.Editor
                     Click(Field<Button>(_roundResults, "_backButton"));
                     Equal(ScreenId.MatchMenu, _router.Current, "the match menu opens over the online round results");
                     Equal(_text.Get("ui.match_menu.mode_online"), Field<TMP_Text>(_menu, "_modeLabel").text, "online, the menu's mode tag reads \"Online game\"");
+                    VerifyModeTag();
+                    Snapshot("MatchMenu_online");
                     Equal(_text.Get("ui.match_menu.back_to_game"), Field<TMP_Text>(_menu, "_resumeLabel").text, "online, the menu's first button reads \"Back to Game\"");
                     Check(!Field<GameObject>(_menu, "_pausedNote").activeSelf, "online, the menu has no \"paused\" note");
                     Check(!online.IsPaused, "online, opening the menu pauses nothing");

@@ -18,7 +18,7 @@ namespace Callbreak.Tests.PlayMode
     /// The pages that open over a game (GDD §11 screens 11 and 13), in the real scenes. The match
     /// menu of an online game says "Online game", inside its pill, and its first button reads "Back
     /// to Game": an online game cannot pause. Offline it says the match is paused and offers "Resume
-    /// Game". Settings covers the screen it opens from, the gear that opened it included, and has no
+    /// Game". Either way the tag's pill hugs its words. Settings covers the screen it opens from, the gear that opened it included, and has no
     /// gear of its own, wherever it opens from. Saves go to a temporary folder.
     /// </summary>
     public sealed class MatchMenuAndSettingsTests
@@ -57,6 +57,7 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreNotEqual(Text(MatchMenuText.ResumeKey), first.text);
             Assert.IsFalse(Named(menu, "PausedNote").gameObject.activeInHierarchy, "nothing says the game is paused");
             AssertInkInside(mode, Named(menu, "ModePill"), "the mode tag");
+            AssertHugs(mode, Named(menu, "ModePill"), Named(menu, "Panel"), "the mode tag");
             AssertInkInside(first, Named(menu, "ResumeButton"), "\"Back to Game\"");
 
             GameFixture.Press(router, "ResumeButton");
@@ -82,6 +83,7 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(Text(MatchMenuText.ResumeKey), first.text);
             Assert.IsTrue(Named(menu, "PausedNote").gameObject.activeInHierarchy, "\"Your match is paused.\"");
             AssertInkInside(mode, Named(menu, "ModePill"), "the mode tag");
+            AssertHugs(mode, Named(menu, "ModePill"), Named(menu, "Panel"), "the mode tag");
             AssertInkInside(first, Named(menu, "ResumeButton"), "\"Resume Game\"");
         }
 
@@ -210,6 +212,23 @@ namespace Callbreak.Tests.PlayMode
             float end = rect.height * 0.5f;
             Assert.GreaterOrEqual(left, rect.xMin + end, what + " (\"" + label.text + "\") starts inside its " + box.name);
             Assert.LessOrEqual(right, rect.xMax - end, what + " (\"" + label.text + "\") ends inside its " + box.name);
+        }
+
+        /// <summary>
+        /// The tag hugs its words (the owner, 3 Oct 2026: "Online game" sat in the pill drawn for
+        /// "Offline match · Paused"): it is no wider than its words and mockup 13's margins (25
+        /// canvas units a side), its art spans it, and it stays centred on the menu.
+        /// </summary>
+        private static void AssertHugs(TMP_Text label, RectTransform pill, RectTransform menu, string what)
+        {
+            Rect rect = pill.rect;
+            float words = label.GetPreferredValues(label.text).x;
+            Assert.LessOrEqual(rect.width, words + 2f * 26f, what + " (\"" + label.text + "\") hugs its words");
+            var face = (RectTransform)pill.Find("Face");
+            Assert.IsNotNull(face, what + " has its art");
+            Assert.AreEqual(rect.width, face.rect.width, 0.5f, what + ": its art spans it");
+            float off = menu.InverseTransformPoint(pill.TransformPoint(rect.center)).x - menu.rect.center.x;
+            Assert.AreEqual(0f, off, 1f, what + " stays centred on the menu");
         }
 
         /// <summary>The sorting order the graphic is drawn with: its nearest canvas that sorts on its own.</summary>

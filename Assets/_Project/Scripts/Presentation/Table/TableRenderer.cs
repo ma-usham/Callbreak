@@ -101,7 +101,8 @@ namespace Callbreak.Presentation.Table
 
                 // The line stays whoever plays the seat; how its player is connected is the chip's.
                 // A bot that fills a seat looks like any other player: no tag (ADR 025).
-                seatView.SetChip(SeatStatus.Chip(who.Connection, _localization), SeatStatus.ChipIsBusy(who.Connection));
+                SeatConnection shown = SeatStatus.Shown(who.Connection, _session.Mode);
+                seatView.SetChip(SeatStatus.Chip(shown, _localization), SeatStatus.ChipIsBusy(shown));
                 seatView.SetTurn(turn);
                 if (seatView.Fan != null)
                 {

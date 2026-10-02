@@ -40,3 +40,77 @@
   - **Decks:** the private-room deck tests now expect each player's own deck. A Quick Match test seats three devices on three decks through a hand-over, and a play test checks every card on the real table against the chosen deck.
   - **Menus:** the match menu and Settings have their own play tests.
   - **The table simulation's checks** follow the new pill, the missing bubble and label, the chips and the Away touch.
+
+## Addendum, 3 Oct 2026: the owner's answers, and who can come back
+
+**The owner's answers** to the questions this ADR left open:
+- **Not back in time:** a seat whose player did not return within the 90 s hold
+  (`BotControlled`) shows no chip either. "Bot playing" is gone; `ui.seat.bot_playing` is now
+  unused, like `ui.banner.im_back` and `ui.toast.left_table`.
+- **Gold:** a seat's pill turns gold once its call is met, whoever plays it. That includes a
+  player who left, one not back in time, and an Away or reconnecting seat. This replaces "only for
+  a player who is at the table".
+- **Offline deck:** a resumed offline match stays in the deck it was dealt in, as above.
+
+**Pills that fit their text** (the owner: the won-bid pill was "quite big" for "3-7"):
+- **The seat pill** fits its text: the text's width plus 23 on each side (mockup 08's margin),
+  never less than 84 (canvas units at 1920×1080).
+  - Every one-digit won-bid line ("0-3", "3-7") gets the same 84-wide pill, where the pill used to
+    be a fixed 173.
+  - "10-8" is 89 wide, "Waiting" 119, "Calling…" 130 and "Choosing bid" 167.
+  - Its height, colours, gold, "Won +1" pulse and centre under the name plate stay.
+- **The match menu's mode tag** fits its text too, with mockup 13's margins (24.5 on each side).
+  "Online game" is 183 wide; it used to be 292, the width drawn for "Offline match · Paused",
+  which keeps it.
+
+**Who can come back.** The owner asked what happens when a player swipes the game away. A seat
+should say "Reconnecting…" only if its player can really come back; otherwise a bot should take
+over at once, as for a player who left.
+- **What a swipe does:** the host loses that player's connection. It holds the seat for 90 s
+  (GDD §8), and a bot plays it from the first moment, so nothing waits. A killed app looks exactly
+  like one in the background or out of signal, so nobody can tell them apart.
+- **Private rooms: anyone can come back,** so the seat says "Reconnecting…" as before.
+  - A guest's next launch already offered "Rejoin your match?" (GDD §27).
+  - **New:** the host keeps a rejoin ticket too, whenever its match would be handed over (ADR 030:
+    over the peer network, with another person at the table). Its relaunched app rejoins the new
+    host as a player, in its own seat. This lifts ADR 030's known limit "a killed host app keeps no
+    rejoin ticket" for private rooms.
+  - A host alone with bots keeps none, because its match dies with its app.
+  - A host who leaves on purpose (Leave, or its app closing normally) keeps none. Every device now
+    drops its ticket the moment its room closes, not a tick later.
+  - **Stats:** a killed host that never comes back now has the match recorded as left, like a
+    guest (GDD §8: leaving costs the match).
+- **Quick Match: nobody can come back after a kill.** The app keeps no ticket there, and a code
+  lookup doesn't find quick tables. So a dropped seat shows nothing: no chip, and no "Welcome back"
+  when its player returns. A player whose app was only in the background, or out of signal, still
+  takes the seat back within the hold. Away keeps its chip.
+- **Where:**
+  - `SeatStatus.Shown(connection, mode)` decides what the others see; the table's chips and its
+    welcome toast both go through it.
+  - `RoomService.TrackRejoinTicket` and `GoesOnWithoutThisHost` decide who keeps a ticket.
+- **Fixed on the way:** when a private room's hand-over gave up (the host and the next in line
+  lost together), `RoomService.KeepTheMatch` threw a NullReferenceException once.
+
+**Tests:**
+- `TurnPromptTests`: no chip for a seat not back in time; gold whoever plays the seat; Quick Match
+  shows no Reconnecting chip.
+- Hand-over scenarios in `RoomServiceTests.HandOver`:
+  - a killed host relaunches and plays on from its own seat to the end;
+  - a host who leaves or closes its app keeps no ticket;
+  - a host alone with bots keeps none;
+  - a paused host back as a player keeps its ticket fresh;
+  - the give-up without a fault.
+- The table simulation checks every chip in both modes and the gold of seats that left. After
+  every event it also checks that each pill fits its text, keeps its centre and stays on screen,
+  and it checks the mode tag offline and online.
+- Play tests: `SeatPillTests` plays a real match and measures every seat's pill; the match menu
+  tests check that the tag fits its text.
+
+**Not verified on devices:**
+- an Android swipe and relaunch;
+- whether EOS lists the new host's generation before a very fast relaunch;
+- whether an Android swipe still closes the app normally (then the host counts as leaving on
+  purpose: its seat Left, no ticket).
+
+**The GDD is out of date here:** §8 "What others see" ("Bot playing", the gold only for a player at
+the table), and §27, where only a guest keeps a ticket.

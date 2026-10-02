@@ -74,7 +74,7 @@ namespace Callbreak.Application.Online
         private HandOver _handOver;
 
         /// <param name="seedSource">Draws shuffle seeds, match ids and room codes (a CSPRNG in production).</param>
-        /// <param name="tickets">Where a guest's running match is remembered for "Rejoin match"; null keeps none.</param>
+        /// <param name="tickets">Where the running match is remembered for "Rejoin match" (a guest's, and a host's whose match would be handed over); null keeps none.</param>
         /// <param name="analytics">Receives room_created and room_joined (GDD §15); null reports nothing.</param>
         public RoomService(
             IRoomTransport transport,
@@ -431,9 +431,12 @@ namespace Callbreak.Application.Online
         }
 
         /// <summary>
-        /// GDD §27 and §29: while this device plays a match as a guest it keeps a fresh ticket, so
-        /// the next launch can offer "Rejoin match" after an app kill. The host keeps none: its
-        /// room dies with its app (Phase 1).
+        /// GDD §27 and §29: while this device plays a match it keeps a fresh ticket, so the next
+        /// launch can offer "Rejoin match" after an app kill. A guest always does. So does the host
+        /// while its match would go on without it (<see cref="GoesOnWithoutThisHost"/>): the next
+        /// host in line takes it over and holds this player's seat (ADR 030). On the relay, or alone
+        /// with bots, the host keeps none: its match dies with its app. Leaving on purpose, the room
+        /// closing and the match's end all let the ticket go.
         /// </summary>
         private void TrackRejoinTicket(double now)
         {
@@ -443,7 +446,7 @@ namespace Callbreak.Application.Online
             }
 
             RoomClient client = _client;
-            if (client == null || client.IsClosed || client.IsHost || !client.InMatch || client.Match == null)
+            if (client == null || client.IsClosed || !client.InMatch || client.Match == null || (client.IsHost && !GoesOnWithoutThisHost(client.Match)))
             {
                 DropRejoinTicket();
                 return;
@@ -458,6 +461,31 @@ namespace Callbreak.Application.Online
             }
         }
 
+        /// <summary>
+        /// Whether the match this device hosts would go on should its app be killed: over the
+        /// peer-to-peer network the next host in line takes it over (ADR 030), as long as another
+        /// person is at the table, there or being waited for. The relay hands nothing over.
+        /// </summary>
+        private bool GoesOnWithoutThisHost(IMatchSession match)
+        {
+            if (!(_transport is IHandOverTransport))
+            {
+                return false;
+            }
+
+            IReadOnlyList<SessionSeat> seats = match.Seats;
+            for (int s = 0; s < seats.Count; s++)
+            {
+                SessionSeat seat = seats[s];
+                if (!seat.IsLocal && !seat.IsBot && seat.Connection != SeatConnection.Left && seat.Connection != SeatConnection.BotControlled)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private void DropRejoinTicket()
         {
             if (_ticketHeld)
@@ -467,7 +495,20 @@ namespace Callbreak.Application.Online
             }
         }
 
-        private void OnClosed(RoomError reason) => Release();
+        private void OnClosed(RoomError reason)
+        {
+            Release();
+            try
+            {
+                // Left on purpose, or the room is over for this device: there is nothing to go back
+                // to, even should the app be killed before the next tick.
+                DropRejoinTicket();
+            }
+            catch (Exception e)
+            {
+                _faults.Keep(e);
+            }
+        }
 
         /// <summary>
         /// While a match is on over the peer-to-peer network, the hand-over keeps this player's seat
@@ -495,13 +536,16 @@ namespace Callbreak.Application.Online
                 }, _network, now);
             }
 
-            if (_handOver == null)
+            HandOver handOver = _handOver;
+            if (handOver == null)
             {
                 return;
             }
 
-            _handOver.Tick(now);
-            if (_handOver.IsDone)
+            // A hand-over that gives up closes the room, and closing it lets go of the hand-over
+            // already (Release): only one that is still this room's is dropped here.
+            handOver.Tick(now);
+            if (handOver == _handOver && handOver.IsDone)
             {
                 DropHandOver();
             }
