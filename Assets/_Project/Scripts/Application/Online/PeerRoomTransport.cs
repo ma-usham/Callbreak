@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Callbreak.Application.Rooms;
@@ -29,10 +30,17 @@ namespace Callbreak.Application.Online
     /// <para>
     /// Quick Match (<see cref="IQuickMatchTransport"/>, ADR 029) opens tables that are listed in its
     /// own directory instead (<see cref="OpenAsync"/>), and joins a table's host at the address that
-    /// directory gave (<see cref="JoinAtAsync"/>).
+    /// directory gave (<see cref="JoinAtAsync(string, string, CancellationToken)"/>).
+    /// </para>
+    /// <para>
+    /// A player who takes a room over from a lost host (<see cref="IHandOverTransport"/>, ADR 030)
+    /// hosts the room's next generation, on a channel of its own (the code and the generation), so
+    /// that it never mixes with the generation before; a private room is listed again at that
+    /// generation, and a lookup finds the latest. A host of a later generation takes members'
+    /// messages up to <see cref="Protocol.MaxReportBytes"/>, for the reports they bring it.
     /// </para>
     /// </summary>
-    public sealed class PeerRoomTransport : ITickedRoomTransport, IQuickMatchTransport, IDisposable
+    public sealed class PeerRoomTransport : ITickedRoomTransport, IQuickMatchTransport, IHandOverTransport, IDisposable
     {
         /// <summary>
         /// How long hosting may take, and each step of joining: signing in, one lookup, and
@@ -136,14 +144,25 @@ namespace Callbreak.Application.Online
         /// at once when <paramref name="ct"/> is cancelled. One room is hosted at a time: a new call
         /// ends the attempt before it and lets go of the room hosted before.
         /// </summary>
-        public Task<HostLinkResult> HostAsync(string roomCode, CancellationToken ct) => Host(roomCode, listed: true, ct);
+        public Task<HostLinkResult> HostAsync(string roomCode, CancellationToken ct) => Host(roomCode, listed: true, 0, ct);
 
         /// <summary>
         /// Signs in and hosts <paramref name="roomCode"/> without listing it: only a guest that knows
         /// this device's address joins (Quick Match lists its tables in a directory of their own).
         /// Offline when the device cannot sign in; Unknown otherwise, as <see cref="HostAsync"/>.
         /// </summary>
-        public Task<HostLinkResult> OpenAsync(string roomCode, CancellationToken ct) => Host(roomCode, listed: false, ct);
+        public Task<HostLinkResult> OpenAsync(string roomCode, CancellationToken ct) => Host(roomCode, listed: false, 0, ct);
+
+        /// <summary>
+        /// Signs in and hosts generation <paramref name="generation"/> of <paramref name="roomCode"/>
+        /// (ADR 030), on that generation's channel; <paramref name="listed"/>, the code is listed at
+        /// that generation. AlreadyStarted when another device lists the code at that generation or a
+        /// later one; otherwise as <see cref="HostAsync"/>.
+        /// </summary>
+        public Task<HostLinkResult> TakeOverAsync(string roomCode, int generation, bool listed, CancellationToken ct)
+        {
+            return generation < 1 ? Task.FromResult(HostFailed(RoomError.Unknown)) : Host(roomCode, listed, generation, ct);
+        }
 
         /// <summary>
         /// Signs in, looks <paramref name="roomCode"/> up and connects to its host. A code not found
@@ -155,7 +174,7 @@ namespace Callbreak.Application.Online
         /// <paramref name="ct"/> is cancelled. One connection to a host at a time: a new call ends
         /// the attempt before it and lets go of the connection made before.
         /// </summary>
-        public Task<ClientLinkResult> JoinAsync(string roomCode, CancellationToken ct) => Join(roomCode, null, ct);
+        public Task<ClientLinkResult> JoinAsync(string roomCode, CancellationToken ct) => Join(roomCode, null, 0, ct);
 
         /// <summary>
         /// Signs in and connects to the host at <paramref name="hostAddress"/> on
@@ -164,10 +183,29 @@ namespace Callbreak.Application.Online
         /// </summary>
         public Task<ClientLinkResult> JoinAtAsync(string roomCode, string hostAddress, CancellationToken ct)
         {
-            return string.IsNullOrEmpty(hostAddress) ? Task.FromResult(JoinFailed(RoomError.NotFound)) : Join(roomCode, hostAddress, ct);
+            return JoinAtAsync(roomCode, 0, hostAddress, ct);
         }
 
-        private Task<HostLinkResult> Host(string roomCode, bool listed, CancellationToken ct)
+        /// <summary>
+        /// Signs in and connects to the host of generation <paramref name="generation"/> of
+        /// <paramref name="roomCode"/> at <paramref name="hostAddress"/>, on that generation's channel,
+        /// with no lookup (ADR 030). NotFound when that device does not host that generation of the
+        /// room, or is this one; otherwise as <see cref="JoinAsync"/>.
+        /// </summary>
+        public Task<ClientLinkResult> JoinAtAsync(string roomCode, int generation, string hostAddress, CancellationToken ct)
+        {
+            return string.IsNullOrEmpty(hostAddress) || generation < 0 ? Task.FromResult(JoinFailed(RoomError.NotFound)) : Join(roomCode, hostAddress, generation, ct);
+        }
+
+        /// <summary>The channel of generation <paramref name="generation"/> of a room: the prefix and the code, and the generation after a dot from 1 on.</summary>
+        internal static string ChannelOf(string roomCode, int generation)
+        {
+            return generation > 0
+                ? ChannelPrefix + roomCode + "." + generation.ToString(CultureInfo.InvariantCulture)
+                : ChannelPrefix + roomCode;
+        }
+
+        private Task<HostLinkResult> Host(string roomCode, bool listed, int generation, CancellationToken ct)
         {
             if (_disposed || !RoomCode.IsValid(roomCode))
             {
@@ -180,7 +218,7 @@ namespace Callbreak.Application.Online
                 _host.Dispose();
             }
 
-            var attempt = new HostAttempt(roomCode, listed);
+            var attempt = new HostAttempt(roomCode, listed, generation);
             _hosting = attempt;
             if (ct.IsCancellationRequested)
             {
@@ -203,7 +241,8 @@ namespace Callbreak.Application.Online
         }
 
         /// <param name="knownAddress">The host's address when it is known already; null looks the code up.</param>
-        private Task<ClientLinkResult> Join(string roomCode, string knownAddress, CancellationToken ct)
+        /// <param name="generation">The generation hosted at <paramref name="knownAddress"/>; a lookup finds it out.</param>
+        private Task<ClientLinkResult> Join(string roomCode, string knownAddress, int generation, CancellationToken ct)
         {
             if (_disposed)
             {
@@ -221,7 +260,7 @@ namespace Callbreak.Application.Online
                 _client.Dispose();
             }
 
-            var attempt = new JoinAttempt(roomCode, knownAddress);
+            var attempt = new JoinAttempt(roomCode, knownAddress, generation);
             _joining = attempt;
             if (ct.IsCancellationRequested)
             {
@@ -340,13 +379,13 @@ namespace Callbreak.Application.Online
                 if (!attempt.Listed)
                 {
                     // A room that is not listed is hosted as soon as the device is signed in.
-                    var unlisted = new HostLink(this, attempt.Code, attempt.Channel, listed: false);
+                    var unlisted = new HostLink(this, attempt.Code, attempt.Channel, listed: false, attempt.Generation);
                     _host = unlisted;
                     EndHosting(attempt, new HostLinkResult(unlisted, RoomError.None));
                     return;
                 }
 
-                attempt.List = Call(() => _network.ListAsync(attempt.Code, attempt.Abort.Token));
+                attempt.List = Call(() => ListCode(attempt.Code, attempt.Generation, attempt.Abort.Token));
             }
 
             if (attempt.List != null && attempt.List.IsCompleted)
@@ -354,7 +393,7 @@ namespace Callbreak.Application.Online
                 RoomError listed = Answered(attempt.List, out RoomError answer) ? answer : RoomError.Unknown;
                 if (listed == RoomError.None)
                 {
-                    var link = new HostLink(this, attempt.Code, attempt.Channel, listed: true);
+                    var link = new HostLink(this, attempt.Code, attempt.Channel, listed: true, attempt.Generation);
                     _host = link;
                     if (attempt.ListingLost)
                     {
@@ -486,6 +525,8 @@ namespace Callbreak.Application.Online
                 return false;
             }
 
+            // The room as the latest generation hosts it, on that generation's channel.
+            attempt.Channel = ChannelOf(attempt.Code, lookup.Generation);
             return Connect(attempt, lookup.Address, now);
         }
 
@@ -799,6 +840,12 @@ namespace Callbreak.Application.Online
 
         private void RaiseListingLost(string roomCode) => ListingLost?.Invoke(roomCode);
 
+        /// <summary>Lists the code at its generation; the creator's room (0) as it always was.</summary>
+        private Task<RoomError> ListCode(string roomCode, int generation, CancellationToken ct)
+        {
+            return generation > 0 ? _network.ListAsync(roomCode, generation, ct) : _network.ListAsync(roomCode, ct);
+        }
+
         /// <summary>A peer id for a new connection: never <see cref="PeerId.Local"/>, never one handed out before.</summary>
         private PeerId NextPeer()
         {
@@ -991,14 +1038,18 @@ namespace Callbreak.Application.Online
         /// <summary>One call to <see cref="HostAsync"/> or <see cref="OpenAsync"/>, until it has its answer.</summary>
         private sealed class HostAttempt
         {
-            public HostAttempt(string code, bool listed)
+            public HostAttempt(string code, bool listed, int generation)
             {
                 Code = code;
-                Channel = ChannelPrefix + code;
+                Generation = generation;
+                Channel = ChannelOf(code, generation);
                 Listed = listed;
             }
 
             public string Code { get; }
+
+            /// <summary>The generation of the room hosted (ADR 030); 0 for a room as its creator opens it.</summary>
+            public int Generation { get; }
 
             /// <summary>The room is listed under its code (<see cref="HostAsync"/>), not only opened (<see cref="OpenAsync"/>).</summary>
             public bool Listed { get; }
@@ -1027,19 +1078,20 @@ namespace Callbreak.Application.Online
         /// <summary>One call to <see cref="JoinAsync"/> or <see cref="JoinAtAsync"/>, until it has its answer.</summary>
         private sealed class JoinAttempt
         {
-            public JoinAttempt(string code, string knownAddress)
+            public JoinAttempt(string code, string knownAddress, int generation)
             {
                 Code = code;
-                Channel = ChannelPrefix + code;
+                Channel = ChannelOf(code, generation);
                 KnownAddress = knownAddress;
             }
 
             public string Code { get; }
 
-            /// <summary>The host's address given with <see cref="JoinAtAsync"/>: nothing is looked up.</summary>
+            /// <summary>The host's address given with <see cref="JoinAtAsync(string, int, string, CancellationToken)"/>: nothing is looked up.</summary>
             public string KnownAddress { get; }
 
-            public string Channel { get; }
+            /// <summary>The room's channel: of the generation given, or of the one the lookup found.</summary>
+            public string Channel { get; set; }
 
             public TaskCompletionSource<ClientLinkResult> Result { get; } = new TaskCompletionSource<ClientLinkResult>();
 
@@ -1079,24 +1131,28 @@ namespace Callbreak.Application.Online
         /// <summary>One guest's connection to the hosted room, under a peer id of its own.</summary>
         private sealed class Guest
         {
-            public Guest(PeerId peer, string address)
+            public Guest(PeerId peer, string address, int maxMessageBytes)
             {
                 Peer = peer;
                 Address = address;
+                Assembler = new PacketAssembler(maxMessageBytes);
             }
 
             public PeerId Peer { get; }
 
             public string Address { get; }
 
-            /// <summary>No member ever sends more than <see cref="Protocol.MaxClientPayloadBytes"/>; anything longer is dropped unread.</summary>
-            public PacketAssembler Assembler { get; } = new PacketAssembler(Protocol.MaxClientPayloadBytes);
+            /// <summary>
+            /// No member ever sends more than <see cref="Protocol.MaxClientPayloadBytes"/>, or a host that
+            /// took a room over more than <see cref="Protocol.MaxReportBytes"/>; anything longer is dropped unread.
+            /// </summary>
+            public PacketAssembler Assembler { get; }
 
             /// <summary>The guest's open packet came: another one means a new connection from the same device.</summary>
             public bool Opened { get; set; }
         }
 
-        private sealed class HostLink : IHostLink
+        private sealed class HostLink : IHostLink, IHostAddresses
         {
             private readonly PeerRoomTransport _owner;
             private readonly Dictionary<string, Guest> _byAddress = new Dictionary<string, Guest>();
@@ -1110,12 +1166,13 @@ namespace Callbreak.Application.Online
             private double _relistAt;
             private bool _unlisted;
 
-            public HostLink(PeerRoomTransport owner, string code, string channel, bool listed)
+            public HostLink(PeerRoomTransport owner, string code, string channel, bool listed, int generation)
             {
                 _owner = owner;
                 Code = code;
                 Channel = channel;
                 Listed = listed;
+                Generation = generation;
             }
 
             public event Action<PeerId> PeerConnected;
@@ -1131,7 +1188,13 @@ namespace Callbreak.Application.Online
             /// <summary>Listed under its code: a lost listing is listed again, and the listing goes with the room.</summary>
             public bool Listed { get; }
 
+            public int Generation { get; }
+
+            public string LocalAddress => _owner.LocalAddress;
+
             public bool IsDisposed { get; private set; }
+
+            public string AddressOf(PeerId peer) => _byPeer.TryGetValue(peer, out Guest guest) ? guest.Address : null;
 
             /// <summary>A connection request on the room's channel: allowed, and the guest counts once it opens.</summary>
             public void Accept(string address)
@@ -1253,7 +1316,7 @@ namespace Callbreak.Application.Online
                     }
 
                     CancellationToken token = _relistAbort.Token;
-                    _relist = _owner.Call(() => _owner._network.ListAsync(Code, token));
+                    _relist = _owner.Call(() => _owner.ListCode(Code, Generation, token));
                 }
 
                 if (_relist != null && _relist.IsCompleted)
@@ -1362,7 +1425,7 @@ namespace Callbreak.Application.Online
 
             private Guest Add(string address)
             {
-                var guest = new Guest(_owner.NextPeer(), address);
+                var guest = new Guest(_owner.NextPeer(), address, Generation > 0 ? Protocol.MaxReportBytes : Protocol.MaxClientPayloadBytes);
                 _byAddress[address] = guest;
                 _byPeer[guest.Peer] = guest;
                 _owner.Enqueue(new Notice(NoticeKind.PeerConnected, this, null, guest.Peer, null));

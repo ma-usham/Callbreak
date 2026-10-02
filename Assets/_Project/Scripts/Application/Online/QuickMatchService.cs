@@ -39,7 +39,15 @@ namespace Callbreak.Application.Online
     /// <item>A host that leaves before the start sends its guests back to searching, their own
     /// countdowns still running; one whose time runs low opens a table of its own, which bots fill
     /// by its own 20 s. A guest whose connection drops during the match reconnects to the host's
-    /// address while its seat is held.</item>
+    /// address while its seat is held. A host lost during the match is replaced by the next host in
+    /// line, and the match goes on from the same trick (<see cref="HandOver"/>, ADR 030).</item>
+    /// <item>A waiting host tells its guests it is still there about every second, up to the start.
+    /// A guest that hears nothing for a few seconds (the host went offline, or its app is in the
+    /// background) treats the host as gone, even during the 3 s countdown: it leaves, and looks
+    /// again without that host. A join that gets no answer for a few seconds (a table that still
+    /// shows though its host is gone) gives that table up the same way. A host that comes back finds
+    /// its table as the guests left it: free seats are filled again, by people or bots, and past its
+    /// own fill time the bots sit down at once and the match starts.</item>
     /// <item>Without a table directory (no peer-to-peer network, sign-in fails, or it cannot be
     /// reached) the device plays at a table of its own, filled with bots after a short delay: Quick
     /// Match as it was before (GDD §27 "Phase 1 fallback").</item>
@@ -47,15 +55,9 @@ namespace Callbreak.Application.Online
     /// A table is the same room protocol as a private room (ADR 016), so it then runs exactly like an
     /// online one (turn clock, away handling, no pause).
     /// </summary>
-    public sealed class QuickMatchService : IMatchmakingService, IDisposable
+    public sealed class QuickMatchService : IMatchmakingService, IDisposable, IHandOverHolder
     {
         private const int SeatCount = RoomSnapshot.SeatCount;
-
-        /// <summary>Reconnect attempts in a row that the host's device turns down before the guest is told the host has left.</summary>
-        private const int RefusalsBeforeHostLeft = 3;
-
-        /// <summary>A guest reconnecting during the match tries again after these pauses, the last one repeating, as a room member does.</summary>
-        private static readonly double[] RetryPauses = { 1, 2, 4, 8 };
 
         private static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
@@ -86,7 +88,7 @@ namespace Callbreak.Application.Online
         private bool _listed;
         private int _listedFree = -1;
         private Search _search;
-        private Rejoin _rejoin;
+        private HandOver _handOver;
         private WarmUpCall _warmUp;
         private bool _warm;
         private double _now;
@@ -150,6 +152,20 @@ namespace Callbreak.Application.Online
 
         /// <summary>The match the last successful search found; the table plays through it.</summary>
         public IMatchSession Match => _client != null ? _client.Match : null;
+
+        /// <summary>The table this device hosts, for tests: its own, or one it took over (ADR 030); null for a guest.</summary>
+        internal RoomHost Host => _host;
+
+        /// <summary>This device's member of its table, for tests.</summary>
+        internal RoomClient Client => _client;
+
+        RoomClient IHandOverHolder.Client => _client;
+
+        RoomHost IHandOverHolder.Host => _host;
+
+        IHostLink IHandOverHolder.HostLink => _hostLink;
+
+        IClientLink IHandOverHolder.ClientLink => _clientLink;
 
         /// <summary>
         /// Gets the network ready ahead of a search: signs in, and makes the first call to the table
@@ -457,7 +473,7 @@ namespace Callbreak.Application.Online
             }
 
             search.Searched = true;
-            List<QuickTable> tables = Joinable(found.Tables, search.TapUnixMs, null);
+            List<QuickTable> tables = Joinable(found.Tables, search.TapUnixMs, null, search.Avoid);
             if (tables.Count == 0)
             {
                 BeginHosting(search);
@@ -472,9 +488,9 @@ namespace Callbreak.Application.Online
         /// opened by a host who tapped no later than this player did (<paramref name="tappedAt"/>),
         /// so the table's countdown ends no later than this player's own. For a host thinking of
         /// moving (<paramref name="mineCode"/> is its table), only tables older than its own: by the
-        /// tap, then by code.
+        /// tap, then by code. Hosts in <paramref name="avoid"/> went quiet on this search: not again.
         /// </summary>
-        private List<QuickTable> Joinable(IReadOnlyList<QuickTable> tables, long tappedAt, string mineCode)
+        private List<QuickTable> Joinable(IReadOnlyList<QuickTable> tables, long tappedAt, string mineCode, HashSet<string> avoid)
         {
             var joinable = new List<QuickTable>();
             string me = _transport.LocalAddress;
@@ -487,7 +503,7 @@ namespace Callbreak.Application.Online
                     continue;
                 }
 
-                if (table.OpenedAtUnixMs > tappedAt || (mineCode != null && Oldest(table, mine) >= 0))
+                if (table.OpenedAtUnixMs > tappedAt || (mineCode != null && Oldest(table, mine) >= 0) || avoid.Contains(table.HostAddress))
                 {
                     continue;
                 }
@@ -520,6 +536,7 @@ namespace Callbreak.Application.Online
             QuickTable table = search.Candidates.Dequeue();
             search.Target = table;
             search.AttemptAbort = new CancellationTokenSource();
+            search.AttemptDeadline = now + _config.JoinTimeoutSeconds;
             CancellationToken token = search.AttemptAbort.Token;
             search.Link = Call(() => _transport.JoinAtAsync(table.RoomCode, table.HostAddress, token));
         }
@@ -531,6 +548,15 @@ namespace Callbreak.Application.Online
                 // A join still under way is given up for a table of this player's own, which bots fill in time.
                 DropJoin(search);
                 BeginHosting(search);
+                return;
+            }
+
+            if (now >= search.AttemptDeadline)
+            {
+                // No answer: a table that still shows though its host is gone (or gone quiet). It is
+                // not tried again on this search.
+                search.Avoid.Add(search.Target.HostAddress);
+                TryNextTable(search, now);
                 return;
             }
 
@@ -554,6 +580,8 @@ namespace Callbreak.Application.Online
                     return;
                 }
 
+                // Connected: the host has as long again to answer the hello.
+                search.AttemptDeadline = now + _config.JoinTimeoutSeconds;
                 search.JoinLink = linked.Link;
                 search.Joiner = new RoomClient(linked.Link, Hello(search.Target.RoomCode), null, MatchMode.QuickMatch, _stats, _settings);
                 search.Joiner.Tick(now);
@@ -581,6 +609,8 @@ namespace Callbreak.Application.Online
             search.Joiner = null;
             search.JoinLink = null;
             search.AttemptAbort = null;
+            search.HeardCount = _client.Heard;
+            search.HeardAt = now;
             search.Stage = Stage.Seated;
             search.Dirty = true;
         }
@@ -594,10 +624,25 @@ namespace Callbreak.Application.Online
                 return;
             }
 
-            if (client.IsClosed || _clientLink == null || !_clientLink.IsConnected)
+            // Every message from the host, a heartbeat or anything else, says it is still there. Counted
+            // rather than timed, so messages that waited while this app was in the background count too.
+            if (client.Heard != search.HeardCount)
             {
-                // The host left before the start (or the connection went): look again, on this
-                // player's own clock, which kept running (ADR 029).
+                search.HeardCount = client.Heard;
+                search.HeardAt = now;
+            }
+
+            bool silent = now - search.HeardAt >= _config.HostSilenceSeconds;
+            if (client.IsClosed || _clientLink == null || !_clientLink.IsConnected || silent)
+            {
+                // The host left before the start, went quiet (offline, or its app in the background),
+                // or the connection went: look again, on this player's own clock, which kept running
+                // (ADR 029). A host that went quiet is not tried again on this search.
+                if (silent && _hostAddress != null)
+                {
+                    search.Avoid.Add(_hostAddress);
+                }
+
                 Close();
                 BeginSearch(search, now);
             }
@@ -639,7 +684,8 @@ namespace Callbreak.Application.Online
             // the Quick Match clocks: 20 s to call, 15 s to play a card (GDD §6).
             var settings = new RoomSettings("Quick Match", _config.Clocks.PlaySeconds);
             var host = new RoomHost(
-                code, settings, link, _bots, _names, new Pcg32Random(_seedSource()), _cosmetics.DeckIds, _seedSource, _timing, clocks: _config.Clocks, quickTable: true);
+                code, settings, link, _bots, _names, new Pcg32Random(_seedSource()), _cosmetics.DeckIds, _seedSource, _timing, clocks: _config.Clocks, quickTable: true,
+                heartbeatSeconds: _config.HeartbeatSeconds);
             host.Tick(now);
             var client = new RoomClient(host.Local, Hello(code), host, MatchMode.QuickMatch, _stats, _settings);
             client.Tick(now);
@@ -697,8 +743,9 @@ namespace Callbreak.Application.Online
                 ListTable(search);
             }
 
-            // From the end of the people-only time, bots take the empty seats one by one.
-            if (!host.IsLocked && Elapsed(search, now) >= _config.PeopleOnlySeconds && now >= search.NextBotAt && host.SeatBot())
+            // From the end of the people-only time, bots take the empty seats one by one; a table that
+            // is late (its host was away) gets them all at once, so it still starts in time.
+            while (!host.IsLocked && Elapsed(search, now) >= _config.PeopleOnlySeconds && now >= search.NextBotAt && host.SeatBot())
             {
                 search.NextBotAt = now + NextBotGap(search, now, host.FreeSeats);
                 search.Dirty = true;
@@ -798,7 +845,7 @@ namespace Callbreak.Application.Online
             }
 
             // This table is dated by this player's tap, as the directory has it.
-            List<QuickTable> older = Joinable(found.Tables, search.TapUnixMs, _code);
+            List<QuickTable> older = Joinable(found.Tables, search.TapUnixMs, _code, search.Avoid);
             if (older.Count == 0)
             {
                 return;
@@ -910,125 +957,47 @@ namespace Callbreak.Application.Online
             }
         }
 
-        /// <summary>A guest whose connection drops during the match starts reconnecting.</summary>
+        /// <summary>
+        /// Once the match is on, every player's seat is kept through hosts that come and go (ADR 030):
+        /// a guest whose connection drops reconnects to the host's address while its seat is held, and a
+        /// host lost for good is replaced by the next host in line.
+        /// </summary>
         private void WatchTheLink(double now)
         {
-            if (_rejoin != null)
+            if (_handOver == null && _search == null && _client != null && _client.Match != null && _code != null && _transport != null)
             {
-                AdvanceRejoin(now);
-                return;
+                _handOver = new HandOver(_transport, this, HandOverRoom(), _network, now);
             }
 
-            if (_search != null || _host != null || _client == null || _clientLink == null || _code == null)
+            if (_handOver != null)
             {
-                return;
-            }
-
-            if (!_clientLink.IsConnected && !_client.IsClosed && _client.Match != null)
-            {
-                _rejoin = new Rejoin(now + Protocol.SeatHoldSeconds, now + RetryPauses[0]);
+                _handOver.Tick(now);
             }
         }
 
-        /// <summary>
-        /// GDD §8 and §27: the seat is held for a while, so the guest tries the host's address again
-        /// with growing pauses until it would be given up, as a room member does.
-        /// </summary>
-        private void AdvanceRejoin(double now)
+        /// <summary>How this table is hosted here, should this player take it over (ADR 030).</summary>
+        private HandOverRoom HandOverRoom() => new HandOverRoom
         {
-            Rejoin rejoin = _rejoin;
-            RoomClient client = _client;
-            if (client == null || client.IsClosed)
-            {
-                StopRejoin();
-                return;
-            }
+            Code = _code,
+            Listed = false,
+            QuickTable = true,
+            Mode = MatchMode.QuickMatch,
+            Settings = new RoomSettings("Quick Match", _config.Clocks.PlaySeconds),
+            Clocks = _config.Clocks,
+            Bots = _bots,
+            Names = _names,
+            DeckIds = _cosmetics.DeckIds,
+            Seeds = _seedSource,
+            Timing = _timing,
+            HeartbeatSeconds = _config.HeartbeatSeconds,
+            HostAddress = _hostAddress,
+        };
 
-            if (rejoin.Hello != null)
-            {
-                if (!rejoin.Hello.IsCompleted)
-                {
-                    return;
-                }
-
-                RoomError result = Answer(rejoin.Hello, RoomError.Unknown);
-                rejoin.Hello = null;
-                if (result == RoomError.None)
-                {
-                    StopRejoin();
-                    return;
-                }
-
-                if (result == RoomError.AlreadyStarted || result == RoomError.Full || result == RoomError.UpdateRequired || result == RoomError.Kicked)
-                {
-                    // The host no longer knows this player: the seat was given up.
-                    StopRejoin();
-                    client.Close(result == RoomError.Kicked ? RoomError.Kicked : RoomError.ConnectionLost);
-                    return;
-                }
-            }
-
-            if (rejoin.Link != null)
-            {
-                if (!rejoin.Link.IsCompleted)
-                {
-                    return;
-                }
-
-                ClientLinkResult linked = Answer(rejoin.Link, new ClientLinkResult(null, RoomError.Unknown));
-                rejoin.Link = null;
-                if (linked.Succeeded)
-                {
-                    rejoin.Refusals = 0;
-                    IClientLink old = _clientLink;
-                    _clientLink = linked.Link;
-                    if (old != null)
-                    {
-                        old.Dispose();
-                    }
-
-                    rejoin.Hello = client.RejoinAsync(linked.Link, rejoin.Abort.Token);
-                    return;
-                }
-
-                // The host's device turning the connection down, again and again, means the host left.
-                rejoin.Refusals = linked.Error == RoomError.NotFound ? rejoin.Refusals + 1 : 0;
-                if (rejoin.Refusals >= RefusalsBeforeHostLeft)
-                {
-                    StopRejoin();
-                    client.Close(RoomError.HostLeft);
-                    return;
-                }
-            }
-
-            if (now >= rejoin.Until)
-            {
-                StopRejoin();
-                client.Close(RoomError.ConnectionLost);
-                return;
-            }
-
-            if (now >= rejoin.NextAt)
-            {
-                rejoin.NextAt = now + RetryPauses[Math.Min(++rejoin.Retries, RetryPauses.Length - 1)];
-                if (_network.IsOnline)
-                {
-                    string code = _code;
-                    string address = _hostAddress;
-                    CancellationToken token = rejoin.Abort.Token;
-                    rejoin.Link = Call(() => _transport.JoinAtAsync(code, address, token));
-                }
-            }
-        }
-
-        private void StopRejoin()
+        void IHandOverHolder.Hold(RoomHost host, IHostLink hostLink, IClientLink clientLink)
         {
-            Rejoin rejoin = _rejoin;
-            _rejoin = null;
-            if (rejoin != null)
-            {
-                Cancel(rejoin.Abort);
-            }
+            _host = host;
+            _hostLink = hostLink;
+            _clientLink = clientLink;
         }
 
         private void Finish(MatchmakingError result)
@@ -1059,7 +1028,20 @@ namespace Callbreak.Application.Online
         /// </summary>
         private void Close()
         {
-            StopRejoin();
+            if (_handOver != null)
+            {
+                HandOver handOver = _handOver;
+                _handOver = null;
+                try
+                {
+                    handOver.Dispose();
+                }
+                catch (Exception e)
+                {
+                    _faults.Keep(e);
+                }
+            }
+
             UnlistTable();
             RoomClient client = _client;
             RoomHost host = _host;
@@ -1421,6 +1403,17 @@ namespace Callbreak.Application.Online
             public double NextBotAt { get; set; }
 
             public double StartsAt { get; set; } = double.NaN;
+
+            /// <summary>When the join under way gives up on its table unless it hears back.</summary>
+            public double AttemptDeadline { get; set; }
+
+            /// <summary>The messages a guest had from its host when it last looked: a count that stops moving means a host that went quiet.</summary>
+            public int HeardCount { get; set; }
+
+            public double HeardAt { get; set; }
+
+            /// <summary>Hosts that went quiet on this search, or never answered it: their tables are not tried again.</summary>
+            public HashSet<string> Avoid { get; } = new HashSet<string>();
         }
 
         /// <summary>Signing in and the first directory call, made ahead of a search (<see cref="WarmUp"/>).</summary>
@@ -1431,31 +1424,6 @@ namespace Callbreak.Application.Online
             public Task<bool> SignIn { get; set; }
 
             public Task<QuickTableSearch> Find { get; set; }
-        }
-
-        /// <summary>A guest reconnecting to its table during the match.</summary>
-        private sealed class Rejoin
-        {
-            public Rejoin(double until, double nextAt)
-            {
-                Until = until;
-                NextAt = nextAt;
-            }
-
-            /// <summary>When the host gives the seat up (GDD §8 seat hold).</summary>
-            public double Until { get; }
-
-            public double NextAt { get; set; }
-
-            public int Retries { get; set; }
-
-            public int Refusals { get; set; }
-
-            public CancellationTokenSource Abort { get; } = new CancellationTokenSource();
-
-            public Task<ClientLinkResult> Link { get; set; }
-
-            public Task<RoomError> Hello { get; set; }
         }
     }
 }

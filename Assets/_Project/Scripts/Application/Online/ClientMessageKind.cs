@@ -14,5 +14,8 @@ namespace Callbreak.Application.Online
         RequestResync = 9,
         Presence = 10,
         LeaveTable = 11,
+
+        /// <summary>A hello to a host that took the table over, with what this player holds (ADR 030).</summary>
+        Report = 12,
     }
 }

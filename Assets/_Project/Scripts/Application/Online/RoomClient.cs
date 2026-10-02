@@ -24,8 +24,11 @@ namespace Callbreak.Application.Online
     {
         private const double JoinTimeoutSeconds = 10.0;
 
+        /// <summary>A host that took a table over answers a report once every player's is in (ADR 030): up to <see cref="Protocol.HandOverWaitSeconds"/> and the time to rebuild.</summary>
+        private const double ReportTimeoutSeconds = 20.0;
+
         private readonly HelloMessage _identity;
-        private readonly RoomHost _host;
+        private RoomHost _host;
         private readonly MatchMode _mode;
         private readonly IStatsService _stats;
         private readonly ISettingsService _settings;
@@ -41,6 +44,7 @@ namespace Callbreak.Application.Online
         private int _localSeat = -1;
         private double _now;
         private double _joinDeadline;
+        private double _joinTimeout = JoinTimeoutSeconds;
         private bool _closed;
 
         /// <param name="host">The room's authority when this member is its host; null for a guest.</param>
@@ -92,13 +96,39 @@ namespace Callbreak.Application.Online
         /// </summary>
         public double StartsAt { get; private set; } = double.NaN;
 
+        /// <summary>
+        /// How many messages this member has had from its host, whatever they said: a count that
+        /// stops moving means a host that went quiet (ADR 029).
+        /// </summary>
+        public int Heard { get; private set; }
+
+        /// <summary>Who takes the match over if the host is lost, as the host last said (ADR 030); null when it never said.</summary>
+        public NextHostNotice NextHost { get; private set; }
+
+        /// <summary>
+        /// What this player needs to take the match over (ADR 030): sent by the host to the next host in
+        /// line alone, and let go of as soon as someone else is next. It holds the bots' dealt hands, so
+        /// nothing ever shows or logs it.
+        /// </summary>
+        internal SuccessionPackage Package { get; private set; }
+
+        /// <summary>The lobby as the host last published it, with who is connected; null before the first.</summary>
+        internal RoomSnapshot Room { get; private set; }
+
+        /// <summary>This player's hello: its version, identity and looks.</summary>
+        internal HelloMessage Identity => _identity;
+
         /// <summary>Introduces this player to the host. None when seated; otherwise why not.</summary>
-        public Task<RoomError> JoinAsync(CancellationToken ct)
+        public Task<RoomError> JoinAsync(CancellationToken ct) => Introduce(ClientMessages.Hello(_identity), JoinTimeoutSeconds, ct);
+
+        /// <summary>Sends <paramref name="hello"/> and waits for the host's answer, for <paramref name="timeout"/> seconds from the next tick at most.</summary>
+        private Task<RoomError> Introduce(byte[] hello, double timeout, CancellationToken ct)
         {
             FinishJoin(RoomError.Unknown);
             var join = new TaskCompletionSource<RoomError>();
             _join = join;
             _joinDeadline = double.NaN;
+            _joinTimeout = timeout;
             if (ct.CanBeCanceled)
             {
                 _joinCancellation = ct.Register(() =>
@@ -110,7 +140,7 @@ namespace Callbreak.Application.Online
                 });
             }
 
-            Send(ClientMessages.Hello(_identity));
+            Send(hello);
             return join.Task;
         }
 
@@ -122,6 +152,61 @@ namespace Callbreak.Application.Online
             return JoinAsync(ct);
         }
 
+        /// <summary>
+        /// Goes to the host that took the match over (ADR 030) over <paramref name="link"/>, with what
+        /// this player holds: its last update and that update's view. The new host answers once it has
+        /// rebuilt the table. A player that hosted the match before is a guest from now on.
+        /// </summary>
+        internal Task<RoomError> ReportAsync(IClientLink link, CancellationToken ct)
+        {
+            _host = null;
+            Detach();
+            Attach(link);
+            byte[] report = _match != null
+                ? ClientMessages.Report(_identity, _match.LastSeq, _match.View)
+                : ClientMessages.Hello(_identity);
+            return Introduce(report, ReportTimeoutSeconds, ct);
+        }
+
+        /// <summary>
+        /// This player took the match over (ADR 030): it hosts the rebuilt room from now on, and says
+        /// hello to it over that room's own connection, which takes its seat back at once.
+        /// </summary>
+        internal Task<RoomError> HostAsync(RoomHost host, CancellationToken ct)
+        {
+            _host = host ?? throw new ArgumentNullException(nameof(host));
+
+            // What the host before said about its succession is over; this room names its own.
+            NextHost = null;
+            Package = null;
+            Detach();
+            Attach(host.Local);
+            return JoinAsync(ct);
+        }
+
+        /// <summary>
+        /// Lets go of the connection without closing the room (ADR 030: the host was lost, or this
+        /// player's own room is to be given up): the match shows it is reconnecting meanwhile. The link
+        /// is the caller's to dispose.
+        /// </summary>
+        internal void Unlink()
+        {
+            Detach();
+            if (_match != null)
+            {
+                try
+                {
+                    _match.OnLinkLost();
+                }
+                catch (Exception e)
+                {
+                    _faults.Keep(e);
+                }
+            }
+
+            _faults.Rethrow();
+        }
+
         public void Tick(double now)
         {
             _now = now;
@@ -130,7 +215,7 @@ namespace Callbreak.Application.Online
                 // The wait starts on the first tick after the hello went out.
                 if (double.IsNaN(_joinDeadline))
                 {
-                    _joinDeadline = now + JoinTimeoutSeconds;
+                    _joinDeadline = now + _joinTimeout;
                 }
                 else if (now >= _joinDeadline)
                 {
@@ -326,6 +411,8 @@ namespace Callbreak.Application.Online
                 return;
             }
 
+            Heard++;
+
             try
             {
                 var reader = new WireReader(payload);
@@ -404,6 +491,20 @@ namespace Callbreak.Application.Online
 
                         break;
                     }
+
+                    case HostMessageKind.NextHost:
+                        NextHost = NextHostNotice.Read(reader);
+                        if (Package != null && (NextHost.NextSeat != _localSeat || NextHost.Generation != Package.Generation))
+                        {
+                            // Someone else is next: the bots' cards are not this player's to keep.
+                            Package = null;
+                        }
+
+                        break;
+
+                    case HostMessageKind.Succession:
+                        Package = SuccessionPackage.Read(reader);
+                        break;
                 }
             }
             catch (WireFormatException)
@@ -443,6 +544,7 @@ namespace Callbreak.Application.Online
 
         private void Apply(RoomSnapshot snapshot)
         {
+            Room = snapshot;
             _code = snapshot.Code;
             _roomSettings = snapshot.Settings;
             InMatch = snapshot.InMatch;

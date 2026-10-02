@@ -11,5 +11,12 @@ namespace Callbreak.Core.Rules
 
         /// <summary>A hand had no card above 10 (<see cref="RuleSet.RedealIfNoHonour"/>).</summary>
         NoHonour = 2,
+
+        /// <summary>
+        /// Online only (ADR 030): the host and another player were lost at once, so nobody could tell
+        /// whose cards were whose, and the round in progress was dealt again. The engine never gives
+        /// this reason itself.
+        /// </summary>
+        HostLost = 3,
     }
 }

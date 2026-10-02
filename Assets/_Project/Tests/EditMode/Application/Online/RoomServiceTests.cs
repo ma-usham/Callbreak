@@ -488,7 +488,11 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 _now = Math.Min(until, _now + 0.25);
                 foreach (Device d in _devices)
                 {
-                    d.Rooms.Tick(_now);
+                    // A device whose app is paused runs nothing.
+                    if (!(_peerOf.TryGetValue(d, out InMemoryPeerNetwork.Device net) && net.IsPaused))
+                    {
+                        d.Rooms.Tick(_now);
+                    }
                 }
 
                 Pump();

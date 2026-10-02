@@ -20,6 +20,9 @@ namespace Callbreak.Application.Online
         /// <param name="botGapMaxSeconds">The longest pause between one bot taking a seat and the next.</param>
         /// <param name="startCountdownSeconds">The "Table found" countdown, the same on every screen, from a full table to the start.</param>
         /// <param name="searchIntervalSeconds">How often a host still alone at its table looks for an older one to move to.</param>
+        /// <param name="heartbeatSeconds">How often a host tells its guests it is still there while its table waits.</param>
+        /// <param name="hostSilenceSeconds">How long a guest hears nothing from its host before it looks for another table.</param>
+        /// <param name="joinTimeoutSeconds">How long a join waits for each answer (the connection, then the seat) before it tries the next table.</param>
         public QuickMatchConfig(
             double botFillDelaySeconds = 6.0,
             double seatRevealSeconds = 0.6,
@@ -31,7 +34,10 @@ namespace Callbreak.Application.Online
             double botGapMinSeconds = 0.8,
             double botGapMaxSeconds = 1.2,
             double startCountdownSeconds = 3.0,
-            double searchIntervalSeconds = 2.5)
+            double searchIntervalSeconds = 2.5,
+            double heartbeatSeconds = 1.0,
+            double hostSilenceSeconds = 3.0,
+            double joinTimeoutSeconds = 3.0)
         {
             BotFillDelaySeconds = botFillDelaySeconds;
             SeatRevealSeconds = seatRevealSeconds;
@@ -44,6 +50,9 @@ namespace Callbreak.Application.Online
             BotGapMaxSeconds = botGapMaxSeconds < botGapMinSeconds ? botGapMinSeconds : botGapMaxSeconds;
             StartCountdownSeconds = startCountdownSeconds;
             SearchIntervalSeconds = searchIntervalSeconds;
+            HeartbeatSeconds = heartbeatSeconds;
+            HostSilenceSeconds = hostSilenceSeconds;
+            JoinTimeoutSeconds = joinTimeoutSeconds;
         }
 
         /// <summary>A table of the device's own: how long the search runs before its empty seats are filled with bots.</summary>
@@ -78,5 +87,20 @@ namespace Callbreak.Application.Online
 
         /// <summary>How often a host that is still alone at its table looks for an older table to move to.</summary>
         public double SearchIntervalSeconds { get; }
+
+        /// <summary>How often a host tells its guests it is still there while its table waits, up to the start (ADR 029).</summary>
+        public double HeartbeatSeconds { get; }
+
+        /// <summary>
+        /// How long a guest hears nothing from its host (offline, or its app in the background) before
+        /// it treats the host as gone and looks for another table, on its own countdown.
+        /// </summary>
+        public double HostSilenceSeconds { get; }
+
+        /// <summary>
+        /// How long a join waits for each answer, the connection and then the seat, before it gives up
+        /// on that table (one that still shows in searches though its host is gone) and tries the next.
+        /// </summary>
+        public double JoinTimeoutSeconds { get; }
     }
 }

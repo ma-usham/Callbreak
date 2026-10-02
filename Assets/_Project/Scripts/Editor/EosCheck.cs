@@ -222,7 +222,13 @@ namespace Callbreak.Editor
                     return;
                 }
 
-                // 6. Quick Match tables.
+                // 6. Generations (ADR 030): the same code listed again, one generation up.
+                if (!await RunGenerationsAsync(network, self, ct))
+                {
+                    return;
+                }
+
+                // 7. Quick Match tables.
                 if (!await RunQuickAsync(network, ct))
                 {
                     return;
@@ -469,6 +475,92 @@ namespace Callbreak.Editor
             {
                 return await network.ListAsync(code, step.Token);
             }
+        }
+
+        private static async Task<RoomError> ListAsync(EosPeerNetwork network, string code, int generation, CancellationToken ct)
+        {
+            using (CancellationTokenSource step = Step(ct))
+            {
+                return await network.ListAsync(code, generation, step.Token);
+            }
+        }
+
+        /// <summary>
+        /// A private room's generations (ADR 030). This device lists a code at generation 0 and a
+        /// lookup finds it at 0. It lists the same code at generation 1, which takes its generation-0
+        /// lobby down, and a lookup then finds generation 1. Then it unlists, and a lookup finds nothing.
+        /// </summary>
+        private static async Task<bool> RunGenerationsAsync(EosPeerNetwork network, string self, CancellationToken ct)
+        {
+            string code = "EOSGEN" + RoomCode.Generate(Codes.Next);
+            double start = Seconds();
+            RoomError first = await ListAsync(network, code, 0, ct);
+            if (ct.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            if (first != RoomError.None)
+            {
+                Fail("generations: list at 0", first + Failure(network));
+                return false;
+            }
+
+            PeerLookup atZero = await LookUpUntilAsync(network, code, lookup => lookup.Found, ct);
+            if (ct.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            Note("generation 0: " + Describe(atZero, self) + " at generation " + atZero.Generation + " after " + Secs(Seconds() - start));
+            if (!atZero.Found || atZero.Address != self || atZero.Generation != 0)
+            {
+                Fail("generations: lookup at 0", "expected this player at generation 0" + Failure(network));
+                return false;
+            }
+
+            start = Seconds();
+            RoomError second = await ListAsync(network, code, 1, ct);
+            if (ct.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            if (second != RoomError.None)
+            {
+                Fail("generations: list at 1", second + Failure(network));
+                return false;
+            }
+
+            PeerLookup atOne = await LookUpUntilAsync(network, code, lookup => lookup.Found && lookup.Generation == 1, ct);
+            if (ct.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            Note("generation 1: " + Describe(atOne, self) + " at generation " + atOne.Generation + " after " + Secs(Seconds() - start));
+            if (!atOne.Found || atOne.Address != self || atOne.Generation != 1)
+            {
+                Fail("generations: lookup at 1", "expected this player at generation 1" + Failure(network));
+                return false;
+            }
+
+            start = Seconds();
+            network.Unlist(code);
+            PeerLookup gone = await LookUpUntilAsync(network, code, lookup => lookup.Error == RoomError.NotFound, ct);
+            if (ct.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            Note("generations unlisted: " + Describe(gone, self) + " after " + Secs(Seconds() - start));
+            if (gone.Error != RoomError.NotFound)
+            {
+                Fail("generations: unlist", "expected NotFound" + Failure(network));
+                return false;
+            }
+
+            return true;
         }
 
         private static async Task<PeerLookup> LookUpAsync(EosPeerNetwork network, string code, CancellationToken ct)

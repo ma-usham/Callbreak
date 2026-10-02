@@ -37,16 +37,28 @@ namespace Callbreak.Application.Online
         Task<bool> SignInAsync(CancellationToken ct);
 
         /// <summary>
-        /// Lists this device as the host of <paramref name="roomCode"/>. None when listed;
-        /// AlreadyStarted when another device lists the code already; Offline or Unknown when the
-        /// directory cannot be reached.
+        /// Lists this device as the host of <paramref name="roomCode"/> (generation 0: the room as its
+        /// creator opened it). None when listed; AlreadyStarted when another device lists the code
+        /// already; Offline or Unknown when the directory cannot be reached.
         /// </summary>
         Task<RoomError> ListAsync(string roomCode, CancellationToken ct);
 
-        /// <summary>Takes this device's listing of <paramref name="roomCode"/> down; nothing if there is none.</summary>
+        /// <summary>
+        /// Lists this device as the host of <paramref name="roomCode"/> at <paramref name="generation"/>
+        /// (ADR 030: a player who took the room over from a lost host lists it again, one generation
+        /// up). AlreadyStarted when another device lists the code at that generation or a later one; a
+        /// listing of an earlier generation is no obstacle, and from then on a lookup finds this one.
+        /// Otherwise as <see cref="ListAsync(string, CancellationToken)"/>.
+        /// </summary>
+        Task<RoomError> ListAsync(string roomCode, int generation, CancellationToken ct);
+
+        /// <summary>Takes this device's listing of <paramref name="roomCode"/> down, whatever its generation; nothing if there is none.</summary>
         void Unlist(string roomCode);
 
-        /// <summary>Looks up the device that hosts <paramref name="roomCode"/>: NotFound when nobody lists it.</summary>
+        /// <summary>
+        /// Looks up the device that hosts <paramref name="roomCode"/>, and at which generation: the one
+        /// that lists it at the latest generation, when several do. NotFound when nobody lists it.
+        /// </summary>
         Task<PeerLookup> LookUpAsync(string roomCode, CancellationToken ct);
 
         /// <summary>
@@ -74,13 +86,22 @@ namespace Callbreak.Application.Online
     public readonly struct PeerLookup
     {
         public PeerLookup(string address, RoomError error)
+            : this(address, error, 0)
+        {
+        }
+
+        public PeerLookup(string address, RoomError error, int generation)
         {
             Address = address;
             Error = error;
+            Generation = generation;
         }
 
         /// <summary>The host's address when it was found; null otherwise.</summary>
         public string Address { get; }
+
+        /// <summary>The generation the host lists the room at (ADR 030); 0 for the room as its creator opened it.</summary>
+        public int Generation { get; }
 
         /// <summary>None when found, NotFound when nobody lists the code, Offline or Unknown when the directory cannot be reached.</summary>
         public RoomError Error { get; }

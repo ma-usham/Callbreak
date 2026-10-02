@@ -500,6 +500,238 @@ namespace Callbreak.Tests.EditMode.Application.Online
             Assert.AreEqual(0, _peers.QuickOpenedAt(hari.TableCode ?? string.Empty), "Hari hosts his own, the older table");
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void QuickMatch_HostGoesQuietInTheWaitingRoom_GuestsRegroupAtOneTableAndEachStartsByItsOwn20s(bool unplugged)
+        {
+            UseQuickMatch(listingDelay: 2.0);
+            QuickPlayer hari = NewQuickPlayer("Hari");
+            QuickPlayer asha = NewQuickPlayer("Asha");
+            QuickPlayer suman = NewQuickPlayer("Suman");
+            Tap(hari);
+            SettleQuick(0.5);
+            Tap(asha);
+            SettleQuick(0.5);
+            Tap(suman);
+            SettleQuickUntil(() => SeatsTaken(asha) == 3 && SeatsTaken(suman) == 3, 10);
+            Assert.AreSame(hari, HostOf(hari, asha, suman));
+
+            double quietAt = _now;
+            GoQuiet(hari, unplugged);
+            SettleQuickUntil(() => asha.Search.IsCompleted && suman.Search.IsCompleted, 30);
+
+            Assert.That(LeftTableAt(asha, hari, quietAt) - quietAt, Is.LessThanOrEqualTo(3.5), "Asha gave the quiet host up within about 3 s");
+            Assert.That(LeftTableAt(suman, hari, quietAt) - quietAt, Is.LessThanOrEqualTo(3.5), "and so did Suman");
+            if (!unplugged)
+            {
+                Assert.AreEqual(1, OpensTo(asha, hari), "a host that went quiet is not tried again on that search");
+                Assert.AreEqual(1, OpensTo(suman, hari));
+            }
+
+            Assert.IsTrue(asha.Search.Result.Found && suman.Search.Result.Found);
+            Assert.AreEqual(asha.Match.View.MatchId, suman.Match.View.MatchId, "they regrouped at one table");
+            Assert.AreSame(asha, HostOf(asha, suman), "hosted by the earlier tapper");
+            Assert.That(asha.FoundAt - asha.TappedAt, Is.LessThanOrEqualTo(20.3), "Asha starts by her own 20 s");
+            Assert.That(suman.FoundAt - suman.TappedAt, Is.LessThanOrEqualTo(20.3), "Suman by his");
+            AssertOwnCountdown(asha);
+            AssertOwnCountdown(suman);
+            AssertOwnCountdownNeverBelowItsTables(suman);
+        }
+
+        [Test]
+        public void QuickMatch_HostGoesQuietDuringTheCountdown_GuestsSearchAgainAndNoMatchStartsWithoutIt()
+        {
+            UseQuickMatch(listingDelay: 2.0);
+            var four = new List<QuickPlayer> { NewQuickPlayer("Hari"), NewQuickPlayer("Asha"), NewQuickPlayer("Suman"), NewQuickPlayer("Bikash") };
+            foreach (QuickPlayer p in four)
+            {
+                Tap(p);
+            }
+
+            SettleQuickUntil(() => four.TrueForAll(p => p.Reports.Exists(r => r.Progress.TableFound)), 14);
+            QuickPlayer host = HostOf(four.ToArray());
+            List<QuickPlayer> guests = four.FindAll(p => p != host);
+
+            SettleQuick(0.5);
+            Pause(host);
+            SettleQuickUntil(() => guests.TrueForAll(p => p.Search.IsCompleted), 30);
+
+            Assert.IsFalse(host.Search.IsCompleted, "the quiet host started nothing");
+            foreach (QuickPlayer g in guests)
+            {
+                Assert.IsTrue(g.Search.Result.Found, g.Name + " still plays");
+                Assert.AreEqual(guests[0].Match.View.MatchId, g.Match.View.MatchId, g.Name + " regrouped with the others");
+                Assert.That(g.FoundAt - g.TappedAt, Is.LessThanOrEqualTo(20.3), g.Name + " by its own 20 s");
+                foreach (SessionSeat seat in g.Match.Seats)
+                {
+                    Assert.AreNotEqual(host.Device.Profile.DisplayName, seat.Name, "without the quiet host");
+                }
+            }
+
+            Assert.AreEqual(1, Bots(guests[0].Match), "three people and a bot");
+        }
+
+        [Test]
+        public void QuickMatch_StaleTable_TheJoinerGivesItUpInAbout3s()
+        {
+            UseQuickMatch(listingDelay: 1.0);
+            QuickPlayer hari = NewQuickPlayer("Hari");
+            Tap(hari);
+            SettleQuick(3);
+            Pause(hari);
+            QuickPlayer asha = NewQuickPlayer("Asha");
+
+            Tap(asha);
+            SettleQuickUntil(() => asha.TableCode != null, 8);
+            double hosting = _now - asha.TappedAt;
+            SettleQuickUntil(() => asha.Search.IsCompleted, 30);
+
+            Assert.IsTrue(SentOpen(asha, hari), "she tried the table that still showed");
+            Assert.That(hosting, Is.LessThanOrEqualTo(4.5), "and gave it up in about 3 s, for a table of her own");
+            Assert.IsFalse(asha.Reports.Exists(r => r.Progress.Seats[0].Name == "Hari"), "she never sat at it");
+            Assert.AreEqual(3, Bots(asha.Match));
+            Assert.That(asha.FoundAt - asha.TappedAt, Is.LessThanOrEqualTo(20.3));
+        }
+
+        [Test]
+        public void QuickMatch_HostComesBackBeforeIts20s_ItsTableCarriesOnWithBots()
+        {
+            UseQuickMatch(listingDelay: 2.0);
+            QuickPlayer hari = NewQuickPlayer("Hari");
+            QuickPlayer asha = NewQuickPlayer("Asha");
+            Tap(hari);
+            SettleQuick(0.5);
+            Tap(asha);
+            SettleQuickUntil(() => SeatsTaken(asha) == 2, 10);
+            string code = hari.TableCode;
+
+            Pause(hari);
+            SettleQuickUntil(() => !asha.Reports[asha.Reports.Count - 1].Progress.Seats[0].Name.Equals("Hari"), 6);
+            SettleQuick(1);
+            Resume(hari);
+            SettleQuick(0.5);
+
+            Assert.AreEqual(1, SeatsTaken(hari), "the guest who left is gone");
+            Assert.AreEqual(3, _peers.QuickFreeSeats(code), "and the directory says the seats are free");
+            SettleQuickUntil(() => hari.Search.IsCompleted && asha.Search.IsCompleted, 30);
+            Assert.IsTrue(hari.Search.Result.Found);
+            Assert.AreEqual(3, Bots(hari.Match), "Hari's table carried on, with bots");
+            Assert.That(hari.FoundAt - hari.TappedAt, Is.LessThanOrEqualTo(20.3));
+            Assert.AreNotEqual(hari.Match.View.MatchId, asha.Match.View.MatchId, "Asha plays elsewhere");
+        }
+
+        [Test]
+        public void QuickMatch_HostComesBackAfterIts20s_BotsFillAtOnceAndItStarts()
+        {
+            UseQuickMatch(listingDelay: 2.0);
+            QuickPlayer hari = NewQuickPlayer("Hari");
+            Tap(hari);
+            SettleQuick(5);
+
+            Pause(hari);
+            SettleQuick(20);
+            Resume(hari);
+            double back = _now;
+            SettleQuickUntil(() => hari.Search.IsCompleted, 5);
+
+            Assert.IsTrue(hari.Search.Result.Found);
+            Assert.AreEqual(3, Bots(hari.Match));
+            Assert.That(hari.FoundAt - back, Is.LessThanOrEqualTo(0.5), "at once");
+        }
+
+        [Test]
+        public void QuickMatch_Heartbeat_WhileTheTableWaitsAndThroughTheMatch_NoneAfterIt()
+        {
+            UseQuickMatch(listingDelay: 2.0);
+            QuickPlayer hari = NewQuickPlayer("Hari");
+            QuickPlayer asha = NewQuickPlayer("Asha");
+            Tap(hari);
+            Tap(asha);
+            SettleQuickUntil(() => hari.Search.IsCompleted && asha.Search.IsCompleted, 30);
+            QuickPlayer host = HostOf(hari, asha);
+            QuickPlayer guest = host == hari ? asha : hari;
+            int whileWaiting = Heartbeats(host, guest);
+            double startedAt = _now;
+            host.Match.Start();
+            guest.Match.Start();
+            PlayQuick(200);
+            int duringMatch = Heartbeats(host, guest) - whileWaiting;
+            double played = _now - startedAt;
+
+            Assert.Greater(whileWaiting, 3, "about one a second while the table waited");
+            Assert.That(duringMatch, Is.InRange((int)(played * 0.8), (int)(played * 1.2) + 1), "and about one a second through the match, so a host that went quiet is noticed (ADR 030)");
+            Assert.AreEqual(SessionStatus.Running, guest.Match.Status, "disturbing nothing");
+            PlayQuick(20000);
+            Assert.AreEqual(SessionStatus.Ended, guest.Match.Status);
+            int atTheEnd = Heartbeats(host, guest);
+            SettleQuick(5);
+            Assert.AreEqual(atTheEnd, Heartbeats(host, guest), "and none once it is over");
+            Assert.That(_peerFaults, Is.Empty);
+        }
+
+        /// <summary>The player's app goes to the background: it runs nothing, and what reaches it waits.</summary>
+        private void Pause(QuickPlayer player) => _peers.Pause(player.Network);
+
+        private void Resume(QuickPlayer player) => _peers.Resume(player.Network);
+
+        /// <summary>The player's device goes quiet: its app in the background, or gone for good (unplugged).</summary>
+        private void GoQuiet(QuickPlayer player, bool unplugged)
+        {
+            if (!unplugged)
+            {
+                Pause(player);
+                return;
+            }
+
+            _peers.Unplug(player.Network);
+            player.Stopped = true;
+        }
+
+        /// <summary>When <paramref name="player"/>'s screen first stopped showing it at <paramref name="host"/>'s table after <paramref name="since"/>.</summary>
+        private static double LeftTableAt(QuickPlayer player, QuickPlayer host, double since)
+        {
+            foreach (var report in player.Reports)
+            {
+                if (report.At >= since && report.Progress.Seats[0].Name != host.Name)
+                {
+                    return report.At;
+                }
+            }
+
+            return double.PositiveInfinity;
+        }
+
+        /// <summary>How often <paramref name="player"/> asked <paramref name="host"/>'s device for a connection.</summary>
+        private int OpensTo(QuickPlayer player, QuickPlayer host)
+        {
+            int count = 0;
+            foreach (var sent in _peers.Sent)
+            {
+                if (sent.From == player.Network.Address && sent.To == host.Network.Address && sent.Packet.Length == 1 && sent.Packet[0] == (byte)PacketType.Open)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        /// <summary>The heartbeats that went from <paramref name="host"/>'s device to <paramref name="guest"/>'s.</summary>
+        private int Heartbeats(QuickPlayer host, QuickPlayer guest)
+        {
+            int count = 0;
+            foreach (var sent in _peers.Sent)
+            {
+                if (sent.From == host.Network.Address && sent.To == guest.Network.Address && sent.Packet.Length == 2
+                    && sent.Packet[0] == (byte)PacketType.Whole && sent.Packet[1] == (byte)HostMessageKind.Heartbeat)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
         /// <summary>The devices made from now on meet over a fresh peer network, whose new listings show after <paramref name="listingDelay"/> s (EOS: about 8.6 s).</summary>
         private void UseQuickMatch(double listingDelay = 8.6)
         {
@@ -531,7 +763,11 @@ namespace Callbreak.Tests.EditMode.Application.Online
             player.Search = player.Service.FindMatchAsync(player, player.Cancel.Token);
         }
 
-        /// <summary>Time passes, in steps of <paramref name="step"/>: every Quick Match search and table is driven, and the network settles.</summary>
+        /// <summary>
+        /// Time passes, in steps of <paramref name="step"/>: as in the app's frame, the transports take
+        /// what arrived, then every Quick Match search and table is driven, and the network settles.
+        /// A paused or stopped player's device runs nothing.
+        /// </summary>
         private void SettleQuick(double seconds, double step = 0.25)
         {
             double until = _now + seconds;
@@ -539,9 +775,13 @@ namespace Callbreak.Tests.EditMode.Application.Online
             {
                 _now = Math.Min(until, _now + step);
                 _peers.Now = _now;
+                Pump();
                 foreach (QuickPlayer p in _quick)
                 {
-                    p.Service.Tick(_now);
+                    if (!p.Stopped && !p.Network.IsPaused)
+                    {
+                        p.Service.Tick(_now);
+                    }
                 }
 
                 foreach (Device d in _devices)
@@ -572,7 +812,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
             Assert.IsTrue(done(), "it came about within " + seconds + " s");
         }
 
-        /// <summary>Every person plays like the test bots, while time passes and the network settles.</summary>
+        /// <summary>Every person plays like the test bots, while time passes and the network settles; a paused or stopped player's app does nothing.</summary>
         private void PlayQuick(int steps)
         {
             for (int i = 0; i < steps; i++)
@@ -581,7 +821,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 foreach (QuickPlayer p in _quick)
                 {
                     IMatchSession session = p.Service.Match;
-                    if (session != null && session.Status != SessionStatus.Ended && session.Status != SessionStatus.Failed)
+                    if (session != null && session.Status != SessionStatus.Ended && session.Status != SessionStatus.Failed && !p.Stopped && !p.Network.IsPaused)
                     {
                         over = false;
                         RoomFixture.Act(session);
@@ -881,6 +1121,9 @@ namespace Callbreak.Tests.EditMode.Application.Online
             public double TappedAt { get; set; }
 
             public double FoundAt { get; set; } = double.NaN;
+
+            /// <summary>The player's app is gone for good (its device unplugged): nothing of it runs any more.</summary>
+            public bool Stopped { get; set; }
 
             /// <summary>The code of the table this player hosts, as the directory lists it; null when it lists none.</summary>
             public string TableCode => Network.QuickCode;

@@ -103,6 +103,73 @@ namespace Callbreak.Tests.EditMode.Application.Online
             CollectionAssert.AreEqual(new[] { "a" }, heard, "the request was turned down");
         }
 
+        [Test]
+        public void Pause_WhatReachesTheDeviceWaits_AndArrivesInOrderOnceItIsBack()
+        {
+            var world = new InMemoryPeerNetwork();
+            InMemoryPeerNetwork.Device a = SignedIn(world);
+            InMemoryPeerNetwork.Device b = SignedIn(world);
+            a.Accept(b.Address, Channel);
+            b.Accept(a.Address, Channel);
+            world.Pump();
+            var heard = new List<string>();
+            b.Disconnected += (address, channel) => heard.Add("closed, with " + b.Waiting + " waiting");
+
+            world.Pause(b);
+            a.Send(b.Address, Channel, new byte[] { 1 });
+            a.Send(b.Address, Channel, new byte[] { 2 });
+            a.Close(b.Address, Channel);
+            Task<QuickTableSearch> found = b.FindQuickTablesAsync(CancellationToken.None);
+            world.Pump();
+
+            Assert.AreEqual(0, b.Waiting, "nothing reached the paused device");
+            Assert.That(heard, Is.Empty);
+            Assert.IsFalse(found.IsCompleted, "nor did the directory's answer");
+            Assert.IsTrue(world.IsQuiet, "and the network has nothing more to do meanwhile");
+
+            world.Resume(b);
+            world.Pump();
+
+            CollectionAssert.AreEqual(new[] { "closed, with 2 waiting" }, heard, "the packets first, then the close");
+            Assert.IsTrue(found.IsCompleted);
+            Assert.IsTrue(b.TryReceive(out _, out _, out byte[] first));
+            Assert.IsTrue(b.TryReceive(out _, out _, out byte[] second));
+            CollectionAssert.AreEqual(new byte[] { 1 }, first);
+            CollectionAssert.AreEqual(new byte[] { 2 }, second);
+        }
+
+        [Test]
+        public void Listing_ALaterGeneration_IsNoClash_AndLookUpsFindTheLatest()
+        {
+            var world = new InMemoryPeerNetwork();
+            InMemoryPeerNetwork.Device first = SignedIn(world);
+            InMemoryPeerNetwork.Device second = SignedIn(world);
+            InMemoryPeerNetwork.Device third = SignedIn(world);
+            Task<RoomError> creator = first.ListAsync("ABCDEF", CancellationToken.None);
+            world.Pump();
+
+            Task<RoomError> takenOver = second.ListAsync("ABCDEF", 1, CancellationToken.None);
+            Task<RoomError> again = first.ListAsync("ABCDEF", CancellationToken.None);
+            Task<RoomError> sameGeneration = third.ListAsync("ABCDEF", 1, CancellationToken.None);
+            Task<RoomError> older = third.ListAsync("ABCDEF", 0, CancellationToken.None);
+            Task<PeerLookup> latest = third.LookUpAsync("ABCDEF", CancellationToken.None);
+            world.Pump();
+            second.Unlist("ABCDEF");
+            Task<PeerLookup> afterwards = third.LookUpAsync("ABCDEF", CancellationToken.None);
+            world.Pump();
+
+            Assert.AreEqual(RoomError.None, creator.Result);
+            Assert.AreEqual(RoomError.None, takenOver.Result, "an earlier generation is no obstacle (ADR 030)");
+            Assert.AreEqual(RoomError.None, again.Result, "the creator's own listing still stands");
+            Assert.AreEqual(RoomError.AlreadyStarted, sameGeneration.Result, "one device per generation");
+            Assert.AreEqual(RoomError.AlreadyStarted, older.Result, "and nobody new below the latest");
+            Assert.AreEqual(second.Address, latest.Result.Address);
+            Assert.AreEqual(1, latest.Result.Generation);
+            Assert.AreEqual(first.Address, afterwards.Result.Address, "the creator's again, once the later one is gone");
+            Assert.AreEqual(0, afterwards.Result.Generation);
+            Assert.AreEqual(1, world.Listings("ABCDEF"));
+        }
+
         [TestCase("")]
         [TestCase("cb:ABCDEF")]
         [TestCase("cb/ABCDEF")]

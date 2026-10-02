@@ -63,6 +63,13 @@ namespace Callbreak.Networking.Eos
         private const string OpenedKey = "OPENED";
 
         /// <summary>
+        /// The lobby attribute that holds the generation a private room is listed at (ADR 030: a player
+        /// who took the room over from a lost host lists it one generation up). A lobby without it is
+        /// generation 0, as every lobby made before it existed.
+        /// </summary>
+        private const string GenerationKey = "GEN";
+
+        /// <summary>
         /// Nobody joins a listing: guests look the code up (or find the table) and connect straight
         /// to the host. So the capacity only has to leave room in it, in case a search skips full
         /// lobbies. It is a table's four seats.
@@ -149,6 +156,12 @@ namespace Callbreak.Networking.Eos
         private ulong _loginStatus;
         private bool _disposed;
 
+        /// <summary>
+        /// Completed when this network shuts down: whatever waits for the SDK stops waiting then, and
+        /// answers Unknown or false without another call into the SDK.
+        /// </summary>
+        private readonly TaskCompletionSource<bool> _closed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
         /// <param name="displayName">
         /// The player's name, read at each sign-in (EOS keeps it as the Connect user's display name).
         /// "Player" when it is null or blank.
@@ -156,6 +169,16 @@ namespace Callbreak.Networking.Eos
         public EosPeerNetwork(Func<string> displayName)
         {
             _displayName = displayName;
+
+            // Shut down before the plugin shuts EOS down. It releases the platform from
+            // Application.quitting, which in the Editor runs as Play mode ends, and an SDK call after
+            // that crashes the process. Play mode's end (in the Editor) and wantsToQuit (in a player)
+            // come before it; quitting itself is the last chance.
+            UnityEngine.Application.wantsToQuit += OnWantsToQuit;
+            UnityEngine.Application.quitting += Dispose;
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+#endif
         }
 
         private enum LinkState : byte
@@ -203,6 +226,15 @@ namespace Callbreak.Networking.Eos
 
         private double Now => _clock.Elapsed.TotalSeconds;
 
+        /// <summary>
+        /// True while calls into the SDK on <paramref name="platform"/>'s objects are safe: this
+        /// network has not shut down, and EOS still runs on that very platform. After every await,
+        /// pause or callback, the code checks this before it touches the SDK again. When it fails, the
+        /// call is skipped and a handle is left to leak, rather than released into a platform that is
+        /// gone.
+        /// </summary>
+        private bool Alive(PlatformInterface platform) => !_disposed && platform != null && ReferenceEquals(Platform, platform);
+
         public Task<bool> SignInAsync(CancellationToken ct)
         {
             if (_disposed)
@@ -227,7 +259,13 @@ namespace Callbreak.Networking.Eos
         /// Lists the code. A call that is cancelled before it answers None leaves nothing listed: a
         /// lobby made for it meanwhile is destroyed.
         /// </summary>
-        public Task<RoomError> ListAsync(string roomCode, CancellationToken ct)
+        public Task<RoomError> ListAsync(string roomCode, CancellationToken ct) => ListAsync(roomCode, 0, ct);
+
+        /// <summary>
+        /// Lists the code at <paramref name="generation"/> (ADR 030). Another device's lobby of the
+        /// code at an earlier generation is no obstacle; one at this generation or a later one is.
+        /// </summary>
+        public Task<RoomError> ListAsync(string roomCode, int generation, CancellationToken ct)
         {
             if (string.IsNullOrEmpty(roomCode))
             {
@@ -241,10 +279,16 @@ namespace Callbreak.Networking.Eos
 
             if (_listings.TryGetValue(roomCode, out Listing listing))
             {
-                return listing.Live ? Task.FromResult(RoomError.None) : ListedAsync(listing, ct);
+                if (listing.Generation == generation)
+                {
+                    return listing.Live ? Task.FromResult(RoomError.None) : ListedAsync(listing, ct);
+                }
+
+                // This device lists one generation of a code at a time.
+                Withdraw(listing);
             }
 
-            listing = new Listing(roomCode, false);
+            listing = new Listing(roomCode, false) { Generation = generation };
             _listings.Add(roomCode, listing);
             listing.Making = MakeListingAsync(listing, ct);
             return ListedAsync(listing, ct);
@@ -368,7 +412,7 @@ namespace Callbreak.Networking.Eos
         public void Accept(string address, string channel)
         {
             SocketId socket = SocketOf(channel);
-            ProductUserId peer = PeerOf(address);
+            CheckAddress(address);
             var link = new Link(address, channel);
             bool superseded = _closing.Remove(link);
             if (_announcing.Remove(link))
@@ -386,7 +430,7 @@ namespace Callbreak.Networking.Eos
                 return;
             }
 
-            var options = new AcceptConnectionOptions { LocalUserId = _localUser, RemoteUserId = peer, SocketId = socket };
+            var options = new AcceptConnectionOptions { LocalUserId = _localUser, RemoteUserId = ProductUserId.FromString(address), SocketId = socket };
             Result result = p2p.AcceptConnection(ref options);
             if (result != Result.Success)
             {
@@ -410,7 +454,7 @@ namespace Callbreak.Networking.Eos
         public void Close(string address, string channel)
         {
             SocketId socket = SocketOf(channel);
-            ProductUserId peer = PeerOf(address);
+            CheckAddress(address);
             var link = new Link(address, channel);
             _allowed.Remove(link);
             DropQueued(link, false);
@@ -428,7 +472,7 @@ namespace Callbreak.Networking.Eos
                 return;
             }
 
-            var options = new CloseConnectionOptions { LocalUserId = _localUser, RemoteUserId = peer, SocketId = socket };
+            var options = new CloseConnectionOptions { LocalUserId = _localUser, RemoteUserId = ProductUserId.FromString(address), SocketId = socket };
             Result result = p2p.CloseConnection(ref options);
             if (result != Result.Success)
             {
@@ -449,7 +493,7 @@ namespace Callbreak.Networking.Eos
             }
 
             SocketId socket = SocketOf(channel);
-            ProductUserId peer = PeerOf(address);
+            CheckAddress(address);
             var link = new Link(address, channel);
             if (!TryP2P(out P2PInterface p2p) || _closing.ContainsKey(link) || _announcing.Contains(link))
             {
@@ -461,7 +505,7 @@ namespace Callbreak.Networking.Eos
             var options = new SendPacketOptions
             {
                 LocalUserId = _localUser,
-                RemoteUserId = peer,
+                RemoteUserId = ProductUserId.FromString(address),
                 SocketId = socket,
                 Channel = 0,
                 Data = new ArraySegment<byte>(packet),
@@ -529,10 +573,16 @@ namespace Callbreak.Networking.Eos
         }
 
         /// <summary>
-        /// Takes this device's listings down, closes the connections this instance allowed, and
-        /// removes every notification. Connections it only heard of are left alone (another
-        /// instance on the same player, such as EosCheck, may own them). Safe after EOS itself
-        /// shut down.
+        /// Shuts this network down. It runs early, by itself, when Play mode ends (in the Editor) or
+        /// the app wants to quit, so it comes before the plugin releases the platform; the owner's
+        /// Dispose later finds it done.
+        /// <list type="bullet">
+        /// <item>While EOS still runs, it takes this device's listings down, closes the connections
+        /// this instance allowed, and removes every notification. Connections it only heard of are
+        /// left alone (another instance on the same player, such as EosCheck, may own them).</item>
+        /// <item>Once EOS is gone, it touches the SDK no more.</item>
+        /// <item>Whatever still waits for the SDK then answers Unknown or false.</item>
+        /// </list>
         /// </summary>
         public void Dispose()
         {
@@ -541,20 +591,24 @@ namespace Callbreak.Networking.Eos
                 return;
             }
 
-            foreach (Link link in new List<Link>(_allowed))
-            {
-                Close(link.Address, link.Channel);
-            }
-
-            _disposed = true;
-            foreach (Listing listing in AllListings())
-            {
-                Withdraw(listing);
-            }
-
+            UnityEngine.Application.wantsToQuit -= OnWantsToQuit;
+            UnityEngine.Application.quitting -= Dispose;
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+#endif
             PlatformInterface platform = Platform;
-            if (platform != null)
+            if (Alive(platform))
             {
+                foreach (Link link in new List<Link>(_allowed))
+                {
+                    Close(link.Address, link.Channel);
+                }
+
+                foreach (Listing listing in AllListings())
+                {
+                    Withdraw(listing);
+                }
+
                 StopListeningToPeers(platform.GetP2PInterface());
                 if (_memberStatus != Common.INVALID_NOTIFICATIONID)
                 {
@@ -566,7 +620,20 @@ namespace Callbreak.Networking.Eos
                     platform.GetConnectInterface()?.RemoveNotifyLoginStatusChanged(_loginStatus);
                 }
             }
+            else
+            {
+                // EOS is gone already, and its lobbies, connections and notifications with it.
+                foreach (Listing listing in AllListings())
+                {
+                    Forget(listing);
+                }
+            }
 
+            _disposed = true;
+            _closed.TrySetResult(true);
+            _connectionRequests = Common.INVALID_NOTIFICATIONID;
+            _connectionsOpened = Common.INVALID_NOTIFICATIONID;
+            _connectionsClosed = Common.INVALID_NOTIFICATIONID;
             _memberStatus = Common.INVALID_NOTIFICATIONID;
             _loginStatus = Common.INVALID_NOTIFICATIONID;
             ReturnBuffers(_ready);
@@ -605,8 +672,18 @@ namespace Callbreak.Networking.Eos
             }
         }
 
-        /// <summary>The SDK's failures as the room logic knows them: no network is Offline, the rest Unknown.</summary>
-        private static RoomError ErrorOf(Result result)
+        /// <summary>
+        /// Whether an SDK answer is the last one. OperationWillRetry means the same callback comes again.
+        /// This is decided here, without asking the SDK, because callbacks may run while EOS shuts down.
+        /// </summary>
+        private static bool IsComplete(Result result) => result != Result.OperationWillRetry;
+
+        /// <summary>
+        /// The SDK's failures as the room logic knows them: no network is Offline, the rest Unknown.
+        /// The network's state is the one last read on the main loop; this runs inside callbacks too,
+        /// where the SDK must not be asked.
+        /// </summary>
+        private RoomError ErrorOf(Result result)
         {
             switch (result)
             {
@@ -616,9 +693,41 @@ namespace Callbreak.Networking.Eos
                     return RoomError.Offline;
             }
 
-            PlatformInterface platform = Platform;
-            return platform != null && platform.GetNetworkStatus() != NetworkStatus.Online ? RoomError.Offline : RoomError.Unknown;
+            return _networkStatus != NetworkStatus.Online ? RoomError.Offline : RoomError.Unknown;
         }
+
+        /// <summary>
+        /// Waits for an SDK answer, or until this network shuts down: then <paramref name="whenClosed"/>
+        /// comes back at once. The caller checks <see cref="Alive"/> before it touches the SDK again,
+        /// so an answer that is late, or never comes, costs nothing.
+        /// </summary>
+        private async Task<T> Answer<T>(Task<T> answer, T whenClosed)
+        {
+            if (!answer.IsCompleted)
+            {
+                await Task.WhenAny(answer, _closed.Task);
+            }
+
+            return answer.IsCompleted && !answer.IsFaulted && !answer.IsCanceled ? answer.Result : whenClosed;
+        }
+
+        private bool OnWantsToQuit()
+        {
+            // Nothing in this game turns a quit down, so the app does go now: stop before EOS does.
+            Dispose();
+            return true;
+        }
+
+#if UNITY_EDITOR
+        private void OnPlayModeStateChanged(UnityEditor.PlayModeStateChange change)
+        {
+            // Play mode's end comes before Application.quitting, from which the plugin shuts EOS down.
+            if (change == UnityEditor.PlayModeStateChange.ExitingPlayMode)
+            {
+                Dispose();
+            }
+        }
+#endif
 
         /// <summary>
         /// The channel as an EOS socket name: 1 to 32 characters from A-Z, a-z, 0-9, '-', '_', '+',
@@ -644,14 +753,13 @@ namespace Callbreak.Networking.Eos
             return new SocketId { SocketName = channel };
         }
 
-        private static ProductUserId PeerOf(string address)
+        /// <summary>An address is required. It becomes a Product User ID only once the SDK is known to run.</summary>
+        private static void CheckAddress(string address)
         {
             if (string.IsNullOrEmpty(address))
             {
                 throw new ArgumentException("An address is required.", nameof(address));
             }
-
-            return ProductUserId.FromString(address);
         }
 
         private static void ReturnBuffers(IEnumerable<Item> items)
@@ -715,8 +823,8 @@ namespace Callbreak.Networking.Eos
                 return false;
             }
 
-            ConnectInterface connect = Platform?.GetConnectInterface();
-            return connect != null && connect.GetLoginStatus(_localUser) == LoginStatus.LoggedIn;
+            PlatformInterface platform = Platform;
+            return Alive(platform) && platform.GetConnectInterface().GetLoginStatus(_localUser) == LoginStatus.LoggedIn;
         }
 
         private bool IsLocalUser(ProductUserId user) => user != null && _localAddress != null && user.ToString() == _localAddress;
@@ -735,17 +843,19 @@ namespace Callbreak.Networking.Eos
         {
             try
             {
-                ConnectInterface connect = Platform?.GetConnectInterface();
-                if (connect == null)
+                PlatformInterface platform = Platform;
+                if (!Alive(platform))
                 {
-                    // EOS is not running: no credentials in its config, or it failed to start.
+                    // EOS is not running: no credentials in its config, it failed to start, or it shut down.
                     _signInError = RoomError.Unknown;
                     return false;
                 }
 
+                ConnectInterface connect = platform.GetConnectInterface();
+                var shutDown = new LoginCallbackInfo { ResultCode = Result.Canceled };
                 string name = DisplayNameForLogin();
-                LoginCallbackInfo login = await LoginAsync(name);
-                if (_disposed)
+                LoginCallbackInfo login = await Answer(LoginAsync(name), shutDown);
+                if (!Alive(platform))
                 {
                     return false;
                 }
@@ -755,8 +865,8 @@ namespace Callbreak.Networking.Eos
                 {
                     // No device id yet (a first start on this device): make it, then log in again.
                     Result first = login.ResultCode;
-                    Result device = await CreateDeviceIdAsync(connect);
-                    if (_disposed)
+                    Result device = await Answer(CreateDeviceIdAsync(connect), Result.Canceled);
+                    if (!Alive(platform))
                     {
                         return false;
                     }
@@ -766,8 +876,8 @@ namespace Callbreak.Networking.Eos
                         return SignInFailed("the sign-in failed (" + first + ") and no device id could be made", device);
                     }
 
-                    login = await LoginAsync(name);
-                    if (_disposed)
+                    login = await Answer(LoginAsync(name), shutDown);
+                    if (!Alive(platform))
                     {
                         return false;
                     }
@@ -777,8 +887,8 @@ namespace Callbreak.Networking.Eos
 
                 if (newPlayer)
                 {
-                    CreateUserCallbackInfo created = await CreateUserAsync(login.ContinuanceToken);
-                    if (_disposed)
+                    CreateUserCallbackInfo created = await Answer(CreateUserAsync(login.ContinuanceToken), new CreateUserCallbackInfo { ResultCode = Result.Canceled });
+                    if (!Alive(platform))
                     {
                         return false;
                     }
@@ -789,8 +899,8 @@ namespace Callbreak.Networking.Eos
                     }
 
                     // Only a successful login arms the plugin's refresh of it (it runs out after an hour).
-                    login = await LoginAsync(name);
-                    if (_disposed)
+                    login = await Answer(LoginAsync(name), shutDown);
+                    if (!Alive(platform))
                     {
                         return false;
                     }
@@ -841,7 +951,7 @@ namespace Callbreak.Networking.Eos
             var options = new CreateDeviceIdOptions { DeviceModel = DeviceModel() };
             connect.CreateDeviceId(ref options, null, (ref CreateDeviceIdCallbackInfo info) =>
             {
-                if (Common.IsOperationComplete(info.ResultCode))
+                if (IsComplete(info.ResultCode))
                 {
                     done.TrySetResult(info.ResultCode);
                 }
@@ -855,7 +965,7 @@ namespace Callbreak.Networking.Eos
             var done = new TaskCompletionSource<LoginCallbackInfo>(TaskCreationOptions.RunContinuationsAsynchronously);
             EOSManager.Instance.StartConnectLoginWithDeviceToken(displayName, info =>
             {
-                if (Common.IsOperationComplete(info.ResultCode))
+                if (IsComplete(info.ResultCode))
                 {
                     done.TrySetResult(info);
                 }
@@ -868,7 +978,7 @@ namespace Callbreak.Networking.Eos
             var done = new TaskCompletionSource<CreateUserCallbackInfo>(TaskCreationOptions.RunContinuationsAsynchronously);
             EOSManager.Instance.CreateConnectUserWithContinuanceToken(token, info =>
             {
-                if (Common.IsOperationComplete(info.ResultCode))
+                if (IsComplete(info.ResultCode))
                 {
                     done.TrySetResult(info);
                 }
@@ -883,7 +993,7 @@ namespace Callbreak.Networking.Eos
         private void ListenToAccount()
         {
             PlatformInterface platform = Platform;
-            if (platform == null)
+            if (!Alive(platform))
             {
                 return;
             }
@@ -962,7 +1072,7 @@ namespace Callbreak.Networking.Eos
         private void FollowNetworkStatus()
         {
             PlatformInterface platform = Platform;
-            if (platform == null)
+            if (!Alive(platform))
             {
                 return;
             }
@@ -1319,11 +1429,12 @@ namespace Callbreak.Networking.Eos
 
         /// <summary>
         /// The login ran out (or was lost): the listings and the connections went with it. That is
-        /// told like everything else, and the next <see cref="SignInAsync"/> signs in again.
+        /// told like everything else, and the next <see cref="SignInAsync"/> signs in again. This runs
+        /// inside a callback, so it asks nothing of the SDK. The connection notifications stay until
+        /// the next sign-in or Dispose replaces them, and with no local player they are ignored.
         /// </summary>
         private void SignedOut()
         {
-            StopListeningToPeers(Platform?.GetP2PInterface());
             _localUser = null;
             _localAddress = null;
 
@@ -1412,7 +1523,7 @@ namespace Callbreak.Networking.Eos
                         return RoomError.Unknown;
                     }
 
-                    if (search.Error == RoomError.None && search.ListedByAnotherThan(_localAddress))
+                    if (search.Error == RoomError.None && search.ListedByAnotherThan(_localAddress, listing.Generation))
                     {
                         Forget(listing);
                         return RoomError.AlreadyStarted;
@@ -1425,7 +1536,7 @@ namespace Callbreak.Networking.Eos
                     }
                 }
 
-                Made made = await CreateLobbyAsync(listing.Quick ? QuickBucket : Bucket);
+                Made made = await Answer(CreateLobbyAsync(listing.Quick ? QuickBucket : Bucket), new Made(null, RoomError.Unknown));
                 if (made.Error != RoomError.None)
                 {
                     Forget(listing);
@@ -1468,7 +1579,9 @@ namespace Callbreak.Networking.Eos
         {
             if (!listing.Quick)
             {
-                return new[] { Text(CodeKey, listing.Code) };
+                return listing.Generation > 0
+                    ? new[] { Text(CodeKey, listing.Code), Number(GenerationKey, listing.Generation) }
+                    : new[] { Text(CodeKey, listing.Code) };
             }
 
             return new[] { Text(CodeKey, listing.Code), Number(FreeKey, free), Number(OpenedKey, listing.OpenedAtUnixMs) };
@@ -1517,7 +1630,8 @@ namespace Callbreak.Networking.Eos
                         break;
                     }
 
-                    await Task.Delay(TimeSpan.FromSeconds(FreeRetrySeconds));
+                    // The pause ends early when this network shuts down; the loop then stops.
+                    await Task.WhenAny(Task.Delay(TimeSpan.FromSeconds(FreeRetrySeconds)), _closed.Task);
                 }
             }
             catch (Exception e)
@@ -1536,7 +1650,7 @@ namespace Callbreak.Networking.Eos
         /// </summary>
         private bool Abandoned(Listing listing, CancellationToken ct)
         {
-            if (!listing.Withdrawn && !_disposed && !ct.IsCancellationRequested)
+            if (!listing.Withdrawn && !ct.IsCancellationRequested && Alive(Platform))
             {
                 return false;
             }
@@ -1584,17 +1698,18 @@ namespace Callbreak.Networking.Eos
             }
 
             listing.DestroyAsked = true;
-            LobbyInterface lobbies = Platform?.GetLobbyInterface();
-            if (lobbies == null || _localUser == null)
+            PlatformInterface platform = Platform;
+            if (!Alive(platform) || _localUser == null)
             {
-                // Signed out or shut down: the lobby went with the login.
+                // Signed out or shut down: the lobby went with the login, or goes with EOS.
                 return;
             }
 
+            LobbyInterface lobbies = platform.GetLobbyInterface();
             var options = new DestroyLobbyOptions { LocalUserId = _localUser, LobbyId = listing.LobbyId };
             lobbies.DestroyLobby(ref options, null, (ref DestroyLobbyCallbackInfo info) =>
             {
-                if (Common.IsOperationComplete(info.ResultCode) && info.ResultCode != Result.Success && info.ResultCode != Result.NotFound)
+                if (IsComplete(info.ResultCode) && info.ResultCode != Result.Success && info.ResultCode != Result.NotFound)
                 {
                     Failed("a room listing could not be taken down", info.ResultCode);
                 }
@@ -1611,7 +1726,22 @@ namespace Callbreak.Networking.Eos
                 }
 
                 Search search = await SearchAsync(roomCode);
-                return search.Error == RoomError.None ? new PeerLookup(search.Owners[0], RoomError.None) : new PeerLookup(null, search.Error);
+                if (search.Error != RoomError.None)
+                {
+                    return new PeerLookup(null, search.Error);
+                }
+
+                // The room as the latest generation hosts it (ADR 030): an earlier host's lobby may still be up.
+                Owner latest = search.Owners[0];
+                foreach (Owner owner in search.Owners)
+                {
+                    if (owner.Generation > latest.Generation)
+                    {
+                        latest = owner;
+                    }
+                }
+
+                return new PeerLookup(latest.Address, RoomError.None, latest.Generation);
             }
             catch (Exception e)
             {
@@ -1623,13 +1753,14 @@ namespace Callbreak.Networking.Eos
         /// <summary>The owners of the lobbies in this version's bucket whose CODE is <paramref name="roomCode"/>.</summary>
         private async Task<Search> SearchAsync(string roomCode)
         {
-            LobbyInterface lobbies = Platform?.GetLobbyInterface();
+            PlatformInterface platform = Platform;
             ProductUserId user = _localUser;
-            if (lobbies == null || user == null)
+            if (!Alive(platform) || user == null)
             {
                 return new Search(RoomError.Unknown, null);
             }
 
+            LobbyInterface lobbies = platform.GetLobbyInterface();
             var create = new CreateLobbySearchOptions { MaxResults = SearchLimit };
             Result made = lobbies.CreateLobbySearch(ref create, out LobbySearch search);
             if (made != Result.Success || search == null)
@@ -1650,7 +1781,13 @@ namespace Callbreak.Networking.Eos
                     return new Search(FailedAs("a lookup could not be set up", set), null);
                 }
 
-                Result found = await FindAsync(search, user);
+                Result found = await Answer(FindAsync(search, user), Result.Canceled);
+                if (!Alive(platform))
+                {
+                    // EOS shut down meanwhile: the search goes with it, unread.
+                    return new Search(RoomError.Unknown, null);
+                }
+
                 if (found == Result.NotFound)
                 {
                     return new Search(RoomError.NotFound, null);
@@ -1661,12 +1798,16 @@ namespace Callbreak.Networking.Eos
                     return new Search(FailedAs("a lookup failed", found), null);
                 }
 
-                List<string> owners = OwnersOf(search);
+                List<Owner> owners = OwnersOf(search);
                 return owners.Count > 0 ? new Search(RoomError.None, owners) : new Search(RoomError.NotFound, null);
             }
             finally
             {
-                search.Release();
+                // Only into a platform that still runs (2 Oct 2026: a release after EOS shut down crashed the Editor).
+                if (Alive(platform))
+                {
+                    search.Release();
+                }
             }
         }
 
@@ -1685,13 +1826,14 @@ namespace Callbreak.Networking.Eos
                     return new QuickTableSearch(null, ct.IsCancellationRequested ? RoomError.Unknown : _signInError);
                 }
 
-                LobbyInterface lobbies = Platform?.GetLobbyInterface();
+                PlatformInterface platform = Platform;
                 ProductUserId user = _localUser;
-                if (lobbies == null || user == null)
+                if (!Alive(platform) || user == null)
                 {
                     return new QuickTableSearch(null, RoomError.Unknown);
                 }
 
+                LobbyInterface lobbies = platform.GetLobbyInterface();
                 var create = new CreateLobbySearchOptions { MaxResults = QuickSearchLimit };
                 Result made = lobbies.CreateLobbySearch(ref create, out LobbySearch search);
                 if (made != Result.Success || search == null)
@@ -1719,7 +1861,13 @@ namespace Callbreak.Networking.Eos
                         Failed("a table search could not be ordered", ordered);
                     }
 
-                    Result found = await FindAsync(search, user);
+                    Result found = await Answer(FindAsync(search, user), Result.Canceled);
+                    if (!Alive(platform))
+                    {
+                        // EOS shut down meanwhile: the search goes with it, unread.
+                        return new QuickTableSearch(null, RoomError.Unknown);
+                    }
+
                     if (found == Result.NotFound)
                     {
                         return new QuickTableSearch(Array.Empty<QuickTable>(), RoomError.None);
@@ -1736,7 +1884,12 @@ namespace Callbreak.Networking.Eos
                 }
                 finally
                 {
-                    search.Release();
+                    // Only into a platform that still runs: this very release, after EOS had shut down
+                    // as Play mode ended, crashed the Editor three times on 2 Oct 2026.
+                    if (Alive(platform))
+                    {
+                        search.Release();
+                    }
                 }
             }
             catch (Exception e)
@@ -1830,7 +1983,7 @@ namespace Callbreak.Networking.Eos
             var options = new LobbySearchFindOptions { LocalUserId = user };
             search.Find(ref options, null, (ref LobbySearchFindCallbackInfo info) =>
             {
-                if (Common.IsOperationComplete(info.ResultCode))
+                if (IsComplete(info.ResultCode))
                 {
                     done.TrySetResult(info.ResultCode);
                 }
@@ -1838,9 +1991,9 @@ namespace Callbreak.Networking.Eos
             return done.Task;
         }
 
-        private static List<string> OwnersOf(LobbySearch search)
+        private static List<Owner> OwnersOf(LobbySearch search)
         {
-            var owners = new List<string>();
+            var owners = new List<Owner>();
             var countOptions = new LobbySearchGetSearchResultCountOptions();
             uint count = search.GetSearchResultCount(ref countOptions);
             for (uint i = 0; i < count; i++)
@@ -1857,7 +2010,8 @@ namespace Callbreak.Networking.Eos
                     ProductUserId owner = details.GetLobbyOwner(ref ownerOptions);
                     if (owner != null && owner.IsValid())
                     {
-                        owners.Add(owner.ToString());
+                        long? generation = NumberOf(details, GenerationKey);
+                        owners.Add(new Owner(owner.ToString(), generation.HasValue && generation.Value > 0 && generation.Value <= int.MaxValue ? (int)generation.Value : 0));
                     }
                 }
                 finally
@@ -1871,12 +2025,13 @@ namespace Callbreak.Networking.Eos
 
         private Task<Made> CreateLobbyAsync(string bucket)
         {
-            LobbyInterface lobbies = Platform?.GetLobbyInterface();
-            if (lobbies == null || _localUser == null)
+            PlatformInterface platform = Platform;
+            if (!Alive(platform) || _localUser == null)
             {
                 return Task.FromResult(new Made(null, RoomError.Unknown));
             }
 
+            LobbyInterface lobbies = platform.GetLobbyInterface();
             var done = new TaskCompletionSource<Made>(TaskCreationOptions.RunContinuationsAsynchronously);
             var options = new CreateLobbyOptions
             {
@@ -1897,7 +2052,7 @@ namespace Callbreak.Networking.Eos
             };
             lobbies.CreateLobby(ref options, null, (ref CreateLobbyCallbackInfo info) =>
             {
-                if (!Common.IsOperationComplete(info.ResultCode))
+                if (!IsComplete(info.ResultCode))
                 {
                     return;
                 }
@@ -1916,12 +2071,13 @@ namespace Callbreak.Networking.Eos
         /// </summary>
         private async Task<RoomError> PutAttributesAsync(string lobbyId, params AttributeData[] attributes)
         {
-            LobbyInterface lobbies = Platform?.GetLobbyInterface();
-            if (lobbies == null || _localUser == null || lobbyId == null)
+            PlatformInterface platform = Platform;
+            if (!Alive(platform) || _localUser == null || lobbyId == null)
             {
                 return RoomError.Unknown;
             }
 
+            LobbyInterface lobbies = platform.GetLobbyInterface();
             var modify = new UpdateLobbyModificationOptions { LocalUserId = _localUser, LobbyId = lobbyId };
             Result made = lobbies.UpdateLobbyModification(ref modify, out LobbyModification modification);
             if (made != Result.Success || modification == null)
@@ -1941,12 +2097,21 @@ namespace Callbreak.Networking.Eos
                     }
                 }
 
-                Result updated = await UpdateLobbyAsync(lobbies, modification);
+                Result updated = await Answer(UpdateLobbyAsync(lobbies, modification), Result.Canceled);
+                if (!Alive(platform))
+                {
+                    return RoomError.Unknown;
+                }
+
                 return updated == Result.Success ? RoomError.None : FailedAs("a room listing could not be updated", updated);
             }
             finally
             {
-                modification.Release();
+                // Only into a platform that still runs, as with a search.
+                if (Alive(platform))
+                {
+                    modification.Release();
+                }
             }
         }
 
@@ -1956,7 +2121,7 @@ namespace Callbreak.Networking.Eos
             var options = new UpdateLobbyOptions { LobbyModificationHandle = modification };
             lobbies.UpdateLobby(ref options, null, (ref UpdateLobbyCallbackInfo info) =>
             {
-                if (Common.IsOperationComplete(info.ResultCode))
+                if (IsComplete(info.ResultCode))
                 {
                     done.TrySetResult(info.ResultCode);
                 }
@@ -1989,6 +2154,9 @@ namespace Callbreak.Networking.Eos
 
             /// <summary>When a table opened, by this device's clock (UTC ms since 1970).</summary>
             public long OpenedAtUnixMs { get; set; }
+
+            /// <summary>The generation a private room is listed at (ADR 030); 0 as its creator opened it.</summary>
+            public int Generation { get; set; }
 
             /// <summary>The making of the listing, for a second ListAsync of the same code while it runs.</summary>
             public Task<RoomError> Making { get; set; }
@@ -2072,7 +2240,7 @@ namespace Callbreak.Networking.Eos
         /// <summary>The answer of a search: the owners found (never empty when Error is None).</summary>
         private readonly struct Search
         {
-            public Search(RoomError error, List<string> owners)
+            public Search(RoomError error, List<Owner> owners)
             {
                 Error = error;
                 Owners = owners;
@@ -2080,13 +2248,14 @@ namespace Callbreak.Networking.Eos
 
             public RoomError Error { get; }
 
-            public List<string> Owners { get; }
+            public List<Owner> Owners { get; }
 
-            public bool ListedByAnotherThan(string address)
+            /// <summary>True when a device other than <paramref name="address"/> lists the code at <paramref name="generation"/> or a later one.</summary>
+            public bool ListedByAnotherThan(string address, int generation)
             {
-                foreach (string owner in Owners)
+                foreach (Owner owner in Owners)
                 {
-                    if (!string.Equals(owner, address, StringComparison.Ordinal))
+                    if (!string.Equals(owner.Address, address, StringComparison.Ordinal) && owner.Generation >= generation)
                     {
                         return true;
                     }
@@ -2094,6 +2263,20 @@ namespace Callbreak.Networking.Eos
 
                 return false;
             }
+        }
+
+        /// <summary>A lobby's owner, and the generation it lists its room at (ADR 030).</summary>
+        private readonly struct Owner
+        {
+            public Owner(string address, int generation)
+            {
+                Address = address;
+                Generation = generation;
+            }
+
+            public string Address { get; }
+
+            public int Generation { get; }
         }
 
         /// <summary>The answer of a lobby's creation.</summary>

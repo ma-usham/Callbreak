@@ -8,10 +8,12 @@ namespace Callbreak.Application.Online
     /// What Quick Match needs of the room transport besides rooms found by their code (ADR 029):
     /// signing in before the table directory (<see cref="IQuickTableDirectory"/>) is searched,
     /// opening a table that only that directory leads to, and joining a table's host at the
-    /// address the directory gave, without looking a code up. Implemented by PeerRoomTransport; a
-    /// transport without it (the relay, none) plays Quick Match at a table of the device's own.
+    /// address the directory gave, without looking a code up; and, once a table's match is on,
+    /// keeping it going when its host is lost (<see cref="IHandOverTransport"/>, ADR 030).
+    /// Implemented by PeerRoomTransport; a transport without it (the relay, none) plays Quick Match
+    /// at a table of the device's own.
     /// </summary>
-    public interface IQuickMatchTransport : IRoomTransport
+    public interface IQuickMatchTransport : IHandOverTransport
     {
         /// <summary>
         /// The directory dropped a listing this transport does not keep itself, such as a Quick Match
@@ -20,9 +22,6 @@ namespace Callbreak.Application.Online
         /// whoever listed it.
         /// </summary>
         event Action<string> ListingLost;
-
-        /// <summary>This device's address once it is signed in; null before.</summary>
-        string LocalAddress { get; }
 
         /// <summary>Signs this device in if it is not yet; false when the network cannot be reached.</summary>
         Task<bool> SignInAsync(CancellationToken ct);

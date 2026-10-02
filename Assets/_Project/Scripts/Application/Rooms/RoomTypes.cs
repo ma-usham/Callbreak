@@ -35,7 +35,10 @@ namespace Callbreak.Application.Rooms
         public int Rounds { get; }
     }
 
-    /// <summary>One lobby seat as the lobby screen shows it (GDD §11 screen 04). The host is seat 0.</summary>
+    /// <summary>
+    /// One lobby seat as the lobby screen shows it (GDD §11 screen 04). The host is seat 0, but in a
+    /// room taken over from a lost host, the seat of the player who took it over (ADR 030): <see cref="IsHost"/>.
+    /// </summary>
     public sealed class RoomSeat
     {
         public RoomSeat(int index, bool occupied, string name, int avatarId, string deckThemeId, bool isHost, bool isReady, bool isBot, bool isLocal)

@@ -73,6 +73,32 @@ namespace Callbreak.Application.Online
             return w.ToArray();
         }
 
+        /// <summary>
+        /// The host is still there: sent about every second while a Quick Match table waits (ADR 029)
+        /// and during a match its players can take over (ADR 030), so a player notices a host that
+        /// went quiet.
+        /// </summary>
+        public static byte[] Heartbeat() => Begin(HostMessageKind.Heartbeat).ToArray();
+
+        /// <summary>Who takes the table over if the host is lost (ADR 030): to every player.</summary>
+        public static byte[] NextHost(NextHostNotice notice)
+        {
+            WireWriter w = Begin(HostMessageKind.NextHost);
+            notice.WriteTo(w);
+            return w.ToArray();
+        }
+
+        /// <summary>
+        /// To the next host in line alone (ADR 030): the people's identities and the bots' dealt hands
+        /// (<see cref="SuccessionPackage"/>).
+        /// </summary>
+        public static byte[] Succession(SuccessionPackage package)
+        {
+            WireWriter w = Begin(HostMessageKind.Succession);
+            package.WriteTo(w);
+            return w.ToArray();
+        }
+
         public static byte[] EmoteShown(Seat seat, int emoteId)
         {
             WireWriter w = Begin(HostMessageKind.EmoteShown);

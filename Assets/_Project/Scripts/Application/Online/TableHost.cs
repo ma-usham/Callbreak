@@ -7,6 +7,7 @@ using Callbreak.Core.Commands;
 using Callbreak.Core.Events;
 using Callbreak.Core.Match;
 using Callbreak.Core.Randomness;
+using Callbreak.Core.Rules;
 using Callbreak.Core.Views;
 
 namespace Callbreak.Application.Online
@@ -54,8 +55,21 @@ namespace Callbreak.Application.Online
         private double _holdUntil;
         private bool _summaryOpen;
         private double _summaryDeadline;
+        private int _redealingRound;
 
         public TableHost(TableHostSetup setup, IBotFactory botFactory)
+            : this(setup, botFactory, null)
+        {
+        }
+
+        /// <summary>
+        /// A table taken over from a lost host (ADR 030), or a new one when <paramref name="resume"/>
+        /// is null. The match goes on from the rebuilt state: from the same trick, or from the round
+        /// dealt again when <see cref="TableResume.Rebuilt"/> could not tell every hand apart. Every
+        /// clock starts again from <see cref="TableResume.Now"/>; the people who are not here yet are
+        /// reconnecting, their seats held and played by bots meanwhile (GDD §8).
+        /// </summary>
+        internal TableHost(TableHostSetup setup, IBotFactory botFactory, TableResume resume)
         {
             if (setup == null)
             {
@@ -70,9 +84,24 @@ namespace Callbreak.Application.Online
             _timing = setup.Timing;
             _clocks = setup.Clocks;
 
-            // GDD §22: each round is dealt from a seed of its own, drawn when that round begins.
-            _shuffle = new RoundSeededRandom(setup.Seeds, () => _engine.Round);
-            _engine = new MatchEngine(setup.Rules, _shuffle, new MatchSetup(setup.MatchId, setup.Seats));
+            // GDD §22: each round is dealt from a seed of its own, drawn when that round begins. A round
+            // dealt again after a hand-over draws one before the engine exists.
+            _shuffle = new RoundSeededRandom(setup.Seeds, () => _engine != null ? _engine.Round : _redealingRound);
+            if (resume == null)
+            {
+                _engine = new MatchEngine(setup.Rules, _shuffle, new MatchSetup(setup.MatchId, setup.Seats));
+            }
+            else
+            {
+                MatchSnapshot from = resume.Rebuilt.Snapshot;
+                if (from == null)
+                {
+                    _redealingRound = resume.Rebuilt.Latest.Round;
+                    from = TableRebuild.Redeal(resume.Rebuilt.Latest, _shuffle);
+                }
+
+                _engine = MatchEngine.Restore(from, setup.Rules, _shuffle);
+            }
 
             var botSeats = new Dictionary<Seat, IBotStrategy>();
             for (int s = 0; s < _seats.Length; s++)
@@ -94,6 +123,11 @@ namespace Callbreak.Application.Online
             {
                 _chatter = new BotChatter(seat => !_seats[(int)seat].Human, new Pcg32Random(StableHash(setup.MatchId)), setup.Rules.Rounds);
             }
+
+            if (resume != null)
+            {
+                Resume(resume);
+            }
         }
 
         /// <summary>A payload for the member in a seat. The room routes it to that member's connection.</summary>
@@ -114,6 +148,24 @@ namespace Callbreak.Application.Online
         public PlayerView ViewFor(Seat seat) => _engine.ViewFor(seat);
 
         public bool IsHuman(Seat seat) => _seats[(int)seat].Human && !_seats[(int)seat].Gone;
+
+        /// <summary>The round being played, or the last one played; 0 before the first deal.</summary>
+        public int Round => _engine.Round;
+
+        public RuleSet Rules => _engine.Rules;
+
+        /// <summary>The whole match, every hand included: for the host alone, and for tests (GDD §22).</summary>
+        internal MatchSnapshot Snapshot() => _engine.Snapshot();
+
+        /// <summary>
+        /// The hand <paramref name="seat"/> was dealt this round: what it holds and what it has played
+        /// since. The host sends a bot seat's to the next host in line alone (ADR 030).
+        /// </summary>
+        internal CardSet DealtHandOf(Seat seat)
+        {
+            PlayerView view = _engine.ViewFor(seat);
+            return view.Hand.Union(TableRebuild.PlayedBy(view, seat));
+        }
 
         /// <summary>Deals the first hand. Call once every member's table is listening.</summary>
         public void Start(double now)
@@ -349,11 +401,25 @@ namespace Callbreak.Application.Online
             Flush(now);
         }
 
-        /// <summary>Sends the seat its whole state (join, reconnect, resync).</summary>
+        /// <summary>
+        /// Sends the seat its whole state (join, reconnect, resync). The first one after a round was
+        /// dealt again because the host was lost carries that news (ADR 030), so the table says so.
+        /// </summary>
         public void SendSync(Seat seat, double now)
         {
             SeatState state = _seats[(int)seat];
-            var update = new TableUpdate(state.Seq, null, _engine.ViewFor(seat), StatusAt(now));
+            MatchEvent[] notice = null;
+            if (state.RedealNotice > 0)
+            {
+                if (_engine.Round == state.RedealNotice && (_engine.Phase == Phase.Calling || _engine.Phase == Phase.Playing))
+                {
+                    notice = new MatchEvent[] { new Redealt(state.RedealNotice, RedealReason.HostLost) };
+                }
+
+                state.RedealNotice = 0;
+            }
+
+            var update = new TableUpdate(state.Seq, notice, _engine.ViewFor(seat), StatusAt(now));
             Outbound?.Invoke(seat, HostMessages.SyncState(update));
         }
 
@@ -449,6 +515,46 @@ namespace Callbreak.Application.Online
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Picks a taken-over match up where it was (ADR 030): who is here, numbered on from the last
+        /// update anyone had, with bots on every seat whose person is not here, and every clock
+        /// starting now, the round results' countdown included.
+        /// </summary>
+        private void Resume(TableResume resume)
+        {
+            _started = _engine.Phase != Phase.Lobby;
+            _over = _engine.Phase == Phase.MatchOver || _engine.Phase == Phase.Closed;
+            int redealt = resume.Rebuilt.MustRedeal ? _engine.Round : 0;
+            for (int s = 0; s < _seats.Length; s++)
+            {
+                SeatState seat = _seats[s];
+                seat.Seq = resume.Rebuilt.Seq;
+                seat.RedealNotice = redealt;
+                if (!seat.Human)
+                {
+                    continue;
+                }
+
+                SeatConnection presence = resume.Presence[s];
+                seat.Presence = presence;
+                seat.Gone = presence == SeatConnection.Left || presence == SeatConnection.BotControlled;
+                seat.DisconnectedAt = resume.Now;
+                if (presence != SeatConnection.Connected)
+                {
+                    // Away keeps its bot until the person does something (GDD §8).
+                    _bots.TakeOver((Seat)s, null);
+                }
+            }
+
+            if (_engine.Phase == Phase.RoundSummary)
+            {
+                _summaryOpen = true;
+                _summaryDeadline = resume.Now + _clocks.SummarySeconds;
+            }
+
+            RefreshClock(resume.Now);
         }
 
         /// <summary>FNV-1a over the text: the same match id always gives the same seed.</summary>
@@ -654,6 +760,39 @@ namespace Callbreak.Application.Online
             public double LastEmoteAt { get; set; } = double.NegativeInfinity;
 
             public int EmotesThisRound { get; set; }
+
+            /// <summary>The round dealt again after a hand-over (ADR 030), until this seat's next full state has said so; 0 otherwise.</summary>
+            public int RedealNotice { get; set; }
         }
+    }
+
+    /// <summary>
+    /// How a table taken over from a lost host goes on (ADR 030): the rebuilt match, who is here, and
+    /// the time it goes on from.
+    /// </summary>
+    internal sealed class TableResume
+    {
+        /// <param name="presence">
+        /// Each person's seat by seat number: Connected for the people here, Reconnecting for the ones
+        /// still to come (the lost host among them), Left or BotControlled for the seats whose person
+        /// is gone for good. Ignored for bot seats.
+        /// </param>
+        public TableResume(RebuiltTable rebuilt, IReadOnlyList<SeatConnection> presence, double now)
+        {
+            Rebuilt = rebuilt ?? throw new ArgumentNullException(nameof(rebuilt));
+            if (presence == null || presence.Count != SeatExtensions.Count)
+            {
+                throw new ArgumentException("A table has four seats.", nameof(presence));
+            }
+
+            Presence = presence;
+            Now = now;
+        }
+
+        public RebuiltTable Rebuilt { get; }
+
+        public IReadOnlyList<SeatConnection> Presence { get; }
+
+        public double Now { get; }
     }
 }

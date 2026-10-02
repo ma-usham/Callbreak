@@ -94,6 +94,7 @@ namespace Callbreak.Tests.EditMode.Application
         }
 
         [TestCase("ui.toast.redeal")]
+        [TestCase("ui.toast.redeal_host_lost")]
         [TestCase("ui.toast.welcome_back")]
         [TestCase("ui.toast.connect_failed")]
         [TestCase("ui.toast.no_internet")]

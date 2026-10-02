@@ -10,8 +10,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
     /// <summary>
     /// The host's side of a Quick Match table (ADR 029): nobody needs to say ready; a bot sits down
     /// in the lobby where every member sees it, and plays that seat under the same name; a locked
-    /// table turns newcomers away as full and tells every member when the match starts. A private
-    /// room does none of this.
+    /// table turns newcomers away as full and tells every member when the match starts; a heartbeat
+    /// tells the guests the host is still there. A private room does none of this.
     /// </summary>
     public sealed class QuickTableHostTests
     {
@@ -94,6 +94,47 @@ namespace Callbreak.Tests.EditMode.Application.Online
             Assert.AreEqual(RoomError.Full, error, "seats are free, but the table is locked");
             Assert.AreEqual(room.Now + 3.0, guest.Client.StartsAt, 0.001, "the guest learned when it starts");
             Assert.AreEqual(room.Now + 3.0, room.HostMember.Client.StartsAt, 0.001, "and so did the host's own player");
+        }
+
+        [Test]
+        public void Heartbeat_ReachesEveryGuestButNoBot_AndChangesNothingInTheLobby()
+        {
+            var room = new RoomFixture(quickTable: true);
+            RoomFixture.Member asha = room.Join("player-asha", "Asha");
+            RoomFixture.Member suman = room.Join("player-suman", "Suman");
+            room.Host.SeatBot();
+            room.Network.Pump();
+            int changes = 0;
+            foreach (RoomFixture.Member m in room.Members)
+            {
+                m.Client.Changed += () => changes++;
+            }
+
+            int ashaHeard = asha.Client.Heard;
+            int sumanHeard = suman.Client.Heard;
+            int sent = room.Network.HostPayloads.Count;
+
+            room.Host.Heartbeat();
+            room.Network.Pump();
+
+            Assert.AreEqual(2, room.Network.HostPayloads.Count - sent, "one to each guest: none to the bot, none to the host's own player");
+            CollectionAssert.AreEqual(new[] { (byte)HostMessageKind.Heartbeat }, room.Network.HostPayloads[sent], "the kind, and nothing else");
+            Assert.AreEqual(ashaHeard + 1, asha.Client.Heard, "Asha heard the host");
+            Assert.AreEqual(sumanHeard + 1, suman.Client.Heard, "and so did Suman");
+            Assert.AreEqual(0, changes, "and nothing in the lobby changed for anyone");
+        }
+
+        [Test]
+        public void PrivateRoom_SendsNoHeartbeat()
+        {
+            var room = new RoomFixture();
+            room.Join("player-asha", "Asha");
+            int sent = room.Network.HostPayloads.Count;
+
+            room.Host.Heartbeat();
+            room.Network.Pump();
+
+            Assert.AreEqual(sent, room.Network.HostPayloads.Count);
         }
 
         [Test]

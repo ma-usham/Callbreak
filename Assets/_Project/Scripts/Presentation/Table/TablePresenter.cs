@@ -46,6 +46,7 @@ namespace Callbreak.Presentation.Table
         };
 
         private const string RedealToastKey = "ui.toast.redeal";
+        private const string HostLostRedealToastKey = "ui.toast.redeal_host_lost";
         private const string HostLeftToastKey = "ui.toast.host_left";
         private const string WelcomeBackToastKey = "ui.toast.welcome_back";
         private const string LeftTableToastKey = "ui.toast.left_table";
@@ -473,9 +474,11 @@ namespace Callbreak.Presentation.Table
                     _view.Prompt.Hide();
                     return null;
 
-                case Redealt _:
+                case Redealt redealt:
                     State.Apply(e);
-                    _toast.Show(_localization.Get(RedealToastKey));
+
+                    // ADR 030: the host and another player were lost at once, so the round was dealt again.
+                    _toast.Show(_localization.Get(redealt.Reason == RedealReason.HostLost ? HostLostRedealToastKey : RedealToastKey));
                     return null;
 
                 case HandDealt dealt when dealt.Seat == Local:

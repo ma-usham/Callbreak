@@ -351,7 +351,9 @@ namespace Callbreak.Presentation.Screens
         private void OnSeatLongPressed(int index)
         {
             IRoomSession room = _room;
-            if (room == null || !room.IsHost || _asking || index <= 0 || index >= room.Seats.Count || !room.Seats[index].Occupied)
+            // The host's own seat is not always the first: a room taken over is hosted from the seat of
+            // the player who took it over (ADR 030).
+            if (room == null || !room.IsHost || _asking || index < 0 || index >= room.Seats.Count || !room.Seats[index].Occupied || room.Seats[index].IsHost)
             {
                 return;
             }

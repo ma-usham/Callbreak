@@ -106,6 +106,9 @@ namespace Callbreak.Application.Online
 
         public string MatchId => View.MatchId;
 
+        /// <summary>The number of the host's update that <see cref="View"/> came with: what a player brings to a host that took the match over (ADR 030).</summary>
+        public uint LastSeq => _expected - 1;
+
         public void Start()
         {
             if (_started)
@@ -285,7 +288,9 @@ namespace Callbreak.Application.Online
 
         /// <summary>
         /// The whole state (join, reconnect, resync): the table is rebuilt from it at once. It may
-        /// be the finished table, for a player who was reconnecting when the match ended.
+        /// be the finished table, for a player who was reconnecting when the match ended. Events that
+        /// come with it are news about that state, such as a round dealt again after its host was lost
+        /// (ADR 030): they are passed on once the table is rebuilt.
         /// </summary>
         public void OnSync(TableUpdate update)
         {
@@ -314,6 +319,11 @@ namespace Callbreak.Application.Online
             }
 
             _faults.Raise(Resynced, View);
+            for (int i = 0; i < update.Events.Count; i++)
+            {
+                _faults.Raise(EventReceived, update.Events[i]);
+            }
+
             _faults.Rethrow();
         }
 

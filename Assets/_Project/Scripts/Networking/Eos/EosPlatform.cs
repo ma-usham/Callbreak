@@ -1,4 +1,6 @@
 using System;
+using System.Text.RegularExpressions;
+using Epic.OnlineServices;
 using Epic.OnlineServices.Logging;
 using PlayEveryWare.EpicOnlineServices;
 using UnityEngine;
@@ -56,6 +58,11 @@ namespace Callbreak.Networking.Eos
         /// the Editor: when Play mode ends). Destroying it earlier skips that, and the next start of
         /// EOS in the same Editor then hangs the Editor while it unloads the SDK that still runs.
         /// </para>
+        /// <para>
+        /// While the SDK starts, it logs its boot lines at Info level, on Android whatever the plugin's
+        /// log levels say. One of them, "Platform Properties", names the client id; that value is
+        /// hidden from the log for the start (<see cref="ClientIdHidden"/>).
+        /// </para>
         /// </summary>
         public static bool Start()
         {
@@ -64,7 +71,17 @@ namespace Callbreak.Networking.Eos
                 return true;
             }
 
-            new GameObject("EOSManager").AddComponent<EOSManager>();
+            ILogHandler handler = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new ClientIdHidden(handler);
+            try
+            {
+                new GameObject("EOSManager").AddComponent<EOSManager>();
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = handler;
+            }
+
             if (!IsRunning)
             {
                 Debug.LogWarning("EOS did not start (its error is above).");
@@ -74,6 +91,48 @@ namespace Callbreak.Networking.Eos
             // In the Editor the plugin logs every SDK message (VeryVerbose); warnings and errors are enough.
             EOSManager.Instance.SetLogLevel(LogCategory.AllCategories, LogLevel.Warning);
             return true;
+        }
+
+        /// <summary>
+        /// Passes every log message on, except that a client id in it reads "ClientId=(hidden)". It
+        /// stands in for the log only while EOS starts. The SDK's boot line goes through the plugin
+        /// as Debug.LogFormat with the SDK's text as an argument (a string or the SDK's UTF-8 string).
+        /// </summary>
+        private sealed class ClientIdHidden : ILogHandler
+        {
+            private static readonly Regex ClientId = new Regex(@"ClientId=[^,\]\s]*", RegexOptions.CultureInvariant);
+
+            private readonly ILogHandler _inner;
+
+            public ClientIdHidden(ILogHandler inner)
+            {
+                _inner = inner;
+            }
+
+            public void LogFormat(LogType logType, UnityEngine.Object context, string format, params object[] args)
+            {
+                if (args != null)
+                {
+                    for (int i = 0; i < args.Length; i++)
+                    {
+                        object arg = args[i];
+                        string text = arg is string s ? s : arg is Utf8String u ? (string)u : null;
+                        if (text != null && text.IndexOf("ClientId=", StringComparison.Ordinal) >= 0)
+                        {
+                            args[i] = Hide(text);
+                        }
+                    }
+                }
+
+                _inner.LogFormat(logType, context, format != null && format.IndexOf("ClientId=", StringComparison.Ordinal) >= 0 ? Hide(format) : format, args);
+            }
+
+            public void LogException(Exception exception, UnityEngine.Object context)
+            {
+                _inner.LogException(exception, context);
+            }
+
+            private static string Hide(string text) => ClientId.Replace(text, "ClientId=(hidden)");
         }
     }
 }

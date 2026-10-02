@@ -16,9 +16,12 @@ namespace Callbreak.Application.Online
     /// Private rooms by code (GDD §11 screens 02-04, §27): creating one makes this device the host
     /// (Phase 1: host and relay) with its own player seated first; joining one connects to that
     /// host. One room at a time. While a match is on, a dropped connection is retried with
-    /// growing pauses for as long as the host holds the seat; after that the room is closed.
+    /// growing pauses for as long as the host holds the seat; after that the room is closed. Over
+    /// the peer-to-peer network a host lost during the match is replaced by the next host in line,
+    /// and the match goes on from the same trick (<see cref="HandOver"/>, ADR 030); the room then
+    /// stays with the new host.
     /// </summary>
-    public sealed class RoomService : IRoomService, IDisposable
+    public sealed class RoomService : IRoomService, IDisposable, IHandOverHolder
     {
         /// <summary>GDD §25: join attempts per device are limited, which stops code guessing.</summary>
         public const int JoinAttemptsPerMinute = 6;
@@ -68,6 +71,7 @@ namespace Callbreak.Application.Online
         private CancellationTokenSource _retryCancel;
         private bool _ticketHeld;
         private double _nextTicketAt;
+        private HandOver _handOver;
 
         /// <param name="seedSource">Draws shuffle seeds, match ids and room codes (a CSPRNG in production).</param>
         /// <param name="tickets">Where a guest's running match is remembered for "Rejoin match"; null keeps none.</param>
@@ -108,6 +112,17 @@ namespace Callbreak.Application.Online
 
         /// <summary>The member's connection to the host, for tests that drop it.</summary>
         internal IClientLink ClientLink => _clientLink;
+
+        /// <summary>The room this device hosts, for tests: its creator's, or the one it took over (ADR 030); null for a guest.</summary>
+        internal RoomHost Host => _host;
+
+        RoomClient IHandOverHolder.Client => _client;
+
+        RoomHost IHandOverHolder.Host => _host;
+
+        IHostLink IHandOverHolder.HostLink => _hostLink;
+
+        IClientLink IHandOverHolder.ClientLink => _client != null && _host != null && _clientLink == _host.Local ? null : _clientLink;
 
         public async Task<RoomResult> CreateRoomAsync(RoomSettings settings, CancellationToken ct)
         {
@@ -303,6 +318,15 @@ namespace Callbreak.Application.Online
 
             try
             {
+                KeepTheMatch(now);
+            }
+            catch (Exception e)
+            {
+                _faults.Keep(e);
+            }
+
+            try
+            {
                 TrackRejoinTicket(now);
             }
             catch (Exception e)
@@ -445,10 +469,74 @@ namespace Callbreak.Application.Online
 
         private void OnClosed(RoomError reason) => Release();
 
+        /// <summary>
+        /// While a match is on over the peer-to-peer network, the hand-over keeps this player's seat
+        /// through hosts that come and go (ADR 030); a new one for every match of the room.
+        /// </summary>
+        private void KeepTheMatch(double now)
+        {
+            if (_handOver == null && _client != null && !_client.IsClosed && _client.InMatch && _client.Match != null
+                && _client.Match.Status != SessionStatus.Ended && _client.Match.Status != SessionStatus.Failed
+                && _transport is IHandOverTransport handOverTransport)
+            {
+                StopReconnecting();
+                _handOver = new HandOver(handOverTransport, this, new HandOverRoom
+                {
+                    Code = _client.Code,
+                    Listed = true,
+                    QuickTable = false,
+                    Mode = MatchMode.PrivateRoom,
+                    Settings = _client.Settings,
+                    Bots = _bots,
+                    Names = _names,
+                    DeckIds = _cosmetics.DeckIds,
+                    Seeds = _seedSource,
+                    Timing = _timing,
+                }, _network, now);
+            }
+
+            if (_handOver == null)
+            {
+                return;
+            }
+
+            _handOver.Tick(now);
+            if (_handOver.IsDone)
+            {
+                DropHandOver();
+            }
+        }
+
+        private void DropHandOver()
+        {
+            HandOver handOver = _handOver;
+            _handOver = null;
+            if (handOver != null)
+            {
+                handOver.Dispose();
+            }
+        }
+
+        void IHandOverHolder.Hold(RoomHost host, IHostLink hostLink, IClientLink clientLink)
+        {
+            _host = host;
+            _hostLink = hostLink;
+            _clientLink = clientLink ?? (host != null ? host.Local : null);
+        }
+
         /// <summary>Lets the last messages out, then closes the connections of the room that ended.</summary>
         private void Release()
         {
             StopReconnecting();
+            try
+            {
+                DropHandOver();
+            }
+            catch (Exception e)
+            {
+                _faults.Keep(e);
+            }
+
             if (_client == null && _host == null)
             {
                 return;
@@ -476,6 +564,12 @@ namespace Callbreak.Application.Online
         {
             if (_client == null || _client.IsClosed)
             {
+                return;
+            }
+
+            if (_handOver != null && !_handOver.IsDone)
+            {
+                // The hand-over finds the host again, or the one that took over (ADR 030).
                 return;
             }
 

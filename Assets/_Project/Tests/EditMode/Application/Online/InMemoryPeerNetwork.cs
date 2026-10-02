@@ -26,7 +26,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
     /// asynchronously, as the adapter's do.
     /// </para>
     /// <para>
-    /// Tests can lose a connection or a listing, unplug a device, keep it from signing in, make the
+    /// Tests can lose a connection or a listing, cut two devices apart, unplug a device or pause it, keep it from signing in, make the
     /// directory unreachable for it, hold every answer back, list a code elsewhere, and make new
     /// listings take a while to show in lookups (with the network's clock, <see cref="Now"/>).
     /// </para>
@@ -48,11 +48,11 @@ namespace Callbreak.Tests.EditMode.Application.Online
         public const int MaxChannelLength = 32;
 
         private readonly Dictionary<string, Device> _devices = new Dictionary<string, Device>();
-        private readonly Dictionary<string, string> _listings = new Dictionary<string, string>();
-        private readonly Dictionary<string, double> _shownAt = new Dictionary<string, double>();
+        private readonly List<Listing> _listings = new List<Listing>();
         private readonly Dictionary<string, QuickListing> _quick = new Dictionary<string, QuickListing>();
         private readonly Dictionary<string, Link> _links = new Dictionary<string, Link>();
         private readonly HashSet<string> _closing = new HashSet<string>();
+        private readonly HashSet<string> _cut = new HashSet<string>();
         private readonly Queue<Action> _queue = new Queue<Action>();
         private readonly Queue<Action> _held = new Queue<Action>();
         private int _nextDevice = 1;
@@ -119,7 +119,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
                 foreach (Device device in _devices.Values)
                 {
-                    if (device.Waiting > 0)
+                    if (!device.IsPaused && device.Waiting > 0)
                     {
                         return false;
                     }
@@ -167,8 +167,22 @@ namespace Callbreak.Tests.EditMode.Application.Online
         /// <summary>The Quick Match tables in the directory, shown in searches yet or not, open or full.</summary>
         public int QuickTables => _quick.Count;
 
-        /// <summary>The address that lists <paramref name="roomCode"/>, shown in lookups yet or not; null when nobody does.</summary>
-        public string ListedBy(string roomCode) => _listings.TryGetValue(roomCode, out string address) ? address : null;
+        /// <summary>The address that lists <paramref name="roomCode"/> at its latest generation, shown in lookups yet or not; null when nobody does.</summary>
+        public string ListedBy(string roomCode)
+        {
+            Listing latest = Latest(roomCode, shownOnly: false);
+            return latest != null ? latest.Address : null;
+        }
+
+        /// <summary>The latest generation <paramref name="roomCode"/> is listed at (ADR 030), shown yet or not; -1 when nobody lists it.</summary>
+        public int ListedGeneration(string roomCode)
+        {
+            Listing latest = Latest(roomCode, shownOnly: false);
+            return latest != null ? latest.Generation : -1;
+        }
+
+        /// <summary>How many devices list <paramref name="roomCode"/>, at any generation.</summary>
+        public int Listings(string roomCode) => _listings.FindAll(listing => listing.Code == roomCode).Count;
 
         /// <summary>True while <paramref name="a"/> and <paramref name="b"/> have an open connection on <paramref name="channel"/>.</summary>
         public bool AreConnected(Device a, Device b, string channel) => _links.TryGetValue(Key(a.Address, b.Address, channel), out Link link) && link.Open;
@@ -188,19 +202,16 @@ namespace Callbreak.Tests.EditMode.Application.Online
             }
         }
 
-        /// <summary>The directory drops the listing of <paramref name="roomCode"/>, as when its device lost the network for a moment; that device hears of it.</summary>
+        /// <summary>The directory drops every listing of <paramref name="roomCode"/>, as when its device lost the network for a moment; each device that listed it hears of it.</summary>
         public void LoseListing(string roomCode)
         {
-            if (!_listings.TryGetValue(roomCode, out string address))
+            foreach (Listing listing in _listings.FindAll(l => l.Code == roomCode))
             {
-                return;
-            }
-
-            _listings.Remove(roomCode);
-            _shownAt.Remove(roomCode);
-            if (_devices.TryGetValue(address, out Device owner))
-            {
-                _queue.Enqueue(() => owner.RaiseListingLost(roomCode));
+                _listings.Remove(listing);
+                if (_devices.TryGetValue(listing.Address, out Device owner))
+                {
+                    _queue.Enqueue(() => ToDevice(owner, () => owner.RaiseListingLost(roomCode)));
+                }
             }
         }
 
@@ -217,7 +228,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 _quick.Remove(pair.Key);
                 if (_devices.TryGetValue(pair.Value.Address, out Device owner))
                 {
-                    _queue.Enqueue(() => owner.RaiseListingLost(roomCode));
+                    _queue.Enqueue(() => ToDevice(owner, () => owner.RaiseListingLost(roomCode)));
                 }
 
                 return;
@@ -230,8 +241,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
         /// </summary>
         public void Take(string roomCode, string address = "elsewhere")
         {
-            _listings[roomCode] = address;
-            _shownAt[roomCode] = Now;
+            _listings.RemoveAll(listing => listing.Code == roomCode);
+            _listings.Add(new Listing(address, roomCode, 0, Now));
         }
 
         /// <summary>Every connection between <paramref name="a"/> and <paramref name="b"/> is lost: both ends hear it, and what was in flight is gone.</summary>
@@ -247,6 +258,38 @@ namespace Callbreak.Tests.EditMode.Application.Online
         }
 
         /// <summary>
+        /// <paramref name="a"/> and <paramref name="b"/> cannot reach each other, both still on the network
+        /// (a route between them fails): their connections are lost, and whatever either sends the other,
+        /// on any channel, is gone, until <see cref="Mend"/>.
+        /// </summary>
+        public void Cut(Device a, Device b)
+        {
+            _cut.Add(PairKey(a.Address, b.Address));
+            Break(a, b);
+        }
+
+        /// <summary>The two devices reach each other again.</summary>
+        public void Mend(Device a, Device b) => _cut.Remove(PairKey(a.Address, b.Address));
+
+        /// <summary>
+        /// The device's app goes to the background, or its process is stopped: it runs nothing (the
+        /// test stops ticking it), and everything that reaches it, packets, events and answers, waits
+        /// in order until it is resumed. Its connections stay open meanwhile: the network has not
+        /// noticed.
+        /// </summary>
+        public void Pause(Device device) => device.IsPaused = true;
+
+        /// <summary>The device's app is back: what reached it meanwhile arrives, in order, on the next pump.</summary>
+        public void Resume(Device device)
+        {
+            device.IsPaused = false;
+            while (device.Deferred.Count > 0)
+            {
+                _queue.Enqueue(device.Deferred.Dequeue());
+            }
+        }
+
+        /// <summary>
         /// The device is gone without a word (its app was killed): every connection of it is lost
         /// for the other end, and nothing reaches it any more. Its listings stay, as the directory
         /// has not noticed yet.
@@ -254,6 +297,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
         public void Unplug(Device device)
         {
             device.IsUnplugged = true;
+            device.Deferred.Clear();
             device.ClearInbox();
             foreach (Link link in new List<Link>(_links.Values))
             {
@@ -263,6 +307,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 }
             }
         }
+
+        private static string PairKey(string a, string b) => string.CompareOrdinal(a, b) < 0 ? a + "\n" + b : b + "\n" + a;
 
         private static string Key(string a, string b, string channel) =>
             string.CompareOrdinal(a, b) < 0 ? a + "\n" + b + "\n" + channel : b + "\n" + a + "\n" + channel;
@@ -285,15 +331,29 @@ namespace Callbreak.Tests.EditMode.Application.Online
             }
         }
 
-        private void Answer(Action answer)
+        private void Answer(Device device, Action answer)
         {
+            Action toDevice = () => ToDevice(device, answer);
             if (_holdAnswers)
             {
-                _held.Enqueue(answer);
+                _held.Enqueue(toDevice);
             }
             else
             {
-                _queue.Enqueue(answer);
+                _queue.Enqueue(toDevice);
+            }
+        }
+
+        /// <summary>Runs <paramref name="action"/> on <paramref name="device"/> now, or, while it is paused, once it is back: in order.</summary>
+        private static void ToDevice(Device device, Action action)
+        {
+            if (device.IsPaused)
+            {
+                device.Deferred.Enqueue(action);
+            }
+            else
+            {
+                action();
             }
         }
 
@@ -382,7 +442,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
             return new QuickTableSearch(tables, RoomError.None);
         }
 
-        private RoomError List(Device device, string roomCode)
+        private RoomError List(Device device, string roomCode, int generation)
         {
             if (!device.IsSignedIn)
             {
@@ -394,24 +454,45 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 return device.DirectoryError;
             }
 
-            if (_listings.TryGetValue(roomCode, out string owner))
+            Listing mine = _listings.Find(listing => listing.Code == roomCode && listing.Address == device.Address);
+            if (mine != null && mine.Generation == generation)
             {
-                // Listing a code twice is one listing; anyone else's is a clash, shown in lookups yet or not.
-                return owner == device.Address ? RoomError.None : RoomError.AlreadyStarted;
+                // Listing a code twice is one listing, as with the adapter.
+                return RoomError.None;
             }
 
-            _listings[roomCode] = device.Address;
-            _shownAt[roomCode] = Now + ListingDelaySeconds;
+            foreach (Listing listing in _listings)
+            {
+                if (listing.Code == roomCode && listing.Address != device.Address && listing.Generation >= generation)
+                {
+                    // Anyone else's listing at this generation or a later one is a clash, shown in lookups yet or not.
+                    return RoomError.AlreadyStarted;
+                }
+            }
+
+            _listings.Remove(mine);
+            _listings.Add(new Listing(device.Address, roomCode, generation, Now + ListingDelaySeconds));
             return RoomError.None;
         }
 
         private void Unlist(Device device, string roomCode)
         {
-            if (_listings.TryGetValue(roomCode, out string owner) && owner == device.Address)
+            _listings.RemoveAll(listing => listing.Code == roomCode && listing.Address == device.Address);
+        }
+
+        /// <summary>The listing of <paramref name="roomCode"/> at the latest generation, among those lookups show yet when <paramref name="shownOnly"/>.</summary>
+        private Listing Latest(string roomCode, bool shownOnly)
+        {
+            Listing latest = null;
+            foreach (Listing listing in _listings)
             {
-                _listings.Remove(roomCode);
-                _shownAt.Remove(roomCode);
+                if (listing.Code == roomCode && (!shownOnly || Now >= listing.ShownAt) && (latest == null || listing.Generation > latest.Generation))
+                {
+                    latest = listing;
+                }
             }
+
+            return latest;
         }
 
         private PeerLookup LookUp(Device device, string roomCode)
@@ -426,8 +507,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 return new PeerLookup(null, device.DirectoryError);
             }
 
-            bool shown = _listings.TryGetValue(roomCode, out string address) && Now >= _shownAt[roomCode];
-            return shown ? new PeerLookup(address, RoomError.None) : new PeerLookup(null, RoomError.NotFound);
+            Listing latest = Latest(roomCode, shownOnly: true);
+            return latest != null ? new PeerLookup(latest.Address, RoomError.None, latest.Generation) : new PeerLookup(null, RoomError.NotFound);
         }
 
         private Link LinkOf(string from, string to, string channel)
@@ -446,6 +527,11 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
         private void Accept(Device device, string to, string channel)
         {
+            if (_cut.Contains(PairKey(device.Address, to)))
+            {
+                return;
+            }
+
             Link link = LinkOf(device.Address, to, channel);
             link.End(device.Address).Allowed = true;
             TryOpen(link);
@@ -456,6 +542,12 @@ namespace Callbreak.Tests.EditMode.Application.Online
             if (_closing.Contains(device.Address + "\n" + Key(device.Address, to, channel)))
             {
                 // The device's close of this connection is not through yet.
+                return;
+            }
+
+            if (_cut.Contains(PairKey(device.Address, to)))
+            {
+                // The two cannot reach each other: the packet never arrives, and asks nothing.
                 return;
             }
 
@@ -480,7 +572,13 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 {
                     if (IsCurrent(link) && !link.Open && _devices.TryGetValue(to, out Device other) && !other.IsUnplugged)
                     {
-                        other.RaiseConnectionRequested(from, channel);
+                        ToDevice(other, () =>
+                        {
+                            if (IsCurrent(link) && !link.Open)
+                            {
+                                other.RaiseConnectionRequested(from, channel);
+                            }
+                        });
                     }
                 });
             }
@@ -569,7 +667,13 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
                 if (_devices.TryGetValue(to, out Device device) && !device.IsUnplugged)
                 {
-                    raise(device, about, link.Channel);
+                    ToDevice(device, () =>
+                    {
+                        if (!whileOpen || (IsCurrent(link) && link.Open))
+                        {
+                            raise(device, about, link.Channel);
+                        }
+                    });
                 }
             });
         }
@@ -580,7 +684,13 @@ namespace Callbreak.Tests.EditMode.Application.Online
             {
                 if (!link.Lost && _devices.TryGetValue(to, out Device device) && !device.IsUnplugged)
                 {
-                    device.Take(from, link.Channel, packet);
+                    ToDevice(device, () =>
+                    {
+                        if (!link.Lost)
+                        {
+                            device.Take(from, link.Channel, packet);
+                        }
+                    });
                 }
             });
         }
@@ -625,6 +735,12 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
             public bool IsUnplugged { get; internal set; }
 
+            /// <summary>The app is in the background (<see cref="InMemoryPeerNetwork.Pause"/>): what reaches it waits.</summary>
+            public bool IsPaused { get; internal set; }
+
+            /// <summary>What reached the device while it was paused, in order.</summary>
+            internal Queue<Action> Deferred { get; } = new Queue<Action>();
+
             public int SignInCalls { get; private set; }
 
             public int ListCalls { get; private set; }
@@ -645,7 +761,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
             {
                 SignInCalls++;
                 var answer = Pending(ct, false);
-                _network.Answer(() =>
+                _network.Answer(this, () =>
                 {
                     if (answer.Task.IsCompleted || IsUnplugged)
                     {
@@ -662,15 +778,17 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 return answer.Task;
             }
 
-            public Task<RoomError> ListAsync(string roomCode, CancellationToken ct)
+            public Task<RoomError> ListAsync(string roomCode, CancellationToken ct) => ListAsync(roomCode, 0, ct);
+
+            public Task<RoomError> ListAsync(string roomCode, int generation, CancellationToken ct)
             {
                 ListCalls++;
                 var answer = Pending(ct, RoomError.Unknown);
-                _network.Answer(() =>
+                _network.Answer(this, () =>
                 {
                     if (!answer.Task.IsCompleted && !IsUnplugged)
                     {
-                        answer.TrySetResult(_network.List(this, roomCode));
+                        answer.TrySetResult(_network.List(this, roomCode, generation));
                     }
                 });
                 return answer.Task;
@@ -700,7 +818,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 }
                 int takenDown = TakenDown(roomCode);
                 var answer = Pending(ct, RoomError.Unknown);
-                _network.Answer(() =>
+                _network.Answer(this, () =>
                 {
                     if (answer.Task.IsCompleted || IsUnplugged)
                     {
@@ -743,7 +861,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
             {
                 QuickSearches++;
                 var answer = Pending(ct, new QuickTableSearch(null, RoomError.Unknown));
-                _network.Answer(() =>
+                _network.Answer(this, () =>
                 {
                     if (!answer.Task.IsCompleted && !IsUnplugged)
                     {
@@ -757,7 +875,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
             {
                 LookUpCalls++;
                 var answer = Pending(ct, new PeerLookup(null, RoomError.Unknown));
-                _network.Answer(() =>
+                _network.Answer(this, () =>
                 {
                     if (!answer.Task.IsCompleted && !IsUnplugged)
                     {
@@ -857,6 +975,26 @@ namespace Callbreak.Tests.EditMode.Application.Online
                     throw new InvalidOperationException("The device is not signed in.");
                 }
             }
+        }
+
+        /// <summary>A device's listing of a room code, at a generation (ADR 030), shown in lookups from <see cref="ShownAt"/>.</summary>
+        private sealed class Listing
+        {
+            public Listing(string address, string code, int generation, double shownAt)
+            {
+                Address = address;
+                Code = code;
+                Generation = generation;
+                ShownAt = shownAt;
+            }
+
+            public string Address { get; }
+
+            public string Code { get; }
+
+            public int Generation { get; }
+
+            public double ShownAt { get; }
         }
 
         private sealed class QuickListing

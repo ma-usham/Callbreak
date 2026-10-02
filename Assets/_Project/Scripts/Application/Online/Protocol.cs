@@ -14,8 +14,14 @@ namespace Callbreak.Application.Online
         /// back after the match ended is sent its SyncState before the lobby answers.
         /// 3: the lobby says when a full Quick Match table starts (RoomSnapshot.StartsInMs), and the
         /// bots that fill a Quick Match table sit in its lobby (ADR 029).
+        /// 4: a waiting Quick Match host says it is still there about every second (Heartbeat), and a
+        /// guest that hears nothing from it for a few seconds looks for another table (ADR 029).
+        /// 5: a host whose players can take the table over (ADR 030) names the next host in line to
+        /// everyone (NextHost), sends that player alone what it needs to take over (Succession), and
+        /// keeps up its heartbeat during the match; a player who goes to a new host introduces itself
+        /// with what it holds (Report).
         /// </summary>
-        public const ushort Version = 3;
+        public const ushort Version = 5;
 
         /// <summary>GDD §25 anti-abuse: a connection may send this many intents per second.</summary>
         public const int IntentsPerSecond = 10;
@@ -48,8 +54,34 @@ namespace Callbreak.Application.Online
 
         /// <summary>
         /// The largest payload a member ever sends: a hello with every field at its limit is 234
-        /// bytes. The host drops anything larger unread, before it is even copied.
+        /// bytes. The host drops anything larger unread, before it is even copied. The one exception
+        /// is a <see cref="ClientMessageKind.Report"/> (<see cref="MaxReportBytes"/>).
         /// </summary>
         public const int MaxClientPayloadBytes = 256;
+
+        /// <summary>
+        /// The largest <see cref="ClientMessageKind.Report"/>: a hello and the player's whole view,
+        /// which at every limit (four 96-byte names, five rounds, 13 tricks) stays under 1.5 KB. Only a
+        /// host that took a table over (ADR 030) is sent one.
+        /// </summary>
+        public const int MaxReportBytes = 4096;
+
+        /// <summary>
+        /// ADR 030: while a match is on, a host whose players can take the table over tells them it is
+        /// still there this often, so that they notice when it is not.
+        /// </summary>
+        public const double HeartbeatSeconds = 1.0;
+
+        /// <summary>ADR 030: during a match, a player who hears nothing from its host for this long takes the host as lost.</summary>
+        public const double HostLostSeconds = 4.0;
+
+        /// <summary>
+        /// ADR 030: how long a player who takes a table over waits for the other players' reports
+        /// before it rebuilds the table without the missing ones.
+        /// </summary>
+        public const double HandOverWaitSeconds = 8.0;
+
+        /// <summary>ADR 030: each try to reach the new host, or the old one, gives up after this long; the next one follows.</summary>
+        public const double HandOverAttemptSeconds = 3.0;
     }
 }

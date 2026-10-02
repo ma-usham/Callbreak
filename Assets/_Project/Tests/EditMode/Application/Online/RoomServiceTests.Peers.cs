@@ -94,7 +94,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
         }
 
         [Test]
-        public void PeerNetwork_HostLosesItsListingAsTheGuestDrops_TheGuestFindsTheTableOnceItIsListedAgain()
+        public void PeerNetwork_HostLosesItsListingAsTheGuestDrops_TheGuestComesBackAtTheHostsAddressAndTheCodeIsListedAgain()
         {
             UsePeers();
             Device host = NewPeerDevice("Hari");
@@ -110,17 +110,16 @@ namespace Callbreak.Tests.EditMode.Application.Online
             hostDevice.DirectoryError = RoomError.Offline;
             _peers.LoseListing(code);
             _peers.Break(hostDevice, _peerOf[guest]);
-            Settle(2);
+            Settle(0.5);
             Assert.AreEqual(SessionStatus.Reconnecting, guestSession.Status);
-            Assert.IsNull(_peers.ListedBy(code), "nobody finds the room meanwhile");
-            hostDevice.DirectoryError = RoomError.None;
-            for (int i = 0; i < 40 && guestSession.Status != SessionStatus.Running; i++)
-            {
-                Settle(0.5);
-            }
+            Settle(1.5);
 
-            Assert.AreEqual(SessionStatus.Running, guestSession.Status, "the guest found the table again before giving up");
-            Assert.AreEqual(hostDevice.Address, _peers.ListedBy(code));
+            // During a match the host has told its players where it is (ADR 030): no lookup is needed.
+            Assert.AreEqual(SessionStatus.Running, guestSession.Status, "the guest is back at the host's address");
+            Assert.IsNull(_peers.ListedBy(code), "though nobody finds the room by its code meanwhile");
+            hostDevice.DirectoryError = RoomError.None;
+            Settle(PeerRoomTransport.RelistSeconds + 1);
+            Assert.AreEqual(hostDevice.Address, _peers.ListedBy(code), "then the code leads to it again, for whoever comes by it");
             PlayToEnd(host, guest);
             Assert.AreEqual(SessionStatus.Ended, guestSession.Status);
             Assert.That(_peerFaults, Is.Empty);
@@ -155,10 +154,11 @@ namespace Callbreak.Tests.EditMode.Application.Online
             _peerFaults.Clear();
         }
 
-        private Device NewPeerDevice(string name)
+        /// <param name="saves">The files of an earlier run of the same app, for a device that starts again.</param>
+        private Device NewPeerDevice(string name, InMemorySaveStore saves = null)
         {
             InMemoryPeerNetwork.Device network = _peers.AddDevice();
-            var device = new Device(new PeerRoomTransport(network, _peerFaults.Add), name, (ulong)(100 + _devices.Count), new InMemorySaveStore(), () => Epoch.AddSeconds(_now));
+            var device = new Device(new PeerRoomTransport(network, _peerFaults.Add), name, (ulong)(100 + _devices.Count), saves ?? new InMemorySaveStore(), () => Epoch.AddSeconds(_now));
             _devices.Add(device);
             _peerOf[device] = network;
             return device;
@@ -216,7 +216,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 _peers.Pump();
                 foreach (Device d in _devices)
                 {
-                    if (d.Transport != null)
+                    // A device whose app is paused runs nothing.
+                    if (d.Transport != null && !(_peerOf.TryGetValue(d, out InMemoryPeerNetwork.Device net) && net.IsPaused))
                     {
                         d.Transport.Tick(0.25f, _now);
                     }

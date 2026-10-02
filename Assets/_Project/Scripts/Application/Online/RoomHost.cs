@@ -5,6 +5,7 @@ using Callbreak.Application.Profile;
 using Callbreak.Application.Rooms;
 using Callbreak.Application.Sessions;
 using Callbreak.Bots;
+using Callbreak.Core.Cards;
 using Callbreak.Core.Match;
 using Callbreak.Core.Randomness;
 using Callbreak.Core.Rules;
@@ -16,6 +17,13 @@ namespace Callbreak.Application.Online
     /// the host starts, the <see cref="TableHost"/> that runs the match. Members talk to it only
     /// through messages; the host device's own player is just another member, connected in
     /// process through <see cref="Local"/>, so the host's screens run the same code as a guest's.
+    /// <para>
+    /// Over a link that knows its peers' addresses (<see cref="IHostAddresses"/>, ADR 030) the
+    /// players can take the match over if the host is lost: during the match the host keeps up a
+    /// heartbeat, names the next host in line to everyone (<see cref="NextHostNotice"/>) and sends
+    /// that player alone what it needs (<see cref="SuccessionPackage"/>). A room that was taken over
+    /// is hosted from the seat of the player who took it over.
+    /// </para>
     /// </summary>
     public sealed class RoomHost : IDisposable
     {
@@ -37,6 +45,9 @@ namespace Callbreak.Application.Online
         private readonly TableClocks _clocks;
         private readonly bool _botsChat;
         private readonly bool _quickTable;
+        private readonly IHostAddresses _addresses;
+        private readonly int _hostSeat;
+        private readonly double _heartbeatSeconds;
         private readonly LocalLink _local;
         private readonly Member[] _members = new Member[Seats];
         private readonly Dictionary<PeerId, int> _seatOfPeer = new Dictionary<PeerId, int>();
@@ -55,6 +66,12 @@ namespace Callbreak.Application.Online
         private bool _closed;
         private bool _locked;
         private double _startsAt;
+        private double _nextBeatAt;
+        private NextHostNotice _nextHost;
+        private int _packageSeat = NextHostNotice.NoSeat;
+        private PeerId _packagePeer;
+        private int _packageRound;
+        private int _packageBots;
 
         /// <param name="remote">The relay's host end; null for a room nobody else can reach (Quick Match filled with bots).</param>
         /// <param name="seedSource">Draws each match's shuffle seed (a CSPRNG in production, GDD §22).</param>
@@ -69,6 +86,10 @@ namespace Callbreak.Application.Online
         /// the moment they sit down; bots can take seats in the lobby (<see cref="SeatBot"/>); and the
         /// table can be locked for its start (<see cref="Lock"/>).
         /// </param>
+        /// <param name="heartbeatSeconds">
+        /// How often the host tells its players it is still there: while a Quick Match table waits
+        /// (ADR 029), and during a match its players can take over (ADR 030).
+        /// </param>
         public RoomHost(
             string code,
             RoomSettings settings,
@@ -82,8 +103,37 @@ namespace Callbreak.Application.Online
             BotLevel fillLevel = BotLevel.Normal,
             TableClocks clocks = null,
             bool botsChat = true,
-            bool quickTable = false)
+            bool quickTable = false,
+            double heartbeatSeconds = Protocol.HeartbeatSeconds)
+            : this(null, code, settings, remote, botFactory, names, rng, deckIds, seedSource, timing, fillLevel, clocks, botsChat, quickTable, heartbeatSeconds)
         {
+        }
+
+        /// <summary>
+        /// A room taken over from a lost host (ADR 030), or a new one when <paramref name="takeOver"/>
+        /// is null: the match goes on at the rebuilt table, hosted from the seat of the player who took
+        /// it over, and the players who brought their reports are seated at once.
+        /// </summary>
+        internal RoomHost(
+            RoomTakeOver takeOver,
+            string code,
+            RoomSettings settings,
+            IHostLink remote,
+            IBotFactory botFactory,
+            NameFilter names,
+            IRandom rng,
+            IReadOnlyList<string> deckIds,
+            Func<ulong> seedSource,
+            BotTiming timing,
+            BotLevel fillLevel,
+            TableClocks clocks,
+            bool botsChat,
+            bool quickTable,
+            double heartbeatSeconds)
+        {
+            _heartbeatSeconds = heartbeatSeconds;
+            _addresses = remote as IHostAddresses;
+            _hostSeat = takeOver != null ? takeOver.HostSeat : 0;
             _botsChat = botsChat;
             _quickTable = quickTable;
             _code = code ?? string.Empty;
@@ -104,6 +154,11 @@ namespace Callbreak.Application.Online
                 _remote.PeerDisconnected += OnPeerDisconnected;
                 _remote.Received += OnRemoteReceived;
             }
+
+            if (takeOver != null)
+            {
+                TakeOver(takeOver);
+            }
         }
 
         /// <summary>The host player's own connection to this room.</summary>
@@ -123,9 +178,9 @@ namespace Callbreak.Application.Online
             get
             {
                 int guests = 0;
-                for (int i = 1; i < Seats; i++)
+                for (int i = 0; i < Seats; i++)
                 {
-                    if (_members[i] != null && !_members[i].IsBot)
+                    if (i != _hostSeat && _members[i] != null && !_members[i].IsBot)
                     {
                         guests++;
                     }
@@ -156,6 +211,36 @@ namespace Callbreak.Application.Online
         /// <summary>True once a Quick Match table is locked for its start (<see cref="Lock"/>).</summary>
         public bool IsLocked => _locked;
 
+        /// <summary>The seat of the host device's own player: 0, but in a room taken over, the seat of the player who took it over (ADR 030).</summary>
+        public int HostSeat => _hostSeat;
+
+        /// <summary>
+        /// The room's generation (ADR 030): 0 as its creator opened it, one more each time a player
+        /// took it over; 0 over a link that does not know about generations.
+        /// </summary>
+        public int Generation => _addresses != null ? _addresses.Generation : 0;
+
+        /// <summary>Who takes the match over if this host is lost, as it last told its players (ADR 030); null before it named anyone.</summary>
+        public NextHostNotice NextHost => _nextHost;
+
+        /// <summary>True while some other person in the room is connected: a host whose players all dropped may have been taken over (ADR 030).</summary>
+        public bool HasConnectedGuests
+        {
+            get
+            {
+                for (int i = 0; i < Seats; i++)
+                {
+                    Member m = _members[i];
+                    if (i != _hostSeat && m != null && !m.IsBot && m.Connected)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
         /// <summary>
         /// Drives the table's time and hands out what is queued. Throws, after all of that, the first
         /// exception a handler of the host's own player (or the transport) threw since the last tick.
@@ -176,7 +261,14 @@ namespace Callbreak.Application.Online
                     _table.Tick(now);
                 }
 
+                if (now >= _nextBeatAt && ((_quickTable && _table == null) || (_addresses != null && InMatch)))
+                {
+                    Heartbeat();
+                    _nextBeatAt = now + _heartbeatSeconds;
+                }
+
                 Pump();
+                RefreshSuccession();
             }
 
             _faults.Rethrow();
@@ -188,7 +280,7 @@ namespace Callbreak.Application.Online
         /// </summary>
         public bool CanStart(bool fillWithBots)
         {
-            if (_closed || InMatch || _members[0] == null)
+            if (_closed || InMatch || _members[_hostSeat] == null)
             {
                 return false;
             }
@@ -203,7 +295,7 @@ namespace Callbreak.Application.Online
                 }
 
                 people++;
-                if (i > 0 && !m.Ready)
+                if (i != _hostSeat && !m.Ready)
                 {
                     return false;
                 }
@@ -234,9 +326,9 @@ namespace Callbreak.Application.Online
                 }
             }
 
-            // The host's own deck (seat 0 is always taken here), in Quick Match too (ADR 025). A
-            // guest's faces are in it as well, whatever deck that guest chose (ADR 020).
-            string deck = _members[0].DeckThemeId;
+            // The host's own deck (the host's seat is always taken here), in Quick Match too (ADR 025).
+            // A guest's faces are in it as well, whatever deck that guest chose (ADR 020).
+            string deck = _members[_hostSeat].DeckThemeId;
             for (int i = 0; i < Seats; i++)
             {
                 Member m = _members[i];
@@ -288,13 +380,14 @@ namespace Callbreak.Application.Online
 
             Broadcast();
             Pump();
+            RefreshSuccession();
             return true;
         }
 
         /// <summary>Host only: removes a guest (GDD §11 screen 04, long-press on a seat).</summary>
         public void Kick(int seatIndex)
         {
-            if (_closed || seatIndex <= 0 || seatIndex >= Seats || _members[seatIndex] == null)
+            if (_closed || seatIndex < 0 || seatIndex == _hostSeat || seatIndex >= Seats || _members[seatIndex] == null)
             {
                 return;
             }
@@ -324,7 +417,7 @@ namespace Callbreak.Application.Online
         /// </summary>
         public bool SeatBot()
         {
-            if (!_quickTable || _closed || InMatch || _members[0] == null)
+            if (!_quickTable || _closed || InMatch || _members[_hostSeat] == null)
             {
                 return false;
             }
@@ -349,10 +442,34 @@ namespace Callbreak.Application.Online
             }
 
             // In the host's deck, as every seat of the table is (ADR 025).
-            _members[seat] = Member.Bot(SeatRoster.DrawName(_rng, used), _rng.NextInt(SeatRoster.AvatarCount), _members[0].DeckThemeId);
+            _members[seat] = Member.Bot(SeatRoster.DrawName(_rng, used), _rng.NextInt(SeatRoster.AvatarCount), _members[_hostSeat].DeckThemeId);
             Broadcast();
             Pump();
             return true;
+        }
+
+        /// <summary>
+        /// Tells every member over the network that this host is still there, so a player notices a
+        /// host that went quiet (offline, or its app in the background): a Quick Match table's
+        /// (ADR 029), and during a match one whose players can take over (ADR 030). <see cref="Tick"/>
+        /// sends it every <c>heartbeatSeconds</c>.
+        /// </summary>
+        public void Heartbeat()
+        {
+            if (_closed || _remote == null || !(_quickTable || (_addresses != null && InMatch)))
+            {
+                return;
+            }
+
+            byte[] payload = HostMessages.Heartbeat();
+            for (int i = 0; i < Seats; i++)
+            {
+                Member m = _members[i];
+                if (i != _hostSeat && m != null && m.Connected && !m.IsBot)
+                {
+                    Send(m.Peer, payload);
+                }
+            }
         }
 
         /// <summary>
@@ -381,9 +498,9 @@ namespace Callbreak.Application.Online
                 return;
             }
 
-            for (int i = 1; i < Seats; i++)
+            for (int i = 0; i < Seats; i++)
             {
-                if (_members[i] != null && _members[i].Connected && !_members[i].IsBot)
+                if (i != _hostSeat && _members[i] != null && _members[i].Connected && !_members[i].IsBot)
                 {
                     Send(_members[i].Peer, HostMessages.RoomClosed(RoomError.HostLeft));
                 }
@@ -479,9 +596,11 @@ namespace Callbreak.Application.Online
                 return;
             }
 
-            if (payload.Length > Protocol.MaxClientPayloadBytes)
+            if (payload.Length > Protocol.MaxClientPayloadBytes
+                && (payload.Length > Protocol.MaxReportBytes || payload[0] != (byte)ClientMessageKind.Report))
             {
-                // No member ever sends this much; it is never read (GDD §25 "messages are tiny").
+                // No member ever sends this much; it is never read (GDD §25 "messages are tiny"). Only a
+                // report, a hello with the player's view (ADR 030), is longer.
                 return;
             }
 
@@ -558,8 +677,10 @@ namespace Callbreak.Application.Online
             {
                 var reader = new WireReader(payload);
                 var kind = (ClientMessageKind)reader.Byte();
-                if (kind == ClientMessageKind.Hello)
+                if (kind == ClientMessageKind.Hello || kind == ClientMessageKind.Report)
                 {
+                    // A report is a hello with what the player holds (ADR 030); a room that is already
+                    // running needs only the hello.
                     ReadHello(peer, reader);
                     return;
                 }
@@ -657,8 +778,17 @@ namespace Callbreak.Application.Online
 
         private void OnHello(PeerId peer, HelloMessage hello)
         {
-            if (_seatOfPeer.ContainsKey(peer))
+            if (_seatOfPeer.TryGetValue(peer, out int seated))
             {
+                Member member = _members[seated];
+                if (member != null && member.Identity == hello.Identity && !string.IsNullOrEmpty(hello.Identity))
+                {
+                    // GDD §27 idempotent rejoin: the same player saying hello again on its connection
+                    // (another part of its app took the connection over) is answered again.
+                    member.TableReady = false;
+                    Welcome(peer, seated, rejoined: true);
+                }
+
                 return;
             }
 
@@ -685,10 +815,10 @@ namespace Callbreak.Application.Online
 
             // GDD §27 idempotent rejoin: the same player connecting again takes its seat back.
             int known = FindByIdentity(hello.Identity);
-            if (known == 0 && !peer.IsLocal)
+            if (known == _hostSeat && !peer.IsLocal)
             {
-                // Seat 0 is the host device's own player, connected in process: whoever presents
-                // its identity over the network is someone else, and never takes it over.
+                // The host's seat is the host device's own player, connected in process: whoever
+                // presents its identity over the network is someone else, and never takes it over.
                 Refuse(peer, RoomError.Unknown);
                 return;
             }
@@ -717,10 +847,9 @@ namespace Callbreak.Application.Online
                 m.Connected = true;
                 m.TableReady = false;
                 _seatOfPeer[peer] = known;
-                Send(peer, HostMessages.Welcome(known, Snapshot()));
+                Welcome(peer, known, rejoined: true);
                 if (InMatch)
                 {
-                    Send(peer, HostMessages.MatchStarting(_table.ViewFor((Seat)known), _table.StatusAt(_now)));
                     _table.SetConnected((Seat)known, true, _now);
                 }
 
@@ -751,13 +880,13 @@ namespace Callbreak.Application.Online
                 }
             }
 
-            // Seat 0 is the host's; only the host device's own player may take it.
-            if (free == 0 && !peer.IsLocal)
+            // The host's seat is the host's; only the host device's own player may take it.
+            if (free == _hostSeat && !peer.IsLocal)
             {
                 free = -1;
-                for (int i = 1; i < Seats; i++)
+                for (int i = 0; i < Seats; i++)
                 {
-                    if (_members[i] == null)
+                    if (i != _hostSeat && _members[i] == null)
                     {
                         free = i;
                         break;
@@ -776,6 +905,23 @@ namespace Callbreak.Application.Online
             _seatOfPeer[peer] = free;
             Send(peer, HostMessages.Welcome(free, Snapshot()));
             Broadcast();
+        }
+
+        /// <summary>
+        /// Seats the member at <paramref name="seat"/>: the lobby, and during a match the table as that
+        /// seat sees it and who takes over if the host is lost (ADR 030).
+        /// </summary>
+        private void Welcome(PeerId peer, int seat, bool rejoined)
+        {
+            Send(peer, HostMessages.Welcome(seat, Snapshot()));
+            if (rejoined && InMatch)
+            {
+                Send(peer, HostMessages.MatchStarting(_table.ViewFor((Seat)seat), _table.StatusAt(_now)));
+                if (_nextHost != null && !peer.IsLocal)
+                {
+                    Send(peer, HostMessages.NextHost(_nextHost));
+                }
+            }
         }
 
         /// <summary>GDD §11 screen 14: names are checked again where they are shown to others.</summary>
@@ -922,6 +1068,12 @@ namespace Callbreak.Application.Online
             Member m = _members[(int)seat];
             if (m != null && m.Connected && !m.IsBot)
             {
+                if (_nextHost != null && (int)seat == _nextHost.NextSeat)
+                {
+                    // A new deal reaches the next host in line after the bots' hands for it (ADR 030).
+                    RefreshSuccession();
+                }
+
                 Send(m.Peer, payload);
             }
         }
@@ -982,11 +1134,159 @@ namespace Callbreak.Application.Online
                 Member m = _members[i];
                 seats[i] = m == null
                     ? RoomSnapshot.Member.Empty
-                    : new RoomSnapshot.Member(true, m.Name, m.AvatarId, m.DeckThemeId, i == 0, m.Ready, m.IsBot, m.Connected);
+                    : new RoomSnapshot.Member(true, m.Name, m.AvatarId, m.DeckThemeId, i == _hostSeat, m.Ready, m.IsBot, m.Connected);
             }
 
             int startsInMs = _locked ? (int)Math.Round(Math.Max(0.0, _startsAt - _now) * 1000.0) : -1;
             return new RoomSnapshot(_code, _settings, seats, InMatch, startsInMs);
+        }
+
+        /// <summary>
+        /// Names the next host in line and tells every player over the network (ADR 030): the next
+        /// person after the host in seat order who is connected and can be reached, bots and the people
+        /// who left skipped. That player alone is sent what it needs to take over: again whenever a
+        /// round is dealt, the next host in line changes, or a seat passes to a bot. Nothing over a link
+        /// that does not know its peers' addresses, nor outside a match.
+        /// </summary>
+        private void RefreshSuccession()
+        {
+            if (_addresses == null || _closed || !InMatch)
+            {
+                return;
+            }
+
+            int next = NextInLine(out string nextAddress);
+            if (next != NextHostNotice.NoSeat)
+            {
+                SendPackage(next);
+            }
+
+            var notice = new NextHostNotice(_addresses.Generation, _hostSeat, _addresses.LocalAddress, next, nextAddress);
+            if (notice.Equals(_nextHost))
+            {
+                return;
+            }
+
+            _nextHost = notice;
+            byte[] payload = HostMessages.NextHost(notice);
+            for (int i = 0; i < Seats; i++)
+            {
+                Member m = _members[i];
+                if (i != _hostSeat && m != null && m.Connected && !m.IsBot)
+                {
+                    Send(m.Peer, payload);
+                }
+            }
+        }
+
+        private int NextInLine(out string address)
+        {
+            address = null;
+            var seat = (Seat)_hostSeat;
+            for (int step = 1; step < Seats; step++)
+            {
+                seat = seat.Next(_table.Rules.Direction);
+                Member m = _members[(int)seat];
+                if (m == null || m.IsBot || !m.Connected || m.Peer.IsLocal || !_table.IsHuman(seat))
+                {
+                    continue;
+                }
+
+                string at = _addresses.AddressOf(m.Peer);
+                if (!string.IsNullOrEmpty(at))
+                {
+                    address = at;
+                    return (int)seat;
+                }
+            }
+
+            return NextHostNotice.NoSeat;
+        }
+
+        /// <summary>The next host in line's package (<see cref="SuccessionPackage"/>), unless it has this one already.</summary>
+        private void SendPackage(int next)
+        {
+            Member heir = _members[next];
+            int round = _table.Round;
+            int bots = 0;
+            for (int s = 0; s < Seats; s++)
+            {
+                bots |= _table.IsHuman((Seat)s) ? 0 : 1 << s;
+            }
+
+            if (next == _packageSeat && heir.Peer == _packagePeer && round == _packageRound && bots == _packageBots)
+            {
+                return;
+            }
+
+            _packageSeat = next;
+            _packagePeer = heir.Peer;
+            _packageRound = round;
+            _packageBots = bots;
+            var identities = new string[Seats];
+            var dealt = new CardSet[Seats];
+            for (int s = 0; s < Seats; s++)
+            {
+                if ((bots & (1 << s)) == 0)
+                {
+                    identities[s] = _members[s] != null ? _members[s].Identity : null;
+                }
+                else
+                {
+                    dealt[s] = _table.DealtHandOf((Seat)s);
+                }
+            }
+
+            // ADR 030 (owner-approved exception to AGENTS.md "a seat's hand leaves the server only by
+            // TargetRpc to that seat"): the bot seats' dealt hands go to the next host in line alone,
+            // so it can take the table over; never a person's hand, never shown, never logged.
+            Send(heir.Peer, HostMessages.Succession(new SuccessionPackage(_addresses.Generation, round, identities, dealt)));
+        }
+
+        /// <summary>
+        /// Seats everyone at the rebuilt table of a room taken over (ADR 030): the people who brought
+        /// their reports at once, the others when they come back (their seats held meanwhile), and this
+        /// device's own player when it says hello over <see cref="Local"/>.
+        /// </summary>
+        private void TakeOver(RoomTakeOver takeOver)
+        {
+            _now = takeOver.Now;
+            _locked = _quickTable;
+            for (int s = 0; s < Seats; s++)
+            {
+                RoomTakeOver.SeatInfo seat = takeOver.Seats[s];
+                if (seat == null)
+                {
+                    continue;
+                }
+
+                _members[s] = seat.IsBot
+                    ? Member.Bot(seat.Name, seat.AvatarId, seat.DeckThemeId)
+                    : new Member(default, seat.Identity, seat.Name, seat.AvatarId, seat.DeckThemeId) { Connected = false, Ready = _quickTable };
+            }
+
+            _table = takeOver.Table;
+            _table.Outbound += OnTableOutbound;
+            _table.Ended += OnTableEnded;
+            _tableStartDeadline = _now + Protocol.TableReadyWaitSeconds;
+            foreach (KeyValuePair<PeerId, int> reporter in takeOver.Reporters)
+            {
+                Member m = _members[reporter.Value];
+                m.Peer = reporter.Key;
+                m.Connected = true;
+                m.TableReady = false;
+                _seatOfPeer[reporter.Key] = reporter.Value;
+                _guests[reporter.Key] = new Guest(_now) { SaidHello = true };
+            }
+
+            RefreshSuccession();
+            foreach (KeyValuePair<PeerId, int> reporter in takeOver.Reporters)
+            {
+                Welcome(reporter.Key, reporter.Value, rejoined: true);
+            }
+
+            Broadcast();
+            Pump();
         }
 
         private void Broadcast()

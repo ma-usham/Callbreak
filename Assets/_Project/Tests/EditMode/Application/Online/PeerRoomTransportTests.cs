@@ -703,6 +703,102 @@ namespace Callbreak.Tests.EditMode.Application.Online
             Assert.IsNotNull(_world.ListedBy(Code));
         }
 
+        [Test]
+        public void TakeOver_HostsTheNextGenerationOnAChannelOfItsOwn_WhileTheDeviceIsStillAMemberOfTheOneBefore()
+        {
+            Pair first = Connect();
+            PeerRoomTransport third = NewTransport(out InMemoryPeerNetwork.Device thirdDevice);
+            PeerRoomTransport stranger = NewTransport(out InMemoryPeerNetwork.Device strangerDevice);
+
+            // The guest takes the room over (ADR 030) while its connection to the first host still stands.
+            Task<HostLinkResult> taking = first.Guest.TakeOverAsync(Code, 1, listed: true, CancellationToken.None);
+            Settle();
+            var takenLog = new HostLog(taking.Result.Link);
+            Task<ClientLinkResult> joining = third.JoinAtAsync(Code, 1, first.GuestDevice.Address, CancellationToken.None);
+            Settle();
+            joining.Result.Link.Send(Bytes(6, 40));
+            first.HostLink.Send(first.Peer, Bytes(9, 41));
+            Settle();
+            ClientLinkResult found = Join(stranger);
+
+            Assert.IsTrue(taking.Result.Succeeded);
+            var addresses = (IHostAddresses)taking.Result.Link;
+            Assert.AreEqual(1, addresses.Generation);
+            Assert.AreEqual(first.GuestDevice.Address, addresses.LocalAddress);
+            Assert.AreEqual(thirdDevice.Address, addresses.AddressOf(takenLog.Connected[0]), "the host knows where its guest is");
+            Assert.IsNull(addresses.AddressOf(new PeerId(999)));
+            Assert.IsTrue(_world.AreConnected(first.GuestDevice, thirdDevice, PeerRoomTransport.ChannelOf(Code, 1)), "on the next generation's channel");
+            Assert.AreEqual(Channel + ".1", PeerRoomTransport.ChannelOf(Code, 1));
+            CollectionAssert.AreEqual(new[] { "connected 1", "received 1: 6", "connected 2" }, takenLog.Events, "the new room hears its own guests only");
+            CollectionAssert.AreEqual(new[] { "received 9" }, first.GuestLog.Events, "and the old room still reaches its member");
+            Assert.AreEqual(first.GuestDevice.Address, _world.ListedBy(Code), "the code leads to the latest generation");
+            Assert.AreEqual(1, _world.ListedGeneration(Code));
+            Assert.IsTrue(found.Succeeded, "a lookup of the code finds it");
+            Assert.IsTrue(_world.AreConnected(first.GuestDevice, strangerDevice, PeerRoomTransport.ChannelOf(Code, 1)), "at the latest generation");
+            Assert.That(_faults, Is.Empty);
+        }
+
+        [Test]
+        public void JoinAt_AGenerationTheDeviceDoesNotHost_IsNotFoundAtOnce()
+        {
+            PeerRoomTransport host = NewTransport(out InMemoryPeerNetwork.Device hostDevice);
+            PeerRoomTransport guest = NewTransport(out _);
+            Task<HostLinkResult> taking = host.TakeOverAsync(Code, 2, listed: false, CancellationToken.None);
+            Settle();
+
+            Task<ClientLinkResult> older = guest.JoinAtAsync(Code, 1, hostDevice.Address, CancellationToken.None);
+            Settle(0.5);
+            Task<ClientLinkResult> newer = guest.JoinAtAsync(Code, 3, hostDevice.Address, CancellationToken.None);
+            Settle(0.5);
+
+            Assert.IsTrue(taking.Result.Succeeded);
+            Assert.IsNull(_world.ListedBy(Code), "a table taken over in Quick Match is not listed");
+            Assert.AreEqual(RoomError.NotFound, older.Result.Error);
+            Assert.AreEqual(RoomError.NotFound, newer.Result.Error);
+            Assert.AreEqual(RoomError.Unknown, host.TakeOverAsync(Code, 0, true, CancellationToken.None).Result.Error, "generation 0 is the room's creator's");
+        }
+
+        [Test]
+        public void TakeOver_CodeListedAtThatGenerationByAnother_IsAlreadyStarted()
+        {
+            PeerRoomTransport first = NewTransport(out _);
+            PeerRoomTransport second = NewTransport(out _);
+            Task<HostLinkResult> one = first.TakeOverAsync(Code, 1, listed: true, CancellationToken.None);
+            Settle();
+
+            Task<HostLinkResult> two = second.TakeOverAsync(Code, 1, listed: true, CancellationToken.None);
+            Settle();
+
+            Assert.IsTrue(one.Result.Succeeded);
+            Assert.AreEqual(RoomError.AlreadyStarted, two.Result.Error, "one host per generation");
+        }
+
+        [TestCase(Protocol.MaxReportBytes, true)]
+        [TestCase(Protocol.MaxReportBytes + 1, false)]
+        public void TakenOverRoom_TakesAMemberMessageUpToAReportsLength(int length, bool arrives)
+        {
+            PeerRoomTransport host = NewTransport(out InMemoryPeerNetwork.Device hostDevice);
+            PeerRoomTransport guest = NewTransport(out _);
+            Task<HostLinkResult> taking = host.TakeOverAsync(Code, 1, listed: false, CancellationToken.None);
+            Settle();
+            var log = new HostLog(taking.Result.Link);
+            Task<ClientLinkResult> joining = guest.JoinAtAsync(Code, 1, hostDevice.Address, CancellationToken.None);
+            Settle();
+
+            joining.Result.Link.Send(Bytes(length, 50));
+            joining.Result.Link.Send(Bytes(3, 51));
+            Settle();
+
+            var expected = new List<string> { "connected 1" };
+            if (arrives)
+            {
+                expected.Add("received 1: " + length);
+            }
+
+            expected.Add("received 1: 3");
+            CollectionAssert.AreEqual(expected, log.Events);
+        }
+
         private static void AssertSame(List<byte[]> sent, List<byte[]> received)
         {
             Assert.AreEqual(sent.Count, received.Count, "every message arrived, once");

@@ -1,5 +1,6 @@
 using Callbreak.Core.Cards;
 using Callbreak.Core.Match;
+using Callbreak.Core.Views;
 
 namespace Callbreak.Application.Online
 {
@@ -62,6 +63,20 @@ namespace Callbreak.Application.Online
         public static byte[] Presence() => Begin(ClientMessageKind.Presence).ToArray();
 
         public static byte[] LeaveTable() => Begin(ClientMessageKind.LeaveTable).ToArray();
+
+        /// <summary>
+        /// A hello to the host that took the table over (ADR 030), with what this player holds: the
+        /// last update it had from the host before (<paramref name="seq"/>) and the view that came
+        /// with it, its own hand included. A host that is not rebuilding a table reads it as a hello.
+        /// </summary>
+        public static byte[] Report(HelloMessage hello, uint seq, PlayerView view)
+        {
+            WireWriter w = Begin(ClientMessageKind.Report);
+            hello.WriteTo(w);
+            w.UInt32(seq);
+            WireCodec.Write(w, view);
+            return w.ToArray();
+        }
 
         private static WireWriter Begin(ClientMessageKind kind)
         {
