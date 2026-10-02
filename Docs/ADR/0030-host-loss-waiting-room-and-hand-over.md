@@ -96,3 +96,34 @@
   log fix. The client secret appears in none of them.
 - **The GDD is out of date here:** §8 ("a room whose host left records nothing") describes the old
   behaviour for matches the hand-over now saves.
+
+## Addendum, 2 Oct 2026: a host who leaves on purpose (protocol version 6)
+
+**The gap.** The owner tested on two devices and found it. A host who left during a match with the
+match menu's Leave, or whose app closed, still closed the room ("the host leaves: the room is over
+for everyone", from before this ADR). Everyone got "Host left" and was sent to the main menu. The
+hand-over only started when the host went silent.
+
+**Now:** mid-match, on the peer network, a host who leaves (Leave, its app closing, or Play mode
+stopping) hands the match over instead of closing it:
+- **The host's seat:** it passes to a bot for the rest of the match. It shows as Left, with no seat
+  hold, and the leave is recorded in the host's stats as today's Leave does.
+- **The next host's package** is refreshed with the leaver's hand, now a bot's seat.
+- **Every player** is sent a new `HandOverNow` message with the generation and the next host.
+  - The next host takes over at once, without the 4 s wait.
+  - The others go straight to it, never back to the leaver.
+  - In the in-memory tests it is about a second.
+- **A private room's new host** starts hosting as soon as it is signed in and lists the code in the
+  background, so players are never kept waiting on the EOS lobby.
+- **If the message never gets out,** the 4 s silence detection covers it.
+- **The leave warning:** "Leave match?" no longer tells a host that the room will close for
+  everyone when it will be handed over. It shows the existing "A bot will take your seat…" text
+  (`IHandOverRoom.HandsOverWhenLeaving`).
+
+**Unchanged:**
+- A private lobby still closes when its host leaves before the match.
+- In the Quick Match waiting room and its 3-2-1, guests simply search again, with no dialog.
+- The PurrNet development relay keeps "Host left".
+
+**Not verified on EOS:** whether `HandOverNow` leaves the device before an app that is quitting
+closes its connections. The silence detection is the fallback.

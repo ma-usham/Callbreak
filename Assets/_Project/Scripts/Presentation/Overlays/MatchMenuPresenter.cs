@@ -72,13 +72,16 @@ namespace Callbreak.Presentation.Overlays
 
         private bool IsOffline => _session.Mode == MatchMode.Offline;
 
-        /// <summary>This device hosts the private room the match is played in (one room at a time).</summary>
-        private bool HostsTheRoom
+        /// <summary>
+        /// This device hosts the private room the match is played in (one room at a time), and its
+        /// leaving closes the room: not when the next host in line would take the match over (ADR 030).
+        /// </summary>
+        private bool LeavingClosesTheRoom
         {
             get
             {
                 IRoomSession room = _session.Mode == MatchMode.PrivateRoom && _rooms != null ? _rooms.Current : null;
-                return room != null && room.IsHost;
+                return room != null && room.IsHost && !(room is IHandOverRoom handOver && handOver.HandsOverWhenLeaving);
             }
         }
 
@@ -173,7 +176,7 @@ namespace Callbreak.Presentation.Overlays
             {
                 var request = new DialogRequest(
                     _localization.Get(LeaveTitleKey),
-                    _localization.Get(MatchMenuText.LeaveBodyKeyFor(_session.Mode, HostsTheRoom)),
+                    _localization.Get(MatchMenuText.LeaveBodyKeyFor(_session.Mode, LeavingClosesTheRoom)),
                     _localization.Get(LeaveConfirmKey),
                     _localization.Get(LeaveCancelKey));
                 bool confirmed = await _dialogs.ConfirmAsync(request, _lifetime.Token);

@@ -991,6 +991,16 @@ namespace Callbreak.Presentation.Table
 
         private void TickClock(double now)
         {
+            // While the table reconnects (its connection dropped, or the next host is taking the
+            // match over, ADR 030) the clock waits where it stood: the host gives the turn a clock of
+            // its own again, and nothing ticks or nudges under the "Reconnecting…" cover meanwhile.
+            if (_session.Status == SessionStatus.Reconnecting)
+            {
+                _warned = false;
+                _lastTickSecond = -1;
+                return;
+            }
+
             TurnTimerState timer = _session.Timer;
             TableState state = State;
             bool running = timer.IsRunning && timer.Duration > 0 && state.HasTurn && timer.Seat == state.TurnSeat;

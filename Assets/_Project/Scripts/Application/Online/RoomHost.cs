@@ -211,6 +211,15 @@ namespace Callbreak.Application.Online
         /// <summary>True once a Quick Match table is locked for its start (<see cref="Lock"/>).</summary>
         public bool IsLocked => _locked;
 
+        /// <summary>True once the host has left (<see cref="Close"/>): this room serves nobody any more.</summary>
+        public bool IsClosed => _closed;
+
+        /// <summary>
+        /// True while the match would go on without this host should it leave (ADR 030): it is on, over
+        /// a link that knows its peers' addresses, and someone is there to take it over.
+        /// </summary>
+        public bool CanHandOver => _addresses != null && !_closed && InMatch && NextInLine(out _) != NextHostNotice.NoSeat;
+
         /// <summary>The seat of the host device's own player: 0, but in a room taken over, the seat of the player who took it over (ADR 030).</summary>
         public int HostSeat => _hostSeat;
 
@@ -490,7 +499,11 @@ namespace Callbreak.Application.Online
             Pump();
         }
 
-        /// <summary>The host leaves: the room is over for everyone (GDD §8, Phase 1).</summary>
+        /// <summary>
+        /// The host leaves (on purpose, or its app is closing). In the lobby, or where nobody can take
+        /// the match over, the room is over for everyone (GDD §8, Phase 1). During a match its players
+        /// can take over (ADR 030), the match goes on without this host (<see cref="HandOverNow"/>).
+        /// </summary>
         public void Close()
         {
             if (_closed)
@@ -498,16 +511,53 @@ namespace Callbreak.Application.Online
                 return;
             }
 
-            for (int i = 0; i < Seats; i++)
+            if (!HandOverNow())
             {
-                if (i != _hostSeat && _members[i] != null && _members[i].Connected && !_members[i].IsBot)
+                for (int i = 0; i < Seats; i++)
                 {
-                    Send(_members[i].Peer, HostMessages.RoomClosed(RoomError.HostLeft));
+                    if (i != _hostSeat && _members[i] != null && _members[i].Connected && !_members[i].IsBot)
+                    {
+                        Send(_members[i].Peer, HostMessages.RoomClosed(RoomError.HostLeft));
+                    }
                 }
             }
 
             Pump();
             _closed = true;
+        }
+
+        /// <summary>
+        /// The host leaves during a match its players can take over (ADR 030): it never ends the game.
+        /// The host's seat passes to a bot for the rest of the match, as anyone's who leaves (GDD §8),
+        /// so the next host in line is sent that seat's hand with the bots'; then everyone is told to go
+        /// to the next host in line now, which takes the table over at once. False, with nothing done,
+        /// when there is nobody to take over.
+        /// </summary>
+        private bool HandOverNow()
+        {
+            if (_addresses == null || !InMatch || NextInLine(out _) == NextHostNotice.NoSeat)
+            {
+                return false;
+            }
+
+            _table.Leave((Seat)_hostSeat, _now);
+            RefreshSuccession();
+            if (_nextHost == null || !_nextHost.HasNext)
+            {
+                return false;
+            }
+
+            byte[] payload = HostMessages.HandOverNow(_nextHost);
+            for (int i = 0; i < Seats; i++)
+            {
+                Member m = _members[i];
+                if (i != _hostSeat && m != null && m.Connected && !m.IsBot)
+                {
+                    Send(m.Peer, payload);
+                }
+            }
+
+            return true;
         }
 
         /// <summary>Closes the room and lets go of the link; throws last a fault no tick has passed on yet.</summary>
@@ -709,7 +759,8 @@ namespace Callbreak.Application.Online
                     case ClientMessageKind.LeaveTable:
                         if (peer.IsLocal)
                         {
-                            // GDD §8, Phase 1: the host leaving ends the room for everyone.
+                            // GDD §8, Phase 1: the host leaving ends the room for everyone, but during a
+                            // match its players can take over, which goes on without it (ADR 030).
                             Close();
                             break;
                         }

@@ -131,6 +131,9 @@ namespace Callbreak.Presentation.Table
         /// <summary>The chip's text while it shows; null while the seat has no chip.</summary>
         public string Chip => _chip != null && _chip.gameObject.activeSelf ? _chipText.text : null;
 
+        /// <summary>The whole seconds the turn clock shows; -1 while the seat shows no clock.</summary>
+        public int TimerSeconds => _timerDisc.activeSelf && _shownSeconds != int.MinValue ? _shownSeconds : -1;
+
         /// <summary>The chip shows its spinner.</summary>
         public bool ChipIsBusy => _chip != null && _chip.gameObject.activeSelf && _chipSpinner.activeSelf;
 

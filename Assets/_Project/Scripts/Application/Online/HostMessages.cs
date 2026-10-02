@@ -89,6 +89,17 @@ namespace Callbreak.Application.Online
         }
 
         /// <summary>
+        /// The host leaves during the match (ADR 030): to every player, who takes the table over now
+        /// (the next host in line) and where to find it. The room goes on there.
+        /// </summary>
+        public static byte[] HandOverNow(NextHostNotice notice)
+        {
+            WireWriter w = Begin(HostMessageKind.HandOverNow);
+            notice.WriteTo(w);
+            return w.ToArray();
+        }
+
+        /// <summary>
         /// To the next host in line alone (ADR 030): the people's identities and the bots' dealt hands
         /// (<see cref="SuccessionPackage"/>).
         /// </summary>

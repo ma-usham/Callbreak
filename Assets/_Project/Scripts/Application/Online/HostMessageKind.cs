@@ -21,5 +21,11 @@ namespace Callbreak.Application.Online
 
         /// <summary>What the next host in line needs to take the table over (ADR 030): to that player alone.</summary>
         Succession = 12,
+
+        /// <summary>
+        /// The host leaves during the match (ADR 030): the next host in line takes the table over now,
+        /// and everyone goes to it. Who that is follows, as in <see cref="NextHost"/>.
+        /// </summary>
+        HandOverNow = 13,
     }
 }

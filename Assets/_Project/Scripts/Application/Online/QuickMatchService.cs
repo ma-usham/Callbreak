@@ -1024,7 +1024,8 @@ namespace Callbreak.Application.Online
 
         /// <summary>
         /// Lets go of the table this device sits at: a hosted one leaves the directory and its guests
-        /// are told; a guest that has not started playing tells the host it leaves.
+        /// are told (before the start they look again; during the match the next host in line takes it
+        /// over, ADR 030); a guest that has not started playing tells the host it leaves.
         /// </summary>
         private void Close()
         {
@@ -1055,7 +1056,13 @@ namespace Callbreak.Application.Online
             _hostAddress = null;
             if (client != null)
             {
-                if (host == null && client.Match == null && !client.IsClosed && clientLink != null && clientLink.IsConnected)
+                bool waitingGuest = host == null && client.Match == null && !client.IsClosed && clientLink != null && clientLink.IsConnected;
+
+                // A host whose match is on (the app is closing) leaves it as anyone leaving on purpose
+                // does (GDD §8): it counts as left, and the match goes on without it (ADR 030).
+                bool hostInMatch = host != null && host.InMatch && client.Match != null && !client.IsClosed
+                    && client.Match.Status != SessionStatus.Ended && client.Match.Status != SessionStatus.Failed;
+                if (waitingGuest || hostInMatch)
                 {
                     try
                     {

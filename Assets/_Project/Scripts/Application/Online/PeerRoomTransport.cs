@@ -155,9 +155,11 @@ namespace Callbreak.Application.Online
 
         /// <summary>
         /// Signs in and hosts generation <paramref name="generation"/> of <paramref name="roomCode"/>
-        /// (ADR 030), on that generation's channel; <paramref name="listed"/>, the code is listed at
-        /// that generation. AlreadyStarted when another device lists the code at that generation or a
-        /// later one; otherwise as <see cref="HostAsync"/>.
+        /// (ADR 030), on that generation's channel, as soon as the device is signed in: the players
+        /// come to its address. <paramref name="listed"/>, the code is listed at that generation
+        /// meanwhile, and again every <see cref="RelistSeconds"/> until the directory takes it (it
+        /// never does while another device lists the code at that generation or a later one).
+        /// Otherwise as <see cref="HostAsync"/>.
         /// </summary>
         public Task<HostLinkResult> TakeOverAsync(string roomCode, int generation, bool listed, CancellationToken ct)
         {
@@ -382,6 +384,18 @@ namespace Callbreak.Application.Online
                     var unlisted = new HostLink(this, attempt.Code, attempt.Channel, listed: false, attempt.Generation);
                     _host = unlisted;
                     EndHosting(attempt, new HostLinkResult(unlisted, RoomError.None));
+                    return;
+                }
+
+                if (attempt.Generation > 0)
+                {
+                    // A room taken over is hosted at once too (ADR 030): its players come to this
+                    // device's address, which they know. Its code is listed meanwhile, and again every
+                    // few seconds until the directory takes it, for whoever comes by the code.
+                    var takenOver = new HostLink(this, attempt.Code, attempt.Channel, listed: true, attempt.Generation);
+                    _host = takenOver;
+                    takenOver.LoseListing(now);
+                    EndHosting(attempt, new HostLinkResult(takenOver, RoomError.None));
                     return;
                 }
 

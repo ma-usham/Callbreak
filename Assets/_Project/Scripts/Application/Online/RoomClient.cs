@@ -20,7 +20,7 @@ namespace Callbreak.Application.Online
     /// A screen whose handler throws never stops a message from being applied whole: the join
     /// still completes and a closed room still says so, and the exception is passed on afterwards.
     /// </summary>
-    public sealed class RoomClient : IRoomSession
+    public sealed class RoomClient : IRoomSession, IHandOverRoom
     {
         private const double JoinTimeoutSeconds = 10.0;
 
@@ -80,6 +80,8 @@ namespace Callbreak.Application.Online
 
         public bool IsHost => _host != null;
 
+        public bool HandsOverWhenLeaving => _host != null && _host.CanHandOver;
+
         public int LocalSeatIndex => _localSeat;
 
         /// <summary>True while the room's match is being played.</summary>
@@ -104,6 +106,13 @@ namespace Callbreak.Application.Online
 
         /// <summary>Who takes the match over if the host is lost, as the host last said (ADR 030); null when it never said.</summary>
         public NextHostNotice NextHost { get; private set; }
+
+        /// <summary>
+        /// The host left during the match and said so (ADR 030): the next host in line
+        /// (<see cref="NextHost"/>) takes the table over now, and this player goes there. Over again
+        /// once this player is connected to a host anew.
+        /// </summary>
+        public bool HostLeaving { get; private set; }
 
         /// <summary>
         /// What this player needs to take the match over (ADR 030): sent by the host to the next host in
@@ -147,6 +156,7 @@ namespace Callbreak.Application.Online
         /// <summary>Replaces a dropped connection and introduces this player again (GDD §27 reconnection).</summary>
         public Task<RoomError> RejoinAsync(IClientLink link, CancellationToken ct)
         {
+            HostLeaving = false;
             Detach();
             Attach(link);
             return JoinAsync(ct);
@@ -160,6 +170,7 @@ namespace Callbreak.Application.Online
         internal Task<RoomError> ReportAsync(IClientLink link, CancellationToken ct)
         {
             _host = null;
+            HostLeaving = false;
             Detach();
             Attach(link);
             byte[] report = _match != null
@@ -179,6 +190,7 @@ namespace Callbreak.Application.Online
             // What the host before said about its succession is over; this room names its own.
             NextHost = null;
             Package = null;
+            HostLeaving = false;
             Detach();
             Attach(host.Local);
             return JoinAsync(ct);
@@ -330,7 +342,8 @@ namespace Callbreak.Application.Online
             _closed = true;
             if (_host != null)
             {
-                // GDD §8, Phase 1: when the host leaves, the room is over for everyone.
+                // GDD §8, Phase 1: when the host leaves, the room is over for everyone; but a match
+                // its players can take over goes on without it (ADR 030).
                 try
                 {
                     _host.Close();
@@ -504,6 +517,16 @@ namespace Callbreak.Application.Online
 
                     case HostMessageKind.Succession:
                         Package = SuccessionPackage.Read(reader);
+                        break;
+
+                    case HostMessageKind.HandOverNow:
+                        NextHost = NextHostNotice.Read(reader);
+                        HostLeaving = NextHost.HasNext;
+                        if (Package != null && (NextHost.NextSeat != _localSeat || NextHost.Generation != Package.Generation))
+                        {
+                            Package = null;
+                        }
+
                         break;
                 }
             }

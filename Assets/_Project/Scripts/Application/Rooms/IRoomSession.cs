@@ -49,6 +49,20 @@ namespace Callbreak.Application.Rooms
         Task LeaveAsync(CancellationToken ct);
     }
 
+    /// <summary>
+    /// A room whose match can go on without its host (ADR 030): over the peer-to-peer network, the
+    /// next host in line takes the match over when the host leaves, so leaving costs only the host's
+    /// own match.
+    /// </summary>
+    public interface IHandOverRoom
+    {
+        /// <summary>
+        /// True while this device hosts a match that goes on without it should it leave; false for a
+        /// guest, in the lobby, over the relay, or with nobody to take the match over.
+        /// </summary>
+        bool HandsOverWhenLeaving { get; }
+    }
+
     /// <summary>Creates and joins private rooms (GDD §27 "Private rooms").</summary>
     public interface IRoomService
     {

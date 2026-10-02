@@ -18,11 +18,10 @@ namespace Callbreak.Application.Online
 
         /// <summary>
         /// Hosts generation <paramref name="generation"/> (1 or more) of <paramref name="roomCode"/>:
-        /// this device takes the room over. A private room is <paramref name="listed"/> under its code
-        /// at that generation, so lookups find this host from then on; a Quick Match table is not
-        /// listed (its players know this device's address). Fails as
-        /// <see cref="IRoomTransport.HostAsync"/> does; AlreadyStarted when another device lists the
-        /// code at that generation or a later one.
+        /// this device takes the room over, at once, since its players know its address. A private
+        /// room is <paramref name="listed"/> under its code at that generation meanwhile, so lookups
+        /// find this host from then on; a Quick Match table is not listed. Fails as
+        /// <see cref="IRoomTransport.HostAsync"/> does when the device cannot sign in.
         /// </summary>
         Task<HostLinkResult> TakeOverAsync(string roomCode, int generation, bool listed, CancellationToken ct);
 

@@ -205,6 +205,16 @@ namespace Callbreak.Application.Online
                         WatchAsGuest(client);
                     }
 
+                    // A host just found lost (or leaving) is gone after at once, not a frame later.
+                    if (_mode == Mode.Rehoming)
+                    {
+                        Rehome(client);
+                    }
+                    else if (_mode == Mode.TakingOver)
+                    {
+                        TakeOver(client);
+                    }
+
                     break;
                 case Mode.Rehoming:
                     Rehome(client);
@@ -228,7 +238,8 @@ namespace Callbreak.Application.Online
         /// <summary>
         /// A guest whose connection goes tries its host again at once (GDD §27); one that hears nothing
         /// from its host for <see cref="Protocol.HostLostSeconds"/>, connection or not, takes the host as
-        /// lost (<see cref="DeclareLost"/>).
+        /// lost (<see cref="DeclareLost"/>); and one whose host says it is leaving goes to the next host
+        /// in line at once, without waiting for anything (<see cref="RoomClient.HostLeaving"/>).
         /// </summary>
         private void WatchAsGuest(RoomClient client)
         {
@@ -241,7 +252,8 @@ namespace Callbreak.Application.Online
             IClientLink link = _holder.ClientLink;
             bool dropped = link == null || !link.IsConnected;
             bool silent = _now - _heardAt >= Protocol.HostLostSeconds;
-            if (!dropped && !silent)
+            bool leaving = client.HostLeaving;
+            if (!dropped && !silent && !leaving)
             {
                 return;
             }
@@ -252,25 +264,26 @@ namespace Callbreak.Application.Online
             _holder.Hold(null, null, null);
             _giveUpAt = _now + Protocol.SeatHoldSeconds;
             _refusedSince = double.NaN;
-            _oldHost = notice != null
-                ? new Place(notice.Generation, notice.HostAddress)
+            _oldHost = leaving ? null
+                : notice != null ? new Place(notice.Generation, notice.HostAddress)
                 : new Place(0, _room.HostAddress);
             _nextHost = null;
             _declared = false;
             _mode = Mode.Rehoming;
             _nextTryAt = _now + ReconnectSeconds;
-            if (silent)
+            if (silent || leaving)
             {
-                DeclareLost(client);
+                DeclareLost(client, leaving);
             }
         }
 
         /// <summary>
-        /// Nothing from the host for <see cref="Protocol.HostLostSeconds"/>: the host is lost. The next
-        /// host in line takes the match over; everyone else tries the next host in line with its report,
-        /// and the old host with a hello, in turn.
+        /// The host is lost: nothing came from it for <see cref="Protocol.HostLostSeconds"/>, or it said
+        /// it leaves (<paramref name="hostLeft"/>). The next host in line takes the match over; everyone
+        /// else tries the next host in line with its report, and, unless it left, the old host with a
+        /// hello, in turn.
         /// </summary>
-        private void DeclareLost(RoomClient client)
+        private void DeclareLost(RoomClient client, bool hostLeft)
         {
             _declared = true;
             NextHostNotice notice = client.NextHost;
@@ -279,7 +292,7 @@ namespace Callbreak.Application.Online
                 && package != null && package.Generation == notice.Generation)
             {
                 DropTry();
-                BeginTakeOver(client, notice, package);
+                BeginTakeOver(client, notice, package, hostLeft);
                 return;
             }
 
@@ -461,7 +474,7 @@ namespace Callbreak.Application.Online
             if (!_declared && _now - _heardAt >= Protocol.HostLostSeconds && (_try == null || _try.Link == null))
             {
                 // A try that has reached the old host is let finish: the host is there after all.
-                DeclareLost(client);
+                DeclareLost(client, hostLeft: false);
                 if (_mode != Mode.Rehoming)
                 {
                     return;
@@ -470,6 +483,13 @@ namespace Callbreak.Application.Online
 
             if (_try == null)
             {
+                if (_nextHost == null && _oldHost == null)
+                {
+                    // The host left, and nobody here can take the match over: there is nowhere to go.
+                    GiveUp(client, RoomError.HostLeft);
+                    return;
+                }
+
                 if (_now >= _giveUpAt)
                 {
                     GiveUp(client, RoomError.ConnectionLost);
@@ -542,10 +562,11 @@ namespace Callbreak.Application.Online
             _nextTryAt = _now + RetrySeconds;
         }
 
-        private void BeginTakeOver(RoomClient client, NextHostNotice notice, SuccessionPackage package)
+        /// <param name="hostLeft">The old host said it leaves: there is no point looking for it.</param>
+        private void BeginTakeOver(RoomClient client, NextHostNotice notice, SuccessionPackage package, bool hostLeft)
         {
             _package = package;
-            _previousHost = new Place(notice.Generation, notice.HostAddress);
+            _previousHost = hostLeft ? null : new Place(notice.Generation, notice.HostAddress);
             _mode = Mode.TakingOver;
             _openAbort = new CancellationTokenSource();
             CancellationToken token = _openAbort.Token;
@@ -588,10 +609,10 @@ namespace Callbreak.Application.Online
                 return;
             }
 
-            // Meanwhile the old host is tried: this player's own connection may be what dropped.
+            // Meanwhile the old host is tried, unless it left: this player's own connection may be what dropped.
             if (_try == null)
             {
-                if (_now >= _nextTryAt && Online())
+                if (_previousHost != null && _now >= _nextTryAt && Online())
                 {
                     StartTry(Aim.Probe, _previousHost, client);
                 }

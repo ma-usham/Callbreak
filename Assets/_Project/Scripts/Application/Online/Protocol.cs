@@ -20,8 +20,10 @@ namespace Callbreak.Application.Online
         /// everyone (NextHost), sends that player alone what it needs to take over (Succession), and
         /// keeps up its heartbeat during the match; a player who goes to a new host introduces itself
         /// with what it holds (Report).
+        /// 6: a host that leaves during the match tells everyone to go to the next host in line now
+        /// (HandOverNow) instead of closing the room (ADR 030).
         /// </summary>
-        public const ushort Version = 5;
+        public const ushort Version = 6;
 
         /// <summary>GDD §25 anti-abuse: a connection may send this many intents per second.</summary>
         public const int IntentsPerSecond = 10;

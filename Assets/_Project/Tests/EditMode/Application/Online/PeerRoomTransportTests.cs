@@ -759,18 +759,47 @@ namespace Callbreak.Tests.EditMode.Application.Online
         }
 
         [Test]
-        public void TakeOver_CodeListedAtThatGenerationByAnother_IsAlreadyStarted()
+        public void TakeOver_HostsAsSoonAsSignedIn_AndListsTheCodeOnceTheDirectoryTakesIt()
         {
-            PeerRoomTransport first = NewTransport(out _);
-            PeerRoomTransport second = NewTransport(out _);
+            PeerRoomTransport host = NewTransport(out InMemoryPeerNetwork.Device hostDevice);
+            PeerRoomTransport guest = NewTransport(out _);
+            hostDevice.DirectoryError = RoomError.Offline;
+
+            // ADR 030: the players of a room taken over come to its address; nobody waits for the directory.
+            Task<HostLinkResult> taking = host.TakeOverAsync(Code, 1, listed: true, CancellationToken.None);
+            Settle();
+            Task<ClientLinkResult> joining = guest.JoinAtAsync(Code, 1, hostDevice.Address, CancellationToken.None);
+            Settle();
+            bool listedMeanwhile = _world.ListedBy(Code) != null;
+            hostDevice.DirectoryError = RoomError.None;
+            Settle(PeerRoomTransport.RelistSeconds + 0.5);
+
+            Assert.IsTrue(taking.Result.Succeeded, "hosted with the directory out of reach");
+            Assert.IsTrue(joining.Result.Succeeded, "and a player reached it at its address");
+            Assert.IsFalse(listedMeanwhile);
+            Assert.AreEqual(hostDevice.Address, _world.ListedBy(Code), "then the code was listed, for whoever comes by it");
+            Assert.AreEqual(1, _world.ListedGeneration(Code));
+        }
+
+        [Test]
+        public void TakeOver_OfAGenerationAnotherDeviceLists_HostsAllTheSame_AndTheDirectoryKeepsTheFirst()
+        {
+            PeerRoomTransport first = NewTransport(out InMemoryPeerNetwork.Device firstDevice);
+            PeerRoomTransport second = NewTransport(out InMemoryPeerNetwork.Device secondDevice);
+            PeerRoomTransport guest = NewTransport(out _);
             Task<HostLinkResult> one = first.TakeOverAsync(Code, 1, listed: true, CancellationToken.None);
             Settle();
 
             Task<HostLinkResult> two = second.TakeOverAsync(Code, 1, listed: true, CancellationToken.None);
+            Settle(PeerRoomTransport.RelistSeconds * 2);
+            Task<ClientLinkResult> joining = guest.JoinAtAsync(Code, 1, secondDevice.Address, CancellationToken.None);
             Settle();
 
             Assert.IsTrue(one.Result.Succeeded);
-            Assert.AreEqual(RoomError.AlreadyStarted, two.Result.Error, "one host per generation");
+            Assert.IsTrue(two.Result.Succeeded, "its players come to its address");
+            Assert.IsTrue(joining.Result.Succeeded);
+            Assert.AreEqual(firstDevice.Address, _world.ListedBy(Code), "one device per generation in the directory");
+            Assert.AreEqual(1, _world.Listings(Code));
         }
 
         [TestCase(Protocol.MaxReportBytes, true)]

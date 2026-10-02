@@ -110,6 +110,9 @@ namespace Callbreak.Presentation.Table
         /// <summary>How much of the emote button the wait still fills, 0 to 1 (0: a phrase may be sent).</summary>
         public float EmoteCooldown => _emoteCooldown != null && _emoteCooldown.enabled ? _emoteCooldown.fillAmount : 0f;
 
+        /// <summary>The "Reconnecting…" cover is over the table.</summary>
+        public bool IsReconnecting => _reconnecting.activeSelf;
+
         /// <summary>"ROUND 1 / 5".</summary>
         public void SetRound(string text)
         {

@@ -104,6 +104,36 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual("00:03", Label(screen, "Elapsed").text);
         }
 
+        [UnityTest]
+        public IEnumerator HostLeavesDuringTheStartCountdown_TheGuestStaysAndSearches_OnTheirOwnClock()
+        {
+            yield return OpenTheSearch();
+            ScreenRouter router = _game.MenuRouter;
+            UIScreen screen = router.Get<UIScreen>(ScreenId.Matchmaking);
+            var text = _game.Services.Resolve<ILocalization>();
+            _search.Report(new MatchmakingProgress(FullTable(), 19.3, true, 6.4, 2.4));
+            Assert.IsFalse(GameFixture.CanPress(screen, "CancelButton"), "the table is locked");
+
+            // The host left (or went quiet): the service drops the table and searches again, with
+            // this player alone in the first seat and their own countdown still running (ADR 030).
+            _search.Report(new MatchmakingProgress(Alone(), 19.9, false, 5.8, double.NaN));
+            yield return null;
+
+            Assert.AreEqual(ScreenId.Matchmaking, router.Current, "the guest stays on the search");
+            Assert.IsFalse(_game.Dialogs.IsOpen, "no \"Host left\", nothing to answer");
+            Assert.IsFalse(_search.Cancelled, "and the search goes on");
+            Assert.AreEqual(text.Get("ui.common.you"), Label(screen, "SeatName0").text);
+            for (int i = 1; i < 4; i++)
+            {
+                Assert.AreEqual(string.Empty, Label(screen, "SeatName" + i).text, "the old table's seat " + i + " is cleared");
+                Assert.AreEqual(text.Get("ui.matchmaking.seat_searching"), Label(screen, "SeatStatus" + i).text);
+            }
+
+            Assert.AreEqual(text.Get("ui.matchmaking.finding"), Label(screen, "StatusTitle").text);
+            Assert.AreEqual("00:06", Label(screen, "Elapsed").text, "the guest's own countdown, not the table's 3-2-1");
+            Assert.IsTrue(GameFixture.CanPress(screen, "CancelButton") && GameFixture.CanPress(screen, "BackButton"), "Cancel and back are back");
+        }
+
         private IEnumerator OpenTheSearch()
         {
             yield return _game.Boot(extra: builder =>
@@ -113,6 +143,18 @@ namespace Callbreak.Tests.PlayMode
             });
             GameFixture.Press(_game.MenuRouter, "PlayOnlineButton");
             yield return GameFixture.Until(() => _search.Progress != null, "the search to start");
+        }
+
+        /// <summary>No table: the player alone in the first seat, as the search reports it between tables.</summary>
+        private static List<RoomSeat> Alone()
+        {
+            return new List<RoomSeat>
+            {
+                new RoomSeat(0, true, "Asha", 2, "classic-crimson", false, true, false, true),
+                new RoomSeat(1, false, string.Empty, 0, string.Empty, false, false, false, false),
+                new RoomSeat(2, false, string.Empty, 0, string.Empty, false, false, false, false),
+                new RoomSeat(3, false, string.Empty, 0, string.Empty, false, false, false, false),
+            };
         }
 
         /// <summary>The table's order: the host Hari in seat 0, the guest Asha (the player) in seat 1.</summary>

@@ -133,6 +133,25 @@ namespace Callbreak.Tests.EditMode.Presentation
             Assert.AreEqual("Finding players...", resumed.Title);
         }
 
+        [Test]
+        public void TheHostLeavesBeforeTheStart_TheOldTableClears_AndThePlayerSearchesOnTheirOwnClock()
+        {
+            // Asha's screen during the locked 3-2-1, then the search the service goes back to (ADR 030):
+            // Asha alone in the first seat, her own countdown still running from when she began.
+            MatchmakingScreenState locked = Show(Report(14.0, true, 6.4, 2.4, FullTable()));
+            Assert.IsFalse(locked.CanLeave);
+
+            MatchmakingScreenState searching = Show(Report(14.6, false, 5.8, double.NaN, Seat(0, "Asha", local: true), Empty(1), Empty(2), Empty(3)));
+
+            AssertSeats(searching, "You", "", "", "");
+            AssertFilled(searching, true, false, false, false);
+            Assert.AreEqual("Finding players...", searching.Title);
+            Assert.AreEqual("1 of 4 players connected", searching.Subtitle);
+            Assert.AreEqual(Clock.Search, searching.Clock, "the start countdown is over");
+            Assert.AreEqual("00:06", searching.ClockText, "her own countdown goes on");
+            Assert.IsTrue(searching.CanLeave, "Cancel and back are hers again");
+        }
+
         [TestCase(12.7, "00:12")]
         [TestCase(75.2, "01:15")]
         [TestCase(0.0, "00:00")]
