@@ -93,3 +93,27 @@ build ("config file not found, Set EOS configuration").
   it, the plugin unloads the SDK's DLL in the Editor, and a Play session that started after an
   unclean end once hung the Editor while doing so (2 Oct 2026). Players are not affected: Android
   and iOS never shut EOS down.
+
+## Android builds
+
+The plugin's own Android module (`eos_dependencies.androidlib`) is written for old Android
+tools. Unity 6.3's Gradle 9.1 and AGP 9.0 reject it, and the build stops with
+"Could not find method jcenter()" (2 Oct 2026). `Assets/_Project/Scripts/Editor/AndroidEosGradle.cs`
+fits it to the generated Gradle project on every Android build, without touching the plugin's
+files or the Player Settings:
+
+- **The module's build file:**
+  - drops its old `buildscript` block and `jcenter()`;
+  - gets the namespace `com.pew.eos_dependencies`;
+  - uses the SDK levels of the Player Settings;
+  - loses the outdated `buildToolsVersion`.
+- **The module's manifest** loses its `package=`.
+- **The launcher** turns on core-library desugaring, because the EOS SDK's aar requires it
+  (`desugar_jdk_libs`).
+- **R8 rules** let a minified release build pass: annotations of the Tink library come in through
+  androidx.security.
+
+Each step does nothing once a plugin update fixes its files, and the hook can then go.
+`Assets/EOS/link.xml` (EOS Plugin > Advanced > Create link.xml) keeps the plugin's config readers
+from being stripped by IL2CPP. `Assets/Plugins/Android/gradleTemplate.properties` is the plugin's
+Gradle properties template (AndroidX).
