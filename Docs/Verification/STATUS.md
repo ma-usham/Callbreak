@@ -107,7 +107,7 @@ the side-by-side images are in `ArtSource/Screens/<Name>/check/`.
 | 05 Matchmaking | 23.06 | 14 Profile | 23.17 |
 | 06 Offline setup | 23.14 | 15 Card collection | 23.97 |
 | 07 Call panel | 23.53 | 16 Scorecard | 23.56 |
-| 08 Table | 20.54 | | |
+| 08 Table | 20.54 | 17 Scene loading (2 Oct) | 9.29 |
 
 Where the error comes from:
 - **The shared background.** Most of the error on screens 01-16 is here. Each mockup was painted

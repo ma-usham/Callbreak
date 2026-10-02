@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text;
 using Callbreak.Application.Config;
 using Callbreak.Bootstrap;
+using Callbreak.Editor.Screens;
 using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
 using PurrNet.Transports;
@@ -50,10 +51,13 @@ namespace Callbreak.Editor
             "MatchMenu", "RoundResults", "MatchResults", "Scorecard", "Settings", "HowToPlay",
         };
 
+        /// <summary>The loading curtain is the screen built from mockup 17's layout (ArtSource/Screens/SceneLoading).</summary>
+        public const string CurtainScreen = "SceneLoading";
+
         // GDD §23 canvas layers.
         private const int ScreensLayer = 10;
         private const int OverlaysLayer = 40;
-        private const int CurtainLayer = 70;
+        internal const int CurtainLayer = 70;
 
         [MenuItem("Callbreak/Build/Scenes")]
         private static void BuildFromMenu() => Debug.Log(BuildAll());
@@ -316,30 +320,108 @@ namespace Callbreak.Editor
             }
         }
 
+        /// <summary>
+        /// The loading curtain: an instance of the SceneLoading screen (mockup 17), which brings its
+        /// own canvas on the curtain layer. Its background is the shared menu background (ADR 010),
+        /// framed exactly as the menu screens frame it, so it opens onto them without a jump. The
+        /// main menu still draws its own 16:9 plate (BG_Menu_Clean, scaled to cover the screen):
+        /// that one has other flowers in the bottom corners and is zoomed on wider or taller screens.
+        /// The prefab is built from its layout first when it is missing.
+        /// </summary>
         private static LoadingCurtain CreateCurtain(Scene scene, Transform parent)
         {
-            GameObject curtain = Create(scene, "LoadingCurtain", parent, typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler),
-                typeof(GraphicRaycaster), typeof(CanvasGroup));
-            var canvas = curtain.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = CurtainLayer;
-            ConfigureScaler(curtain.GetComponent<CanvasScaler>());
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(CurtainPrefab(), scene);
+            instance.name = "LoadingCurtain";
+            instance.transform.SetParent(parent, false);
+            return instance.GetComponent<LoadingCurtain>();
+        }
 
-            // The shared menu background, framed exactly as the menu screens frame it, so the curtain
-            // opening onto the main menu shows no jump.
-            var background = (RectTransform)Create(scene, "Background", curtain.transform, typeof(RectTransform), typeof(Image)).transform;
-            background.sizeDelta = UiBuildKit.FromMock(2230f, 1255f);
-            Image plate = background.GetComponent<Image>();
-            plate.sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/Backgrounds/BG_Menu_Wide.png");
+        private static GameObject CurtainPrefab()
+        {
+            string path = ScreenLayoutBuilder.PrefabPath(CurtainScreen);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null || prefab.GetComponent<LoadingCurtain>() == null)
+            {
+                ScreenLayoutBuilder.Build(CurtainScreen);
+                prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            }
 
-            var logo = (RectTransform)Create(scene, "Logo", curtain.transform, typeof(RectTransform), typeof(Image)).transform;
-            logo.sizeDelta = UiBuildKit.FromMock(834.75f, 180.25f);
-            Image logoImage = logo.GetComponent<Image>();
-            logoImage.sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/UI/Ornaments/Logo_Callbreak.png");
-            logoImage.preserveAspect = true;
-            logoImage.raycastTarget = false;
+            return prefab;
+        }
 
-            return curtain.AddComponent<LoadingCurtain>();
+        [MenuItem("Callbreak/Build/Boot Curtain")]
+        private static void RebuildBootCurtainFromMenu() => Debug.Log(RebuildBootCurtain());
+
+        /// <summary>
+        /// Puts a fresh curtain (<see cref="CreateCurtain"/>) into the saved Boot scene in place of
+        /// the one there, at the same place under the project scope, and leaves every other object
+        /// of the scene as it is: <see cref="BuildBoot"/> makes all of them anew and drops changes
+        /// saved into the scene since. Nothing happens while an open scene has unsaved changes.
+        /// </summary>
+        public static string RebuildBootCurtain()
+        {
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                Scene open = SceneManager.GetSceneAt(i);
+                if (open.isDirty)
+                {
+                    return $"skipped: {(string.IsNullOrEmpty(open.path) ? "an untitled scene" : open.path)} has unsaved changes";
+                }
+            }
+
+            CurtainPrefab();
+
+            // The saved scene, loaded afresh. Whenever the Editor draws a loaded scene, TextMeshPro
+            // writes derived fields (its style hash, its 32-bit colour) into the scene's text, and a
+            // copy saved after that would carry them into the file as overrides of the toast and
+            // dialog instances. The Editor gets back the saved scenes it had open.
+            UnityEditor.SceneManagement.SceneSetup[] before = EditorSceneManager.GetSceneManagerSetup();
+            Scene scene = EditorSceneManager.OpenScene(BootPath, OpenSceneMode.Single);
+            try
+            {
+                return ReplaceCurtain(scene);
+            }
+            finally
+            {
+                UnityEditor.SceneManagement.SceneSetup[] saved = System.Array.FindAll(before, s => !string.IsNullOrEmpty(s.path));
+                if (saved.Length > 0 && System.Array.Exists(saved, s => s.isActive))
+                {
+                    EditorSceneManager.RestoreSceneManagerSetup(saved);
+                }
+            }
+        }
+
+        private static string ReplaceCurtain(Scene scene)
+        {
+            ProjectLifetimeScope scope = null;
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                if (root.TryGetComponent(out scope))
+                {
+                    break;
+                }
+            }
+
+            if (scope == null)
+            {
+                return $"FAILED: {BootPath} has no ProjectLifetimeScope";
+            }
+
+            var so = new SerializedObject(scope);
+            SerializedProperty curtainField = so.FindProperty("_curtain");
+            var old = curtainField.objectReferenceValue as LoadingCurtain;
+            int index = old != null ? old.transform.GetSiblingIndex() : scope.transform.childCount;
+            if (old != null)
+            {
+                Object.DestroyImmediate(old.gameObject);
+            }
+
+            LoadingCurtain curtain = CreateCurtain(scene, scope.transform);
+            curtain.transform.SetSiblingIndex(index);
+            curtainField.objectReferenceValue = curtain;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorSceneManager.MarkSceneDirty(scene);
+            return EditorSceneManager.SaveScene(scene) ? $"saved {BootPath} with a new curtain" : $"FAILED to save {BootPath}";
         }
 
         private static UIScreen InstantiateScreen(Scene scene, string path, Transform parent)
@@ -371,7 +453,7 @@ namespace Callbreak.Editor
         }
 
         /// <summary>GDD §12 FIG 12.1: Expand mode, so the 1920 x 1080 design area always fits.</summary>
-        private static void ConfigureScaler(CanvasScaler scaler)
+        internal static void ConfigureScaler(CanvasScaler scaler)
         {
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(UiBuildKit.CanvasWidth, UiBuildKit.CanvasHeight);

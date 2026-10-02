@@ -1,0 +1,33 @@
+{
+  // Screen 17 - the loading curtain, shown whenever a scene loads (GDD §21 startup sequence, §23
+  // curtain layer). Rects are mockup pixels on 17-scene-loading.png. Everything is shared art: the
+  // menu background, the logo with the flag, and the Play Online emblem (screen 05's turning ring
+  // around the still spade), which the owner asked for as the loading indicator. Measured with
+  // Tools/art (profile edges, inkbox) and, for the logo, a least-squares fit of the kit sprite.
+  "name": "SceneLoading",
+  "mockup": "17-scene-loading.png",
+  "background": "shared",
+  "nodes": [
+    // The kit logo with its flag, uniform scale 0.4621 mockup px per sprite px, fitted on the wordmark
+    // and the subtitle. Mockup 17 draws the flag 11.5 px higher above the wordmark than the kit
+    // logo has it, so the flag lands that much lower than on the mockup.
+    { "id": "Logo", "rect": [465.15, 156.9, 740.28, 293.9], "use": "UI/Ornaments/Logo_Callbreak.png" },
+
+    // The ring's outer edge is a 133.7 px circle centred on (836.0, 555.7) (row 555: 769.0 -> 903.0;
+    // column 836: 489.0 -> 622.4). The kit arc's outer edge spans 331.2 of its 372 px, centred, so its
+    // sprite is 150.17 px square. It turns about its centre (Spinner); the spade does not.
+    { "id": "Ring", "rect": [760.91, 480.61, 150.17, 150.17], "use": "UI/Decor/Deco_SearchArc.png" },
+    // The spade's ink is 64.3 x 71.9 px centred on (836.05, 555.55); the kit spade's ink is 156.3 x 179.9
+    // of its 162 x 186 px. One scale (0.4055, the mean of the two) keeps the kit icon's proportions.
+    { "id": "Spade", "rect": [803.14, 517.9, 65.69, 75.42], "use": "UI/Icons/Icon_Suit_Spade.png" },
+
+    { "id": "Loading", "kind": "label", "text": "Loading...", "font": "SerifBold", "rect": [749, 638, 173, 47], "key": "ui.scene_loading.title" },
+
+    // The tagline between its two fine lines, as on the main menu (the lines are plain colour; the
+    // customizer gives them an Image of this colour). Lines measured with profile: x 524.9 -> 584.0 and
+    // 1079.6 -> 1144.0, y 874.6 -> 876.4.
+    { "id": "TaglineLineLeft", "kind": "line", "rect": [524.9, 874.6, 59.1, 1.8], "color": "#946E4A" },
+    { "id": "Tagline", "kind": "label", "text": "A GAME THAT BRINGS US CLOSER", "font": "SansSemiBold", "tracked": true, "rect": [598, 864, 464, 24], "key": "ui.main_menu.tagline" },
+    { "id": "TaglineLineRight", "kind": "line", "rect": [1079.6, 874.6, 64.4, 1.8], "color": "#946E4A" }
+  ]
+}

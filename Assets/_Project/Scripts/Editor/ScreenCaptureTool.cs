@@ -105,6 +105,22 @@ namespace Callbreak.Editor
                 var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
                 instance.transform.SetParent(canvasRect, false);
 
+                // A prefab that is a screen-overlay canvas of its own (the loading curtain) is laid
+                // out by that canvas while it stands alone, which leaves it at the size of whatever
+                // screen the Editor last had; here it covers the capture canvas, as it covers the
+                // screen in the game.
+                if (instance.GetComponent<Canvas>() != null)
+                {
+                    var rect = (RectTransform)instance.transform;
+                    rect.anchorMin = Vector2.zero;
+                    rect.anchorMax = Vector2.one;
+                    rect.pivot = new Vector2(0.5f, 0.5f);
+                    rect.offsetMin = Vector2.zero;
+                    rect.offsetMax = Vector2.zero;
+                    rect.localScale = Vector3.one;
+                    rect.localPosition = Vector3.zero;
+                }
+
                 // Optional design-time state. A screen whose content is built at runtime (the
                 // table's cards, an overlay that sits on the table) has a class
                 // Callbreak.Editor.Screens.<PrefabName>Preview with

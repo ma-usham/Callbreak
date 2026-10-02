@@ -386,8 +386,10 @@ namespace Callbreak.Editor.Screens
         /// </summary>
         private static void AttachView(ScreenBuildContext ctx)
         {
-            // Screens first; the in-match table and its overlays live in their own folders (GDD §20).
-            Type viewType = FindType($"Callbreak.Presentation.Screens.{ctx.Layout.name}View")
+            // A customizer may name the view; otherwise screens first, then the in-match table and its
+            // overlays, which live in their own folders (GDD §20).
+            Type viewType = ctx.ViewType
+                ?? FindType($"Callbreak.Presentation.Screens.{ctx.Layout.name}View")
                 ?? FindType($"Callbreak.Presentation.Table.{ctx.Layout.name}View")
                 ?? FindType($"Callbreak.Presentation.Overlays.{ctx.Layout.name}View");
             if (viewType == null)
@@ -584,6 +586,12 @@ namespace Callbreak.Editor.Screens
         public RectTransform Content { get; set; }
 
         public RectTransform SafeArea { get; set; }
+
+        /// <summary>
+        /// The view to attach and bind, for a screen whose view is not
+        /// Callbreak.Presentation.{Screens,Table,Overlays}.&lt;Name&gt;View (set by its customizer).
+        /// </summary>
+        public Type ViewType { get; set; }
 
         public Dictionary<string, RectTransform> Groups { get; } = new Dictionary<string, RectTransform>();
 
