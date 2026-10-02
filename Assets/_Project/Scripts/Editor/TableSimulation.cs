@@ -744,6 +744,16 @@ namespace Callbreak.Editor
                 if (_table != null)
                 {
                     Equal(ScreenId.None, _table.Id, "the table is not a router screen");
+
+                    // The owner (3 Oct 2026): no "Trump ♠" line at the top of the table; the round line stays.
+                    bool trumpLine = false;
+                    foreach (Transform part in _table.GetComponentsInChildren<Transform>(true))
+                    {
+                        trumpLine |= part.name == "TrumpLabel" || part.name == "TrumpSuit";
+                    }
+
+                    Check(!trumpLine, "the table has no trump line");
+                    Check(Field<TMP_Text>(_table, "_roundLabel") != null, "the table keeps its round line");
                 }
 
                 if (_bidding != null)
@@ -761,7 +771,8 @@ namespace Callbreak.Editor
             /// the match menu answers to at least 88 canvas px each way (the cards in the hand are the
             /// GDD's one exception and are not buttons), and no two of them answer to the same point.
             /// The areas that catch every other touch (the table, the trick area, the emote picker's
-            /// outside) lie under the controls and are left out of the second check.
+            /// outside) lie under the controls, and the Away catcher takes every touch on purpose while
+            /// it shows (the owner, 3 Oct 2026): they are left out of the second check.
             /// </summary>
             private void VerifyTouchTargets()
             {
@@ -788,7 +799,7 @@ namespace Callbreak.Editor
                         Vector3 scale = target.rectTransform.lossyScale;
                         float width = area.width * scale.x, height = area.height * scale.y;
                         Check(width >= 87.99f && height >= 87.99f, "every control answers to at least 88 px (GDD 16)", $"{view.name}/{button.name}: {width:0.0} x {height:0.0}");
-                        if (button.name == "TableTap" || button.name == "Tap" || button.name == "Dismiss")
+                        if (button.name == "TableTap" || button.name == "Tap" || button.name == "Dismiss" || button.name == "AwayCatcher")
                         {
                             continue;
                         }
@@ -1104,7 +1115,6 @@ namespace Callbreak.Editor
                 Settle(_table.Prompt, "_motion");
                 Settle(_table.Emotes, "_motion");
                 Settle(_table, "_coverMotion");
-                Settle(_table, "_bannerMotion");
                 for (int i = 0; i < TableView.SeatCount; i++)
                 {
                     Settle(_table.Seat(i), "_chipMotion");
@@ -2316,7 +2326,7 @@ namespace Callbreak.Editor
                 Equal(ScreenId.Gameplay, _router.Current, "the table starts on the Gameplay screen");
                 Equal(MusicTrack.Table, _audio.Music, "the table music plays");
                 Check(!Field<GameObject>(_table, "_reconnecting").activeSelf, "no Reconnecting cover on a running match");
-                Check(!Field<Button>(_table, "_imBackButton").gameObject.activeSelf, "no I'm back banner on a present player");
+                Check(!Field<Button>(_table, "_imBackButton").gameObject.activeSelf, "no \"I'm back\" catcher over the table of a present player");
                 Check(!_table.Emotes.IsOpen, "the emote picker starts closed");
                 Equal(0f, _table.EmoteCooldown, "the emote button starts clear");
 
@@ -2487,8 +2497,9 @@ namespace Callbreak.Editor
                         break;
 
                     case CallPlaced placed:
-                        Equal(_text.Format(placed.IsAuto ? "ui.seat.bid_auto" : "ui.seat.bid", placed.Call), StatusOf(placed.Seat), "the pill shows the call once placed");
-                        Check(BubbleOf(placed.Seat).activeSelf, "a call pops as a bubble over the seat");
+                        // The owner (3 Oct 2026): from the call on the pill reads "won-bid", and no bubble pops.
+                        Equal(_text.Format("ui.seat.won_bid", 0, placed.Call), StatusOf(placed.Seat), "the pill reads \"0-{call}\" once the call is placed");
+                        Check(!BubbleOf(placed.Seat).activeSelf, "a call pops no bubble over the seat");
                         if (placed.Seat == Local)
                         {
                             Equal(_intendedCall, placed.Call, "the local call is the one confirmed");
@@ -2573,9 +2584,11 @@ namespace Callbreak.Editor
                     {
                         Equal(0, _table.Trick.Count, "the swept trick has left the table");
                         string pill = StatusOf(completed.Winner);
-                        Check(pill.Contains("Won " + state.WonBy(completed.Winner)), "the winner's pill counts the trick", pill);
+                        Equal(_text.Format("ui.seat.won_bid", state.WonBy(completed.Winner), state.CallOf(completed.Winner)), pill, "the winner's pill counts the trick (\"won-bid\")");
                         bool met = state.WonBy(completed.Winner) >= state.CallOf(completed.Winner);
-                        Equal(met, pill.EndsWith("\u2713", StringComparison.Ordinal), "the pill gets its tick exactly when the call is met");
+                        SeatView winnerView = _table.Seat(completed.Winner.RelativeTo(Local));
+                        bool gold = Field<Image>(winnerView, "_statusPill").color == Field<Color>(winnerView, "_pillMetColor");
+                        Equal(met, gold, "the pill turns gold exactly when the call is met");
                         for (int rel = 0; rel < TableView.SeatCount; rel++)
                         {
                             Drawable(Field<TMP_Text>(_table.Seat(rel), "_status"), "every character of a status pill can be drawn");
@@ -2841,7 +2854,7 @@ namespace Callbreak.Editor
                 TableState state = State;
                 HandView hand = _table.Hand;
 
-                // ADR 020: every card at the table is in one deck; offline, the one the player selected.
+                // ADR 031: every card this device draws is in the player's own deck, the one they selected.
                 string deck = _cosmetics.SelectedDeckId;
                 Sprite back = _cards.Back(deck);
                 Equal(state.Hand.Count, hand.Count, "the hand shows exactly the cards held (after " + KindOf(after) + ")");
@@ -2850,7 +2863,7 @@ namespace Callbreak.Editor
                     CardView view = HandCard(card);
                     Check(view != null && view.IsFaceUp, "every card held has a face-up view in the hand");
                     bool inDeck = view != null && SpriteOf(view) == _cards.Face(deck, card);
-                    Check(inDeck, "every face on the table is in the player's deck (ADR 020)", inDeck ? null : card + " in the hand");
+                    Check(inDeck, "every face on the table is in the player's deck (ADR 031)", inDeck ? null : card + " in the hand");
                 }
 
                 int onTable = hand.Count;
@@ -2863,7 +2876,7 @@ namespace Callbreak.Editor
                     {
                         Check(!card.IsFaceUp, "an opponent's fan holds backs only");
                         bool inDeck = SpriteOf(card) == back;
-                        Check(inDeck, "every back on the table is in the player's deck (ADR 020)", inDeck ? null : seat + "'s fan, whose seat is in " + _active.Seats[(int)seat].DeckThemeId);
+                        Check(inDeck, "every back on the table is in the player's deck (ADR 031)", inDeck ? null : seat + "'s fan, whose seat is in " + _active.Seats[(int)seat].DeckThemeId);
                     }
 
                     onTable += fan.Count;
@@ -2876,7 +2889,7 @@ namespace Callbreak.Editor
                     CardView lying = _table.Trick.CardAt(trick.SeatAt(i).RelativeTo(Local));
                     Check(lying != null && lying.IsFaceUp && lying.Card == trick[i], "each trick card lies in the slot of the seat that played it");
                     bool inDeck = lying != null && SpriteOf(lying) == _cards.Face(deck, trick[i]);
-                    Check(inDeck, "every face on the table is in the player's deck (ADR 020)", inDeck ? null : trick[i] + " in the trick");
+                    Check(inDeck, "every face on the table is in the player's deck (ADR 031)", inDeck ? null : trick[i] + " in the trick");
                 }
 
                 onTable += _table.Trick.Count + (_table.Trick.IsPeeking ? 4 : 0);
@@ -2907,11 +2920,15 @@ namespace Callbreak.Editor
                 GameObject cover = Field<GameObject>(_table, "_reconnecting");
                 Button imBack = Field<Button>(_table, "_imBackButton");
 
-                // Reconnecting: the cover shows and input is locked.
+                // Reconnecting: the cover shows and input is locked. It carries the loading screen's
+                // emblem (the owner, 3 Oct 2026): its ring turns, and stands still with Reduce motion.
                 _session.StatusOverride = SessionStatus.Reconnecting;
                 _session.RaiseStatusChanged();
                 Check(cover.activeSelf, "Reconnecting shows the cover over the table");
                 Check(!_table.Hand.Interactable, "input is locked while reconnecting");
+                Spinner coverRing = Field<Spinner>(_table, "_reconnectingRing");
+                Check(coverRing != null && coverRing.transform.IsChildOf(cover.transform), "the cover has the loading screen's ring");
+                Check(coverRing != null && coverRing.Still == _reduceMotion, "the cover's ring stands still exactly with Reduce motion");
                 Snapshot("Table_reconnecting");
                 _session.StatusOverride = null;
                 _session.RaiseStatusChanged();
@@ -2943,19 +2960,30 @@ namespace Callbreak.Editor
                 StageConnection(opponent, SeatConnection.BotControlled);
                 Equal(before, StatusOf(opponent), "a seat a bot took over keeps its bid line");
                 Equal(_text.Get("ui.seat.bot_playing"), opponentView.Chip, "a seat a bot took over shows \"Bot playing\"");
+                // The owner (3 Oct 2026): a player who leaves, the host included, goes without a toast
+                // and leaves no chip; a bot plays the seat on silently.
+                int toastsBeforeLeave = _toasts.Shown.Count;
                 StageConnection(opponent, SeatConnection.Left);
-                Equal(_text.Get("ui.toast.left_table"), LastToast(), "a leaving player is announced");
-                Equal(_text.Get("ui.seat.bot_playing"), opponentView.Chip, "a seat whose player left shows \"Bot playing\"");
+                Equal(toastsBeforeLeave, _toasts.Shown.Count, "a leaving player is not announced");
+                Check(opponentView.Chip == null, "a seat whose player left shows no chip");
+                Equal(before, StatusOf(opponent), "a seat whose player left keeps its bid line");
                 StageConnection(opponent, SeatConnection.Connected);
 
-                // The local seat marked Away: the banner, and the chip everybody sees.
+                // The local seat marked Away: the chip everybody sees, and in place of the "I'm back"
+                // banner a catcher over the whole table that takes the next touch (the owner, 3 Oct 2026).
                 StageConnection(Local, SeatConnection.Away);
-                Check(imBack.gameObject.activeSelf, "an Away local seat gets the \"I'm back\" banner");
+                var catcher = (RectTransform)imBack.transform;
+                Transform hud = catcher.parent.Find("SafeArea");
+                Check(imBack.gameObject.activeSelf, "an Away local seat gets the \"I'm back\" catcher");
+                Check(
+                    catcher.anchorMin == Vector2.zero && catcher.anchorMax == Vector2.one && hud != null && catcher.GetSiblingIndex() > hud.GetSiblingIndex(),
+                    "the catcher lies over the whole table, the hand and the HUD");
+                Check(imBack.targetGraphic != null && imBack.targetGraphic.raycastTarget && imBack.targetGraphic.color.a == 0f, "the catcher takes touches and draws nothing");
                 Equal(_text.Get("ui.seat.away"), _table.Seat(0).Chip, "an Away local seat shows the Away chip too");
-                Snapshot("Table_im_back");
+                Snapshot("Table_away");
                 Click(imBack);
                 StageConnection(Local, SeatConnection.Connected);
-                Check(!imBack.gameObject.activeSelf, "the banner goes once the player is back");
+                Check(!imBack.gameObject.activeSelf, "the catcher goes once the player is back");
                 Check(_table.Seat(0).Chip == null, "the local chip goes once the player is back");
                 _session.SeatsOverride = null;
                 _session.RaiseSeatsChanged();
@@ -3159,12 +3187,12 @@ namespace Callbreak.Editor
                     Equal(ScreenId.RoundResults, _router.Current, "online, going to the background opens no menu");
                 }
 
-                // Marked Away after two timeouts: the banner, and the tap that takes the seat back.
+                // Marked Away after two timeouts: a touch anywhere on the table takes the seat back.
                 Button imBack = Field<Button>(_table, "_imBackButton");
-                Check(imBack.gameObject.activeSelf, "online, an Away local seat gets the \"I'm back\" banner");
+                Check(imBack.gameObject.activeSelf, "online, an Away local seat gets the \"I'm back\" catcher");
                 int messages = sent.Count;
-                Check(Click(imBack), "the \"I'm back\" banner can be tapped");
-                Equal(messages + 1, sent.Count, "\"I'm back\" sends one message");
+                Check(Click(imBack), "the \"I'm back\" catcher can be touched");
+                Equal(messages + 1, sent.Count, "a touch while Away sends one message");
                 Check(SameBytes(ClientMessages.Presence(), sent[sent.Count - 1]), "the message is Presence");
 
                 // The match menu of an online match: nothing pauses, and leaving costs the match.
@@ -3172,7 +3200,8 @@ namespace Callbreak.Editor
                 {
                     Click(Field<Button>(_roundResults, "_backButton"));
                     Equal(ScreenId.MatchMenu, _router.Current, "the match menu opens over the online round results");
-                    Equal(_text.Get("ui.match_menu.mode_online"), Field<TMP_Text>(_menu, "_modeLabel").text, "online, the menu says the game continues");
+                    Equal(_text.Get("ui.match_menu.mode_online"), Field<TMP_Text>(_menu, "_modeLabel").text, "online, the menu's mode tag reads \"Online game\"");
+                    Equal(_text.Get("ui.match_menu.back_to_game"), Field<TMP_Text>(_menu, "_resumeLabel").text, "online, the menu's first button reads \"Back to Game\"");
                     Check(!Field<GameObject>(_menu, "_pausedNote").activeSelf, "online, the menu has no \"paused\" note");
                     Check(!online.IsPaused, "online, opening the menu pauses nothing");
 

@@ -9,7 +9,7 @@ namespace Callbreak.Presentation.Overlays
 {
     /// <summary>
     /// GDD §11 screen 13, the match menu: "Game Menu" over the dimmed table, with a close ×, the
-    /// mode tag ("Offline match · Paused" or "Online match · Game continues"), Resume Game,
+    /// mode tag ("Offline match · Paused" or "Online game"), Resume Game (Back to Game online),
     /// Scorecard, the Sound switch, Leave Match, and "Your match is paused." for offline matches.
     /// Leaving is confirmed by the shared dialog, not here. It is a panel over the table, not a
     /// page: it does not slide, the dim fades in and the panel pops in like the dialog's.
@@ -18,6 +18,7 @@ namespace Callbreak.Presentation.Overlays
     {
         [SerializeField] private UnityEngine.UI.Button _closeButton;
         [SerializeField] private UnityEngine.UI.Button _resumeButton;
+        [SerializeField] private TMP_Text _resumeLabel;
         [SerializeField] private UnityEngine.UI.Button _scorecardButton;
         [SerializeField] private UnityEngine.UI.Button _leaveButton;
         [SerializeField] private ToggleSwitch _soundToggle;
@@ -45,13 +46,23 @@ namespace Callbreak.Presentation.Overlays
         /// <summary>The Sound switch was flipped: its new state.</summary>
         public event Action<bool> SoundChanged;
 
-        /// <summary>"Offline match · Paused" or "Online match · Game continues".</summary>
+        /// <summary>"Offline match · Paused" or "Online game".</summary>
         public void SetMode(string text)
         {
             text ??= string.Empty;
             if (_modeLabel.text != text)
             {
                 _modeLabel.text = text;
+            }
+        }
+
+        /// <summary>The first button's label: "Resume Game" offline, "Back to Game" online.</summary>
+        public void SetResumeLabel(string text)
+        {
+            text ??= string.Empty;
+            if (_resumeLabel != null && _resumeLabel.text != text)
+            {
+                _resumeLabel.text = text;
             }
         }
 

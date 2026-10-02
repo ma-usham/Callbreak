@@ -315,7 +315,7 @@ namespace Callbreak.Application.Online
 
         /// <summary>
         /// Starts the match: every member is told to load the table, and the deal follows once they
-        /// have. Every seat, the bots' included, is in the table's one deck (ADR 020).
+        /// have. Each member sees every seat, the bots' included, in the deck it chose (ADR 031).
         /// </summary>
         public bool StartMatch(bool fillWithBots)
         {
@@ -335,8 +335,9 @@ namespace Callbreak.Application.Online
                 }
             }
 
-            // The host's own deck (the host's seat is always taken here), in Quick Match too (ADR 025).
-            // A guest's faces are in it as well, whatever deck that guest chose (ADR 020).
+            // ADR 031: each player sees every card in the deck it chose, on its own device, so a seat's
+            // deck draws nothing at anyone else's table; a person's says what that person chose, and a
+            // bot's is the host's (the host's seat is always taken here).
             string deck = _members[_hostSeat].DeckThemeId;
             for (int i = 0; i < Seats; i++)
             {
@@ -351,7 +352,7 @@ namespace Callbreak.Application.Online
                 if (m != null)
                 {
                     humans[i] = true;
-                    profiles[i] = new SeatProfile(m.Name, m.AvatarId.ToString(), deck, false);
+                    profiles[i] = new SeatProfile(m.Name, m.AvatarId.ToString(), m.DeckThemeId, false);
                     m.TableReady = false;
                     continue;
                 }
@@ -450,7 +451,7 @@ namespace Callbreak.Application.Online
                 return false;
             }
 
-            // In the host's deck, as every seat of the table is (ADR 025).
+            // In the host's deck: a bot chose none (each player draws it in its own anyway, ADR 031).
             _members[seat] = Member.Bot(SeatRoster.DrawName(_rng, used), _rng.NextInt(SeatRoster.AvatarCount), _members[_hostSeat].DeckThemeId);
             Broadcast();
             Pump();

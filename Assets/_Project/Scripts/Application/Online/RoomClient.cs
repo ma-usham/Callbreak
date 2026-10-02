@@ -560,7 +560,8 @@ namespace Callbreak.Application.Online
                 _match.Dispose();
             }
 
-            _match = new OnlineMatchSession(_mode, view, status, Send, _stats, _settings, OnMatchLeft);
+            // ADR 031: this player sees every card in the deck it chose, the one its hello named.
+            _match = new OnlineMatchSession(_mode, view, status, Send, _stats, _settings, OnMatchLeft, _identity.DeckThemeId);
             _match.Tick(_now);
             _faults.Raise(MatchStarting);
         }

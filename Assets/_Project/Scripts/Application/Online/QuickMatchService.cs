@@ -898,7 +898,7 @@ namespace Callbreak.Application.Online
             var settings = new RoomSettings("Quick Match", _config.Clocks.PlaySeconds);
 
             // The whole table is in the deck this player chose, every face and back of every seat,
-            // as offline and in a room this player hosts (ADR 025; ADR 020 drew one from the catalog).
+            // as at every table this player sits at (ADR 031).
             var rng = new Pcg32Random(_seedSource());
             _host = new RoomHost(
                 string.Empty, settings, null, _bots, _names, rng, _cosmetics.DeckIds, _seedSource, _timing, clocks: _config.Clocks);

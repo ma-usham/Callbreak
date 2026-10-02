@@ -20,7 +20,10 @@
     { "id": "Greeting", "kind": "label", "group": "HeaderLeft", "text": "Namaste,", "font": "SansSemiBold", "align": "left", "rect": [276, 47, 102, 29], "key": "ui.header.greeting" },
     { "id": "PlayerName", "kind": "label", "group": "HeaderLeft", "text": "Player", "font": "SansBold", "align": "left", "rect": [276, 75, 100, 38] },
 
-    { "id": "SettingsButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1546.7, 34.4, 87.9, 88.2],
+    // Mockup 11 draws the header's gear here too, but on Settings itself it opens nothing, and over
+    // the table or a menu screen it reads as that screen's gear showing through the open page (owner,
+    // 3 Oct 2026): built hidden.
+    { "id": "SettingsButton", "kind": "button", "group": "HeaderRight", "shape": "ellipse", "rect": [1546.7, 34.4, 87.9, 88.2], "hidden": true,
       "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
     { "id": "SettingsIcon", "parent": "SettingsButton", "rect": [1568.17, 56.78, 43.43, 43.82], "use": "UI/Icons/Icon_Settings.png" },
 

@@ -40,8 +40,9 @@ namespace Callbreak.Presentation.Table
         public bool ShowTrickCounter { get; set; }
 
         /// <summary>
-        /// The deck whose faces this device shows: the local seat's, which is the table's one deck
-        /// (ADR 020). Every seat carries that deck, so the fans' backs are in it too.
+        /// The deck this device draws every card in: the one this player chose (ADR 031), which the
+        /// session gives the local seat. Every face and every back on this screen is in it, the
+        /// opponents' fans, the deal and the shuffle pile included, whatever deck anyone else chose.
         /// </summary>
         public string LocalDeck => _session.Seats[(int)_session.LocalSeat].DeckThemeId;
 
@@ -104,7 +105,7 @@ namespace Callbreak.Presentation.Table
                 seatView.SetTurn(turn);
                 if (seatView.Fan != null)
                 {
-                    seatView.Fan.SetBack(_skin.Back(who.DeckThemeId));
+                    seatView.Fan.SetBack(_skin.Back(LocalDeck));
                     seatView.Fan.SetCount(state.HandCountOf(seat));
                 }
             }

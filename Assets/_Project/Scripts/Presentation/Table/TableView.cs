@@ -7,9 +7,10 @@ using UnityEngine;
 namespace Callbreak.Presentation.Table
 {
     /// <summary>
-    /// GDD §11 screen 08, the table: the HUD (home, round and trump, scores and settings), the four
-    /// seats, the trick area, the local hand, the emote button, the turn prompt and the emote
-    /// picker. The hand keeps one order, so there is no sort button (ADR 021), and the emote button
+    /// GDD §11 screen 08, the table: the HUD (home, the round, scores and settings; no trump line,
+    /// spades are always trump), the four seats, the trick area, the local hand, the emote button,
+    /// the turn prompt and the emote picker. The hand keeps one order, so there is no sort button
+    /// (ADR 021), and the emote button
     /// sits in the bottom-right corner where mockup 08 draws that button; it shows the wait before
     /// the next quick phrase (ADR 024). Every phrase, the player's own too, shows in the speech box
     /// above its speaker's avatar (ADR 027). It raises one event per intent and hands out its
@@ -35,6 +36,10 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private TablePromptView _prompt;
         [SerializeField] private EmotePickerView _emotes;
         [SerializeField] private GameObject _reconnecting;
+        [SerializeField] private Widgets.Spinner _reconnectingRing;
+
+        // While the local seat is Away, the whole table is the "I'm back" button: a transparent
+        // catcher over everything, so the touch is neither played as a card nor taken by the hand.
         [SerializeField] private UnityEngine.UI.Button _imBackButton;
 
         // The emote button shows the wait before the next quick phrase (ADR 024).
@@ -44,7 +49,6 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private bool _showTrickCounter;
 
         private MotionHandle _coverMotion;
-        private MotionHandle _bannerMotion;
         private bool _reduceMotion;
 
         /// <summary>Home: opens the match menu; it never leaves the table at once (GDD screen 07, callout 2).</summary>
@@ -62,7 +66,7 @@ namespace Callbreak.Presentation.Table
         /// <summary>A tap on the trick area: skips an animation, or peeks at the previous trick (GDD screen 08).</summary>
         public event Action TrickTapped;
 
-        /// <summary>The "I'm back" banner was tapped (GDD §8: an Away player takes the seat back).</summary>
+        /// <summary>The table was touched while the local seat is Away: the player is back (GDD §8, in place of the "I'm back" banner).</summary>
         public event Action ImBackClicked;
 
         /// <summary>The app went to the background (GDD §8: an offline match pauses itself).</summary>
@@ -84,9 +88,9 @@ namespace Callbreak.Presentation.Table
         public bool ShowTrickCounter => _showTrickCounter;
 
         /// <summary>
-        /// GDD §14 Reduce motion, for the table's own parts: the turn prompt, the emote picker, the
-        /// seat chips and the "I'm back" banner only fade, and the opponents' cards jump to their
-        /// places in the fans instead of gliding (the hand has its own switch).
+        /// GDD §14 Reduce motion, for the table's own parts: the turn prompt, the emote picker and
+        /// the seat chips only fade, the "Reconnecting…" ring stands still, and the opponents' cards
+        /// jump to their places in the fans instead of gliding (the hand has its own switch).
         /// </summary>
         public bool ReduceMotion
         {
@@ -96,6 +100,11 @@ namespace Callbreak.Presentation.Table
                 _reduceMotion = value;
                 _prompt.ReduceMotion = value;
                 _emotes.ReduceMotion = value;
+                if (_reconnectingRing != null)
+                {
+                    _reconnectingRing.Still = value;
+                }
+
                 foreach (SeatView seat in _seat)
                 {
                     seat.ReduceMotion = value;
@@ -140,7 +149,8 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>
         /// The "Reconnecting…" cover while the session is re-joining: the table stays visible
-        /// underneath and takes no input. It fades in, and goes at once when the table is back.
+        /// underneath and takes no input, and the loading screen's ring turns round its spade above
+        /// the words. It fades in, and goes at once when the table is back.
         /// </summary>
         public void SetReconnecting(bool reconnecting)
         {
@@ -161,27 +171,21 @@ namespace Callbreak.Presentation.Table
         }
 
         /// <summary>
-        /// The "I'm back" banner of a seat marked Away after two timeouts: a bot plays its turns
-        /// until the player taps it (GDD §8). It pops in (fades in with Reduce motion), and goes at
-        /// once when the player is back.
+        /// The local seat is marked Away after two timeouts and a bot plays its turns (GDD §8): until
+        /// the player is back, any touch on the table says so (the owner, 3 Oct 2026, in place of
+        /// the "I'm back" banner). The catcher takes that touch alone, and goes once the seat is back.
         /// </summary>
         public void SetAway(bool away)
         {
-            GameObject banner = _imBackButton.gameObject;
-            if (banner.activeSelf == away)
+            GameObject catcher = _imBackButton.gameObject;
+            if (catcher.activeSelf != away)
             {
-                return;
-            }
-
-            UiMotion.Stop(ref _bannerMotion);
-            banner.transform.localScale = Vector3.one;
-            UiMotion.GroupOf(banner).alpha = 1f;
-            banner.SetActive(away);
-            if (away)
-            {
-                _bannerMotion = UiMotion.PopIn(banner.transform, UiMotion.GroupOf(banner), ReduceMotion);
+                catcher.SetActive(away);
             }
         }
+
+        /// <summary>Whether the table is waiting for a touch to bring the Away player back.</summary>
+        public bool IsAway => _imBackButton.gameObject.activeSelf;
 
         /// <summary>
         /// The wait before the next quick phrase (ADR 024): the button is covered by the wait's
@@ -230,7 +234,6 @@ namespace Callbreak.Presentation.Table
             _imBackButton.onClick.RemoveListener(OnImBack);
             _hand.Touched -= OnTableTap;
             UiMotion.Finish(ref _coverMotion);
-            UiMotion.Finish(ref _bannerMotion);
         }
 
         private void OnHome() => HomeClicked?.Invoke();

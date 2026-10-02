@@ -49,12 +49,11 @@ namespace Callbreak.Presentation.Table
         private const string HostLostRedealToastKey = "ui.toast.redeal_host_lost";
         private const string HostLeftToastKey = "ui.toast.host_left";
         private const string WelcomeBackToastKey = "ui.toast.welcome_back";
-        private const string LeftTableToastKey = "ui.toast.left_table";
         private const string AutoTagKey = "ui.tag.auto";
         private const string YourTurnBannerKey = "ui.banner.your_turn";
         private const string MainMenuLabelKey = "ui.match_results.main_menu";
         private const string CallTitleKey = "ui.bidding.title";
-        private const float CallBubbleSeconds = 0.3f;
+        private const float CallBeatSeconds = 0.3f;
         private const float BubbleHoldSeconds = 1.4f;
         private const float EmoteHoldSeconds = 2.4f;
         private const float LeadBeatSeconds = 0.4f;
@@ -337,7 +336,10 @@ namespace Callbreak.Presentation.Table
             RenderAway();
         }
 
-        /// <summary>GDD §8 "What others see": a returning player is welcomed back, a leaving one is announced.</summary>
+        /// <summary>
+        /// GDD §8 "What others see": a returning player is welcomed back. A player who leaves, the
+        /// host included, goes without a word (the owner, 3 Oct 2026): a bot plays the seat on.
+        /// </summary>
         private void AnnounceConnections()
         {
             for (int i = 0; i < _connections.Length; i++)
@@ -350,11 +352,7 @@ namespace Callbreak.Presentation.Table
                     continue;
                 }
 
-                if (now == SeatConnection.Left)
-                {
-                    _toast.Show(_localization.Get(LeftTableToastKey));
-                }
-                else if (now == SeatConnection.Connected && before == SeatConnection.Reconnecting)
+                if (now == SeatConnection.Connected && before == SeatConnection.Reconnecting)
                 {
                     _toast.Show(_localization.Get(WelcomeBackToastKey));
                 }
@@ -369,7 +367,10 @@ namespace Callbreak.Presentation.Table
             }
         }
 
-        /// <summary>Two timeouts mark the local seat Away and a bot plays for it until "I'm back" is tapped (GDD §8).</summary>
+        /// <summary>
+        /// Two timeouts mark the local seat Away and a bot plays for it until the player is back
+        /// (GDD §8): any touch on the table then says so, in place of the "I'm back" button.
+        /// </summary>
         private void RenderAway()
         {
             _view.SetAway(_session.Seats[(int)Local].Connection == SeatConnection.Away && _session.Status == SessionStatus.Running);
@@ -494,12 +495,11 @@ namespace Callbreak.Presentation.Table
                     RenderAll(false);
                     return new DealFade(_view.Hand, Fans());
 
-                case CallPlaced placed:
+                case CallPlaced _:
+                    // The call shows on the seat's pill ("0-3"); no bubble pops over the seat (the owner, 3 Oct 2026).
                     State.Apply(e);
                     _audio.Play(SoundCue.CallConfirm);
-                    _view.Seat(_renderer.RelativeSeat(placed.Seat)).ShowBubble(
-                        placed.Call.ToString(System.Globalization.CultureInfo.InvariantCulture), BubbleHoldSeconds, ReduceMotion);
-                    return new Beat(CallBubbleSeconds);
+                    return new Beat(CallBeatSeconds);
 
                 case PlayTurnStarted turn:
                 {
@@ -635,8 +635,8 @@ namespace Callbreak.Presentation.Table
             var targets = new DealAnimation.Target[TableView.SeatCount];
             for (int rel = 0; rel < targets.Length; rel++)
             {
-                SessionSeat seat = _session.Seats[(int)_renderer.SeatAt(rel)];
-                targets[rel] = new DealAnimation.Target(_view.Seat(rel).Fan, _skin.Back(seat.DeckThemeId));
+                // Every card dealt is in this player's own deck, whoever it goes to (ADR 031).
+                targets[rel] = new DealAnimation.Target(_view.Seat(rel).Fan, _skin.Back(_renderer.LocalDeck));
             }
 
             Direction direction = State.Rules.Direction;

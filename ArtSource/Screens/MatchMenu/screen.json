@@ -24,7 +24,9 @@
 
     { "id": "ResumeButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 20.8, "rect": [612.2, 358.61, 447.7, 78.12],
       "use": "UI/Controls/UI_Button_Crimson_Box.png", "shadowUse": "UI/Controls/UI_Button_Crimson_Box_Shadow.png", "shadowDrop": 1.5, "shadowOpacity": 0.82 },
-    { "id": "ResumeLabel", "kind": "label", "parent": "ResumeButton", "text": "Resume Game", "font": "SerifBold", "ink": "light", "style": "buttonLabel", "rect": [722, 378, 230, 40], "key": "ui.match_menu.resume" },
+    // No string-table key: the presenter sets it, "Resume Game" offline and "Back to Game" online
+    // (MatchMenuText), as the mode tag below the title.
+    { "id": "ResumeLabel", "kind": "label", "parent": "ResumeButton", "text": "Resume Game", "font": "SerifBold", "ink": "light", "style": "buttonLabel", "rect": [722, 378, 230, 40] },
 
     { "id": "ScorecardButton", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 19, "rect": [611.75, 448.65, 447.65, 74.25],
       "use": "UI/Table/UI_ButtonSecondary_Box_Normal.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },

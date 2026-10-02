@@ -19,14 +19,15 @@ namespace Callbreak.Presentation.Overlays
     /// switch mutes music and effects together; Leave Match asks first (the shared dialog), then
     /// leaves the session and returns to the main menu. Offline the match is paused while the menu
     /// is open (the table presenter pauses it for every screen that covers the table) and leaving
-    /// keeps the match for later; online the game goes on and leaving counts as a loss. The host of
-    /// a private room is told that leaving closes the room for everybody (GDD §8: the host's
-    /// device is the room).
+    /// keeps the match for later; online the game goes on, so the menu says "Online game" and its
+    /// first button reads "Back to Game" (<see cref="MatchMenuText"/>), and leaving counts as a
+    /// loss. The host of a private room is told that leaving closes the room for everybody (GDD §8:
+    /// the host's device is the room).
     /// </summary>
     public sealed class MatchMenuPresenter : IStartable, IDisposable
     {
-        public const string ModeOfflineKey = "ui.match_menu.mode_offline";
-        public const string ModeOnlineKey = "ui.match_menu.mode_online";
+        public const string ModeOfflineKey = MatchMenuText.ModeOfflineKey;
+        public const string ModeOnlineKey = MatchMenuText.ModeOnlineKey;
         public const string LeaveTitleKey = "ui.dialog.leave_match.title";
         public const string LeaveBodyKey = MatchMenuText.LeaveBodyKey;
         public const string LeaveBodyOfflineKey = MatchMenuText.LeaveBodyOfflineKey;
@@ -127,7 +128,9 @@ namespace Callbreak.Presentation.Overlays
 
         private void Render()
         {
-            _view.SetMode(_localization.Get(IsOffline ? ModeOfflineKey : ModeOnlineKey));
+            // An online game cannot pause: its tag just says it is online, and its first button goes back to the game.
+            _view.SetMode(_localization.Get(MatchMenuText.ModeKeyFor(_session.Mode)));
+            _view.SetResumeLabel(_localization.Get(MatchMenuText.ResumeKeyFor(_session.Mode)));
             _view.SetPausedNoteVisible(IsOffline);
             _view.SetSound(_settings.Music || _settings.SoundEffects);
             _view.ReduceMotion = _settings.ReduceMotion;

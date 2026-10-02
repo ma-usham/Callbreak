@@ -106,7 +106,7 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
         [Test]
         public void Start_NewMatch_EverySeatBotsIncludedIsInThePlayersDeck()
         {
-            // ADR 020, one deck per table: offline it is the deck the player selected.
+            // ADR 031, my deck everywhere: the player sees every card in the deck it selected.
             _cosmetics.SelectDeck(CosmeticsService.HimalayanIvory);
 
             // Every match draws its bots from a seed of its own: several, so no draw passes by luck.

@@ -36,6 +36,7 @@ namespace Callbreak.Application.Online
         private readonly SessionSeat[] _seats = new SessionSeat[SeatExtensions.Count];
         private readonly List<PendingIntent> _pending = new List<PendingIntent>();
         private readonly HandlerFaults _faults = new HandlerFaults();
+        private readonly string _deck;
 
         private SessionStatus _status = SessionStatus.Starting;
         private TurnTimerState _timer;
@@ -50,6 +51,11 @@ namespace Callbreak.Application.Online
 
         /// <param name="send">Sends a payload to the host.</param>
         /// <param name="left">Called once this player has left the match on purpose, so the room can be left too.</param>
+        /// <param name="deckThemeId">
+        /// The deck this player chose: every card on its table is drawn in it, every seat's faces and
+        /// backs alike, whatever deck anyone else at the table chose (ADR 031). Null or empty draws
+        /// each seat in the deck its profile names.
+        /// </param>
         public OnlineMatchSession(
             MatchMode mode,
             PlayerView initialView,
@@ -57,9 +63,11 @@ namespace Callbreak.Application.Online
             Action<byte[]> send,
             IStatsService stats,
             ISettingsService settings,
-            Action left = null)
+            Action left = null,
+            string deckThemeId = null)
         {
             _left = left;
+            _deck = string.IsNullOrEmpty(deckThemeId) ? null : deckThemeId;
             Mode = mode;
             View = initialView ?? throw new ArgumentNullException(nameof(initialView));
             _send = send ?? throw new ArgumentNullException(nameof(send));
@@ -527,14 +535,15 @@ namespace Callbreak.Application.Online
                 SeatProfile profile = View.Seats[s];
                 SeatConnection connection = status != null ? status.ConnectionOf(seat) : SeatConnection.Connected;
                 SessionSeat current = _seats[s];
+                string deck = _deck ?? profile.DeckThemeId;
                 if (current != null && current.Connection == connection && current.Name == profile.Name
-                    && current.IsBot == profile.IsBot && current.DeckThemeId == profile.DeckThemeId)
+                    && current.IsBot == profile.IsBot && current.DeckThemeId == deck)
                 {
                     continue;
                 }
 
                 int.TryParse(profile.AvatarId, out int avatar);
-                _seats[s] = new SessionSeat(seat, profile.Name, avatar, profile.DeckThemeId, profile.IsBot, seat == View.Viewer, connection);
+                _seats[s] = new SessionSeat(seat, profile.Name, avatar, deck, profile.IsBot, seat == View.Viewer, connection);
                 seatsChanged = true;
             }
 

@@ -8,7 +8,7 @@ namespace Callbreak.Application.Sessions
     /// <summary>
     /// Who sits where for a match with computer players (GDD §9 "names come from a Nepali pool"):
     /// the local player at South, bots on the other seats with distinct Nepali names and avatars.
-    /// Bots have no deck of their own: a table is in one deck (ADR 020).
+    /// Bots have no deck of their own: each player sees every card in its own deck (ADR 031).
     /// </summary>
     public static class SeatRoster
     {
@@ -26,7 +26,7 @@ namespace Callbreak.Application.Sessions
 
         /// <summary>
         /// Seats for an offline match: the player at South; three bots; all four in the player's
-        /// deck, every face and every back (ADR 020). The first ever match uses the names from the
+        /// deck, every face and every back (ADR 031). The first ever match uses the names from the
         /// mockups; later ones draw from the pool.
         /// </summary>
         public static SeatProfile[] Offline(string playerName, int playerAvatar, string playerDeck, IRandom rng, bool firstMatch)

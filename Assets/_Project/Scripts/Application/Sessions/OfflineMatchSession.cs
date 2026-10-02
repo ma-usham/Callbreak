@@ -92,8 +92,9 @@ namespace Callbreak.Application.Sessions
             var botSeats = new Dictionary<Seat, IBotStrategy>();
             IReadOnlyList<SeatProfile> profiles = _engine.ViewFor(Seat.South).Seats;
 
-            // ADR 020: the whole table is in the deck the player had when the match was dealt, also
-            // a match saved while bots still drew backs of their own.
+            // ADR 031: the player sees every card in its own deck, the one it had when the match was
+            // dealt ("Choose a deck for your next match"), also in a match saved while bots still drew
+            // backs of their own.
             string deck = profiles[(int)LocalSeat].DeckThemeId;
             for (int s = 0; s < 4; s++)
             {

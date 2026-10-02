@@ -31,7 +31,7 @@ namespace Callbreak.Presentation.Table
         /// <summary>The call, or <see cref="CallRules.NotCalled"/>.</summary>
         public int Call { get; }
 
-        /// <summary>The call was placed by the timer or a stand-in ("Bid 3 · auto").</summary>
+        /// <summary>The call was placed by the timer or a stand-in (the pill no longer says so: it reads "won-bid").</summary>
         public bool IsAutoCall { get; }
 
         /// <summary>All four have called and tricks are being played.</summary>
@@ -44,22 +44,21 @@ namespace Callbreak.Presentation.Table
     }
 
     /// <summary>
-    /// The status pill's copy: Waiting → Calling… → Bid 3 → Bid 3 · Won 1, with a tick once the call
-    /// is met and "· auto" for a call the timer placed. The line is about the seat, not about who
-    /// is playing it: it stays when the player is away, reconnecting or gone and a bot plays on,
-    /// because what a seat called and has won decides how the others play. How the player is
-    /// connected has its own short chip beside the pill (GDD §8 "What others see"). A bot that
-    /// fills a seat has no tag there (ADR 025).
+    /// The status pill's copy: Waiting → Calling… (Choosing bid on the local seat), then from the
+    /// call on only "won-bid": "0-3" once 3 is called, "1-3" after the first trick won, and so on
+    /// (the owner, 3 Oct 2026, in place of "Bid 3 · Won 1"). A met call turns the pill gold
+    /// (<see cref="IsMet"/>). The line is about the seat, not about who is playing it: it stays when
+    /// the player is away, reconnecting or gone and a bot plays on, because what a seat called and
+    /// has won decides how the others play. How the player is connected has its own short chip
+    /// beside the pill (GDD §8 "What others see"). A bot that fills a seat has no tag there (ADR
+    /// 025), and neither has the seat of a player who left.
     /// </summary>
     public static class SeatStatus
     {
         public const string WaitingKey = "ui.seat.waiting";
         public const string CallingKey = "ui.seat.calling";
         public const string ChoosingBidKey = "ui.seat.choosing_bid";
-        public const string BidKey = "ui.seat.bid";
-        public const string BidAutoKey = "ui.seat.bid_auto";
-        public const string BidWonKey = "ui.seat.bid_won";
-        public const string BidWonMetKey = "ui.seat.bid_won_met";
+        public const string WonBidKey = "ui.seat.won_bid";
         public const string AwayKey = "ui.seat.away";
         public const string ReconnectingKey = "ui.seat.reconnecting";
         public const string BotPlayingKey = "ui.seat.bot_playing";
@@ -82,18 +81,13 @@ namespace Callbreak.Presentation.Table
                 return localization.Get(seat.IsLocal ? ChoosingBidKey : CallingKey);
             }
 
-            if (!seat.IsPlaying)
-            {
-                return localization.Format(seat.IsAutoCall ? BidAutoKey : BidKey, seat.Call);
-            }
-
-            return localization.Format(HasMetItsCall(seat) ? BidWonMetKey : BidWonKey, seat.Call, seat.Won);
+            // Tricks won, then the call (nothing is won before play starts).
+            return localization.Format(WonBidKey, seat.IsPlaying ? seat.Won : 0, seat.Call);
         }
 
         /// <summary>
         /// The pill turns gold: the seat has won at least what it called (GDD screen 08, callout 3).
-        /// Only for a player who is at the table: the line of a seat that is away keeps its tick,
-        /// but the pill stays plain.
+        /// Only for a player who is at the table: the pill of a seat that is away stays plain.
         /// </summary>
         public static bool IsMet(in SeatStatusInfo seat)
         {
@@ -102,9 +96,11 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>
         /// The chip beside the pill (GDD §8 "What others see"): "Away" after two timeouts,
-        /// "Reconnecting…" while the seat is held, "Bot playing" once a bot has taken a player's
-        /// seat for good; null for a player who is there: no chip. A bot that fills a seat from the
-        /// start carries no tag either (ADR 025; GDD §9 gave it "BOT" online).
+        /// "Reconnecting…" while the seat is held, "Bot playing" once a bot has taken the seat of a
+        /// player who did not come back in time; null for a player who is there: no chip. A bot that
+        /// fills a seat from the start carries no tag (ADR 025; GDD §9 gave it "BOT" online), and
+        /// neither does the seat of a player who left on purpose, a host who handed the table over
+        /// included: a bot plays it on silently (the owner, 3 Oct 2026).
         /// </summary>
         public static string Chip(SeatConnection connection, ILocalization localization)
         {
@@ -120,7 +116,6 @@ namespace Callbreak.Presentation.Table
                 case SeatConnection.Reconnecting:
                     return localization.Get(ReconnectingKey);
                 case SeatConnection.BotControlled:
-                case SeatConnection.Left:
                     return localization.Get(BotPlayingKey);
                 default:
                     return null;

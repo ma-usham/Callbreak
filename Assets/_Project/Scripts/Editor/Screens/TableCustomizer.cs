@@ -94,9 +94,11 @@ namespace Callbreak.Editor.Screens
         // While the next quick phrase has to wait, the emote button is covered in this colour, which
         // sweeps away as the wait runs out (ADR 024).
         private static readonly Color EmoteCooldownColor = new Color(0f, 0f, 0f, 0.5f);
+
+        // The "Reconnecting…" cover: the dim over the table, and its words, the speech box's ivory
+        // (the loading screen's dark brown would not read on the dim).
         private const float ReconnectingDim = 0.45f;
-        private static readonly Vector2 ImBackCentre = new Vector2(836f, 300f);
-        private static readonly Vector2 ImBackSize = new Vector2(250f, 66f);
+        private static readonly Color ReconnectingWordsColor = new Color32(0xFD, 0xF5, 0xED, 0xFF);
 
         /// <summary>GDD §16 "Touch targets are ≥ 88 px", in canvas units.</summary>
         public const float MinTouch = 88f;
@@ -194,6 +196,17 @@ namespace Callbreak.Editor.Screens
                 }
             }
 
+            // The owner took "Trump ♠" off the table (3 Oct 2026): spades are always trump. The round
+            // line stays, and the top seat keeps its place under where the trump line was.
+            foreach (string id in new[] { "TrumpLabel", "TrumpSuit" })
+            {
+                if (ctx.Nodes.TryGetValue(id, out RectTransform node))
+                {
+                    Object.DestroyImmediate(node.gameObject);
+                    ctx.Nodes.Remove(id);
+                }
+            }
+
             // One ornament sprite serves both sides of the round line: the right one is its mirror image.
             if (ctx.Nodes.TryGetValue("RoundOrnamentRight", out RectTransform ornament) && ornament.Find("Face") is RectTransform ornamentFace)
             {
@@ -203,7 +216,6 @@ namespace Callbreak.Editor.Screens
             RectTransform centre = ctx.Groups["Centre"];
             TMP_Text statusStyle = ctx.Nodes["SeatStatus3"].GetComponent<TMP_Text>();
             TMP_Text nameStyle = ctx.Nodes["SeatName3"].GetComponent<TMP_Text>();
-            AddToAtlas(statusStyle.font, "✓");
 
             // A tap on the table itself skips a long animation; everything else sits above this.
             RectTransform tap = Stretched("TableTap", ctx.Content);
@@ -230,8 +242,8 @@ namespace Callbreak.Editor.Screens
             BuildTrickLabel(ctx);
             BuildEmotePicker(ctx, statusStyle);
             BuildEmoteCooldown(ctx);
-            BuildImBack(ctx, centre);
-            BuildReconnecting(ctx, nameStyle);
+            BuildAwayCatcher(ctx);
+            BuildReconnecting(ctx);
 
             // The emote button is 83 px across; the other HUD buttons are 88 or more already.
             foreach (string id in new[] { "HomeButton", "ScoresButton", "SettingsButton", "EmoteButton" })
@@ -872,74 +884,62 @@ namespace Callbreak.Editor.Screens
         }
 
         /// <summary>
-        /// The "I'm back" banner of GDD §8: after two timeouts a bot plays the local seat until the
-        /// player taps this. A kit primary button above the trick, hidden until the seat is Away.
+        /// While the local seat is Away (GDD §8: after two timeouts a bot plays it), the whole table
+        /// is the "I'm back" button (the owner, 3 Oct 2026, in place of the banner): a transparent
+        /// catcher over the table, the hand and the HUD, hidden until then. The first touch only
+        /// brings the player back; it is neither played as a card nor taken by anything under it.
         /// </summary>
-        private static void BuildImBack(ScreenBuildContext ctx, RectTransform centre)
+        private static void BuildAwayCatcher(ScreenBuildContext ctx)
         {
-            RectTransform rect = UiBuildKit.CreateAt("ImBack", centre, ImBackCentre, UiBuildKit.ScreenCentre, UiBuildKit.FromMock(ImBackSize.x, ImBackSize.y));
-            RectTransform shadowRect = Stretched("Shadow", rect);
-            shadowRect.offsetMin = new Vector2(-12f, -16f);
-            shadowRect.offsetMax = new Vector2(12f, 8f);
-            Image shadow = Sliced(shadowRect, UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Buttons/UI_Shadow_Primary.png", 0f));
-            shadow.raycastTarget = false;
-            RectTransform faceRect = Stretched("Face", rect);
-            Image face = Sliced(faceRect, UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Buttons/UI_ButtonPrimary_Normal.png", 0f));
-            face.raycastTarget = true;
-
-            // 76 px high: it answers to 88. All of the extra is above it, where only the top seat's
-            // fan is; right under it lies the trick area, which answers to taps itself.
-            MinimumTouch(face, 0f, MinTouch, 1f);
-
+            RectTransform rect = Stretched("AwayCatcher", ctx.Content);
+            var image = rect.gameObject.AddComponent<Image>();
+            image.color = new Color(1f, 1f, 1f, 0f);
+            image.raycastTarget = true;
             var button = rect.gameObject.AddComponent<Button>();
-            button.targetGraphic = face;
-            ColorBlock colors = button.colors;
-            colors.highlightedColor = Color.white;
-            colors.pressedColor = new Color(0.9f, 0.9f, 0.9f, 1f);
-            colors.selectedColor = Color.white;
-            colors.fadeDuration = 0.08f;
-            button.colors = colors;
+            button.transition = Selectable.Transition.None;
+            button.targetGraphic = image;
             NoNavigation(button);
-            var feedback = rect.gameObject.AddComponent<ButtonFeedback>();
-            var feedbackSo = new SerializedObject(feedback);
-            feedbackSo.FindProperty("_selectable").objectReferenceValue = button;
-            feedbackSo.ApplyModifiedPropertiesWithoutUndo();
-
-            // Light text on crimson: the seconds disc's label is the table's own example of it.
-            TMP_Text style = ctx.Nodes["SeatTimerText0"].GetComponent<TMP_Text>();
-            TextMeshProUGUI label = Label("Text", rect, style, "I'm back");
-            label.fontSize = 34f;
-            var localized = label.gameObject.AddComponent<LocalizedText>();
-            var so = new SerializedObject(localized);
-            so.FindProperty("_key").stringValue = "ui.banner.im_back";
-            so.ApplyModifiedPropertiesWithoutUndo();
-
             rect.gameObject.SetActive(false);
             ctx.Bound["_imBackButton"] = button;
         }
 
         /// <summary>
         /// "Reconnecting…" while the session re-joins (GDD §8): a light dim over the whole table, which
-        /// stays visible but takes no input, and the word on the name plate's white pill, with the
-        /// spinner the GDD gives that chip.
+        /// stays visible but takes no input, and the loading screen's emblem (mockup 17, laid out as
+        /// ArtSource/Screens/SceneLoading has it) in the middle of the screen: its ring turning round
+        /// the still spade, on unscaled time (standing still with Reduce motion), and the words below
+        /// in its serif, light on the dim.
         /// </summary>
-        private static void BuildReconnecting(ScreenBuildContext ctx, TMP_Text style)
+        private static void BuildReconnecting(ScreenBuildContext ctx)
         {
             RectTransform cover = Stretched("Reconnecting", ctx.Content);
             var dim = cover.gameObject.AddComponent<Image>();
             dim.color = new Color(0f, 0f, 0f, ReconnectingDim);
             dim.raycastTarget = true;
 
-            var pillObject = new GameObject("Pill", typeof(RectTransform));
-            var pill = (RectTransform)pillObject.transform;
-            pill.SetParent(cover, false);
-            pill.anchorMin = pill.anchorMax = pill.pivot = new Vector2(0.5f, 0.5f);
-            pill.sizeDelta = UiBuildKit.FromMock(262f, 46f);
-            Sliced(pill, LoadTableSprite("UI_NamePlate"));
-            TextMeshProUGUI label = Label("Text", pill, style, "Reconnecting…");
-            float spinnerSize = 22f * UiBuildKit.ScaleX;
-            BuildSpinner(pill, spinnerSize, 26f + spinnerSize / 2f, label.color);
-            label.rectTransform.offsetMin = new Vector2(spinnerSize + 14f, 0f);
+            // The loading screen's ring, spade and words, moved together to the middle of the screen.
+            ScreenLayout loading = ScreenLayout.Load("SceneLoading");
+            LayoutNode ringNode = NodeOf(loading, "Ring"), spadeNode = NodeOf(loading, "Spade"), wordsNode = NodeOf(loading, "Loading");
+            float top = ringNode.rect[1], bottom = wordsNode.inkBox[3];
+            Vector2 shift = UiBuildKit.ScreenCentre - new Vector2(ringNode.Centre.x, (top + bottom) / 2f);
+
+            RectTransform ring = UiBuildKit.CreateAt("Ring", cover, ringNode.Centre + shift, UiBuildKit.ScreenCentre, UiBuildKit.FromMock(ringNode.rect[2], ringNode.rect[3]));
+            UiBuildKit.AddImage(ring, UiBuildKit.LoadSpriteAt(ringNode.sprite, 0f), false);
+            var spinner = ring.gameObject.AddComponent<Spinner>();
+            var spinnerSo = new SerializedObject(spinner);
+            spinnerSo.FindProperty("_unscaledTime").boolValue = true;
+            spinnerSo.ApplyModifiedPropertiesWithoutUndo();
+
+            RectTransform spade = UiBuildKit.CreateAt("Spade", cover, spadeNode.Centre + shift, UiBuildKit.ScreenCentre, UiBuildKit.FromMock(spadeNode.rect[2], spadeNode.rect[3]));
+            UiBuildKit.AddImage(spade, UiBuildKit.LoadSpriteAt(spadeNode.sprite, 0f), false);
+
+            // Fitted to the loading line, so the words come out at its size, then given their own.
+            float[] ink = wordsNode.inkBox;
+            float[] inkHere = { ink[0] + shift.x, ink[1] + shift.y, ink[2] + shift.x, ink[3] + shift.y };
+            TMP_FontAsset serif = UiBuildKit.LoadFontRole(wordsNode.font);
+            TextMeshProUGUI label = UiBuildKit.FitLabel(
+                "Text", cover, UiBuildKit.ScreenCentre, wordsNode.text, serif, inkHere, "centre", false, ReconnectingWordsColor, ReconnectingWordsColor);
+            label.text = "Reconnecting…";
             var localized = label.gameObject.AddComponent<LocalizedText>();
             var so = new SerializedObject(localized);
             so.FindProperty("_key").stringValue = "ui.seat.reconnecting";
@@ -947,6 +947,20 @@ namespace Callbreak.Editor.Screens
 
             cover.gameObject.SetActive(false);
             ctx.Bound["_reconnecting"] = cover.gameObject;
+            ctx.Bound["_reconnectingRing"] = spinner;
+        }
+
+        private static LayoutNode NodeOf(ScreenLayout layout, string id)
+        {
+            foreach (LayoutNode node in layout.nodes)
+            {
+                if (node.id == id)
+                {
+                    return node;
+                }
+            }
+
+            throw new System.InvalidOperationException($"{layout.name} has no node {id}");
         }
 
         // ------------------------------------------------------------------ helpers
@@ -995,55 +1009,6 @@ namespace Callbreak.Editor.Screens
             ring.fillAmount = 0.75f;
             spinner.AddComponent<Spinner>();
             return spinner;
-        }
-
-        /// <summary>
-        /// Adds characters to a static font atlas from the font's own file: the tick of a met call
-        /// ("Bid 3 · Won 3 ✓") is in Inter but not in the Latin set the atlases were baked with. A
-        /// static atlas has let go of its source font, so it is found again through the GUID the
-        /// asset keeps, used for this one addition, and let go again.
-        /// </summary>
-        private static void AddToAtlas(TMP_FontAsset font, string characters)
-        {
-            if (font == null)
-            {
-                return;
-            }
-
-            bool missing = false;
-            foreach (char c in characters)
-            {
-                missing |= !font.HasCharacter(c, false, false);
-            }
-
-            if (!missing)
-            {
-                return;
-            }
-
-            var so = new SerializedObject(font);
-            string guid = so.FindProperty("m_SourceFontFileGUID").stringValue;
-            var source = AssetDatabase.LoadAssetAtPath<Font>(AssetDatabase.GUIDToAssetPath(guid));
-            if (source == null)
-            {
-                Debug.LogWarning($"[TableCustomizer] {font.name}: no source font to add '{characters}' from.");
-                return;
-            }
-
-            so.FindProperty("m_AtlasPopulationMode").intValue = (int)AtlasPopulationMode.Dynamic;
-            so.FindProperty("m_SourceFontFile").objectReferenceValue = source;
-            so.ApplyModifiedPropertiesWithoutUndo();
-            bool added = font.TryAddCharacters(characters, out string notAdded);
-            so.Update();
-            so.FindProperty("m_AtlasPopulationMode").intValue = (int)AtlasPopulationMode.Static;
-            so.FindProperty("m_SourceFontFile").objectReferenceValue = null;
-            so.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(font);
-            AssetDatabase.SaveAssets();
-            if (!added)
-            {
-                Debug.LogWarning($"[TableCustomizer] {font.name}: could not add '{notAdded}' to the atlas.");
-            }
         }
 
         private static Sprite LoadTableSprite(string name) => UiBuildKit.LoadSpriteAt($"{TableArt}/{name}.png", 0f);

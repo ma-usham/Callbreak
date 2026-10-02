@@ -562,7 +562,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
             rounds = s.rounds,
         };
 
-        private List<QuickPlayer> QuickTable(int people)
+        /// <summary><paramref name="people"/> players at one Quick Match table, its match started; the first ones chose <paramref name="decks"/>, in order.</summary>
+        private List<QuickPlayer> QuickTable(int people, params string[] decks)
         {
             UseQuickMatch(listingDelay: 0.5);
             string[] names = { "Hari", "Asha", "Suman", "Bikash" };
@@ -570,6 +571,10 @@ namespace Callbreak.Tests.EditMode.Application.Online
             for (int i = 0; i < people; i++)
             {
                 players.Add(NewQuickPlayer(names[i]));
+                if (i < decks.Length)
+                {
+                    players[i].Device.Cosmetics.SelectDeck(decks[i]);
+                }
             }
 
             foreach (QuickPlayer p in players)

@@ -12,14 +12,15 @@ using NUnit.Framework;
 namespace Callbreak.Tests.EditMode.Application.Online
 {
     /// <summary>
-    /// ADR 020, one deck per table: every face and every back at a table, for every player, is in
-    /// one deck. A private room plays in the host's deck, whatever its guests chose; Quick Match in
-    /// the deck the player chose (ADR 025).
+    /// ADR 031, my deck everywhere (it replaces ADR 020's one deck per table and ADR 025's host's
+    /// deck): each player sees every card, every face and every back of every seat, in the deck it
+    /// chose, on its own device, whatever anyone else at the table chose. The deck a seat's profile
+    /// names says what that person chose; no table draws from it.
     /// </summary>
     public sealed partial class RoomServiceTests
     {
         [Test]
-        public void PrivateRoom_GuestChoseAnotherDeck_EverySeatOfBothTablesIsInTheHostsDeck()
+        public void PrivateRoom_GuestChoseAnotherDeck_EachSeesEveryCardInItsOwnDeck()
         {
             Device host = NewDevice("Hari");
             Device guest = NewDevice("Asha");
@@ -30,14 +31,15 @@ namespace Callbreak.Tests.EditMode.Application.Online
             StartMatch(host, guest);
 
             IMatchSession guestTable = guest.Rooms.Current.Match;
-            AssertTableDeck(host.Rooms.Current.Match, CosmeticsService.KathmanduGold, "the host's table");
-            AssertTableDeck(guestTable, CosmeticsService.KathmanduGold, "the guest's table");
-            Assert.AreEqual(CosmeticsService.KathmanduGold, guestTable.Seats[(int)guestTable.LocalSeat].DeckThemeId, "the guest's own faces are the host's deck");
+            AssertDrawnIn(host.Rooms.Current.Match, CosmeticsService.KathmanduGold, "the host's table");
+            AssertDrawnIn(guestTable, CosmeticsService.HimalayanIvory, "the guest's table");
+            Assert.AreEqual(CosmeticsService.KathmanduGold, guestTable.View.Seats[0].DeckThemeId, "the host's profile says what the host chose");
+            Assert.AreEqual(CosmeticsService.HimalayanIvory, guestTable.View.Seats[(int)guestTable.LocalSeat].DeckThemeId, "and the guest's what the guest chose");
             Assert.IsTrue(guestTable.Seats[2].IsBot && guestTable.Seats[3].IsBot, "two of those seats were filled with bots");
         }
 
         [Test]
-        public void PrivateRoom_PlayAgain_TheNextMatchIsInTheHostsDeckToo()
+        public void PrivateRoom_PlayAgain_EachTableStaysInItsPlayersDeck()
         {
             Device host = NewDevice("Hari");
             Device guest = NewDevice("Asha");
@@ -53,12 +55,12 @@ namespace Callbreak.Tests.EditMode.Application.Online
             StartMatch(host, guest);
 
             Assert.AreNotSame(first, guest.Rooms.Current.Match, "a second match");
-            AssertTableDeck(host.Rooms.Current.Match, CosmeticsService.HimalayanIvory, "the host's second table");
-            AssertTableDeck(guest.Rooms.Current.Match, CosmeticsService.HimalayanIvory, "the guest's second table");
+            AssertDrawnIn(host.Rooms.Current.Match, CosmeticsService.HimalayanIvory, "the host's second table");
+            AssertDrawnIn(guest.Rooms.Current.Match, CosmeticsService.KathmanduGold, "the guest's second table");
         }
 
         [Test]
-        public void PrivateRoom_GuestBackAfterAnAppKill_ItsTableIsStillInTheHostsDeck()
+        public void PrivateRoom_GuestBackAfterAnAppKill_ItsTableIsInTheDeckItHasNow()
         {
             Device host = NewDevice("Hari");
             Device guest = NewDevice("Asha");
@@ -70,20 +72,54 @@ namespace Callbreak.Tests.EditMode.Application.Online
             Kill(guest);
             Settle(5);
 
+            // Back in the app, the player chooses another deck before going back to the match.
             Device back = NewDevice("Asha", guest.Saves);
             Assert.AreEqual(CosmeticsService.HimalayanIvory, back.Cosmetics.SelectedDeckId, "the guest's own choice is still its own");
+            back.Cosmetics.SelectDeck(CosmeticsService.ClassicCrimson);
             Assert.IsTrue(back.Tickets.TryGet(out string code));
             Task<RoomResult> rejoining = back.Rooms.JoinRoomAsync(code, CancellationToken.None);
             Settle();
 
             Assert.IsTrue(rejoining.Result.Succeeded);
-            AssertTableDeck(back.Rooms.Current.Match, CosmeticsService.KathmanduGold, "the table the guest is back at");
+            AssertDrawnIn(back.Rooms.Current.Match, CosmeticsService.ClassicCrimson, "the table the guest is back at");
+            AssertDrawnIn(host.Rooms.Current.Match, CosmeticsService.KathmanduGold, "the host's table");
+        }
+
+        [Test]
+        public void QuickMatch_ThreePlayersOnThreeDecks_EachSeesItsOwn_AlsoAtTheNextHostAfterAHandOver()
+        {
+            string[] decks = { CosmeticsService.KathmanduGold, CosmeticsService.HimalayanIvory, CosmeticsService.ClassicCrimson };
+            List<QuickPlayer> players = QuickTable(3, decks);
+            for (int i = 0; i < players.Count; i++)
+            {
+                Assert.AreEqual(decks[i], players[i].Device.Cosmetics.SelectedDeckId, players[i].Name + " chose its deck");
+                AssertDrawnIn(players[i].Match, decks[i], players[i].Name + "'s table");
+            }
+
+            Assert.AreEqual(players[0].Match.View.MatchId, players[2].Match.View.MatchId, "one table");
+            QuickPlayer host = Hosting(players);
+            PlayQuickUntil(() => MidTrick(host, 1), 20000);
+            QuickPlayer next = AtSeat(players, host.Service.Host.NextHost.NextSeat);
+            GoQuiet(host, unplugged: true);
+            SettleQuickUntil(() => next.Service.Host != null && AllRunning(players, except: host), 20);
+            PlayQuick(40);
+
+            for (int i = 0; i < players.Count; i++)
+            {
+                if (players[i] != host)
+                {
+                    AssertDrawnIn(players[i].Match, decks[i], players[i].Name + "'s table, its host handed over");
+                }
+            }
+
+            Assert.That(_peerFaults, Is.Empty);
         }
 
         [Test]
         public void QuickMatch_EverySeatIsInTheDeckThePlayerChose()
         {
-            // ADR 025: Quick Match plays in the player's own deck, as offline and a room they host do.
+            // ADR 031: the player sees every card in its own deck; at a table of its own, bots only,
+            // every profile names that deck too.
             Device device = NewDevice("Hari");
             Assert.Greater(device.Cosmetics.DeckIds.Count, 1, "more than one deck to choose from");
             for (int d = 0; d < device.Cosmetics.DeckIds.Count; d++)
@@ -103,19 +139,23 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
                 IMatchSession table = quick.Match;
                 Assert.IsNotNull(table, "the bots filled the table");
-                AssertTableDeck(table, chosen, "chose " + chosen);
+                AssertDrawnIn(table, chosen, "chose " + chosen);
+                for (int s = 0; s < table.View.Seats.Count; s++)
+                {
+                    Assert.AreEqual(chosen, table.View.Seats[s].DeckThemeId, $"chose {chosen}: the profile of seat {s}");
+                }
+
                 quick.Dispose();
             }
         }
 
-        /// <summary>Every seat of <paramref name="table"/> is in <paramref name="deck"/>: what the table draws, and what the host sent.</summary>
-        private static void AssertTableDeck(IMatchSession table, string deck, string what)
+        /// <summary>Every card <paramref name="table"/> draws, every seat's faces and backs, is in <paramref name="deck"/>.</summary>
+        private static void AssertDrawnIn(IMatchSession table, string deck, string what)
         {
             Assert.IsNotNull(table, what + ": a match");
             for (int s = 0; s < table.Seats.Count; s++)
             {
                 Assert.AreEqual(deck, table.Seats[s].DeckThemeId, $"{what}: what the table draws for seat {s}");
-                Assert.AreEqual(deck, table.View.Seats[s].DeckThemeId, $"{what}: the profile of seat {s}");
             }
         }
     }

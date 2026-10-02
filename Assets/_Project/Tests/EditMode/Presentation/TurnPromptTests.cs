@@ -99,8 +99,8 @@ namespace Callbreak.Tests.EditMode.Presentation
             {
                 TurnPrompt.LeadAnyKey, TurnPrompt.BeatKey, TurnPrompt.FollowKey, TurnPrompt.TrumpKey, TurnPrompt.AnyCardKey,
                 TurnPrompt.WaitingForKey, TurnPrompt.WinsTrickKey, TurnPrompt.YouWinTrickKey, TurnPrompt.YouLeadKey, TurnPrompt.CallingKey,
-                SeatStatus.WaitingKey, SeatStatus.CallingKey, SeatStatus.ChoosingBidKey, SeatStatus.BidKey, SeatStatus.BidAutoKey,
-                SeatStatus.BidWonKey, SeatStatus.BidWonMetKey, SeatStatus.AwayKey, SeatStatus.ReconnectingKey, SeatStatus.BotPlayingKey,
+                SeatStatus.WaitingKey, SeatStatus.CallingKey, SeatStatus.ChoosingBidKey, SeatStatus.WonBidKey,
+                SeatStatus.AwayKey, SeatStatus.ReconnectingKey, SeatStatus.BotPlayingKey,
             })
             {
                 Assert.IsTrue(_text.Has(key), key);
@@ -117,18 +117,21 @@ namespace Callbreak.Tests.EditMode.Presentation
         [Test]
         public void StatusPill_FollowsTheRound()
         {
+            // Before the call, the words; from the call on, only "won-bid" (the owner, 3 Oct 2026).
             Assert.AreEqual("Waiting", Status(false, SeatConnection.Connected, false, CallRules.NotCalled, false, false, 0));
             Assert.AreEqual("Calling…", Status(false, SeatConnection.Connected, true, CallRules.NotCalled, false, false, 0));
             Assert.AreEqual("Choosing bid", Status(true, SeatConnection.Connected, true, CallRules.NotCalled, false, false, 0), "mockup 07, the local seat");
-            Assert.AreEqual("Bid 3", Status(false, SeatConnection.Connected, false, 3, false, false, 0));
-            Assert.AreEqual("Bid 3 · auto", Status(false, SeatConnection.Connected, false, 3, true, false, 0));
-            Assert.AreEqual("Bid 3 · Won 1", Status(false, SeatConnection.Connected, false, 3, false, true, 1));
-            Assert.AreEqual("Bid 4 · Won 2", Status(true, SeatConnection.Connected, false, 4, false, true, 2), "mockup 08, the local seat");
-            Assert.AreEqual("Bid 3 · Won 1", Status(false, SeatConnection.Connected, false, 3, true, true, 1), "the auto tag goes once play starts");
+            Assert.AreEqual("0-3", Status(false, SeatConnection.Connected, false, 3, false, false, 0), "nothing won yet, bid 3");
+            Assert.AreEqual("0-3", Status(false, SeatConnection.Connected, false, 3, true, false, 0), "a call the timer placed reads the same");
+            Assert.AreEqual("1-3", Status(false, SeatConnection.Connected, false, 3, false, true, 1));
+            Assert.AreEqual("2-4", Status(true, SeatConnection.Connected, false, 4, false, true, 2), "the local seat");
+            Assert.AreEqual("1-3", Status(false, SeatConnection.Connected, false, 3, true, true, 1));
+            Assert.AreEqual("0-8", Status(false, SeatConnection.Connected, false, 8, false, true, 0));
+            Assert.AreEqual("13-8", Status(false, SeatConnection.Connected, false, 8, false, true, 13));
         }
 
         [Test]
-        public void StatusPill_TurnsGoldWithATick_OnceTheCallIsMet()
+        public void StatusPill_TurnsGold_OnceTheCallIsMet()
         {
             var short1 = new SeatStatusInfo(false, SeatConnection.Connected, false, 3, false, true, 2);
             var met = new SeatStatusInfo(false, SeatConnection.Connected, false, 3, false, true, 3);
@@ -138,8 +141,11 @@ namespace Callbreak.Tests.EditMode.Presentation
             Assert.IsTrue(SeatStatus.IsMet(met));
             Assert.IsTrue(SeatStatus.IsMet(over));
             Assert.IsFalse(SeatStatus.IsMet(justCalled));
-            Assert.AreEqual("Bid 3 · Won 3 ✓", SeatStatus.Text(met, _text));
-            Assert.AreEqual("Bid 3 · Won 5 ✓", SeatStatus.Text(over, _text));
+
+            // The gold is the sign: the words stay "won-bid".
+            Assert.AreEqual("2-3", SeatStatus.Text(short1, _text));
+            Assert.AreEqual("3-3", SeatStatus.Text(met, _text));
+            Assert.AreEqual("5-3", SeatStatus.Text(over, _text));
         }
 
         private static readonly SeatConnection[] NotAtTheTable =
@@ -157,10 +163,10 @@ namespace Callbreak.Tests.EditMode.Presentation
                 string seat = connection.ToString();
                 Assert.AreEqual("Waiting", Status(false, connection, false, CallRules.NotCalled, false, false, 0), seat);
                 Assert.AreEqual("Calling…", Status(false, connection, true, CallRules.NotCalled, false, false, 0), seat);
-                Assert.AreEqual("Bid 3", Status(false, connection, false, 3, false, false, 0), seat);
-                Assert.AreEqual("Bid 3 · auto", Status(false, connection, false, 3, true, false, 0), seat);
-                Assert.AreEqual("Bid 3 · Won 1", Status(false, connection, false, 3, false, true, 1), seat);
-                Assert.AreEqual("Bid 3 · Won 4 ✓", Status(false, connection, false, 3, false, true, 4), seat + ": the tick says the call is met, whoever played the cards");
+                Assert.AreEqual("0-3", Status(false, connection, false, 3, false, false, 0), seat);
+                Assert.AreEqual("0-3", Status(false, connection, false, 3, true, false, 0), seat);
+                Assert.AreEqual("1-3", Status(false, connection, false, 3, false, true, 1), seat);
+                Assert.AreEqual("4-3", Status(false, connection, false, 3, false, true, 4), seat + ": what was won counts, whoever played the cards");
             }
         }
 
@@ -172,8 +178,11 @@ namespace Callbreak.Tests.EditMode.Presentation
             Assert.IsNull(SeatStatus.Chip(SeatConnection.Connected, _text), "a player who is there has no chip");
             Assert.AreEqual("Away", SeatStatus.Chip(SeatConnection.Away, _text));
             Assert.AreEqual("Reconnecting…", SeatStatus.Chip(SeatConnection.Reconnecting, _text));
-            Assert.AreEqual("Bot playing", SeatStatus.Chip(SeatConnection.BotControlled, _text));
-            Assert.AreEqual("Bot playing", SeatStatus.Chip(SeatConnection.Left, _text));
+            Assert.AreEqual("Bot playing", SeatStatus.Chip(SeatConnection.BotControlled, _text), "not back in time: a bot took the seat over");
+
+            // The owner (3 Oct 2026): a player who left on purpose, a host who left and handed the
+            // table over too, leaves no chip; a bot plays the seat on silently.
+            Assert.IsNull(SeatStatus.Chip(SeatConnection.Left, _text), "a player who left has no chip");
 
             // Only "Reconnecting…" has the spinner.
             Assert.IsTrue(SeatStatus.ChipIsBusy(SeatConnection.Reconnecting));
@@ -186,7 +195,7 @@ namespace Callbreak.Tests.EditMode.Presentation
         [Test]
         public void StatusPill_IsNotGold_WhileTheSeatIsNotPlayingItself()
         {
-            // A seat that met its call and then went away keeps its line and its tick, but not the gold.
+            // A seat that met its call and then went away keeps its line, but not the gold.
             foreach (SeatConnection connection in NotAtTheTable)
             {
                 var gone = new SeatStatusInfo(false, connection, false, 3, false, true, 4);
