@@ -20,9 +20,10 @@ namespace Callbreak.Application.Online
     /// <para>
     /// Over a link that knows its peers' addresses (<see cref="IHostAddresses"/>, ADR 030) the
     /// players can take the match over if the host is lost: during the match the host keeps up a
-    /// heartbeat, names the next host in line to everyone (<see cref="NextHostNotice"/>) and sends
-    /// that player alone what it needs (<see cref="SuccessionPackage"/>). A room that was taken over
-    /// is hosted from the seat of the player who took it over.
+    /// heartbeat, names the line of succession to everyone (<see cref="NextHostNotice"/>), sends the
+    /// next host in line alone what it needs to go on from the same trick, and every later successor
+    /// what it needs to take over without any cards (<see cref="SuccessionPackage"/>). A room that was
+    /// taken over is hosted from the seat of the player who took it over.
     /// </para>
     /// </summary>
     public sealed class RoomHost : IDisposable
@@ -68,10 +69,7 @@ namespace Callbreak.Application.Online
         private double _startsAt;
         private double _nextBeatAt;
         private NextHostNotice _nextHost;
-        private int _packageSeat = NextHostNotice.NoSeat;
-        private PeerId _packagePeer;
-        private int _packageRound;
-        private int _packageBots;
+        private readonly PackageSent[] _packages = new PackageSent[Seats];
 
         /// <param name="remote">The relay's host end; null for a room nobody else can reach (Quick Match filled with bots).</param>
         /// <param name="seedSource">Draws each match's shuffle seed (a CSPRNG in production, GDD §22).</param>
@@ -218,7 +216,7 @@ namespace Callbreak.Application.Online
         /// True while the match would go on without this host should it leave (ADR 030): it is on, over
         /// a link that knows its peers' addresses, and someone is there to take it over.
         /// </summary>
-        public bool CanHandOver => _addresses != null && !_closed && InMatch && NextInLine(out _) != NextHostNotice.NoSeat;
+        public bool CanHandOver => _addresses != null && !_closed && InMatch && Line().Count > 0;
 
         /// <summary>The seat of the host device's own player: 0, but in a room taken over, the seat of the player who took it over (ADR 030).</summary>
         public int HostSeat => _hostSeat;
@@ -536,7 +534,7 @@ namespace Callbreak.Application.Online
         /// </summary>
         private bool HandOverNow()
         {
-            if (_addresses == null || !InMatch || NextInLine(out _) == NextHostNotice.NoSeat)
+            if (_addresses == null || !InMatch || Line().Count == 0)
             {
                 return false;
             }
@@ -1194,11 +1192,13 @@ namespace Callbreak.Application.Online
         }
 
         /// <summary>
-        /// Names the next host in line and tells every player over the network (ADR 030): the next
-        /// person after the host in seat order who is connected and can be reached, bots and the people
-        /// who left skipped. That player alone is sent what it needs to take over: again whenever a
-        /// round is dealt, the next host in line changes, or a seat passes to a bot. Nothing over a link
-        /// that does not know its peers' addresses, nor outside a match.
+        /// Names the line of succession and tells every player over the network (ADR 030; the owner's
+        /// backup host, 3 Oct 2026): every person after the host in seat order who is connected and can
+        /// be reached, bots and the people who left skipped. The first in line alone is sent what it
+        /// needs to go on from the same trick, the bots' dealt hands included: again whenever a round is
+        /// dealt, the line changes, or a seat passes to a bot. Every later successor is sent what it
+        /// needs to take over without them. Nothing over a link that does not know its peers'
+        /// addresses, nor outside a match.
         /// </summary>
         private void RefreshSuccession()
         {
@@ -1207,13 +1207,13 @@ namespace Callbreak.Application.Online
                 return;
             }
 
-            int next = NextInLine(out string nextAddress);
-            if (next != NextHostNotice.NoSeat)
+            List<NextHostNotice.Successor> line = Line();
+            for (int i = 0; i < line.Count; i++)
             {
-                SendPackage(next);
+                SendPackage(line[i].Seat, withCards: i == 0);
             }
 
-            var notice = new NextHostNotice(_addresses.Generation, _hostSeat, _addresses.LocalAddress, next, nextAddress);
+            var notice = new NextHostNotice(_addresses.Generation, _hostSeat, _addresses.LocalAddress, line);
             if (notice.Equals(_nextHost))
             {
                 return;
@@ -1231,9 +1231,10 @@ namespace Callbreak.Application.Online
             }
         }
 
-        private int NextInLine(out string address)
+        /// <summary>Every person after the host in seat order who is connected and can be reached, in order: the line of succession.</summary>
+        private List<NextHostNotice.Successor> Line()
         {
-            address = null;
+            var line = new List<NextHostNotice.Successor>();
             var seat = (Seat)_hostSeat;
             for (int step = 1; step < Seats; step++)
             {
@@ -1247,34 +1248,34 @@ namespace Callbreak.Application.Online
                 string at = _addresses.AddressOf(m.Peer);
                 if (!string.IsNullOrEmpty(at))
                 {
-                    address = at;
-                    return (int)seat;
+                    line.Add(new NextHostNotice.Successor((int)seat, at));
                 }
             }
 
-            return NextHostNotice.NoSeat;
+            return line;
         }
 
-        /// <summary>The next host in line's package (<see cref="SuccessionPackage"/>), unless it has this one already.</summary>
-        private void SendPackage(int next)
+        /// <summary>
+        /// A successor's package (<see cref="SuccessionPackage"/>), unless it has this one already: the
+        /// next host in line's <paramref name="withCards"/>, every later successor's without any.
+        /// </summary>
+        private void SendPackage(int seat, bool withCards)
         {
-            Member heir = _members[next];
-            int round = _table.Round;
+            Member heir = _members[seat];
+            int round = withCards ? _table.Round : 0;
             int bots = 0;
             for (int s = 0; s < Seats; s++)
             {
                 bots |= _table.IsHuman((Seat)s) ? 0 : 1 << s;
             }
 
-            if (next == _packageSeat && heir.Peer == _packagePeer && round == _packageRound && bots == _packageBots)
+            PackageSent last = _packages[seat];
+            if (last != null && last.Peer == heir.Peer && last.WithCards == withCards && last.Round == round && last.Bots == bots)
             {
                 return;
             }
 
-            _packageSeat = next;
-            _packagePeer = heir.Peer;
-            _packageRound = round;
-            _packageBots = bots;
+            _packages[seat] = new PackageSent(heir.Peer, withCards, round, bots);
             var identities = new string[Seats];
             var dealt = new CardSet[Seats];
             for (int s = 0; s < Seats; s++)
@@ -1283,15 +1284,23 @@ namespace Callbreak.Application.Online
                 {
                     identities[s] = _members[s] != null ? _members[s].Identity : null;
                 }
-                else
+                else if (withCards)
                 {
                     dealt[s] = _table.DealtHandOf((Seat)s);
                 }
             }
 
+            if (!withCards)
+            {
+                // A later successor deals the round again should it take over: no cards at all.
+                Send(heir.Peer, HostMessages.Succession(SuccessionPackage.WithoutCards(_addresses.Generation, identities)));
+                return;
+            }
+
             // ADR 030 (owner-approved exception to AGENTS.md "a seat's hand leaves the server only by
             // TargetRpc to that seat"): the bot seats' dealt hands go to the next host in line alone,
-            // so it can take the table over; never a person's hand, never shown, never logged.
+            // so it can take the table over; never a person's hand, never to anyone later in the line,
+            // never shown, never logged.
             Send(heir.Peer, HostMessages.Succession(new SuccessionPackage(_addresses.Generation, round, identities, dealt)));
         }
 
@@ -1436,6 +1445,27 @@ namespace Callbreak.Application.Online
 
             public static Member Bot(string name, int avatarId, string deckThemeId) =>
                 new Member(default, null, name, avatarId, deckThemeId) { IsBot = true, Ready = true };
+        }
+
+        /// <summary>The last package a successor's seat was sent: another goes only when something in it would change.</summary>
+        private sealed class PackageSent
+        {
+            public PackageSent(PeerId peer, bool withCards, int round, int bots)
+            {
+                Peer = peer;
+                WithCards = withCards;
+                Round = round;
+                Bots = bots;
+            }
+
+            public PeerId Peer { get; }
+
+            public bool WithCards { get; }
+
+            public int Round { get; }
+
+            /// <summary>The bot seats, one bit each.</summary>
+            public int Bots { get; }
         }
 
         /// <summary>The end of a match, kept for a player who was reconnecting when it came, until their seat hold is over.</summary>

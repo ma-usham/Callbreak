@@ -115,9 +115,9 @@ namespace Callbreak.Application.Online
         public bool HostLeaving { get; private set; }
 
         /// <summary>
-        /// What this player needs to take the match over (ADR 030): sent by the host to the next host in
-        /// line alone, and let go of as soon as someone else is next. It holds the bots' dealt hands, so
-        /// nothing ever shows or logs it.
+        /// What this player needs to take the match over (ADR 030): the next host in line's holds the
+        /// bots' dealt hands, so nothing ever shows or logs it; a later successor's holds no cards (the
+        /// owner's backup host). Let go of as soon as the line no longer names this player for it.
         /// </summary>
         internal SuccessionPackage Package { get; private set; }
 
@@ -153,9 +153,14 @@ namespace Callbreak.Application.Online
             return join.Task;
         }
 
-        /// <summary>Replaces a dropped connection and introduces this player again (GDD §27 reconnection).</summary>
+        /// <summary>
+        /// Replaces a dropped connection and introduces this player again (GDD §27 reconnection). A
+        /// player that hosted a table of the match before and gives it up for this one (ADR 030) is a
+        /// guest from now on.
+        /// </summary>
         public Task<RoomError> RejoinAsync(IClientLink link, CancellationToken ct)
         {
+            _host = null;
             HostLeaving = false;
             Detach();
             Attach(link);
@@ -301,7 +306,13 @@ namespace Callbreak.Application.Online
         }
 
         /// <summary>The service gave up reconnecting, or the room is otherwise over for this member.</summary>
-        public void Close(RoomError reason)
+        public void Close(RoomError reason) => Close(reason, countsAsLeft: true);
+
+        /// <param name="countsAsLeft">
+        /// Whether a lost connection records the match as left (<see cref="OnlineMatchSession.OnRoomClosed(RoomError, bool)"/>):
+        /// false when the hand-over gave up while this device was online, nobody having taken the match over.
+        /// </param>
+        internal void Close(RoomError reason, bool countsAsLeft)
         {
             if (_closed)
             {
@@ -314,7 +325,7 @@ namespace Callbreak.Application.Online
             {
                 try
                 {
-                    _match.OnRoomClosed(reason);
+                    _match.OnRoomClosed(reason, countsAsLeft);
                 }
                 catch (Exception e)
                 {
@@ -507,12 +518,7 @@ namespace Callbreak.Application.Online
 
                     case HostMessageKind.NextHost:
                         NextHost = NextHostNotice.Read(reader);
-                        if (Package != null && (NextHost.NextSeat != _localSeat || NextHost.Generation != Package.Generation))
-                        {
-                            // Someone else is next: the bots' cards are not this player's to keep.
-                            Package = null;
-                        }
-
+                        KeepPackageFor(NextHost);
                         break;
 
                     case HostMessageKind.Succession:
@@ -522,11 +528,7 @@ namespace Callbreak.Application.Online
                     case HostMessageKind.HandOverNow:
                         NextHost = NextHostNotice.Read(reader);
                         HostLeaving = NextHost.HasNext;
-                        if (Package != null && (NextHost.NextSeat != _localSeat || NextHost.Generation != Package.Generation))
-                        {
-                            Package = null;
-                        }
-
+                        KeepPackageFor(NextHost);
                         break;
                 }
             }
@@ -542,6 +544,27 @@ namespace Callbreak.Application.Online
             }
 
             _faults.Rethrow();
+        }
+
+        /// <summary>
+        /// Keeps the package only where <paramref name="notice"/> puts this player for it: one with the
+        /// bots' cards while it is the next host in line, one without while it is anywhere in the line,
+        /// for the same host. Someone else is next, or this player is out of the line: the bots' cards,
+        /// and the identities, are not this player's to keep.
+        /// </summary>
+        private void KeepPackageFor(NextHostNotice notice)
+        {
+            if (Package == null)
+            {
+                return;
+            }
+
+            int place = notice.PlaceOf(_localSeat);
+            bool keep = Package.Generation == notice.Generation && (Package.HasCards ? place == 1 : place >= 1);
+            if (!keep)
+            {
+                Package = null;
+            }
         }
 
         private void OnMatchStarting(PlayerView view, TableStatus status)

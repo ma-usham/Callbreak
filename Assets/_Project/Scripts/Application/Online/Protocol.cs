@@ -22,8 +22,11 @@ namespace Callbreak.Application.Online
         /// with what it holds (Report).
         /// 6: a host that leaves during the match tells everyone to go to the next host in line now
         /// (HandOverNow) instead of closing the room (ADR 030).
+        /// 7: the host names the whole line of succession (NextHost, HandOverNow: every person after it
+        /// who can take over, with their addresses), and sends every successor after the first a
+        /// package without cards (Succession), so a backup host takes over when the first cannot.
         /// </summary>
-        public const ushort Version = 6;
+        public const ushort Version = 7;
 
         /// <summary>GDD §25 anti-abuse: a connection may send this many intents per second.</summary>
         public const int IntentsPerSecond = 10;
@@ -85,5 +88,12 @@ namespace Callbreak.Application.Online
 
         /// <summary>ADR 030: each try to reach the new host, or the old one, gives up after this long; the next one follows.</summary>
         public const double HandOverAttemptSeconds = 3.0;
+
+        /// <summary>
+        /// The owner's backup host (3 Oct 2026): the k-th person in the line of succession (k ≥ 2) takes
+        /// the match over itself when no host has seated it within (k − 1) times this long of looking
+        /// for one after it took the host as lost.
+        /// </summary>
+        public const double BackupTakeOverSeconds = 10.0;
     }
 }

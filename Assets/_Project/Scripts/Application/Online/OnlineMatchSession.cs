@@ -387,7 +387,15 @@ namespace Callbreak.Application.Online
         /// as having left, a loss, exactly as Leave is (GDD §8 L660-668, L689-690: dropping out
         /// gains nothing). When the host leaves, the match is not recorded (GDD §27 failure modes).
         /// </summary>
-        public void OnRoomClosed(RoomError reason)
+        public void OnRoomClosed(RoomError reason) => OnRoomClosed(reason, countsAsLeft: true);
+
+        /// <param name="countsAsLeft">
+        /// A lost connection records the match as left, a loss. False when this player was not the one
+        /// who dropped out (the owner, 3 Oct 2026): the host was lost, nobody took the match over and
+        /// this device, online all along, could not either. Then the match is not recorded at all, as
+        /// when a host leaves; the player sees the same message.
+        /// </param>
+        internal void OnRoomClosed(RoomError reason, bool countsAsLeft)
         {
             if (IsOver)
             {
@@ -397,7 +405,10 @@ namespace Callbreak.Application.Online
             if (reason == RoomError.ConnectionLost && !_finished && View.Phase != Phase.Lobby)
             {
                 _finished = true;
-                RecordAbandoned();
+                if (countsAsLeft)
+                {
+                    RecordAbandoned();
+                }
             }
 
             FailureReason = reason == RoomError.None ? RoomError.Unknown : reason;

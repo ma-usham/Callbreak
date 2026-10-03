@@ -74,22 +74,9 @@ namespace Callbreak.Application.Online
         /// <param name="package">The bots' dealt hands, as the lost host sent them to the next host in line; null when it sent none.</param>
         public static RebuiltTable Rebuild(IReadOnlyList<SeatReport> reports, SuccessionPackage package)
         {
-            if (reports == null || reports.Count == 0)
-            {
-                throw new ArgumentException("A table is rebuilt from at least the new host's own view.", nameof(reports));
-            }
-
-            string matchId = reports[0].View.MatchId;
-            SeatReport latest = reports[0];
-            foreach (SeatReport report in reports)
-            {
-                if (report.View.MatchId == matchId && report.Seq > latest.Seq)
-                {
-                    latest = report;
-                }
-            }
-
+            SeatReport latest = Latest(reports);
             PlayerView state = latest.View;
+            string matchId = state.MatchId;
             if (state.Phase != Phase.Calling && state.Phase != Phase.Playing)
             {
                 // Between rounds (or before the first deal) nobody holds a card: nothing is hidden.
@@ -153,6 +140,46 @@ namespace Callbreak.Application.Online
             }
 
             return Restorable(state, latest.Seq, SnapshotOf(state, hands));
+        }
+
+        /// <summary>
+        /// The match as a backup host takes it over (the owner, 3 Oct 2026): it holds none of the bots'
+        /// cards, so a round in progress is dealt again (<see cref="Redeal"/>), by the same dealer, with
+        /// the rounds before as they were scored. Between rounds nobody holds a card, and the match goes
+        /// on exactly as it stood.
+        /// </summary>
+        /// <param name="reports">What each player that is here brought, the new host's own included.</param>
+        public static RebuiltTable DealAgain(IReadOnlyList<SeatReport> reports)
+        {
+            SeatReport latest = Latest(reports);
+            PlayerView state = latest.View;
+            if (state.Phase == Phase.Calling || state.Phase == Phase.Playing)
+            {
+                return new RebuiltTable(state, latest.Seq, null);
+            }
+
+            return Restorable(state, latest.Seq, SnapshotOf(state, new CardSet[SeatExtensions.Count]));
+        }
+
+        /// <summary>The report with the newest update of the match the first one is from: the public state the match goes on from.</summary>
+        private static SeatReport Latest(IReadOnlyList<SeatReport> reports)
+        {
+            if (reports == null || reports.Count == 0)
+            {
+                throw new ArgumentException("A table is rebuilt from at least the new host's own view.", nameof(reports));
+            }
+
+            string matchId = reports[0].View.MatchId;
+            SeatReport latest = reports[0];
+            foreach (SeatReport report in reports)
+            {
+                if (report.View.MatchId == matchId && report.Seq > latest.Seq)
+                {
+                    latest = report;
+                }
+            }
+
+            return latest;
         }
 
         /// <summary>
