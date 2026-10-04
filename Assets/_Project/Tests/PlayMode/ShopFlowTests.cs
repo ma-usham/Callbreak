@@ -9,26 +9,28 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 using VContainer;
 
 namespace Callbreak.Tests.PlayMode
 {
     /// <summary>
-    /// The shop in the real Boot and Menu scenes, with the real wallet and cosmetics (the owner,
-    /// 4 Oct 2026; mockups 15, 20 and 21; designer's spec shop-drawer-and-tables-prompts.md): the
-    /// main menu's storefront opens it on Cards with the drawer open, the storefront disc closes and
-    /// opens the drawer, the drawer switches categories and each keeps its choice and its row's
-    /// position, the row browses by chevrons and by drag and stops at its ends, browsing hides when
-    /// everything fits, a table is bought after a confirmation and then put to use, not enough coins
-    /// offers the Earn Coins page or Not now, a deck is equipped, and Back leaves. Saves go to a
-    /// temporary folder.
+    /// The shop in the real Boot and Menu scenes, with the real wallet and cosmetics (the owner, 4
+    /// and 5 Oct 2026; mockups 15, 20 and 21): the main menu's storefront opens it on Cards; the
+    /// drawer is always open, with its three category buttons stacked in its middle and no
+    /// storefront disc of its own; every category shows exactly three tiles side by side and
+    /// nothing scrolls; the drawer switches categories and each keeps its choice; the backgrounds
+    /// are the Himalayan Vista, Pokhara Lakeside and Monastery Garden, and one that left the shop
+    /// falls back to the Vista; a background and a deck are put to use; a table is bought after a
+    /// confirmation and then put to use; not enough coins offers the Earn Coins page or Not now;
+    /// and Back leaves. Saves go to a temporary folder.
     /// </summary>
     public sealed class ShopFlowTests
     {
         private const int Cards = 0;
         private const int Backgrounds = 1;
         private const int Tables = 2;
-        private const float MotionTimeout = 3f;
+        private const int TilesShown = 3;
 
         private GameFixture _game;
 
@@ -45,15 +47,13 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator TheMainMenusStorefront_OpensTheShopOnCards_WithTheDrawerOpen_AndBackLeaves()
+        public IEnumerator TheMainMenusStorefront_OpensTheShopOnCards_AndBackLeaves()
         {
             yield return OpenShop();
 
             Assert.AreEqual(Cards, View.Category);
-            Assert.IsTrue(View.IsDrawerOpen, "the drawer is open when the shop opens");
-            Assert.AreEqual(0f, View.Drawer.Closedness, 0.001f);
             Assert.AreEqual(Cards, View.Drawer.Active, "Cards is the crimson button");
-            Assert.AreEqual(3, View.Carousel(Cards).Count, "the three decks");
+            Assert.AreEqual(3, View.Tiles(Cards).Count, "the three decks");
             ShopItemTile classic = Tile(Cards, 0);
             Assert.IsTrue(classic.IsChosen && classic.RadioFilled, "mockup 15: Classic Crimson chosen, filled radio");
             Assert.AreEqual(Text("ui.shop.status.equipped"), classic.StatusLabel.text);
@@ -68,36 +68,114 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator TheStorefrontDisc_ClosesAndOpensTheDrawer_AtOnceWithReduceMotion()
+        public IEnumerator TheDrawer_IsAlwaysOpen_WithItsThreeButtonsInItsMiddle_AndNoStorefrontDisc()
         {
             yield return OpenShop();
+            yield return UntilSettled();
 
-            GameFixture.Press(Router, "ShopButton");
-            Assert.IsFalse(View.IsDrawerOpen);
-            Assert.IsTrue(View.Drawer.IsMoving, "it slides out");
-            yield return null;
-            Assert.IsFalse(GameFixture.CanPress(View, "CategoryButton1"), "a closing drawer takes no taps");
-            yield return GameFixture.Until(() => !View.Drawer.IsMoving, "the drawer to close", MotionTimeout);
-            Assert.AreEqual(1f, View.Drawer.Closedness, 0.001f, "closed: off the right edge");
-            Assert.IsTrue(GameFixture.CanPress(View, "ShopButton"), "the storefront disc stays to open it again");
+            Assert.IsFalse(Has("ShopButton") || Has("ShopIcon"), "no storefront disc in the shop's drawer");
+            Assert.IsFalse(Has("DrawerLineLeft") || Has("DrawerLineRight") || Has("DrawerDiamond"), "and no divider under it");
 
-            GameFixture.Press(Router, "ShopButton");
-            Assert.IsTrue(View.IsDrawerOpen);
-            yield return GameFixture.Until(() => !View.Drawer.IsMoving, "the drawer to open", MotionTimeout);
-            Assert.AreEqual(0f, View.Drawer.Closedness, 0.001f);
-            yield return null;
-            Assert.IsTrue(GameFixture.CanPress(View, "CategoryButton1"));
+            Rect screen = ScreenRect((RectTransform)View.transform);
+            Rect drawer = ScreenRect((RectTransform)View.Drawer.transform);
+            Assert.AreEqual(screen.xMax, drawer.xMax, 1f, "flush with the right edge");
+            for (int shown = 0; shown < ShopView.CategoryCount; shown++)
+            {
+                Press("CategoryButton" + shown);
+                Assert.AreEqual(shown, View.Category);
+                Assert.AreEqual(shown, View.Drawer.Active);
+                Rect previous = default;
+                for (int c = 0; c < ShopView.CategoryCount; c++)
+                {
+                    Assert.IsTrue(GameFixture.CanPress(View, "CategoryButton" + c), $"button {c} can be tapped while category {shown} shows");
+                    Rect button = ButtonRect(c);
+                    Assert.IsTrue(button.xMin >= drawer.xMin && button.xMax <= drawer.xMax, $"button {c} lies inside the drawer: {button} in {drawer}");
+                    Assert.IsTrue(button.yMin >= screen.yMin && button.yMax <= screen.yMax, $"button {c} lies on the screen: {button} in {screen}");
+                    if (c > 0)
+                    {
+                        Assert.LessOrEqual(button.yMax, previous.yMin, $"button {c} lies below button {c - 1}");
+                    }
 
-            _game.Settings.SetReduceMotion(true);
-            GameFixture.Press(Router, "ShopButton");
-            Assert.IsFalse(View.Drawer.IsMoving, "Reduce motion: no slide");
-            Assert.AreEqual(1f, View.Drawer.Closedness, 0.001f, "closed at once");
-            GameFixture.Press(Router, "ShopButton");
-            Assert.AreEqual(0f, View.Drawer.Closedness, 0.001f, "open at once");
+                    previous = button;
+                }
+
+                float middle = (ButtonRect(0).yMax + ButtonRect(ShopView.CategoryCount - 1).yMin) / 2f;
+                Assert.AreEqual(drawer.center.y, middle, drawer.height * 0.01f, "the three are centred in the drawer");
+            }
         }
 
         [UnityTest]
-        public IEnumerator SwitchingCategories_KeepsEachOnesChoiceAndPosition()
+        public IEnumerator EveryCategory_ShowsExactlyThreeTiles_SideBySideInThePanel_AndNothingScrolls()
+        {
+            yield return OpenShop();
+            yield return UntilSettled();
+
+            Assert.IsFalse(Has("PrevButton") || Has("NextButton"), "no chevrons");
+            Assert.IsFalse(Has("Track") || Has("Thumb") || Has("SwipeHint"), "no scroll track and no \"Swipe to browse\"");
+            Assert.IsEmpty(View.GetComponentsInChildren<IBeginDragHandler>(true), "nothing to drag");
+            Assert.IsEmpty(View.GetComponentsInChildren<IScrollHandler>(true), "nothing to scroll");
+
+            Rect panel = ScreenRect(Find("Panel"));
+            for (int c = 0; c < ShopView.CategoryCount; c++)
+            {
+                Press("CategoryButton" + c);
+                Assert.AreEqual(TilesShown, View.Tiles(c).Count, $"category {c} shows three");
+                Rect previous = default;
+                for (int i = 0; i < TilesShown; i++)
+                {
+                    ShopItemTile tile = Tile(c, i);
+                    Assert.IsTrue(tile.isActiveAndEnabled, $"category {c}, tile {i} shows");
+                    Rect rect = ScreenRect((RectTransform)tile.transform);
+                    Assert.IsTrue(panel.Contains(rect.min) && panel.Contains(rect.max), $"category {c}, tile {i} lies in the panel: {rect} in {panel}");
+                    if (i > 0)
+                    {
+                        Assert.Greater(rect.xMin, previous.xMax, $"category {c}, tile {i} stands right of tile {i - 1}");
+                        Assert.AreEqual(previous.center.y, rect.center.y, 0.5f, "in one row");
+                    }
+
+                    previous = rect;
+                }
+
+                Assert.IsNull(View.Tiles(c).Tile(TilesShown), "and no fourth");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator TheBackgrounds_AreTheHimalayanVistaPokharaLakesideAndMonasteryGarden_WithTheirPictures()
+        {
+            yield return OpenShop();
+            Press("CategoryButton1");
+
+            string[] names = { "ui.shop.background.himalayan_vista", "ui.shop.background.pokhara_lakeside", "ui.shop.background.monastery_garden" };
+            string[] pictures = { "Thumb_HimalayanVista", "Thumb_PokharaLakeside", "Thumb_MonasteryGarden" };
+            for (int i = 0; i < TilesShown; i++)
+            {
+                Assert.AreEqual(Text(names[i]), Tile(Backgrounds, i).NameLabel.text);
+                Assert.IsNotNull(Tile(Backgrounds, i).Face.sprite, names[i] + " has a picture");
+                Assert.AreEqual(pictures[i], Tile(Backgrounds, i).Face.sprite.name);
+            }
+
+            Assert.IsTrue(Tile(Backgrounds, 0).IsChosen, "the shop opens with each choice on its equipped item");
+            Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Backgrounds, 0).StatusLabel.text, "the Himalayan Vista is the default");
+            Assert.AreEqual(Text("ui.shop.status.owned"), Tile(Backgrounds, 1).StatusLabel.text, "every background is owned");
+            Assert.AreEqual(Text("ui.shop.status.owned"), Tile(Backgrounds, 2).StatusLabel.text);
+        }
+
+        [UnityTest]
+        public IEnumerator ABackgroundThatLeftTheShop_ShowsTheHimalayanVistaEquipped()
+        {
+            yield return OpenShop(saves => saves.Save(CosmeticsService.SaveKey, new CosmeticsData { equippedBackgroundId = "vintage-home" }));
+            Assert.AreEqual(CosmeticCatalog.Backgrounds.HimalayanVista, _game.Services.Resolve<ICosmeticsShop>().Equipped(CosmeticKind.Background));
+
+            Press("CategoryButton1");
+            Assert.AreEqual(3, View.Tiles(Backgrounds).Count);
+            Assert.IsTrue(Tile(Backgrounds, 0).IsChosen);
+            Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Backgrounds, 0).StatusLabel.text);
+            Assert.IsFalse(View.PrimaryInteractable, "Use Selected Background is off while the chosen one is equipped");
+        }
+
+        [UnityTest]
+        public IEnumerator SwitchingCategories_KeepsEachOnesChoice()
         {
             yield return OpenShop();
 
@@ -107,17 +185,11 @@ namespace Callbreak.Tests.PlayMode
             Press("CategoryButton1");
             Assert.AreEqual(Backgrounds, View.Category);
             Assert.AreEqual(Backgrounds, View.Drawer.Active);
-            Assert.AreEqual(6, View.Carousel(Backgrounds).Count, "six backgrounds");
-            Assert.IsTrue(Tile(Backgrounds, 3).IsChosen, "the shop opens with each choice on its equipped item: Himalayan Vista, off screen");
-            Assert.AreEqual(0f, View.Carousel(Backgrounds).Offset, "the first three in view");
             Press("Tile1");
             Assert.IsTrue(Tile(Backgrounds, 1).IsChosen);
             Assert.AreEqual(Text("ui.shop.status.selected"), Tile(Backgrounds, 1).StatusLabel.text, "mockup 20: owned, chosen, not equipped");
             Assert.IsTrue(Tile(Backgrounds, 1).RadioFilled);
-            Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Backgrounds, 3).StatusLabel.text);
-            Press("NextButton");
-            yield return GameFixture.Until(() => !View.Carousel(Backgrounds).IsMoving, "the row to glide", MotionTimeout);
-            Assert.AreEqual(3f, View.Carousel(Backgrounds).Offset, 0.001f);
+            Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Backgrounds, 0).StatusLabel.text);
 
             Press("CategoryButton2");
             Assert.AreEqual(Tables, View.Category);
@@ -128,70 +200,26 @@ namespace Callbreak.Tests.PlayMode
 
             Press("CategoryButton1");
             Assert.IsTrue(Tile(Backgrounds, 1).IsChosen, "Backgrounds kept its choice");
-            Assert.AreEqual(3f, View.Carousel(Backgrounds).Offset, 0.001f, "and its position");
+            Assert.IsFalse(Tile(Backgrounds, 0).IsChosen);
         }
 
         [UnityTest]
-        public IEnumerator TheChevrons_BrowseAPage_AndAreOffAtTheEnds_WhileATrackFollows()
+        public IEnumerator UseSelectedBackground_EquipsTheChosenBackground()
         {
             yield return OpenShop();
-            Press("CategoryButton1");
-            ShopCarousel row = View.Carousel(Backgrounds);
-
-            Assert.IsTrue(row.Browsable);
-            Assert.IsFalse(GameFixture.CanPress(View, "PrevButton"), "off at the start");
-            Assert.IsTrue(GameFixture.CanPress(View, "NextButton"));
-            Assert.AreEqual(0f, row.ThumbPosition, 0.001f);
-
-            Press("NextButton");
-            yield return GameFixture.Until(() => !row.IsMoving, "the row to glide", MotionTimeout);
-            Assert.AreEqual(3f, row.Offset, 0.001f, "a page: the last three");
-            Assert.AreEqual(1f, row.ThumbPosition, 0.001f, "the track's thumb at its end");
-            Assert.IsFalse(GameFixture.CanPress(View, "NextButton"), "off at the end");
-            Assert.IsTrue(GameFixture.CanPress(View, "PrevButton"));
-
-            _game.Settings.SetReduceMotion(true);
-            Press("PrevButton");
-            Assert.IsFalse(row.IsMoving, "Reduce motion: no glide");
-            Assert.AreEqual(0f, row.Offset, 0.001f);
-        }
-
-        [UnityTest]
-        public IEnumerator ADrag_BrowsesAndSettlesOnATile_ResistsPastTheStart_AndAQuickOneGoesOn()
-        {
-            yield return OpenShop();
-            Press("CategoryButton1");
-            ShopCarousel row = View.Carousel(Backgrounds);
-
-            // A slow drag of a tile and a third: it follows the finger, then settles on the nearest tile.
-            yield return Drag(row, 1.3f, pauseBeforeRelease: true);
-            yield return GameFixture.Until(() => !row.IsMoving, "the row to settle", MotionTimeout);
-            Assert.AreEqual(1f, row.Offset, 0.001f, "the nearest tile");
-
-            // Back past the start: the row gives a little, and comes back.
-            yield return Drag(row, -1.8f, pauseBeforeRelease: true, observe: offset => Assert.Greater(offset, -1.8f + 1f, "it resists past the start"));
-            yield return GameFixture.Until(() => !row.IsMoving, "the row to settle", MotionTimeout);
-            Assert.AreEqual(0f, row.Offset, 0.001f, "back at the start");
-
-            // A quick release past half a tile: on to the next tile at least (a flick may carry it further).
-            yield return Drag(row, 0.6f, pauseBeforeRelease: false);
-            yield return GameFixture.Until(() => !row.IsMoving, "the row to settle", MotionTimeout);
-            Assert.GreaterOrEqual(row.Offset, 1f - 0.001f, "it goes on");
-            Assert.AreEqual(Mathf.Round(row.Offset), row.Offset, 0.001f, "and rests on a whole tile");
-        }
-
-        [UnityTest]
-        public IEnumerator WhenEverythingFits_BrowsingIsHidden()
-        {
-            yield return OpenShop();
-
-            Assert.IsFalse(View.Carousel(Cards).Browsable, "three decks fit");
-            Assert.IsFalse(GameFixture.CanPress(View, "PrevButton"));
-            Assert.IsFalse(GameFixture.CanPress(View, "NextButton"));
-            Assert.IsFalse(Shows("Track") || Shows("SwipeHint"), "no track and no hint");
+            var shop = _game.Services.Resolve<ICosmeticsShop>();
 
             Press("CategoryButton1");
-            Assert.IsTrue(Shows("Track") && Shows("SwipeHint"), "six backgrounds: the track and the hint");
+            Press("Tile2");
+            Assert.AreEqual(Text("ui.shop.status.selected"), Tile(Backgrounds, 2).StatusLabel.text);
+            Assert.IsTrue(View.PrimaryInteractable, "Use Selected Background");
+            Press("PrimaryButton");
+            yield return null;
+
+            Assert.AreEqual(CosmeticCatalog.Backgrounds.MonasteryGarden, shop.Equipped(CosmeticKind.Background), "the scenery for the next match");
+            Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Backgrounds, 2).StatusLabel.text);
+            Assert.AreEqual(Text("ui.shop.status.owned"), Tile(Backgrounds, 0).StatusLabel.text);
+            Assert.IsFalse(View.PrimaryInteractable, "off while it is equipped");
         }
 
         [UnityTest]
@@ -294,18 +322,15 @@ namespace Callbreak.Tests.PlayMode
             yield return OpenShop();
             Press("CategoryButton1");
             Press("Tile2");
-            Press("NextButton");
-            yield return GameFixture.Until(() => !View.Carousel(Backgrounds).IsMoving, "the row to glide", MotionTimeout);
-            GameFixture.Press(Router, "ShopButton");
+            Assert.IsTrue(Tile(Backgrounds, 2).IsChosen);
             GameFixture.Press(Router, "BackButton");
             yield return null;
 
             GameFixture.Press(Router, "ShopButton");
             yield return GameFixture.Until(() => Router.Current == ScreenId.Shop, "the shop to open again");
             Assert.AreEqual(Cards, View.Category, "Cards again");
-            Assert.IsTrue(View.IsDrawerOpen, "with the drawer open");
-            Assert.AreEqual(0f, View.Carousel(Backgrounds).Offset, "every row at its start");
-            Assert.IsTrue(Tile(Backgrounds, 3).IsChosen, "every choice on its equipped item");
+            Assert.IsTrue(Tile(Backgrounds, 0).IsChosen, "every choice on its equipped item");
+            Assert.IsFalse(Tile(Backgrounds, 2).IsChosen);
         }
 
         private ScreenRouter Router => _game.MenuRouter;
@@ -319,26 +344,67 @@ namespace Callbreak.Tests.PlayMode
             yield return GameFixture.Until(() => Router.Current == ScreenId.Shop && !_game.Curtain.IsCovering, "the shop to open");
         }
 
+        /// <summary>Waits for the shop to finish sliding in, so that everything lies where it rests.</summary>
+        private IEnumerator UntilSettled()
+        {
+            yield return GameFixture.Until(
+                () => Mathf.Approximately(View.SlideTarget.anchoredPosition.x, 0f) && Mathf.Approximately(View.SlideTarget.localScale.x, 1f),
+                "the shop to finish sliding in");
+        }
+
         private void Press(string button) => GameFixture.PressIn(View, button);
 
         private ShopItemTile Tile(int category, int index)
         {
-            ShopItemTile tile = View.Carousel(category).Tile(index);
+            ShopItemTile tile = View.Tiles(category).Tile(index);
             Assert.IsNotNull(tile, $"category {category} has a tile {index}");
             return tile;
         }
 
-        private bool Shows(string node)
+        /// <summary>Anything of that name in the shop, shown or not.</summary>
+        private bool Has(string node) => FindOrNull(node) != null;
+
+        private RectTransform Find(string node)
         {
-            foreach (Transform child in View.Carousel(View.Category).GetComponentsInChildren<Transform>(false))
+            RectTransform found = FindOrNull(node);
+            Assert.IsNotNull(found, "the shop has a " + node);
+            return found;
+        }
+
+        private RectTransform FindOrNull(string node)
+        {
+            foreach (RectTransform child in View.GetComponentsInChildren<RectTransform>(true))
             {
                 if (child.name == node)
                 {
-                    return true;
+                    return child;
                 }
             }
 
-            return false;
+            return null;
+        }
+
+        /// <summary>The area a category button takes taps in: its disc and its label.</summary>
+        private Rect ButtonRect(int category)
+        {
+            foreach (Button button in View.Drawer.GetComponentsInChildren<Button>(false))
+            {
+                if (button.name == "CategoryButton" + category)
+                {
+                    return ScreenRect(button.targetGraphic.rectTransform);
+                }
+            }
+
+            Assert.Fail("no category button " + category);
+            return default;
+        }
+
+        /// <summary>Where a rect is on the screen (the menu canvas draws over the screen).</summary>
+        private static Rect ScreenRect(RectTransform rect)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
         }
 
         private string Text(string key) => _game.Services.Resolve<ILocalization>().Get(key);
@@ -357,41 +423,6 @@ namespace Callbreak.Tests.PlayMode
             }
 
             return false;
-        }
-
-        /// <summary>
-        /// A finger on the row's window, moving it by <paramref name="tiles"/> (positive: on to later
-        /// tiles, so the finger moves left) in ten frames, then lifting, after a rest when asked.
-        /// </summary>
-        private static IEnumerator Drag(ShopCarousel row, float tiles, bool pauseBeforeRelease, System.Action<float> observe = null)
-        {
-            RectTransform window = row.Viewport;
-            Canvas canvas = window.GetComponentInParent<Canvas>().rootCanvas;
-            Vector2 start = RectTransformUtility.WorldToScreenPoint(null, window.TransformPoint(window.rect.center));
-            float distance = tiles * row.Stride * canvas.scaleFactor;
-            var data = new PointerEventData(EventSystem.current)
-            {
-                button = PointerEventData.InputButton.Left,
-                position = start,
-                pressPosition = start,
-            };
-            ExecuteEvents.Execute(row.gameObject, data, ExecuteEvents.initializePotentialDrag);
-            ExecuteEvents.Execute(row.gameObject, data, ExecuteEvents.beginDragHandler);
-            const int Steps = 10;
-            for (int i = 1; i <= Steps; i++)
-            {
-                data.position = start - new Vector2(distance * i / Steps, 0f);
-                ExecuteEvents.Execute(row.gameObject, data, ExecuteEvents.dragHandler);
-                observe?.Invoke(row.Offset);
-                yield return null;
-            }
-
-            if (pauseBeforeRelease)
-            {
-                yield return new WaitForSecondsRealtime(0.25f);
-            }
-
-            ExecuteEvents.Execute(row.gameObject, data, ExecuteEvents.endDragHandler);
         }
     }
 }

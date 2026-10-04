@@ -130,3 +130,22 @@ ArtSource/Prompts, rows in ArtSource/handoff.csv):
 - **Leftovers:** six `ui.card_collection.*` rows and the old Card Collection art sources remain
   unused.
 - **The GDD is out of date here:** §11 screen 15, §13 (cosmetics: decks only) and §15 (no currency).
+
+## Addendum, 5 Oct 2026: three items, no scrolling, a smaller drawer
+
+The owner's changes:
+- **Three items, fixed:** every category shows exactly its three items, with no carousel. The chevrons,
+  scroll track, "Swipe to browse" and dragging are removed (`ShopTiles`, a fixed row).
+- **Backgrounds:** only Himalayan Vista (default), Pokhara Lakeside and Monastery Garden.
+  - Kathmandu Courtyard, Village Terrace and Vintage Home are removed from the catalogue, the table's
+    library and the game's art. Their art stays in ArtSource.
+  - A save that names one of them falls back to the Himalayan Vista.
+  - The table's backdrop textures drop to 7.17 MB on Android: nine textures in ASTC 6×6.
+- **The drawer:**
+  - No storefront button inside the shop, so the drawer is always open: no toggle and no slide.
+  - Its three category buttons are 0.68 of the mockups' size, stacked in the drawer's middle, and the
+    drawer is narrowed to 160 mockup px. Its art keeps its own width past the screen edge.
+- **Earn Coins:** the clock icon now sits about 7 units from its line instead of 16, centred with it
+  as one group, for any text.
+- **Suites:** EditMode 1912 and PlayMode 86; the table simulation has 0 failures in both modes
+  (480 and 467 kinds of check).

@@ -18,8 +18,9 @@ namespace Callbreak.Tests.PlayMode
     /// everything, the background and the table this player equipped in the shop, as three layers in
     /// BG_Table's frame (the scenery, the table, the scenery's foreground). A change in the shop shows
     /// at the next match. A background or table the build has no art for shows the default and the
-    /// log says so once. What the table must show for an id comes from the table's own library, so
-    /// these hold before and after the art lands. Saves go to a temporary folder.
+    /// log says so once; so does a background the game no longer has (the owner, 5 Oct 2026), equipped
+    /// or saved. What the table must show for an id comes from the table's own library, so these hold
+    /// before and after the art lands. Saves go to a temporary folder.
     /// </summary>
     public sealed class TableBackdropTests
     {
@@ -65,7 +66,7 @@ namespace Callbreak.Tests.PlayMode
             yield return null;
             _game.PressDialog(confirm: true);
             yield return _game.UntilMenu();
-            shop.Equip(CosmeticKind.Background, CosmeticCatalog.Backgrounds.KathmanduCourtyard);
+            shop.Equip(CosmeticKind.Background, CosmeticCatalog.Backgrounds.MonasteryGarden);
             shop.Equip(CosmeticKind.Table, CosmeticCatalog.Tables.HimalayanIvory);
 
             _warnings.Clear();
@@ -80,7 +81,70 @@ namespace Callbreak.Tests.PlayMode
             _game.PressDialog(confirm: true);
             yield return UntilTableOpens("the next match's table to open");
             table = UnityEngine.Object.FindFirstObjectByType<TableView>();
-            AssertShows(table, CosmeticCatalog.Backgrounds.KathmanduCourtyard, CosmeticCatalog.Tables.HimalayanIvory);
+            AssertShows(table, CosmeticCatalog.Backgrounds.MonasteryGarden, CosmeticCatalog.Tables.HimalayanIvory);
+        }
+
+        /// <summary>
+        /// The owner (5 Oct 2026): the game keeps three backgrounds. A player who still has one of the
+        /// three that left equipped (Kathmandu Courtyard here) sees the Himalayan Vista on the table
+        /// they equipped, and the log names the old background once.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ARemovedBackground_ShowsTheHimalayanVista_AndTheLogSaysSoOnce()
+        {
+            const string removed = "kathmandu-courtyard";
+            string crimson = CosmeticCatalog.Tables.RoyalCrimson;
+            var shop = new EquippedOnly(removed, crimson);
+            yield return _game.Boot(extra: builder => builder.RegisterInstance<ICosmeticsShop>(shop));
+            Assert.AreSame(shop, _game.Services.Resolve<ICosmeticsShop>());
+
+            _warnings.Clear();
+            GameFixture.Press(_game.MenuRouter, "PlayOfflineButton");
+            GameFixture.Press(_game.MenuRouter, "StartButton");
+            yield return UntilTableOpens("the table to open");
+            TableView table = UnityEngine.Object.FindFirstObjectByType<TableView>();
+
+            Assert.IsNotNull(table.Backdrops, "the table holds the library of backgrounds and tables");
+            Assert.IsNull(table.Backdrops.Background(removed), "the table's library no longer has it");
+            TableBackdrop vista = table.Backdrops.Backdrop(CosmeticCatalog.Backgrounds.HimalayanVista, crimson);
+            Assert.AreEqual(CosmeticCatalog.Backgrounds.HimalayanVista, vista.BackgroundId, "the Himalayan Vista has its art");
+            AssertLayer(vista.Back, table.BackdropBack, "the Himalayan Vista's scenery");
+            AssertLayer(vista.Table, table.BackdropTable, "the equipped table");
+            AssertLayer(vista.Front, table.BackdropFront, "the Himalayan Vista's foreground");
+            Assert.AreEqual(1, Count(removed), "the removed background is named once: " + string.Join(" | ", _warnings));
+            Assert.AreEqual(vista.TableId == crimson ? 0 : 1, Count(crimson), "the table is named only when it has no art: " + string.Join(" | ", _warnings));
+        }
+
+        /// <summary>
+        /// The same from a save file written before 5 Oct 2026, through the game's own shop: the match
+        /// shows the Himalayan Vista on the table the shop has equipped, and the old id is never named
+        /// more than once (the shop may fall back to the default itself, so the table may never see it).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ARemovedBackgroundInTheSave_ShowsTheHimalayanVista()
+        {
+            const string removed = "village-terrace";
+            string crimson = CosmeticCatalog.Tables.RoyalCrimson;
+            yield return _game.Boot(seed: saves => saves.Save(CosmeticsService.SaveKey, new CosmeticsData
+            {
+                equippedBackgroundId = removed,
+                equippedTableId = crimson,
+                boughtTableIds = new List<string> { crimson },
+            }));
+            string equippedTable = _game.Services.Resolve<ICosmeticsShop>().Equipped(CosmeticKind.Table);
+
+            GameFixture.Press(_game.MenuRouter, "PlayOfflineButton");
+            GameFixture.Press(_game.MenuRouter, "StartButton");
+            yield return UntilTableOpens("the table to open");
+            TableView table = UnityEngine.Object.FindFirstObjectByType<TableView>();
+
+            Assert.IsNotNull(table.Backdrops, "the table holds the library of backgrounds and tables");
+            TableBackdrop vista = table.Backdrops.Backdrop(CosmeticCatalog.Backgrounds.HimalayanVista, equippedTable);
+            Assert.AreEqual(CosmeticCatalog.Backgrounds.HimalayanVista, vista.BackgroundId, "the Himalayan Vista has its art");
+            AssertLayer(vista.Back, table.BackdropBack, "the Himalayan Vista's scenery");
+            AssertLayer(vista.Table, table.BackdropTable, "the equipped table");
+            AssertLayer(vista.Front, table.BackdropFront, "the Himalayan Vista's foreground");
+            Assert.LessOrEqual(Count(removed), 1, "never named more than once: " + string.Join(" | ", _warnings));
         }
 
         [UnityTest]

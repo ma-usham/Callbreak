@@ -5,14 +5,16 @@ using System.Collections.ObjectModel;
 namespace Callbreak.Application.Cosmetics
 {
     /// <summary>
-    /// What the shop sells, in shop order (the owner, 4 Oct 2026; mockups 15, 20 and 21 and the
-    /// designer's shop-drawer-and-tables-prompts.md). Ids are stable strings: save files keep them
-    /// and the art is found by them. A deck's id is its deck theme id
-    /// (card-designs/full-decks/manifest.json). Every deck and background and the Himalayan Ivory
-    /// table are owned from the start (price 0); the other tables cost coins. The defaults are the
-    /// game's look before the shop: Classic Crimson cards, the Himalayan Vista scenery and the
-    /// Himalayan Ivory table. Names are localization keys: the decks keep theirs, the rest are
-    /// <c>ui.shop.&lt;kind&gt;.&lt;id with underscores&gt;</c>.
+    /// What the shop sells, in shop order (the owner, 4 and 5 Oct 2026; mockups 15, 20 and 21 and the
+    /// designer's shop-drawer-and-tables-prompts.md): three items of each kind, as the shop shows
+    /// exactly three per category. Ids are stable strings: save files keep them and the art is found
+    /// by them. A deck's id is its deck theme id (card-designs/full-decks/manifest.json). Every deck
+    /// and background and the Himalayan Ivory table are owned from the start (price 0); the other
+    /// tables cost coins. The defaults are the game's look before the shop: Classic Crimson cards,
+    /// the Himalayan Vista scenery and the Himalayan Ivory table. Names are localization keys: the
+    /// decks keep theirs, the rest are <c>ui.shop.&lt;kind&gt;.&lt;id with underscores&gt;</c>. An id
+    /// that has left the shop (Kathmandu Courtyard, Village Terrace and Vintage Home, 5 Oct 2026) is
+    /// unknown from then on, and a save file that still names it falls back to the default.
     /// </summary>
     public static class CosmeticCatalog
     {
@@ -26,9 +28,6 @@ namespace Callbreak.Application.Cosmetics
 
         public static class Backgrounds
         {
-            public const string KathmanduCourtyard = "kathmandu-courtyard";
-            public const string VillageTerrace = "village-terrace";
-            public const string VintageHome = "vintage-home";
             public const string HimalayanVista = "himalayan-vista";
             public const string PokharaLakeside = "pokhara-lakeside";
             public const string MonasteryGarden = "monastery-garden";
@@ -55,9 +54,6 @@ namespace Callbreak.Application.Cosmetics
             new CosmeticItem(CosmeticKind.Deck, Decks.KathmanduGold, "ui.deck.kathmandu_gold", 0));
 
         private static readonly ReadOnlyCollection<CosmeticItem> BackgroundItems = Items(
-            new CosmeticItem(CosmeticKind.Background, Backgrounds.KathmanduCourtyard, "ui.shop.background.kathmandu_courtyard", 0),
-            new CosmeticItem(CosmeticKind.Background, Backgrounds.VillageTerrace, "ui.shop.background.village_terrace", 0),
-            new CosmeticItem(CosmeticKind.Background, Backgrounds.VintageHome, "ui.shop.background.vintage_home", 0),
             new CosmeticItem(CosmeticKind.Background, Backgrounds.HimalayanVista, "ui.shop.background.himalayan_vista", 0),
             new CosmeticItem(CosmeticKind.Background, Backgrounds.PokharaLakeside, "ui.shop.background.pokhara_lakeside", 0),
             new CosmeticItem(CosmeticKind.Background, Backgrounds.MonasteryGarden, "ui.shop.background.monastery_garden", 0));

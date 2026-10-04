@@ -1,3 +1,4 @@
+using Callbreak.Presentation.Screens;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,7 +11,8 @@ namespace Callbreak.Editor.Screens
     /// kit's crimson check (UI/Controls/UI_Check_Badge.png), kept clear of the block's rounded corner
     /// and its title: a proposal, the owner's to confirm (the designer's prototype puts a crimson check
     /// in the block's corner). The dynamic labels get a maximum width, so a longer balance or
-    /// translation shrinks instead of running out of its place.
+    /// translation shrinks instead of running out of its place. The clock is moved close before the
+    /// reset line, the two centred in the panel (<see cref="EarnCoinsView.CentreClockLine"/>).
     /// </summary>
     public static class EarnCoinsCustomizer
     {
@@ -49,6 +51,10 @@ namespace Callbreak.Editor.Screens
             ScreenExtras.LimitWidth(ctx, "WatchLabel", 360f);
             ScreenExtras.LimitWidth(ctx, "Progress", 560f);
             ScreenExtras.LimitWidth(ctx, "ResetLabel", 560f);
+
+            // The clock close before its line, the two centred in the panel (the owner, 5 Oct 2026),
+            // as the view lays them out whenever the line changes.
+            EarnCoinsView.CentreClockLine(ctx.Nodes["ResetLabel"].GetComponent<TMPro.TMP_Text>(), ctx.Nodes["ClockIcon"]);
         }
 
         private static Image Face(ScreenBuildContext ctx, string id) => ctx.Nodes[id].Find("Face").GetComponent<Image>();

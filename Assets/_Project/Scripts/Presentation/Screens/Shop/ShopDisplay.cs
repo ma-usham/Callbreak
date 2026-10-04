@@ -16,7 +16,7 @@ namespace Callbreak.Presentation.Screens
         Price,
     }
 
-    /// <summary>What the primary button under the carousel does for the chosen item.</summary>
+    /// <summary>What the primary button under the tiles does for the chosen item.</summary>
     public enum ShopAction
     {
         /// <summary>"Use Selected Style / Background / Table": equips an owned item.</summary>

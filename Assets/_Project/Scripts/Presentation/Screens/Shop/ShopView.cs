@@ -10,14 +10,14 @@ namespace Callbreak.Presentation.Screens
 {
     /// <summary>
     /// The shop (mockups 15 Cards, 20 Backgrounds and 21 Tables; designer's spec
-    /// shop-drawer-and-tables-prompts.md): Back at the top left, the category's title and subtitle,
-    /// its carousel of items in the panel (<see cref="ShopCarousel"/>), the primary button under
-    /// it ("Use Selected Style / Background / Table", or "Buy for (coin) N"), and the drawer on the
-    /// right (<see cref="ShopDrawer"/>). Each category has its own title, subtitle, carousel and
-    /// Use label, each fitted on its own mockup; showing a category switches them. Tapping a deck
-    /// turns its picture over to the deck's ace of spades for a moment and back
-    /// (<see cref="PeekFace"/>, timed by <see cref="DeckPeek"/>). A primary button that is not
-    /// interactable shows its disabled look with its words dimmed.
+    /// shop-drawer-and-tables-prompts.md; the owner, 5 Oct 2026): Back at the top left, the
+    /// category's title and subtitle, its three items in the panel (<see cref="ShopTiles"/>, nothing
+    /// scrolls), the primary button under them ("Use Selected Style / Background / Table", or "Buy
+    /// for (coin) N"), and the drawer on the right, always open (<see cref="ShopDrawer"/>). Each
+    /// category has its own title, subtitle, tiles and Use label, each fitted on its own mockup;
+    /// showing a category switches them. Tapping a deck turns its picture over to the deck's ace of
+    /// spades for a moment and back (<see cref="PeekFace"/>, timed by <see cref="DeckPeek"/>). A
+    /// primary button that is not interactable shows its disabled look with its words dimmed.
     /// </summary>
     public sealed class ShopView : UIScreen
     {
@@ -31,7 +31,7 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private ShopDrawer _drawer;
         [SerializeField] private GameObject[] _title;
         [SerializeField] private GameObject[] _subtitle;
-        [SerializeField] private ShopCarousel[] _carousel;
+        [SerializeField] private ShopTiles[] _tiles;
         [SerializeField] private Button _primaryButton;
         [SerializeField] private CanvasGroup _primaryContent;
         [SerializeField] private GameObject[] _useLabel;
@@ -51,9 +51,6 @@ namespace Callbreak.Presentation.Screens
 
         public event Action BackClicked;
 
-        /// <summary>The storefront disc: opens or closes the drawer.</summary>
-        public event Action DrawerToggleClicked;
-
         /// <summary>A drawer button: 0 Cards, 1 Backgrounds, 2 Tables.</summary>
         public event Action<int> CategoryClicked;
 
@@ -65,8 +62,6 @@ namespace Callbreak.Presentation.Screens
         /// <summary>The category that shows: 0 Cards, 1 Backgrounds, 2 Tables.</summary>
         public int Category => _category;
 
-        public bool IsDrawerOpen => _drawer.IsOpen;
-
         public ShopDrawer Drawer => _drawer;
 
         /// <summary>The primary button shows "Buy for (coin) N" (otherwise a Use label).</summary>
@@ -76,7 +71,8 @@ namespace Callbreak.Presentation.Screens
 
         public string BuyPrice => _buyPrice.text;
 
-        public ShopCarousel Carousel(int category) => _carousel[category];
+        /// <summary>A category's three tiles: 0 Cards, 1 Backgrounds, 2 Tables.</summary>
+        public ShopTiles Tiles(int category) => _tiles[category];
 
         public void ShowCategory(int category)
         {
@@ -91,37 +87,27 @@ namespace Callbreak.Presentation.Screens
                 bool shows = i == _category;
                 SetActive(_title[i], shows);
                 SetActive(_subtitle[i], shows);
-                SetActive(_carousel[i].gameObject, shows);
+                SetActive(_tiles[i].gameObject, shows);
             }
 
             _drawer.SetActive(_category);
             ShowPrimaryWords();
 
-            // Words measured while their row was hidden were never drawn: measure them now.
-            _carousel[_category].RefreshRows();
+            // Words measured while their tiles were hidden were never drawn: measure them now.
+            _tiles[_category].RefreshRows();
         }
 
         public override void OnShown()
         {
             base.OnShown();
-            _carousel[_category].RefreshRows();
+            _tiles[_category].RefreshRows();
             if (_buying)
             {
                 _buyRow.Refresh();
             }
         }
 
-        public void SetDrawerOpen(bool open, bool instant) => _drawer.SetOpen(open, instant);
-
-        public void SetReduceMotion(bool reduceMotion)
-        {
-            foreach (ShopCarousel carousel in _carousel)
-            {
-                carousel.ReduceMotion = reduceMotion;
-            }
-        }
-
-        public void SetTileCount(int category, int count) => _carousel[category].SetCount(count);
+        public void SetTileCount(int category, int count) => _tiles[category].SetCount(count);
 
         /// <summary>
         /// One tile: the item's name, picture and status, and whether it is the chosen one. A
@@ -130,7 +116,7 @@ namespace Callbreak.Presentation.Screens
         /// </summary>
         public void SetTile(int category, int index, string itemName, Sprite picture, ShopTileStatus status, string statusText, string priceText, bool chosen)
         {
-            ShopItemTile tile = _carousel[category].Tile(index);
+            ShopItemTile tile = _tiles[category].Tile(index);
             if (tile == null)
             {
                 return;
@@ -142,15 +128,6 @@ namespace Callbreak.Presentation.Screens
             }
 
             tile.Show(itemName, status, statusText, priceText, chosen);
-        }
-
-        /// <summary>Every category back at the start of its row (a shop that opens afresh).</summary>
-        public void ResetScroll()
-        {
-            foreach (ShopCarousel carousel in _carousel)
-            {
-                carousel.ResetScroll();
-            }
         }
 
         /// <summary>"Use Selected Style / Background / Table", for the category that shows.</summary>
@@ -189,7 +166,7 @@ namespace Callbreak.Presentation.Screens
         /// </summary>
         public void PeekFace(int index, Sprite face, Sprite back, bool reduceMotion)
         {
-            ShopItemTile tile = _carousel[Cards].Tile(index);
+            ShopItemTile tile = _tiles[Cards].Tile(index);
             if (tile == null || face == null)
             {
                 EndPeek();
@@ -228,11 +205,10 @@ namespace Callbreak.Presentation.Screens
         {
             _backButton.onClick.AddListener(OnBack);
             _primaryButton.onClick.AddListener(OnPrimary);
-            _drawer.ToggleClicked += OnDrawerToggle;
             _drawer.CategoryClicked += OnCategory;
-            for (int i = 0; i < _carousel.Length; i++)
+            for (int i = 0; i < _tiles.Length; i++)
             {
-                _carousel[i].TileClicked += TileHandler(i);
+                _tiles[i].TileClicked += TileHandler(i);
             }
         }
 
@@ -240,11 +216,10 @@ namespace Callbreak.Presentation.Screens
         {
             _backButton.onClick.RemoveListener(OnBack);
             _primaryButton.onClick.RemoveListener(OnPrimary);
-            _drawer.ToggleClicked -= OnDrawerToggle;
             _drawer.CategoryClicked -= OnCategory;
-            for (int i = 0; i < _carousel.Length; i++)
+            for (int i = 0; i < _tiles.Length; i++)
             {
-                _carousel[i].TileClicked -= TileHandler(i);
+                _tiles[i].TileClicked -= TileHandler(i);
             }
 
             // A screen that opens again shows every deck by its back.
@@ -315,7 +290,7 @@ namespace Callbreak.Presentation.Screens
 
         private void ApplyPeek(float time)
         {
-            ShopItemTile tile = _peeking == NoTile ? null : _carousel[Cards].Tile(_peeking);
+            ShopItemTile tile = _peeking == NoTile ? null : _tiles[Cards].Tile(_peeking);
             if (tile == null)
             {
                 return;
@@ -364,7 +339,7 @@ namespace Callbreak.Presentation.Screens
             }
 
             // Also reached while the screen is being torn down, when its children may be gone already.
-            ShopItemTile tile = _carousel != null && _carousel.Length > Cards && _carousel[Cards] != null ? _carousel[Cards].Tile(_peeking) : null;
+            ShopItemTile tile = _tiles != null && _tiles.Length > Cards && _tiles[Cards] != null ? _tiles[Cards].Tile(_peeking) : null;
             if (tile != null && tile.Face != null)
             {
                 tile.Face.sprite = _peekBack;
@@ -381,8 +356,6 @@ namespace Callbreak.Presentation.Screens
         }
 
         private void OnBack() => BackClicked?.Invoke();
-
-        private void OnDrawerToggle() => DrawerToggleClicked?.Invoke();
 
         private void OnCategory(int category) => CategoryClicked?.Invoke(category);
 

@@ -16,11 +16,11 @@ namespace Callbreak.Presentation.Screens
 {
     /// <summary>
     /// The shop (GDD §11 screen 15; mockups 15, 20 and 21; designer's spec
-    /// shop-drawer-and-tables-prompts.md). It opens on Cards with the drawer open and each
-    /// category's choice on its equipped item, every row at its start. The drawer's storefront
-    /// disc opens and closes it; its buttons switch categories, each keeping its choice and its
-    /// row's position. Tapping a tile chooses it (a preview: a deck also shows its ace for a
-    /// moment). The primary button equips an owned choice ("Use Selected ...", off while it is
+    /// shop-drawer-and-tables-prompts.md; the owner, 5 Oct 2026). It opens on Cards with each
+    /// category's choice on its equipped item. The drawer is always open; its buttons switch
+    /// categories, each keeping its choice. Every category shows its three items at once. Tapping
+    /// a tile chooses it (a preview: a deck also shows its ace for a moment). The primary button
+    /// equips an owned choice ("Use Selected ...", off while it is
     /// equipped) or buys one that is not owned: with enough coins a confirmation names the item and
     /// its price, and a bought item is owned (not equipped), so the button turns to Use; without
     /// enough, a dialog offers the Earn Coins page or Not now. Coming back from Earn Coins keeps
@@ -74,7 +74,6 @@ namespace Callbreak.Presentation.Screens
         public void Start()
         {
             _view.BackClicked += OnBack;
-            _view.DrawerToggleClicked += OnDrawerToggle;
             _view.CategoryClicked += OnCategory;
             _view.TileClicked += OnTile;
             _view.PrimaryClicked += OnPrimary;
@@ -82,15 +81,12 @@ namespace Callbreak.Presentation.Screens
             _shop.Changed += Render;
             _wallet.Changed += Render;
             _localization.LanguageChanged += Render;
-            _settings.Changed += RenderMotion;
-            RenderMotion();
             OpenAfresh();
         }
 
         public void Dispose()
         {
             _view.BackClicked -= OnBack;
-            _view.DrawerToggleClicked -= OnDrawerToggle;
             _view.CategoryClicked -= OnCategory;
             _view.TileClicked -= OnTile;
             _view.PrimaryClicked -= OnPrimary;
@@ -98,7 +94,6 @@ namespace Callbreak.Presentation.Screens
             _shop.Changed -= Render;
             _wallet.Changed -= Render;
             _localization.LanguageChanged -= Render;
-            _settings.Changed -= RenderMotion;
 
             // A question still open is answered "no" and closes with the screen.
             _disposed = true;
@@ -139,12 +134,8 @@ namespace Callbreak.Presentation.Screens
         private void OpenAfresh()
         {
             _state.Reset();
-            _view.ResetScroll();
-            _view.SetDrawerOpen(true, instant: true);
             Render();
         }
-
-        private void RenderMotion() => _view.SetReduceMotion(_settings.ReduceMotion);
 
         private void Render()
         {
@@ -200,8 +191,6 @@ namespace Callbreak.Presentation.Screens
         }
 
         private void OnBack() => _router.Pop();
-
-        private void OnDrawerToggle() => _view.SetDrawerOpen(!_view.IsDrawerOpen, instant: _settings.ReduceMotion);
 
         private void OnCategory(int category)
         {

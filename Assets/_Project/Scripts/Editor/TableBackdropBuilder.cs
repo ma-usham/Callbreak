@@ -53,7 +53,11 @@ namespace Callbreak.Editor
         public const int FrameWidth = 2230;
         public const int FrameHeight = 1255;
 
-        /// <summary>The shop's backgrounds, in its order.</summary>
+        /// <summary>
+        /// The shop's backgrounds, in its order: only these are imported and listed. A background the
+        /// shop no longer sells (the owner dropped three on 5 Oct 2026) keeps its finals under ArtSource,
+        /// but nothing of it is imported or loads with the table.
+        /// </summary>
         public static readonly string[] BackgroundIds = Ids(CosmeticKind.Background);
 
         /// <summary>The shop's tables, in its order.</summary>
@@ -94,7 +98,7 @@ namespace Callbreak.Editor
             Front,
         }
 
-        /// <summary>"kathmandu-courtyard" → "KathmanduCourtyard": the name the id's art files carry.</summary>
+        /// <summary>"himalayan-vista" → "HimalayanVista": the name the id's art files carry.</summary>
         public static string ArtName(string id)
         {
             var name = new StringBuilder(id.Length);

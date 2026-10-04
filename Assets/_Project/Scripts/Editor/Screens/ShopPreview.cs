@@ -6,12 +6,10 @@ using UnityEngine;
 namespace Callbreak.Editor.Screens
 {
     /// <summary>
-    /// The shop in each mockup's state, for the screen captures (the carousels are filled at run
+    /// The shop in a state of each category, for the screen captures (the tiles are filled at run
     /// time by the presenter): Cards as mockup 15 draws it (Classic Crimson equipped and chosen),
-    /// Backgrounds as 20 (Kathmandu Courtyard chosen, the first three of six in view) and Tables
-    /// as 21 (Himalayan Ivory equipped, Royal Crimson chosen and for sale: "Buy for 350"). The
-    /// mockups draw the chevrons, the track and the hint even where everything fits, and both
-    /// arrows lit; the captures do the same (in the game they follow the spec).
+    /// Backgrounds with its three (the Himalayan Vista equipped, Pokhara Lakeside chosen) and
+    /// Tables as 21 (Himalayan Ivory equipped, Royal Crimson chosen and for sale: "Buy for 350").
     /// </summary>
     public static class ShopPreview
     {
@@ -46,8 +44,6 @@ namespace Callbreak.Editor.Screens
                 return;
             }
 
-            view.SetDrawerOpen(true, instant: true);
-
             Fill(view, Cards,
                 new[] { "Classic Crimson", "Himalayan Ivory", "Kathmandu Gold" },
                 new[] { Back("ClassicCrimson"), Back("HimalayanIvory"), Back("KathmanduGold") },
@@ -55,17 +51,13 @@ namespace Callbreak.Editor.Screens
                 null,
                 chosen: 0);
 
-            string[] backgrounds =
-            {
-                CosmeticCatalog.Backgrounds.KathmanduCourtyard, CosmeticCatalog.Backgrounds.VillageTerrace, CosmeticCatalog.Backgrounds.VintageHome,
-                CosmeticCatalog.Backgrounds.HimalayanVista, CosmeticCatalog.Backgrounds.PokharaLakeside, CosmeticCatalog.Backgrounds.MonasteryGarden,
-            };
+            string[] backgrounds = { CosmeticCatalog.Backgrounds.HimalayanVista, CosmeticCatalog.Backgrounds.PokharaLakeside, CosmeticCatalog.Backgrounds.MonasteryGarden };
             Fill(view, Backgrounds,
-                new[] { "Kathmandu Courtyard", "Village Terrace", "Vintage Home", "Himalayan Vista", "Pokhara Lakeside", "Monastery Garden" },
+                new[] { "Himalayan Vista", "Pokhara Lakeside", "Monastery Garden" },
                 System.Array.ConvertAll(backgrounds, id => view.Picture(CosmeticKind.Background, id)),
-                new[] { ShopTileStatus.Selected, ShopTileStatus.Owned, ShopTileStatus.Owned, ShopTileStatus.Equipped, ShopTileStatus.Owned, ShopTileStatus.Owned },
+                new[] { ShopTileStatus.Equipped, ShopTileStatus.Selected, ShopTileStatus.Owned },
                 null,
-                chosen: 0);
+                chosen: 1);
 
             string[] tables = { CosmeticCatalog.Tables.HimalayanIvory, CosmeticCatalog.Tables.RoyalCrimson, CosmeticCatalog.Tables.HeritageWalnut };
             Fill(view, Tables,
@@ -84,8 +76,6 @@ namespace Callbreak.Editor.Screens
             {
                 view.SetPrimaryUse(true);
             }
-
-            view.Carousel(category).ShowBrowsingAsDrawn();
         }
 
         private static void Fill(ShopView view, int category, string[] names, Sprite[] pictures, ShopTileStatus[] statuses, string[] prices, int chosen)

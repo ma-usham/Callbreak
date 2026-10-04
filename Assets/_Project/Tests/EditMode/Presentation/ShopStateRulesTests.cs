@@ -29,7 +29,7 @@ namespace Callbreak.Tests.EditMode.Presentation
             _shop.Add(CosmeticKind.Deck, "classic-crimson", 0);
             _shop.Add(CosmeticKind.Deck, "himalayan-ivory", 0);
             _shop.Add(CosmeticKind.Deck, "kathmandu-gold", 0);
-            foreach (string id in new[] { "kathmandu-courtyard", "village-terrace", "vintage-home", "himalayan-vista", "pokhara-lakeside", "monastery-garden" })
+            foreach (string id in new[] { "himalayan-vista", "pokhara-lakeside", "monastery-garden" })
             {
                 _shop.Add(CosmeticKind.Background, id, 0);
             }
@@ -49,7 +49,7 @@ namespace Callbreak.Tests.EditMode.Presentation
         {
             Assert.AreEqual(CosmeticKind.Deck, _state.Category);
             Assert.AreEqual(0, _state.ChosenIndex(CosmeticKind.Deck));
-            Assert.AreEqual(3, _state.ChosenIndex(CosmeticKind.Background), "Himalayan Vista, fourth, off screen at first");
+            Assert.AreEqual(0, _state.ChosenIndex(CosmeticKind.Background), "Himalayan Vista, the first");
             Assert.AreEqual(0, _state.ChosenIndex(CosmeticKind.Table));
         }
 
@@ -64,12 +64,11 @@ namespace Callbreak.Tests.EditMode.Presentation
         [Test]
         public void Mockup20_ChoosingAnOwnedBackground_SaysSelected_AndTheEquippedOneStaysEquipped()
         {
-            Assert.IsTrue(_state.Choose(CosmeticKind.Background, 0));
+            AssertStatuses(CosmeticKind.Background, ShopTileStatus.Equipped, ShopTileStatus.Owned, ShopTileStatus.Owned);
 
-            AssertStatuses(
-                CosmeticKind.Background,
-                ShopTileStatus.Selected, ShopTileStatus.Owned, ShopTileStatus.Owned,
-                ShopTileStatus.Equipped, ShopTileStatus.Owned, ShopTileStatus.Owned);
+            Assert.IsTrue(_state.Choose(CosmeticKind.Background, 1));
+
+            AssertStatuses(CosmeticKind.Background, ShopTileStatus.Equipped, ShopTileStatus.Selected, ShopTileStatus.Owned);
             Assert.AreEqual(ShopAction.Use, _state.ActionFor(CosmeticKind.Background));
             Assert.IsTrue(_state.CanUse(CosmeticKind.Background), "Use Selected Background equips it");
         }
@@ -101,11 +100,11 @@ namespace Callbreak.Tests.EditMode.Presentation
         [Test]
         public void ChoosingTheEquippedItemAgain_SaysEquipped_AndUseIsOff()
         {
+            _state.Choose(CosmeticKind.Background, 2);
             _state.Choose(CosmeticKind.Background, 0);
-            _state.Choose(CosmeticKind.Background, 3);
 
-            Assert.AreEqual(ShopTileStatus.Equipped, _state.StatusOf(CosmeticKind.Background, 3));
-            Assert.AreEqual(ShopTileStatus.Owned, _state.StatusOf(CosmeticKind.Background, 0));
+            Assert.AreEqual(ShopTileStatus.Equipped, _state.StatusOf(CosmeticKind.Background, 0));
+            Assert.AreEqual(ShopTileStatus.Owned, _state.StatusOf(CosmeticKind.Background, 2));
             Assert.IsFalse(_state.CanUse(CosmeticKind.Background));
         }
 

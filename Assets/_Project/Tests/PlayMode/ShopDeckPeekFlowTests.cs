@@ -120,7 +120,7 @@ namespace Callbreak.Tests.PlayMode
         /// <summary>The deck tile's picture (its "Face" image; its parent turns with the shadow).</summary>
         private Image Picture(int deck)
         {
-            ShopItemTile tile = Screen.Carousel(0).Tile(deck);
+            ShopItemTile tile = Screen.Tiles(0).Tile(deck);
             Assert.IsNotNull(tile, "Cards has a tile " + deck);
             return tile.Face;
         }

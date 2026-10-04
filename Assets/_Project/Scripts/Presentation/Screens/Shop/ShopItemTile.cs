@@ -6,7 +6,7 @@ using UnityEngine.UI;
 namespace Callbreak.Presentation.Screens
 {
     /// <summary>
-    /// One item of the shop's carousel (mockups 15, 20 and 21): its picture (a deck's back, a
+    /// One of a shop category's three items (mockups 15, 20 and 21): its picture (a deck's back, a
     /// background's thumbnail, a table's preview), its name, and under it either the status line
     /// (a filled radio and "Equipped" or "Selected", an empty radio and "Owned") or the price line
     /// (the coin and the price). The chosen tile carries the crimson outline. Both lines stay
@@ -34,6 +34,8 @@ namespace Callbreak.Presentation.Screens
         public RectTransform Picture => _picture;
 
         public Image Face => _face;
+
+        public TMP_Text NameLabel => _name;
 
         public TMP_Text StatusLabel => _status;
 
@@ -68,8 +70,8 @@ namespace Callbreak.Presentation.Screens
         }
 
         /// <summary>
-        /// Lays the status or price line out again. A tile made while its row was hidden measured
-        /// words that had never been drawn, so the view calls this once the row shows.
+        /// Lays the status or price line out again. A tile filled in while its category was hidden
+        /// measured words that had never been drawn, so the view calls this once the category shows.
         /// </summary>
         public void RefreshRows()
         {

@@ -68,6 +68,10 @@ namespace Callbreak.Editor
             private static readonly Rect StandInFrontArea = new Rect(0f, 905f, 2230f, 350f);
             private static readonly Rect StandInTableArea = new Rect(40f, 280f, 2150f, 975f);
 
+            // The owner (5 Oct 2026): the game keeps three backgrounds, and these left it. A player may
+            // still have one saved (the shop falls back to the default) or equipped.
+            private static readonly string[] RemovedBackgrounds = { "kathmandu-courtyard", "village-terrace", "vintage-home" };
+
             private readonly BackdropShop _shop = new BackdropShop();
             private readonly List<string> _skinWarnings = new List<string>();
 
@@ -78,6 +82,9 @@ namespace Callbreak.Editor
             /// library of stand-in pictures, so each combination is told apart whatever art is in yet
             /// (one background and one table without art, a front and a table cut down to their
             /// visible part); then with the game's own library, whose defaults must look as BG_Table did.
+            /// That library holds only what the shop sells (all of it loads with the table), and a
+            /// background the game no longer has (the owner, 5 Oct 2026), still equipped, shows the
+            /// default and says so once.
             /// </summary>
             private void StageBackdrops()
             {
@@ -97,6 +104,24 @@ namespace Callbreak.Editor
                         bool listed = kind == CosmeticKind.Background ? real.Background(item.Id) != null : real.Table(item.Id) != null;
                         Check(listed, "every background and table the shop sells is in the table's library", kind + " " + item.Id);
                     }
+                }
+
+                // All of the library's pictures load with the table: nothing the shop does not sell may be among them.
+                for (int i = 0; i < real.BackgroundCount; i++)
+                {
+                    string id = real.BackgroundAt(i)?.Id;
+                    Check(CosmeticCatalog.Find(CosmeticKind.Background, id) != null, "the table's library holds only what the shop sells", "background " + (id ?? "(none)"));
+                }
+
+                for (int i = 0; i < real.TableCount; i++)
+                {
+                    string id = real.TableAt(i)?.Id;
+                    Check(CosmeticCatalog.Find(CosmeticKind.Table, id) != null, "the table's library holds only what the shop sells", "table " + (id ?? "(none)"));
+                }
+
+                foreach (string removed in RemovedBackgrounds)
+                {
+                    Check(real.Background(removed) == null, "the backgrounds the owner removed (5 Oct 2026) are not in the table's library", removed);
                 }
 
                 UnityEngine.Application.logMessageReceived += OnSkinLog;
@@ -125,15 +150,31 @@ namespace Callbreak.Editor
                     }
                 }
 
+                int combinations = 0;
+                IReadOnlyList<CosmeticItem> tables = CosmeticCatalog.Of(CosmeticKind.Table);
                 try
                 {
                     foreach (CosmeticItem background in CosmeticCatalog.Of(CosmeticKind.Background))
                     {
-                        foreach (CosmeticItem table in CosmeticCatalog.Of(CosmeticKind.Table))
+                        foreach (CosmeticItem table in tables)
                         {
                             string name = $"Backdrop_{TableBackdropBuilder.ArtName(background.Id)}_{TableBackdropBuilder.ArtName(table.Id)}";
                             ShowEquipped(background.Id, table.Id, real, false, name);
+                            combinations++;
                         }
+                    }
+
+                    // A background the game no longer has, still equipped: the default (the Himalayan
+                    // Vista) on the equipped table, said once.
+                    for (int i = 0; i < RemovedBackgrounds.Length; i++)
+                    {
+                        string removed = RemovedBackgrounds[i], table = tables[i % tables.Count].Id;
+                        TableBackdrop shown = real.Backdrop(removed, table);
+                        Check(
+                            shown.BackgroundId == CosmeticCatalog.Backgrounds.Default,
+                            "a removed background still equipped shows the default one (the Himalayan Vista)",
+                            $"{removed} shows {shown.BackgroundId}");
+                        ShowEquipped(removed, table, real, false, null);
                     }
                 }
                 finally
@@ -153,7 +194,7 @@ namespace Callbreak.Editor
                     tablesWithArt += real.TableAt(i).Table.IsEmpty ? 0 : 1;
                 }
 
-                Note($"backdrop art in the library: {withArt} of {real.BackgroundCount} backgrounds, {tablesWithArt} of {real.TableCount} tables");
+                Note($"backdrop art in the library: {withArt} of {real.BackgroundCount} backgrounds, {tablesWithArt} of {real.TableCount} tables; {combinations} combinations shown with the game's art, and {RemovedBackgrounds.Length} removed backgrounds");
                 VerifyDefaultLooksAsBefore(real);
             }
 
@@ -208,10 +249,7 @@ namespace Callbreak.Editor
                     ShowsLayer(_table.BackdropBack, expected.Back, expected.Frame, $"the equipped background's scenery shows at the back ({kind} art)", what);
                     ShowsLayer(_table.BackdropTable, expected.Table, expected.Frame, $"the equipped table shows on it ({kind} art)", what);
                     ShowsLayer(_table.BackdropFront, expected.Front, expected.Frame, $"the equipped background's foreground shows in front of the table ({kind} art)", what);
-                    if (standIn)
-                    {
-                        Equal(problems, _skinWarnings.Count, "a background or table without art shows the default and says so once");
-                    }
+                    Check(problems == _skinWarnings.Count, "a background or table without art shows the default and says so once", $"{what} ({kind} art): {_skinWarnings.Count} warnings, expected {problems}");
 
                     if (snapshot != null)
                     {
@@ -225,15 +263,18 @@ namespace Callbreak.Editor
             }
 
             /// <summary>
-            /// What the table must show. The stand-in library is known here, so its answer is worked out
-            /// independently of the library's own lookup; the game's library is asked.
+            /// What the table must show, and how many of the two it must say it cannot show. The
+            /// stand-in library is known here, so its answer is worked out independently of the
+            /// library's own lookup; the game's library is asked.
             /// </summary>
             private static TableBackdrop Expected(TableBackdropLibrary library, string backgroundId, string tableId, bool standIn, out int problems)
             {
                 problems = 0;
                 if (!standIn)
                 {
-                    return library.Backdrop(backgroundId, tableId);
+                    TableBackdrop shown = library.Backdrop(backgroundId, tableId);
+                    problems = (shown.BackgroundId != backgroundId ? 1 : 0) + (shown.TableId != tableId ? 1 : 0);
+                    return shown;
                 }
 
                 bool backgroundKnown = false, tableKnown = false;
@@ -281,7 +322,11 @@ namespace Callbreak.Editor
                 Check(placed, "each backdrop layer lies on its part of the frame", $"{what}: {image.name} at {area}, expected {wanted}");
             }
 
-            /// <summary>A library of plain pictures, one per layer: every background and table the shop sells but one of each.</summary>
+            /// <summary>
+            /// A library of plain pictures, one per layer: every background and table the shop sells but
+            /// one of each. The default background has a foreground (as the Vista's red flowers are), so a
+            /// background that falls back brings one along; the other backgrounds alternate with and without.
+            /// </summary>
             private static TableBackdropLibrary StandInLibrary(TableBackdropLibrary real, List<UnityEngine.Object> made)
             {
                 Sprite Picture(string name, int index)
@@ -304,11 +349,11 @@ namespace Callbreak.Editor
                 }
 
                 var backgrounds = new List<TableBackdropLibrary.BackgroundArt>();
-                int n = 0;
+                int n = 0, others = 0;
                 foreach (CosmeticItem item in CosmeticCatalog.Of(CosmeticKind.Background))
                 {
                     bool art = item.Id != NoArtBackground;
-                    bool front = art && backgrounds.Count % 2 == 1;
+                    bool front = art && (item.Id == CosmeticCatalog.Backgrounds.Default || others++ % 2 == 1);
                     backgrounds.Add(new TableBackdropLibrary.BackgroundArt(
                         item.Id,
                         art ? new BackdropLayer(Picture(item.Id + " back", n++), Rect.zero) : default,

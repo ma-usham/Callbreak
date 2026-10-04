@@ -45,8 +45,8 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>
         /// The backdrop for the player's equipped background and table (<see cref="HasBackdrops"/>
-        /// first). One that this build has no art for, an unknown id or art not made yet, shows the
-        /// default one instead, and the log says so once.
+        /// first). One that this build has no art for (an unknown id, such as one the game no longer
+        /// has, or art not made yet) shows the default one instead, and the log says so once.
         /// </summary>
         public TableBackdrop Backdrop(string backgroundId, string tableId)
         {

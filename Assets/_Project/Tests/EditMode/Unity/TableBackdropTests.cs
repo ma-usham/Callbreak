@@ -10,15 +10,16 @@ namespace Callbreak.Tests.EditMode.Unity
     /// The backdrop behind the table (the owner, 4 Oct 2026; mockups 20 and 21): the player's equipped
     /// background shows as its scenery behind the table and its foreground in front of it, with the
     /// equipped table between them, all in BG_Table's frame. A background or table this build has no
-    /// art for (an unknown id, or art not made yet) shows the default one instead and says so once.
-    /// These tests need the engine (sprites, the log), so they live outside the folders the dotnet
-    /// harness compiles.
+    /// art for (an unknown id, one the game no longer has, or art not made yet) shows the default one
+    /// instead and says so once. The library here has the game's three backgrounds (the owner, 5 Oct
+    /// 2026) and its three tables. These tests need the engine (sprites, the log), so they live
+    /// outside the folders the dotnet harness compiles.
     /// </summary>
     public sealed class TableBackdropTests
     {
         private const string Vista = "himalayan-vista";
         private const string Pokhara = "pokhara-lakeside";
-        private const string Village = "village-terrace";
+        private const string Monastery = "monastery-garden";
         private const string Ivory = "himalayan-ivory";
         private const string Crimson = "royal-crimson";
         private const string Walnut = "heritage-walnut";
@@ -118,18 +119,43 @@ namespace Callbreak.Tests.EditMode.Unity
             StringAssert.Contains("rooftop-cafe", _warnings[0]);
         }
 
+        /// <summary>
+        /// The owner (5 Oct 2026): the game keeps three backgrounds. Asked for one of the three that
+        /// left (still equipped), the table shows the Himalayan Vista instead, with its foreground and
+        /// the equipped table, and says so once.
+        /// </summary>
+        [TestCase("kathmandu-courtyard")]
+        [TestCase("village-terrace")]
+        [TestCase("vintage-home")]
+        public void ARemovedBackground_ShowsTheHimalayanVista_AndSaysSoOnce(string removed)
+        {
+            TableSkin skin = Skin(Library());
+
+            TableBackdrop first = skin.Backdrop(removed, Crimson);
+            TableBackdrop second = skin.Backdrop(removed, Crimson);
+
+            Assert.AreEqual(Vista, first.BackgroundId);
+            Assert.AreSame(_vistaBack, first.Back.Sprite, "the Himalayan Vista's scenery");
+            Assert.AreSame(_vistaFront, first.Front.Sprite, "and its foreground");
+            Assert.AreEqual(Crimson, first.TableId, "the table is still the equipped one");
+            Assert.AreSame(_crimson, first.Table.Sprite);
+            Assert.AreEqual(Vista, second.BackgroundId);
+            Assert.AreEqual(1, _warnings.Count, string.Join(" | ", _warnings));
+            StringAssert.Contains("\"" + removed + "\"", _warnings[0]);
+        }
+
         [Test]
         public void ABackgroundWithoutArtYet_ShowsTheDefault_AndSaysSoOnce()
         {
             TableSkin skin = Skin(Library());
 
-            TableBackdrop shown = skin.Backdrop(Village, Ivory);
-            skin.Backdrop(Village, Ivory);
+            TableBackdrop shown = skin.Backdrop(Monastery, Ivory);
+            skin.Backdrop(Monastery, Ivory);
 
             Assert.AreEqual(Vista, shown.BackgroundId);
             Assert.AreSame(_vistaBack, shown.Back.Sprite);
             Assert.AreEqual(1, _warnings.Count, string.Join(" | ", _warnings));
-            StringAssert.Contains(Village, _warnings[0]);
+            StringAssert.Contains(Monastery, _warnings[0]);
         }
 
         [Test]
@@ -204,8 +230,8 @@ namespace Callbreak.Tests.EditMode.Unity
             TableBackdropLibrary library = Library();
 
             Assert.AreSame(_pokharaBack, library.Background(Pokhara).Back.Sprite);
-            Assert.AreEqual(Village, library.Background(Village).Id, "listed without art");
-            Assert.IsTrue(library.Background(Village).Back.IsEmpty);
+            Assert.AreEqual(Monastery, library.Background(Monastery).Id, "listed without art");
+            Assert.IsTrue(library.Background(Monastery).Back.IsEmpty);
             Assert.IsNull(library.Background("rooftop-cafe"));
             Assert.IsNull(library.Background(null));
             Assert.AreSame(_crimson, library.Table(Crimson).Table.Sprite);
@@ -232,9 +258,9 @@ namespace Callbreak.Tests.EditMode.Unity
                 Frame,
                 new[]
                 {
-                    new TableBackdropLibrary.BackgroundArt(Village, default, default),
                     new TableBackdropLibrary.BackgroundArt(Vista, new BackdropLayer(_vistaBack, Rect.zero), withVistaFront ? new BackdropLayer(_vistaFront, FlowerBand) : default),
                     new TableBackdropLibrary.BackgroundArt(Pokhara, new BackdropLayer(_pokharaBack, Rect.zero), default),
+                    new TableBackdropLibrary.BackgroundArt(Monastery, default, default),
                 },
                 new[]
                 {

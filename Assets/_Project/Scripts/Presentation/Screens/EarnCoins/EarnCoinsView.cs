@@ -12,10 +12,18 @@ namespace Callbreak.Presentation.Screens
     /// whose ad was watched carries a check. Renders what its presenter gives it and reports Back
     /// and Watch ad. A button that is not interactable shows its disabled look with its label and
     /// play triangle dimmed. Without the play triangle (every ad watched) the label is centred on
-    /// the button, and the clock stays beside the reset line's text whatever its length.
+    /// the button. The clock and the reset line are one group centred in the panel, the clock close
+    /// before the first letter whatever the text (<see cref="CentreClockLine"/>).
     /// </summary>
     public sealed class EarnCoinsView : UIScreen
     {
+        /// <summary>
+        /// Canvas units between the clock's box and the reset line's first letter (the owner, 5 Oct
+        /// 2026: "bring it near"). The clock sprite keeps about 2 units clear inside its box, so the
+        /// two inks stand about 7 apart, under a quarter of the clock's width.
+        /// </summary>
+        public const float ClockGap = 5f;
+
         private const float DimmedAlpha = 0.5f;
 
         [SerializeField] private UnityEngine.UI.Button _backButton;
@@ -34,12 +42,9 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private TMP_Text _resetLabel;
         [SerializeField] private RectTransform _clockIcon;
 
-        // As built (read before the first change): the watch label's place beside the play
-        // triangle, and the reset line's width with the clock's place beside that text.
+        // As built (read before the first change): the watch label's place beside the play triangle.
         private bool _designRead;
         private Vector2 _watchLabelPosition;
-        private float _resetDesignWidth;
-        private float _clockDesignX;
 
         public event Action BackClicked;
         public event Action WatchClicked;
@@ -86,26 +91,80 @@ namespace Callbreak.Presentation.Screens
             SetAlpha(_playIcon, alpha);
         }
 
-        /// <summary>
-        /// The line under the button ("Rewards reset every 5 hours", or the time left). The text stays
-        /// centred where it is; the clock moves with its left edge, so the two stay together.
-        /// </summary>
+        /// <summary>The line under the button ("Rewards reset every 5 hours", or the time left), with its clock.</summary>
         public void SetReset(string text)
         {
-            ReadDesign();
             SetText(_resetLabel, text);
-            float x = _clockDesignX - ((TextWidth(_resetLabel) - _resetDesignWidth) / 2f);
-            if (!Mathf.Approximately(_clockIcon.anchoredPosition.x, x))
+            CentreClockLine(_resetLabel, _clockIcon);
+        }
+
+        /// <summary>
+        /// Lays a clock and its line out as one group centred in their common parent: the clock's box,
+        /// <see cref="ClockGap"/>, then the letters as drawn (measured, so any text and any language
+        /// fit tight), the clock centred on the capitals. Both are anchored to the parent's middle, as
+        /// the screen builder places every node, and positions are in the parent's units, which the
+        /// canvas scales with the design area, so the gap is the same at every aspect ratio. The view
+        /// calls this whenever the line changes; the screen builder calls it for the built prefab.
+        /// </summary>
+        public static void CentreClockLine(TMP_Text label, RectTransform clock)
+        {
+            if (!InkSpan(label, out float left, out float right, out TMP_CharacterInfo first))
             {
-                _clockIcon.anchoredPosition = new Vector2(x, _clockIcon.anchoredPosition.y);
+                return;
+            }
+
+            RectTransform labelRect = label.rectTransform;
+            float clockWidth = clock.rect.width;
+            float groupWidth = clockWidth + ClockGap + (right - left);
+            float groupLeft = -groupWidth / 2f;
+            float labelX = groupLeft + clockWidth + ClockGap - left;
+            if (!Mathf.Approximately(labelRect.anchoredPosition.x, labelX))
+            {
+                labelRect.anchoredPosition = new Vector2(labelX, labelRect.anchoredPosition.y);
+            }
+
+            // The middle of the capitals: the line's baseline plus half the font's cap height.
+            float capsMiddle = labelRect.anchoredPosition.y + first.baseLine + (label.font.faceInfo.capLine * first.scale / 2f);
+            var clockPosition = new Vector2(groupLeft + (clockWidth / 2f), capsMiddle);
+            if (clock.anchoredPosition != clockPosition)
+            {
+                clock.anchoredPosition = clockPosition;
             }
         }
 
-        /// <summary>The width of a label's text as drawn, also while the screen is hidden.</summary>
-        private static float TextWidth(TMP_Text label)
+        /// <summary>
+        /// The left and right edges of a label's letters as drawn, in its own space, also while the
+        /// screen is hidden (TextMeshPro's character quads carry the distance field's padding, which is
+        /// taken off), and its first visible character. False for a label with nothing to draw.
+        /// </summary>
+        private static bool InkSpan(TMP_Text label, out float left, out float right, out TMP_CharacterInfo first)
         {
             label.ForceMeshUpdate(true, true);
-            return label.textInfo != null && label.textInfo.characterCount > 0 ? label.textBounds.size.x : 0f;
+            TMP_TextInfo info = label.textInfo;
+            left = float.MaxValue;
+            right = float.MinValue;
+            first = default;
+            bool found = false;
+            for (int i = 0; info != null && i < info.characterCount; i++)
+            {
+                TMP_CharacterInfo c = info.characterInfo[i];
+                if (!c.isVisible || c.textElement == null || c.textElement.glyph == null)
+                {
+                    continue;
+                }
+
+                float glyphWidth = c.textElement.glyph.metrics.width * c.scale * label.characterHorizontalScale;
+                float padding = Mathf.Max(0f, (c.topRight.x - c.bottomLeft.x - glyphWidth) / 2f);
+                left = Mathf.Min(left, c.bottomLeft.x + padding);
+                right = Mathf.Max(right, c.topRight.x - padding);
+                if (!found)
+                {
+                    first = c;
+                    found = true;
+                }
+            }
+
+            return found;
         }
 
         /// <summary>Reads the places the screen was built with, once, before anything has moved.</summary>
@@ -118,8 +177,6 @@ namespace Callbreak.Presentation.Screens
 
             _designRead = true;
             _watchLabelPosition = _watchLabel.rectTransform.anchoredPosition;
-            _resetDesignWidth = TextWidth(_resetLabel);
-            _clockDesignX = _clockIcon.anchoredPosition.x;
         }
 
         private void OnEnable()
