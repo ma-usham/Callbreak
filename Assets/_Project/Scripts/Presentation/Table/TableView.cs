@@ -13,9 +13,10 @@ namespace Callbreak.Presentation.Table
     /// (ADR 021), and the emote button
     /// sits in the bottom-right corner where mockup 08 draws that button; it shows the wait before
     /// the next quick phrase (ADR 024). Every phrase, the player's own too, shows in the speech box
-    /// above its speaker's avatar (ADR 027). It raises one event per intent and hands out its
-    /// parts; the presenters and the event playback decide what they show. Seats are indexed by
-    /// relative position: 0 bottom (you), 1 right, 2 top, 3 left.
+    /// above its speaker's avatar (ADR 027). Behind everything is the backdrop: the background's
+    /// scenery, the table and the scenery's foreground the player equipped in the shop. It raises
+    /// one event per intent and hands out its parts; the presenters and the event playback decide
+    /// what they show. Seats are indexed by relative position: 0 bottom (you), 1 right, 2 top, 3 left.
     /// </summary>
     public sealed class TableView : UIScreen
     {
@@ -47,6 +48,14 @@ namespace Callbreak.Presentation.Table
 
         // The GDD asks for a small "Trick 6 / 13" under the round line; mockup 08 does not draw it.
         [SerializeField] private bool _showTrickCounter;
+
+        // Behind everything else, in BG_Table's frame (the owner, 4 Oct 2026): the background's
+        // scenery, the table, and the scenery's foreground, from the art of every background and
+        // table this table can show.
+        [SerializeField] private TableBackdropLibrary _backdrops;
+        [SerializeField] private UnityEngine.UI.Image _backdropBack;
+        [SerializeField] private UnityEngine.UI.Image _backdropTable;
+        [SerializeField] private UnityEngine.UI.Image _backdropFront;
 
         private MotionHandle _coverMotion;
         private bool _reduceMotion;
@@ -87,6 +96,18 @@ namespace Callbreak.Presentation.Table
         /// <summary>Whether the HUD shows "Trick 6 / 13" under the round line (off: mockup 08 has no such line).</summary>
         public bool ShowTrickCounter => _showTrickCounter;
 
+        /// <summary>The art of every background and table this table can show; null on a prefab built before it.</summary>
+        public TableBackdropLibrary Backdrops => _backdrops;
+
+        /// <summary>The background's scenery, at the back of everything.</summary>
+        public UnityEngine.UI.Image BackdropBack => _backdropBack;
+
+        /// <summary>The table, on the scenery.</summary>
+        public UnityEngine.UI.Image BackdropTable => _backdropTable;
+
+        /// <summary>The scenery's foreground, before the table's near edge and behind everything else.</summary>
+        public UnityEngine.UI.Image BackdropFront => _backdropFront;
+
         /// <summary>
         /// GDD §14 Reduce motion, for the table's own parts: the turn prompt, the emote picker and
         /// the seat chips only fade, the "Reconnecting…" ring stands still, and the opponents' cards
@@ -121,6 +142,49 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>The "Reconnecting…" cover is over the table.</summary>
         public bool IsReconnecting => _reconnecting.activeSelf;
+
+        /// <summary>
+        /// The backdrop: the background's scenery, the table on it and the scenery's foreground, each
+        /// at its place in the frame (BG_Table's, which the three images' parent spans). A layer
+        /// without a picture shows nothing.
+        /// </summary>
+        public void SetBackdrop(TableBackdrop backdrop)
+        {
+            ShowLayer(_backdropBack, backdrop.Back, backdrop.Frame);
+            ShowLayer(_backdropTable, backdrop.Table, backdrop.Frame);
+            ShowLayer(_backdropFront, backdrop.Front, backdrop.Frame);
+        }
+
+        /// <summary>
+        /// Puts a layer's picture on an image that lies in a frame of <paramref name="frame"/> pixels
+        /// spanned by its parent: over the part of it the layer covers (all of it when the layer's area
+        /// is empty). Without a picture the image is off.
+        /// </summary>
+        public static void ShowLayer(UnityEngine.UI.Image image, BackdropLayer layer, Vector2 frame)
+        {
+            if (image == null)
+            {
+                return;
+            }
+
+            image.sprite = layer.Sprite;
+            image.enabled = layer.Sprite != null;
+            RectTransform rect = image.rectTransform;
+            Rect area = layer.Area;
+            if (area.width > 0f && area.height > 0f && frame.x > 0f && frame.y > 0f)
+            {
+                rect.anchorMin = new Vector2(area.xMin / frame.x, 1f - area.yMax / frame.y);
+                rect.anchorMax = new Vector2(area.xMax / frame.x, 1f - area.yMin / frame.y);
+            }
+            else
+            {
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+            }
+
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
 
         /// <summary>"ROUND 1 / 5".</summary>
         public void SetRound(string text)

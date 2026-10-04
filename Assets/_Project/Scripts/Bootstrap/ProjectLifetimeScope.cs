@@ -1,5 +1,6 @@
 using Callbreak.Application.Config;
 using Callbreak.Application.Cosmetics;
+using Callbreak.Application.Economy;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Localization;
 using Callbreak.Application.Matchmaking;
@@ -57,7 +58,19 @@ namespace Callbreak.Bootstrap
             builder.Register<NameFilter>(Lifetime.Singleton);
             builder.Register<ProfileService>(Lifetime.Singleton).As<IProfileService>();
             builder.Register<StatsService>(Lifetime.Singleton).As<IStatsService>();
-            builder.Register<CosmeticsService>(Lifetime.Singleton).As<ICosmeticsService>();
+
+            // The shop and its coins (the owner, 4 Oct 2026): the wallet, the cosmetics the player owns
+            // and has equipped (one object behind the deck choice and the shop), and the Earn Coins ads.
+            // No ad network is connected yet: a stand-in completes every ad.
+            builder.Register<Wallet>(Lifetime.Singleton).As<IWallet>();
+            builder.Register(resolver => new CosmeticsService(resolver.Resolve<ISaveStore>(), resolver.Resolve<IWallet>()), Lifetime.Singleton)
+                .As<ICosmeticsService>()
+                .As<ICosmeticsShop>();
+            builder.Register<StandInRewardedAds>(Lifetime.Singleton).As<IRewardedAds>();
+            builder.Register<IAdRewards>(
+                resolver => new AdRewards(resolver.Resolve<IRewardedAds>(), resolver.Resolve<IWallet>(), resolver.Resolve<ISaveStore>(), () => System.DateTime.UtcNow),
+                Lifetime.Singleton);
+
             builder.Register<OfflineMatchStore>(Lifetime.Singleton).As<IOfflineMatchStore>();
             builder.Register<IRejoinStore>(resolver => new RejoinStore(resolver.Resolve<ISaveStore>(), () => System.DateTime.UtcNow, resolver.Resolve<IStatsService>()), Lifetime.Singleton);
 

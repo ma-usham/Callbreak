@@ -1,0 +1,70 @@
+{
+  // The Shop's Tables category (mockup 21) - a measurement job, not a screen of its own: the Shop
+  // prefab is built from ArtSource/Screens/Shop, and ShopCustomizer reads this layout for the Tables
+  // title, subtitle, tiles, the price row (coin + price), the "Buy for" row of the primary button
+  // and the drawer's Tables-active look (rects from ArtSource/Working/ShopUI/notes.md). Never build
+  // it with screen.sh. Sprites cut here land in Art/Screens/Shop.
+  //
+  // The table previews are the generated ones (ArtSource/Working/ShopTables/final, imported as
+  // Art/Shop/Tables/Preview_<Name>.png, transparent with a soft contact shadow): each covers a
+  // 262 x 275 area centred on its tile (the ShopTables agent's placement).
+  "name": "ShopTablesLayout",
+  "mockup": "21-table-styles.png",
+  "background": "shared",
+  "outDir": "Screens/Shop",
+  "nodes": [
+    { "id": "Title2", "kind": "label", "text": "Table Collection", "font": "SerifBold", "rect": [540, 44, 590, 88], "key": "ui.shop.tables.title" },
+    { "id": "Subtitle2", "kind": "label", "text": "MAKE EVERY HAND FEEL SPECIAL", "font": "SansSemiBold", "tracked": true, "rect": [510, 133, 652, 32], "key": "ui.shop.tables.subtitle" },
+
+    { "id": "Panel", "shape": "roundrect", "radius": 25.5, "rect": [328.6, 198.1, 978.4, 538.2], "use": "UI/Panels/UI_Panel_Card.png", "sliceScale": 0.898,
+      "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+
+    // Tile 0 Equipped (filled radio), tile 1 chosen and not owned (outline, coin and price), tile 2 not owned.
+    { "id": "Tile0", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 19.5, "rect": [399.8, 224.1, 266.1, 426.9],
+      "use": "UI/Panels/UI_Panel_Card_Light.png", "sliceScale": 1.157, "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "TablePicture0", "parent": "Tile0", "rect": [401.85, 262, 262, 275], "use": "Shop/Tables/Preview_HimalayanIvory.png" },
+    { "id": "Name0", "kind": "label", "parent": "Tile0", "text": "Himalayan Ivory", "font": "SerifBold", "rect": [420, 537, 226, 44] },
+    { "id": "RadioOn0", "parent": "Tile0", "rect": [458.4, 588.1, 40.4, 40.4], "use": "UI/Controls/UI_Radio_On.png" },
+    { "id": "Status0", "kind": "label", "parent": "Tile0", "text": "Equipped", "font": "SansMedium", "align": "left", "rect": [506, 592, 112, 35] },
+
+    { "id": "Tile1", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 21, "rect": [683.4, 224.4, 268.5, 427.1],
+      "use": "UI/Panels/UI_Panel_Card_Light.png", "sliceScale": 1.157, "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "Outline1", "parent": "Tile1", "rect": [681.0, 222.0, 273.3, 431.9], "use": "UI/Controls/UI_Outline_Thin_Selected.png", "sliceScale": 1.27 },
+    { "id": "TablePicture1", "parent": "Tile1", "rect": [686.65, 262, 262, 275], "use": "Shop/Tables/Preview_RoyalCrimson.png" },
+    { "id": "Name1", "kind": "label", "parent": "Tile1", "text": "Royal Crimson", "font": "SerifBold", "rect": [718, 537, 200, 44] },
+    { "id": "Coin1", "parent": "Tile1", "rect": [759.90, 584.85, 45.20, 45.20], "use": "UI/Icons/Icon_Coin.png" },
+    { "id": "Price1", "kind": "label", "parent": "Tile1", "text": "350", "font": "SansSemiBold", "align": "left", "rect": [814, 589, 70, 38] },
+
+    { "id": "Tile2", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 20.5, "rect": [971.7, 224.1, 266.3, 426.9],
+      "use": "UI/Panels/UI_Panel_Card_Light.png", "sliceScale": 1.157, "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "TablePicture2", "parent": "Tile2", "rect": [973.85, 262, 262, 275], "use": "Shop/Tables/Preview_HeritageWalnut.png" },
+    { "id": "Name2", "kind": "label", "parent": "Tile2", "text": "Heritage Walnut", "font": "SerifBold", "rect": [994, 537, 222, 44] },
+    { "id": "Coin2", "parent": "Tile2", "rect": [1046.98, 584.83, 45.25, 45.25], "use": "UI/Icons/Icon_Coin.png" },
+    { "id": "Price2", "kind": "label", "parent": "Tile2", "text": "250", "font": "SansSemiBold", "align": "left", "rect": [1102, 589, 70, 38] },
+
+    { "id": "PrevButton", "kind": "button", "parent": "Panel", "shape": "ellipse", "rect": [334.8, 395.4, 65.4, 65.4],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "PrevIcon", "parent": "PrevButton", "shape": "ink", "rect": [352, 410, 30, 38], "use": "UI/Icons/Icon_Chevron.png" },
+    { "id": "NextButton", "kind": "button", "parent": "Panel", "shape": "ellipse", "rect": [1234.8, 395.5, 65.4, 65.4],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "NextIcon", "parent": "NextButton", "shape": "ink", "rect": [1253, 410, 30, 38], "use": "UI/Icons/Icon_Chevron.png" },
+    { "id": "SwipeHint", "kind": "label", "parent": "Panel", "text": "Swipe to browse", "font": "SansRegular", "rect": [747, 694, 178, 33] },
+
+    // "Buy for" + coin + price on the primary button.
+    { "id": "PrimaryButton", "kind": "button", "shape": "roundrect", "radius": 41.5, "rect": [562.9, 764.4, 545.9, 93.7],
+      "use": "UI/Controls/UI_Button_Crimson.png", "shadowUse": "UI/Controls/UI_Button_Crimson_Shadow.png", "shadowDrop": 6, "shadowOpacity": 0.25 },
+    { "id": "BuyLabel", "kind": "label", "parent": "PrimaryButton", "text": "Buy for", "font": "SerifSemiBold", "ink": "light", "style": "buttonLabel", "align": "left",
+      "rect": [700, 786, 136, 54], "key": "ui.shop.buy_for" },
+    { "id": "BuyCoin", "parent": "PrimaryButton", "rect": [839.93, 786.28, 46.75, 46.75], "use": "UI/Icons/Icon_Coin.png" },
+    { "id": "BuyPrice", "kind": "label", "parent": "PrimaryButton", "text": "350", "font": "SerifSemiBold", "ink": "light", "style": "buttonLabel", "align": "left",
+      "rect": [892, 788, 80, 44] },
+
+    // The drawer with Tables active: the crimson disc and the ivory table.
+    { "id": "Drawer", "group": "HeaderRight", "rect": [1439.8, -0.8, 232.2, 942.6], "use": "UI/Panels/UI_Drawer.png" },
+    { "id": "CategoryLabel0", "kind": "label", "parent": "Drawer", "text": "Cards", "font": "SerifSemiBold", "rect": [1512, 365, 98, 40] },
+    { "id": "CategoryLabel1", "kind": "label", "parent": "Drawer", "text": "Backgrounds", "font": "SerifSemiBold", "rect": [1480, 571, 162, 43] },
+    { "id": "CategoryButton2", "kind": "button", "parent": "Drawer", "shape": "ellipse", "rect": [1490.18, 634.73, 139.55, 139.55], "use": "UI/Buttons/UI_ButtonDisc_Selected.png" },
+    { "id": "CategoryIcon2", "parent": "CategoryButton2", "rect": [1513.53, 681.26, 92.85, 61.88], "use": "UI/Icons/Icon_TableOval_Ivory.png" },
+    { "id": "CategoryLabel2", "kind": "label", "parent": "Drawer", "text": "Tables", "font": "SerifSemiBold", "rect": [1514, 779, 94, 36] }
+  ]
+}

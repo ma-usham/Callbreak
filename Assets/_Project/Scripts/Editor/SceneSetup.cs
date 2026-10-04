@@ -35,11 +35,12 @@ namespace Callbreak.Editor
         private const string ScreensFolder = "Assets/_Project/Prefabs/UI/Screens";
         private const string TablePrefabsFolder = "Assets/_Project/Prefabs/Table";
 
-        /// <summary>The Menu scene's screens (GDD §21: 00-06, 11, 12, 14 and 15), bottom to top.</summary>
+        /// <summary>The Menu scene's screens (GDD §21: 00-06, 11, 12, 14 and 15; Earn Coins, mockup 22), bottom to top.</summary>
         private static readonly string[] MenuScreens =
         {
             "MainMenu", "PlayWithFriends", "CreateRoom", "JoinRoom", "PrivateLobby", "Matchmaking",
-            "OfflineSetup", "Settings", "HowToPlay", "Profile", "CardCollection",
+            "OfflineSetup", "Settings", "HowToPlay", "Profile", "Shop",
+            "EarnCoins",
         };
 
         /// <summary>

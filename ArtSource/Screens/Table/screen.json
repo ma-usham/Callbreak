@@ -9,6 +9,11 @@
   // sprites. Their areas are plain rects here so the plate is cleared under them and the view gets a
   // container at the measured place (SeatFan*, TrickArea, HandArea).
   // Seats are numbered by relative position (GDD T rules): 0 bottom (you), 1 right, 2 top, 3 left.
+  // The plate (Backgrounds/BG_Table.png, 2230 x 1255 at [-279, -157]) now gives only the backdrop's frame and place
+  // (the owner's shop, 4 Oct 2026): TableCustomizer replaces its picture with three layers in that frame, the equipped
+  // background's scenery (BG_<Name>_Back), the equipped table (Tables/Table_<Name>) and the scenery's foreground
+  // (BG_<Name>_Front, optional), from Config/Table/TableBackdrops.asset (TableBackdropBuilder). Every layer is drawn in
+  // this same frame, pixel for pixel, so any background goes with any table.
   "name": "Table",
   "mockup": "08-gameplay.png",
   "plate": {

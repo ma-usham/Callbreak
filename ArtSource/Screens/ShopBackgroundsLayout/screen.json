@@ -1,0 +1,67 @@
+{
+  // The Shop's Backgrounds category (mockup 20) - a measurement job, not a screen of its own: the
+  // Shop prefab is built from ArtSource/Screens/Shop, and ShopCustomizer reads this layout for the
+  // Backgrounds title, subtitle, tiles, status row, chevrons, primary label and the drawer's
+  // Backgrounds-active / Cards-inactive looks (rects from ArtSource/Working/ShopUI/notes.md).
+  // Never build it with screen.sh. Sprites cut here land in Art/Screens/Shop ("outDir").
+  //
+  // The thumbnails are the generated ones (ArtSource/Working/ShopBackgroundsA|B/final, imported as
+  // Art/Shop/Backgrounds/Thumb_<Name>.png): square corners, rounded by the tile's frame.
+  "name": "ShopBackgroundsLayout",
+  "mockup": "20-backgrounds.png",
+  "background": "shared",
+  "outDir": "Screens/Shop",
+  "nodes": [
+    { "id": "Title1", "kind": "label", "text": "Background Collection", "font": "SerifBold", "rect": [482, 48, 708, 86], "key": "ui.shop.backgrounds.title" },
+    { "id": "Subtitle1", "kind": "label", "text": "CHOOSE YOUR VIEW", "font": "SansSemiBold", "tracked": true, "rect": [650, 133, 372, 31], "key": "ui.shop.backgrounds.subtitle" },
+
+    { "id": "Panel", "shape": "roundrect", "radius": 24.5, "rect": [329.0, 198.7, 978.0, 537.1], "use": "UI/Panels/UI_Panel_Card.png", "sliceScale": 0.898,
+      "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+
+    // Tile 0 Selected (owned, not equipped: outline, filled radio), tiles 1-2 Owned.
+    { "id": "Tile0", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 20, "rect": [377.4, 224.5, 285.0, 425.9],
+      "use": "UI/Panels/UI_Panel_Card_Light.png", "sliceScale": 1.157, "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "Outline0", "parent": "Tile0", "rect": [375.0, 222.1, 289.8, 430.7], "use": "UI/Controls/UI_Outline_Thin_Selected.png", "sliceScale": 1.27 },
+    { "id": "Thumb0", "parent": "Tile0", "shape": "roundrect", "radius": 10, "rect": [390.0, 239.2, 261.7, 292.7], "use": "Shop/Backgrounds/Thumb_KathmanduCourtyard.png" },
+    { "id": "Name0", "kind": "label", "parent": "Tile0", "text": "Kathmandu Courtyard", "font": "SerifBold", "rect": [395, 540, 252, 42] },
+    { "id": "RadioOn0", "parent": "Tile0", "rect": [447.9, 589.3, 40.4, 40.4], "use": "UI/Controls/UI_Radio_On.png" },
+    { "id": "Status0", "kind": "label", "parent": "Tile0", "text": "Selected", "font": "SansMedium", "align": "left", "rect": [497, 593, 106, 34] },
+
+    { "id": "Tile1", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 14, "rect": [684.1, 225.0, 282.8, 426.1],
+      "use": "UI/Panels/UI_Panel_Card_Light.png", "sliceScale": 1.157, "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "Thumb1", "parent": "Tile1", "shape": "roundrect", "radius": 8, "rect": [698.6, 239.3, 254.3, 292.6], "use": "Shop/Backgrounds/Thumb_VillageTerrace.png" },
+    { "id": "Name1", "kind": "label", "parent": "Tile1", "text": "Village Terrace", "font": "SerifBold", "rect": [735, 540, 182, 42] },
+    { "id": "RadioOff1", "parent": "Tile1", "rect": [759.3, 589.3, 40.4, 40.4], "use": "UI/Controls/UI_Radio_Off.png" },
+    { "id": "Status1", "kind": "label", "parent": "Tile1", "text": "Owned", "font": "SansMedium", "align": "left", "rect": [806, 593, 90, 34] },
+
+    { "id": "Tile2", "kind": "button", "parent": "Panel", "shape": "roundrect", "radius": 13, "rect": [980.8, 225.1, 280.9, 425.8],
+      "use": "UI/Panels/UI_Panel_Card_Light.png", "sliceScale": 1.157, "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "Thumb2", "parent": "Tile2", "shape": "roundrect", "radius": 9.5, "rect": [995.2, 239.8, 252.3, 289.3], "use": "Shop/Backgrounds/Thumb_VintageHome.png" },
+    { "id": "Name2", "kind": "label", "parent": "Tile2", "text": "Vintage Home", "font": "SerifBold", "rect": [1037, 540, 168, 42] },
+    { "id": "RadioOff2", "parent": "Tile2", "rect": [1056.7, 589.2, 40.4, 40.4], "use": "UI/Controls/UI_Radio_Off.png" },
+    { "id": "Status2", "kind": "label", "parent": "Tile2", "text": "Owned", "font": "SansMedium", "align": "left", "rect": [1103, 593, 90, 34] },
+
+    { "id": "PrevButton", "kind": "button", "parent": "Panel", "shape": "ellipse", "rect": [306.3, 395.1, 65.4, 65.4],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "PrevIcon", "parent": "PrevButton", "shape": "ink", "rect": [323, 409, 30, 38], "use": "UI/Icons/Icon_Chevron.png" },
+    { "id": "NextButton", "kind": "button", "parent": "Panel", "shape": "ellipse", "rect": [1263.5, 394.9, 65.4, 65.4],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "NextIcon", "parent": "NextButton", "shape": "ink", "rect": [1282, 409, 30, 38], "use": "UI/Icons/Icon_Chevron.png" },
+    { "id": "SwipeHint", "kind": "label", "parent": "Panel", "text": "Swipe to browse", "font": "SansRegular", "rect": [747, 694, 178, 33] },
+
+    { "id": "PrimaryButton", "kind": "button", "shape": "roundrect", "radius": 36.5, "rect": [565.2, 764.1, 543.9, 92.2],
+      "use": "UI/Controls/UI_Button_Crimson.png", "shadowUse": "UI/Controls/UI_Button_Crimson_Shadow.png", "shadowDrop": 6, "shadowOpacity": 0.25 },
+    { "id": "UseLabel1", "kind": "label", "parent": "PrimaryButton", "text": "Use Selected Background", "font": "SerifSemiBold", "ink": "light", "style": "buttonLabel",
+      "rect": [632, 786, 410, 54], "key": "ui.shop.backgrounds.use" },
+
+    // The drawer with Backgrounds active (the crimson disc, the ivory mountains) and Cards inactive.
+    { "id": "Drawer", "group": "HeaderRight", "rect": [1439.8, -0.8, 232.2, 942.6], "use": "UI/Panels/UI_Drawer.png" },
+    { "id": "CategoryButton0", "kind": "button", "parent": "Drawer", "shape": "ellipse", "rect": [1490.93, 221.03, 138.95, 138.95], "use": "UI/Buttons/UI_ButtonDisc_Normal.png" },
+    { "id": "CategoryIcon0", "parent": "CategoryButton0", "rect": [1517.30, 251.48, 85.07, 85.17], "use": "UI/Icons/Icon_CardsStacked_Brown.png" },
+    { "id": "CategoryLabel0", "kind": "label", "parent": "Drawer", "text": "Cards", "font": "SerifSemiBold", "rect": [1512, 365, 98, 40] },
+    { "id": "CategoryButton1", "kind": "button", "parent": "Drawer", "shape": "ellipse", "rect": [1486.60, 422.25, 147.00, 147.00], "use": "UI/Buttons/UI_ButtonDisc_Selected.png" },
+    { "id": "CategoryIcon1", "parent": "CategoryButton1", "rect": [1514.09, 469.28, 92.63, 50.86], "use": "UI/Icons/Icon_Mountains_Ivory.png" },
+    { "id": "CategoryLabel1", "kind": "label", "parent": "Drawer", "text": "Backgrounds", "font": "SerifSemiBold", "rect": [1476, 574, 170, 40] },
+    { "id": "CategoryLabel2", "kind": "label", "parent": "Drawer", "text": "Tables", "font": "SerifSemiBold", "rect": [1514, 779, 94, 36] }
+  ]
+}

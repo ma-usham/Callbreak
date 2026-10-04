@@ -1,0 +1,894 @@
+{
+  "name": "EarnCoins",
+  "mockup": "22-rewarded-coins.png",
+  "mockW": 1672,
+  "mockH": 941,
+  "background": "Assets/_Project/Art/Backgrounds/BG_Menu_Wide.png",
+  "backgroundRect": [
+    -279,
+    -157,
+    2230,
+    1255
+  ],
+  "backgroundPpu": 0,
+  "nodes": [
+    {
+      "id": "BackButton",
+      "kind": "button",
+      "group": "HeaderLeft",
+      "shape": "ellipse",
+      "rect": [
+        42.6,
+        34.0,
+        86.8,
+        87.4
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        42.6,
+        34,
+        86.8,
+        87.4
+      ],
+      "spritePpu": 0,
+      "checkError": 8.95
+    },
+    {
+      "id": "BackIcon",
+      "parent": "BackButton",
+      "rect": [
+        66.15,
+        59.29,
+        39.04,
+        37.48
+      ],
+      "use": "UI/Icons/Icon_Back.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Back.png",
+      "spriteRect": [
+        66.15,
+        59.29,
+        39.04,
+        37.48
+      ],
+      "spritePpu": 0,
+      "checkError": 17.74
+    },
+    {
+      "id": "WalletPill",
+      "group": "HeaderRight",
+      "shape": "pill",
+      "rect": [
+        1436.5,
+        51.5,
+        191.5,
+        71.5
+      ],
+      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png",
+      "shadowDrop": 2,
+      "shadowOpacity": 0.4,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "spriteRect": [
+        1436.5,
+        51.5,
+        191.5,
+        71.5
+      ],
+      "spritePpu": 0,
+      "checkError": 9.26
+    },
+    {
+      "id": "WalletCoin",
+      "parent": "WalletPill",
+      "rect": [
+        1460.95,
+        57.96,
+        56.70,
+        57.29
+      ],
+      "use": "UI/Icons/Icon_Coin.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Coin.png",
+      "spriteRect": [
+        1460.95,
+        57.96,
+        56.7,
+        57.29
+      ],
+      "spritePpu": 0,
+      "checkError": 14.5
+    },
+    {
+      "id": "Balance",
+      "kind": "label",
+      "parent": "WalletPill",
+      "text": "250",
+      "font": "SansBold",
+      "align": "left",
+      "rect": [
+        1532,
+        70,
+        67,
+        35
+      ],
+      "inkBox": [
+        1537.29,
+        75.04,
+        1593.89,
+        99.86
+      ],
+      "capTop": 75,
+      "baseline": 99,
+      "color": "#181C22"
+    },
+    {
+      "id": "Title",
+      "kind": "label",
+      "text": "Earn Coins",
+      "font": "SerifBold",
+      "rect": [
+        589,
+        39,
+        495,
+        84
+      ],
+      "capFit": [
+        47.6,
+        117.2
+      ],
+      "dilate": 0.12,
+      "lineGradient": [
+        "#C20D16",
+        "#62080F"
+      ],
+      "key": "ui.earn_coins.title",
+      "inkBox": [
+        595.46,
+        44.32,
+        1077.26,
+        118.78
+      ],
+      "capTop": 67,
+      "baseline": 118,
+      "color": "#850C13",
+      "colorTop": "#A90611",
+      "colorBottom": "#7A0E14"
+    },
+    {
+      "id": "Subtitle",
+      "kind": "label",
+      "text": "WATCH \u0026 EARN",
+      "font": "SansSemiBold",
+      "tracked": true,
+      "rect": [
+        659,
+        130,
+        352,
+        30
+      ],
+      "key": "ui.earn_coins.subtitle",
+      "inkBox": [
+        665.46,
+        135.7,
+        1003.55,
+        156.2
+      ],
+      "capTop": 136,
+      "baseline": 156,
+      "color": "#754923"
+    },
+    {
+      "id": "TitleLineLeft",
+      "rect": [
+        609.0,
+        169.9,
+        219.0,
+        3.4
+      ],
+      "use": "UI/Decor/Deco_TitleDivider_Line.png",
+      "mirror": true,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider_Line.png",
+      "spriteRect": [
+        609,
+        169.9,
+        219,
+        3.4
+      ],
+      "spritePpu": 0,
+      "checkError": 28.54
+    },
+    {
+      "id": "TitleDiamond",
+      "rect": [
+        827.7,
+        162.1,
+        16.0,
+        19.0
+      ],
+      "use": "UI/Decor/Deco_TitleDivider_Diamond.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider_Diamond.png",
+      "spriteRect": [
+        827.7,
+        162.1,
+        16,
+        19
+      ],
+      "spritePpu": 0,
+      "checkError": 28.05
+    },
+    {
+      "id": "TitleLineRight",
+      "rect": [
+        843.6,
+        169.9,
+        220.0,
+        3.4
+      ],
+      "use": "UI/Decor/Deco_TitleDivider_Line.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_TitleDivider_Line.png",
+      "spriteRect": [
+        843.6,
+        169.9,
+        220,
+        3.4
+      ],
+      "spritePpu": 0,
+      "checkError": 22.7
+    },
+    {
+      "id": "Panel",
+      "shape": "roundrect",
+      "radius": 30.5,
+      "rect": [
+        336.0,
+        190.6,
+        1000.2,
+        649.6
+      ],
+      "use": "UI/Panels/UI_Panel_Large.png",
+      "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
+      "shadowSpread": 24,
+      "shadowDrop": 3,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Large.png",
+      "spriteRect": [
+        336,
+        190.6,
+        1000.2,
+        649.6
+      ],
+      "spritePpu": 0,
+      "checkError": 10.95
+    },
+    {
+      "id": "Heading",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Earn coins with every ads",
+      "font": "SerifBold",
+      "rect": [
+        589,
+        227,
+        498,
+        55
+      ],
+      "capFit": [
+        235.4,
+        266.3
+      ],
+      "key": "ui.earn_coins.heading",
+      "inkBox": [
+        595.08,
+        233.77,
+        1079.9,
+        276.23
+      ],
+      "capTop": 244,
+      "baseline": 267,
+      "color": "#522610"
+    },
+    {
+      "id": "Block0",
+      "parent": "Panel",
+      "rect": [
+        394.70,
+        327.25,
+        248.80,
+        251.00
+      ],
+      "use": "UI/Panels/UI_RewardBlock_Selected.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_RewardBlock_Selected.png",
+      "spriteRect": [
+        394.7,
+        327.25,
+        248.8,
+        251
+      ],
+      "spritePpu": 0,
+      "checkError": 28.57
+    },
+    {
+      "id": "AdTitle0",
+      "kind": "label",
+      "parent": "Block0",
+      "text": "Ad 1",
+      "font": "SerifBold",
+      "rect": [
+        479,
+        343,
+        77,
+        38
+      ],
+      "inkBox": [
+        485.17,
+        348.69,
+        549.41,
+        374.91
+      ],
+      "capTop": 351,
+      "baseline": 375,
+      "color": "#551716"
+    },
+    {
+      "id": "CoinGlow0",
+      "parent": "Block0",
+      "rect": [
+        395.4,
+        347.9,
+        236.0,
+        236.0
+      ],
+      "use": "UI/Decor/Deco_CoinGlow.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_CoinGlow.png",
+      "spriteRect": [
+        395.4,
+        347.9,
+        236,
+        236
+      ],
+      "spritePpu": 0,
+      "checkError": 22.98
+    },
+    {
+      "id": "CoinShadow0",
+      "parent": "Block0",
+      "rect": [
+        424.54,
+        400.08,
+        177.74,
+        131.64
+      ],
+      "use": "UI/Decor/Deco_CoinPile_Small_Shadow.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_CoinPile_Small_Shadow.png",
+      "spriteRect": [
+        424.54,
+        400.08,
+        177.74,
+        131.64
+      ],
+      "spritePpu": 0,
+      "checkError": 10.17
+    },
+    {
+      "id": "CoinStack0",
+      "parent": "Block0",
+      "rect": [
+        445.78,
+        421.30,
+        135.25,
+        89.20
+      ],
+      "use": "UI/Decor/Deco_CoinPile_Small.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_CoinPile_Small.png",
+      "spriteRect": [
+        445.78,
+        421.3,
+        135.25,
+        89.2
+      ],
+      "spritePpu": 0,
+      "checkError": 16.31
+    },
+    {
+      "id": "Amount0",
+      "kind": "label",
+      "parent": "Block0",
+      "text": "20 coins",
+      "font": "SerifBold",
+      "rect": [
+        426,
+        514,
+        187,
+        49
+      ],
+      "xFit": [
+        531.5,
+        556.5
+      ],
+      "dilate": 0.3,
+      "lineGradient": [
+        "#BC0408",
+        "#5C080C"
+      ],
+      "inkBox": [
+        432.35,
+        519.66,
+        606.8,
+        557.4
+      ],
+      "capTop": 522,
+      "baseline": 557,
+      "color": "#801114",
+      "colorTop": "#A2080D",
+      "colorBottom": "#6D1416"
+    },
+    {
+      "id": "Block1",
+      "parent": "Panel",
+      "rect": [
+        711.00,
+        325.85,
+        249.85,
+        254.40
+      ],
+      "use": "UI/Panels/UI_RewardBlock_Normal.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_RewardBlock_Normal.png",
+      "spriteRect": [
+        711,
+        325.85,
+        249.85,
+        254.4
+      ],
+      "spritePpu": 0,
+      "checkError": 16.57
+    },
+    {
+      "id": "AdTitle1",
+      "kind": "label",
+      "parent": "Block1",
+      "text": "Ad 2",
+      "font": "SerifBold",
+      "rect": [
+        796,
+        343,
+        78,
+        38
+      ],
+      "inkBox": [
+        801.84,
+        348.52,
+        868.4,
+        374.9
+      ],
+      "capTop": 350,
+      "baseline": 375,
+      "color": "#4F1211"
+    },
+    {
+      "id": "CoinGlow1",
+      "parent": "Block1",
+      "rect": [
+        717.0,
+        334.0,
+        236.0,
+        236.0
+      ],
+      "use": "UI/Decor/Deco_CoinGlow.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_CoinGlow.png",
+      "spriteRect": [
+        717,
+        334,
+        236,
+        236
+      ],
+      "spritePpu": 0,
+      "checkError": 14.71
+    },
+    {
+      "id": "CoinShadow1",
+      "parent": "Block1",
+      "rect": [
+        730.79,
+        380.24,
+        210.63,
+        151.53
+      ],
+      "use": "UI/Decor/Deco_CoinPile_Medium_Shadow.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_CoinPile_Medium_Shadow.png",
+      "spriteRect": [
+        730.79,
+        380.24,
+        210.63,
+        151.53
+      ],
+      "spritePpu": 0,
+      "checkError": 11.78
+    },
+    {
+      "id": "CoinStack1",
+      "parent": "Block1",
+      "rect": [
+        752.03,
+        401.45,
+        168.15,
+        109.10
+      ],
+      "use": "UI/Decor/Deco_CoinPile_Medium.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_CoinPile_Medium.png",
+      "spriteRect": [
+        752.03,
+        401.45,
+        168.15,
+        109.1
+      ],
+      "spritePpu": 0,
+      "checkError": 13.82
+    },
+    {
+      "id": "Amount1",
+      "kind": "label",
+      "parent": "Block1",
+      "text": "30 coins",
+      "font": "SerifBold",
+      "rect": [
+        742,
+        514,
+        190,
+        49
+      ],
+      "xFit": [
+        531.5,
+        556.5
+      ],
+      "dilate": 0.3,
+      "lineGradient": [
+        "#BC0408",
+        "#5C080C"
+      ],
+      "inkBox": [
+        748.48,
+        519.29,
+        925.44,
+        557.65
+      ],
+      "capTop": 521,
+      "baseline": 557,
+      "color": "#861014",
+      "colorTop": "#A20B0F",
+      "colorBottom": "#721416"
+    },
+    {
+      "id": "Block2",
+      "parent": "Panel",
+      "rect": [
+        1026.85,
+        325.85,
+        252.00,
+        254.40
+      ],
+      "use": "UI/Panels/UI_RewardBlock_Normal.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_RewardBlock_Normal.png",
+      "spriteRect": [
+        1026.85,
+        325.85,
+        252,
+        254.4
+      ],
+      "spritePpu": 0,
+      "checkError": 16.89
+    },
+    {
+      "id": "AdTitle2",
+      "kind": "label",
+      "parent": "Block2",
+      "text": "Ad 3",
+      "font": "SerifBold",
+      "rect": [
+        1114,
+        343,
+        79,
+        38
+      ],
+      "inkBox": [
+        1120.3,
+        348.67,
+        1186.94,
+        374.9
+      ],
+      "capTop": 350,
+      "baseline": 375,
+      "color": "#551515"
+    },
+    {
+      "id": "CoinGlow2",
+      "parent": "Block2",
+      "rect": [
+        1034.2,
+        335.9,
+        236.0,
+        236.0
+      ],
+      "use": "UI/Decor/Deco_CoinGlow.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_CoinGlow.png",
+      "spriteRect": [
+        1034.2,
+        335.9,
+        236,
+        236
+      ],
+      "spritePpu": 0,
+      "checkError": 14.8
+    },
+    {
+      "id": "CoinShadow2",
+      "parent": "Block2",
+      "rect": [
+        1036.57,
+        374.80,
+        231.18,
+        158.19
+      ],
+      "use": "UI/Decor/Deco_CoinPile_Large_Shadow.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_CoinPile_Large_Shadow.png",
+      "spriteRect": [
+        1036.57,
+        374.8,
+        231.18,
+        158.19
+      ],
+      "spritePpu": 0,
+      "checkError": 13.9
+    },
+    {
+      "id": "CoinStack2",
+      "parent": "Block2",
+      "rect": [
+        1057.78,
+        396.10,
+        188.75,
+        115.60
+      ],
+      "use": "UI/Decor/Deco_CoinPile_Large.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_CoinPile_Large.png",
+      "spriteRect": [
+        1057.78,
+        396.1,
+        188.75,
+        115.6
+      ],
+      "spritePpu": 0,
+      "checkError": 12.28
+    },
+    {
+      "id": "Amount2",
+      "kind": "label",
+      "parent": "Block2",
+      "text": "50 coins",
+      "font": "SerifBold",
+      "rect": [
+        1058,
+        514,
+        188,
+        50
+      ],
+      "xFit": [
+        532.0,
+        557.0
+      ],
+      "dilate": 0.3,
+      "lineGradient": [
+        "#BC0408",
+        "#5C080C"
+      ],
+      "inkBox": [
+        1064.76,
+        520.14,
+        1239.97,
+        558.29
+      ],
+      "capTop": 521,
+      "baseline": 558,
+      "color": "#880F13",
+      "colorTop": "#A80A0D",
+      "colorBottom": "#721316"
+    },
+    {
+      "id": "Connector0",
+      "parent": "Panel",
+      "rect": [
+        643.6,
+        443.85,
+        67.4,
+        5.2
+      ],
+      "use": "UI/Decor/Deco_ConnectorLine.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_ConnectorLine.png",
+      "spriteRect": [
+        643.6,
+        443.85,
+        67.4,
+        5.2
+      ],
+      "spritePpu": 0,
+      "checkError": 12.35
+    },
+    {
+      "id": "Connector1",
+      "parent": "Panel",
+      "rect": [
+        960.85,
+        443.85,
+        66.0,
+        5.2
+      ],
+      "use": "UI/Decor/Deco_ConnectorLine.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_ConnectorLine.png",
+      "spriteRect": [
+        960.85,
+        443.85,
+        66,
+        5.2
+      ],
+      "spritePpu": 0,
+      "checkError": 16.49
+    },
+    {
+      "id": "Progress",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "0 / 3 ads watched",
+      "font": "SerifBold",
+      "rect": [
+        702,
+        612,
+        269,
+        42
+      ],
+      "inkBox": [
+        708.25,
+        618.59,
+        964.77,
+        647.17
+      ],
+      "capTop": 627,
+      "baseline": 644,
+      "color": "#653415"
+    },
+    {
+      "id": "WatchButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "pill",
+      "rect": [
+        527.5,
+        661.5,
+        615.5,
+        108.5
+      ],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Primary.png",
+      "shadowDrop": 6,
+      "shadowOpacity": 0.45,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "spriteRect": [
+        527.5,
+        661.5,
+        615.5,
+        108.5
+      ],
+      "spritePpu": 0,
+      "checkError": 17.15
+    },
+    {
+      "id": "PlayIcon",
+      "parent": "WatchButton",
+      "rect": [
+        628.75,
+        689.60,
+        46.30,
+        51.89
+      ],
+      "use": "UI/Icons/Icon_Play.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Play.png",
+      "spriteRect": [
+        628.75,
+        689.6,
+        46.3,
+        51.89
+      ],
+      "spritePpu": 0,
+      "checkError": 13.44
+    },
+    {
+      "id": "WatchLabel",
+      "kind": "label",
+      "parent": "WatchButton",
+      "text": "Watch ad \u2022 \u002B20 coins",
+      "font": "SerifBold",
+      "ink": "light",
+      "style": "buttonLabel",
+      "rect": [
+        699,
+        695,
+        356,
+        44
+      ],
+      "inkBox": [
+        705.55,
+        702.23,
+        1048.51,
+        731.26
+      ],
+      "capTop": 704,
+      "baseline": 731,
+      "color": "#FDFBFA"
+    },
+    {
+      "id": "ClockIcon",
+      "parent": "Panel",
+      "rect": [
+        661.9,
+        780.9,
+        37.8,
+        37.0
+      ],
+      "use": "UI/Icons/Icon_Clock.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Clock.png",
+      "spriteRect": [
+        661.9,
+        780.9,
+        37.8,
+        37
+      ],
+      "spritePpu": 0,
+      "checkError": 19.89
+    },
+    {
+      "id": "ResetLabel",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Rewards reset every 5 hours",
+      "font": "SerifSemiBold",
+      "rect": [
+        705,
+        783,
+        311,
+        38
+      ],
+      "inkBox": [
+        711.23,
+        789.27,
+        1009.25,
+        814.89
+      ],
+      "capTop": 796,
+      "baseline": 809,
+      "color": "#65351A"
+    }
+  ]
+}

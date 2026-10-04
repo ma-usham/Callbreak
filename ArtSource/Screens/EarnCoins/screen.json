@@ -1,0 +1,78 @@
+{
+  // Screen 22 - Earn Coins (the owner's coins, 4 Oct 2026; the designer's rewarded-coins-prompts.md).
+  // Rects are mockup pixels on 22-rewarded-coins.png. Nothing is cut from the mockup. Shared menu
+  // background and UI kit: the back disc and icon, the wallet capsule (the kit's ivory pill, the main
+  // menu's secondary button), the title divider (a diamond and one line sprite, mirrored on the left),
+  // the large panel, the crimson gold-rimmed button (the main menu's Play Online pill) and the clock.
+  // The ShopUI kit (ChatGPT-generated, ArtSource/Working/ShopUI/notes.md; import settings in
+  // ArtSource/Kit/Coins.json) at the rects its notes give: the coin, the two reward-block looks (gold
+  // double keyline; crimson for the block the next ad pays), the light behind the coins, the three coin
+  // piles with their contact shadows, the connector lines and the play triangle.
+  // Every word is a label. The title, subtitle and heading are fixed copy (keys below); everything
+  // else is written by EarnCoinsPresenter from IWallet and IAdRewards, with the ui.earn_coins.* format
+  // strings: the balance, "Ad {0}", "{0} coins", the progress, the button's "Watch ad • +{0} coins",
+  // and the reset line. EarnCoinsCustomizer adds the states the mockup doesn't draw: the crimson look
+  // on every block (block 0 is drawn with it here only to say which sprite it is), the watched check.
+  "name": "EarnCoins",
+  "mockup": "22-rewarded-coins.png",
+  "background": "shared",
+  "nodes": [
+    { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [42.6, 34.0, 86.8, 87.4],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "BackIcon", "parent": "BackButton", "rect": [66.15, 59.29, 39.04, 37.48], "use": "UI/Icons/Icon_Back.png" },
+
+    // The wallet, without the main menu's "+" (mockup 22): coin and balance in the ivory pill.
+    { "id": "WalletPill", "group": "HeaderRight", "shape": "pill", "rect": [1436.5, 51.5, 191.5, 71.5],
+      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png", "shadowDrop": 2, "shadowOpacity": 0.4 },
+    { "id": "WalletCoin", "parent": "WalletPill", "rect": [1460.95, 57.96, 56.70, 57.29], "use": "UI/Icons/Icon_Coin.png" },
+    { "id": "Balance", "kind": "label", "parent": "WalletPill", "text": "250", "font": "SansBold", "align": "left", "rect": [1532, 70, 67, 35] },
+
+    { "id": "Title", "kind": "label", "text": "Earn Coins", "font": "SerifBold", "rect": [589, 39, 495, 84], "capFit": [47.6, 117.2], "dilate": 0.12, "lineGradient": ["#C20D16", "#62080F"], "key": "ui.earn_coins.title" },
+    { "id": "Subtitle", "kind": "label", "text": "WATCH & EARN", "font": "SansSemiBold", "tracked": true, "rect": [659, 130, 352, 30], "key": "ui.earn_coins.subtitle" },
+    { "id": "TitleLineLeft", "rect": [609.0, 169.9, 219.0, 3.4], "use": "UI/Decor/Deco_TitleDivider_Line.png", "mirror": true },
+    { "id": "TitleDiamond", "rect": [827.7, 162.1, 16.0, 19.0], "use": "UI/Decor/Deco_TitleDivider_Diamond.png" },
+    { "id": "TitleLineRight", "rect": [843.6, 169.9, 220.0, 3.4], "use": "UI/Decor/Deco_TitleDivider_Line.png" },
+
+    { "id": "Panel", "shape": "roundrect", "radius": 30.5, "rect": [336.0, 190.6, 1000.2, 649.6],
+      "use": "UI/Panels/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
+    // The owner's exact wording, "ads" included.
+    { "id": "Heading", "kind": "label", "parent": "Panel", "text": "Earn coins with every ads", "font": "SerifBold", "rect": [589, 227, 498, 55], "capFit": [235.4, 266.3], "key": "ui.earn_coins.heading" },
+
+    // The three reward blocks, each: the block, "Ad n", the light behind the coins, the pile's
+    // contact shadow, the pile and the amount.
+    { "id": "Block0", "parent": "Panel", "rect": [394.70, 327.25, 248.80, 251.00], "use": "UI/Panels/UI_RewardBlock_Selected.png" },
+    { "id": "AdTitle0", "kind": "label", "parent": "Block0", "text": "Ad 1", "font": "SerifBold", "rect": [479, 343, 77, 38] },
+    { "id": "CoinGlow0", "parent": "Block0", "rect": [395.4, 347.9, 236.0, 236.0], "use": "UI/Decor/Deco_CoinGlow.png" },
+    { "id": "CoinShadow0", "parent": "Block0", "rect": [424.54, 400.08, 177.74, 131.64], "use": "UI/Decor/Deco_CoinPile_Small_Shadow.png" },
+    { "id": "CoinStack0", "parent": "Block0", "rect": [445.78, 421.30, 135.25, 89.20], "use": "UI/Decor/Deco_CoinPile_Small.png" },
+    { "id": "Amount0", "kind": "label", "parent": "Block0", "text": "20 coins", "font": "SerifBold", "rect": [426, 514, 187, 49], "xFit": [531.5, 556.5], "dilate": 0.3, "lineGradient": ["#BC0408", "#5C080C"] },
+
+    { "id": "Block1", "parent": "Panel", "rect": [711.00, 325.85, 249.85, 254.40], "use": "UI/Panels/UI_RewardBlock_Normal.png" },
+    { "id": "AdTitle1", "kind": "label", "parent": "Block1", "text": "Ad 2", "font": "SerifBold", "rect": [796, 343, 78, 38] },
+    { "id": "CoinGlow1", "parent": "Block1", "rect": [717.0, 334.0, 236.0, 236.0], "use": "UI/Decor/Deco_CoinGlow.png" },
+    { "id": "CoinShadow1", "parent": "Block1", "rect": [730.79, 380.24, 210.63, 151.53], "use": "UI/Decor/Deco_CoinPile_Medium_Shadow.png" },
+    { "id": "CoinStack1", "parent": "Block1", "rect": [752.03, 401.45, 168.15, 109.10], "use": "UI/Decor/Deco_CoinPile_Medium.png" },
+    { "id": "Amount1", "kind": "label", "parent": "Block1", "text": "30 coins", "font": "SerifBold", "rect": [742, 514, 190, 49], "xFit": [531.5, 556.5], "dilate": 0.3, "lineGradient": ["#BC0408", "#5C080C"] },
+
+    { "id": "Block2", "parent": "Panel", "rect": [1026.85, 325.85, 252.00, 254.40], "use": "UI/Panels/UI_RewardBlock_Normal.png" },
+    { "id": "AdTitle2", "kind": "label", "parent": "Block2", "text": "Ad 3", "font": "SerifBold", "rect": [1114, 343, 79, 38] },
+    { "id": "CoinGlow2", "parent": "Block2", "rect": [1034.2, 335.9, 236.0, 236.0], "use": "UI/Decor/Deco_CoinGlow.png" },
+    { "id": "CoinShadow2", "parent": "Block2", "rect": [1036.57, 374.80, 231.18, 158.19], "use": "UI/Decor/Deco_CoinPile_Large_Shadow.png" },
+    { "id": "CoinStack2", "parent": "Block2", "rect": [1057.78, 396.10, 188.75, 115.60], "use": "UI/Decor/Deco_CoinPile_Large.png" },
+    { "id": "Amount2", "kind": "label", "parent": "Block2", "text": "50 coins", "font": "SerifBold", "rect": [1058, 514, 188, 50], "xFit": [532.0, 557.0], "dilate": 0.3, "lineGradient": ["#BC0408", "#5C080C"] },
+
+    // Thin gold lines linking the blocks, at their middle.
+    { "id": "Connector0", "parent": "Panel", "rect": [643.6, 443.85, 67.4, 5.2], "use": "UI/Decor/Deco_ConnectorLine.png" },
+    { "id": "Connector1", "parent": "Panel", "rect": [960.85, 443.85, 66.0, 5.2], "use": "UI/Decor/Deco_ConnectorLine.png" },
+
+    { "id": "Progress", "kind": "label", "parent": "Panel", "text": "0 / 3 ads watched", "font": "SerifBold", "rect": [702, 612, 269, 42] },
+
+    { "id": "WatchButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [527.5, 661.5, 615.5, 108.5],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "PlayIcon", "parent": "WatchButton", "rect": [628.75, 689.60, 46.30, 51.89], "use": "UI/Icons/Icon_Play.png" },
+    { "id": "WatchLabel", "kind": "label", "parent": "WatchButton", "text": "Watch ad • +20 coins", "font": "SerifBold", "ink": "light", "style": "buttonLabel", "rect": [699, 695, 356, 44] },
+
+    { "id": "ClockIcon", "parent": "Panel", "rect": [661.9, 780.9, 37.8, 37.0], "use": "UI/Icons/Icon_Clock.png" },
+    { "id": "ResetLabel", "kind": "label", "parent": "Panel", "text": "Rewards reset every 5 hours", "font": "SerifSemiBold", "rect": [705, 783, 311, 38] }
+  ]
+}

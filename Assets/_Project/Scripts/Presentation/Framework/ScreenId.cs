@@ -19,7 +19,8 @@ namespace Callbreak.Presentation.Framework
         HowToPlay = 12,
         MatchMenu = 13,
         Profile = 14,
-        CardCollection = 15,
+        Shop = 15,
         Scorecard = 16,
+        EarnCoins = 22,
     }
 }

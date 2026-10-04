@@ -17,6 +17,8 @@ namespace Callbreak.Editor
     /// Builds the Main menu prefab and the Menu scene (GDD §11 screen 00). Every position below
     /// is a centre measured on 00-main-menu.png in mockup pixels; the parts were fitted to the
     /// mockup by re-composing it from the exported sprites (ArtSource/Prompts/MainMenu_Batch.md).
+    /// The coin wallet left of the settings disc is mockup 23's (23-coinsection.png, which is
+    /// mockup 00 with the wallet added; everything else stands where it did).
     /// Re-running overwrites the prefab, so layout changes belong here until the screen is signed
     /// off. Like the screens built from layouts, its buttons carry press feedback, its fixed
     /// labels carry string-table keys, and its corner groups follow the device's safe area.
@@ -42,11 +44,31 @@ namespace Callbreak.Editor
         private static readonly LabelSpec GreetingText = new LabelSpec(27f, 206.6f, 82.1f, 1f, 0f);
         private static readonly LabelSpec PlayerNameText = new LabelSpec(39.6f, 205.4f, 117.5f, 0.966f, 0f);
 
+        // Mockup 23's balance, "250" in Inter Bold: its ink 52.3 x 22.9 at 1202.6..1254.9 x 88.4..111.3
+        // (the digits' overshoot puts the baseline 0.3 above the ink's foot).
+        private static readonly LabelSpec BalanceText = new LabelSpec(35.23f, 1228.65f, 111.02f, 0.933f, 0f);
+
         // The "Resume match" banner is on no mockup: it is the ivory secondary button, smaller,
         // standing where the footer line is (the two never show together).
         private static readonly Vector2 ResumeBannerCentre = new Vector2(835.75f, 877f);
         private static readonly Vector2 ResumeBannerSize = new Vector2(336f, 64f);
         private const float ResumeLabelSize = 27f;
+
+        // The coin wallet (mockup 23): the ivory pill (the kit's secondary pill, which the wallet is
+        // drawn like) measured on its edges, the room the balance may grow into between the coin and
+        // the "+", and the ShopUI kit's coin and crimson "+" (ArtSource/Working/ShopUI/notes.md) at the
+        // rects its notes give.
+        private static readonly Rect WalletPill = new Rect(1107.5f, 64.5f, 235.5f, 69.5f);
+        private static readonly Rect WalletCoin = new Rect(1130.53f, 73.43f, 52.55f, 52.55f);
+        private const float WalletBalanceRoom = 84f;
+        private static readonly Rect WalletPlus = new Rect(1276.6f, 75.4f, 48.4f, 48.4f);
+        private const string WalletCoinPath = "Assets/_Project/Art/UI/Icons/Icon_Coin.png";
+        private const string WalletPlusPath = "Assets/_Project/Art/UI/Buttons/UI_ButtonPlus_Normal.png";
+        private const float WalletShadowDrop = 2f;
+        private const float WalletShadowOpacity = 0.4f;
+
+        // The "+" takes a touch a little beyond its disc (GDD: touch targets of about 88 px).
+        private const float WalletPlusHitGrowth = 15f;
 
         // The fan: the four aces of the player's deck (GDD §13), laid as mockup 00 draws its four
         // cards. For each, the middle of its top edge and its tilt (mockup pixels; degrees,
@@ -201,7 +223,9 @@ namespace Callbreak.Editor
             TextMeshProUGUI playerName = Label(
                 "PlayerName", headerLeft, Screen, "Player", sansBold, UiBuildKit.Hex("#151617"), PlayerNameText, false);
 
-            // Header, right: settings and shop
+            // Header, right: the coin wallet, settings and shop
+            UnityEngine.UI.Button earnCoins = BuildWallet(headerRight, sansBold, secondary, out TextMeshProUGUI coins);
+
             var settingsCentre = new Vector2(1402f, 97f);
             UnityEngine.UI.Button settings = CreateButton(
                 "SettingsButton", headerRight, settingsCentre, UiBuildKit.NativeSize(circle), circle, circleShadow, 1f, 0f, 4f, 0.2f);
@@ -234,6 +258,8 @@ namespace Callbreak.Editor
             serialized.FindProperty("_profileButton").objectReferenceValue = profile;
             serialized.FindProperty("_settingsButton").objectReferenceValue = settings;
             serialized.FindProperty("_shopButton").objectReferenceValue = shop;
+            serialized.FindProperty("_coinsText").objectReferenceValue = coins;
+            serialized.FindProperty("_earnCoinsButton").objectReferenceValue = earnCoins;
             serialized.FindProperty("_playOnlineButton").objectReferenceValue = playOnline;
             serialized.FindProperty("_playWithFriendsButton").objectReferenceValue = playWithFriends;
             serialized.FindProperty("_playOfflineButton").objectReferenceValue = playOffline;
@@ -321,6 +347,48 @@ namespace Callbreak.Editor
 
             banner.gameObject.SetActive(false);
             return banner;
+        }
+
+        /// <summary>
+        /// Mockup 23's coin wallet: the ivory pill holding the coin, the balance and the crimson "+"
+        /// that opens Earn Coins. The pill and its shadow are sliced at the scale that gives the pill
+        /// its height, as the layout builder draws sliced pills. The balance is centred between the
+        /// coin and the "+", and a longer one shrinks to stay between them. Returns the "+".
+        /// </summary>
+        private static UnityEngine.UI.Button BuildWallet(RectTransform headerRight, TMP_FontAsset font, Sprite pill, out TextMeshProUGUI balance)
+        {
+            Vector2 centre = WalletPill.center;
+            Vector2 size = UiBuildKit.FromMock(WalletPill.width, WalletPill.height);
+            RectTransform wallet = UiBuildKit.CreateAt("Wallet", headerRight, centre, Screen, size);
+
+            float scale = size.y / UiBuildKit.NativeSize(pill).y;
+            Sprite shadow = Ui("Buttons/UI_Shadow_Secondary.png", 150f);
+            Vector2 shadowSize = size + ((UiBuildKit.NativeSize(shadow) - UiBuildKit.NativeSize(pill)) * scale);
+            RectTransform shadowRect = UiBuildKit.CreateAt("Shadow", wallet, centre + new Vector2(0f, WalletShadowDrop), centre, shadowSize);
+            UnityEngine.UI.Image shadowImage = UiBuildKit.AddImage(shadowRect, shadow, false);
+            shadowImage.color = new Color(1f, 1f, 1f, WalletShadowOpacity);
+            shadowImage.pixelsPerUnitMultiplier = 1f / scale;
+            RectTransform pillRect = UiBuildKit.CreateAt("Pill", wallet, centre, centre, size);
+            UiBuildKit.AddImage(pillRect, pill, false).pixelsPerUnitMultiplier = 1f / scale;
+
+            RectTransform coin = UiBuildKit.CreateAt("Coin", wallet, WalletCoin.center, centre, UiBuildKit.FromMock(WalletCoin.width, WalletCoin.height));
+            UiBuildKit.AddImage(coin, UiBuildKit.LoadSpriteAt(WalletCoinPath, 0f), false);
+
+            balance = Label("Balance", wallet, centre, "250", font, UiBuildKit.Hex("#181C22"), BalanceText, true);
+            RectTransform balanceRect = balance.rectTransform;
+            balanceRect.sizeDelta = new Vector2(WalletBalanceRoom * UiBuildKit.ScaleX, balanceRect.sizeDelta.y);
+            balance.fontSizeMax = balance.fontSize;
+            balance.fontSizeMin = balance.fontSize * 0.6f;
+            balance.enableAutoSizing = true;
+            balance.overflowMode = TextOverflowModes.Ellipsis;
+
+            Vector2 plusCentre = WalletPlus.center;
+            Vector2 plusSize = UiBuildKit.FromMock(WalletPlus.width, WalletPlus.height);
+            RectTransform plus = UiBuildKit.CreateAt("EarnCoinsButton", wallet, plusCentre, centre, plusSize);
+            RectTransform face = UiBuildKit.CreateAt("Face", plus, plusCentre, plusCentre, plusSize);
+            UnityEngine.UI.Image faceImage = UiBuildKit.AddImage(face, UiBuildKit.LoadSpriteAt(WalletPlusPath, 0f), true);
+            faceImage.raycastPadding = -Vector4.one * WalletPlusHitGrowth;
+            return MakeButton(plus, faceImage);
         }
 
         /// <summary>
@@ -420,9 +488,14 @@ namespace Callbreak.Editor
 
             RectTransform faceRect = UiBuildKit.CreateAt("Face", root, centre, centre, size);
             UnityEngine.UI.Image faceImage = UiBuildKit.AddImage(faceRect, face, true);
+            return MakeButton(root, faceImage);
+        }
 
+        /// <summary>Makes <paramref name="root"/> a button that <paramref name="face"/> draws: its states and its press feedback.</summary>
+        private static UnityEngine.UI.Button MakeButton(RectTransform root, UnityEngine.UI.Image face)
+        {
             var button = root.gameObject.AddComponent<UnityEngine.UI.Button>();
-            button.targetGraphic = faceImage;
+            button.targetGraphic = face;
 
             // GDD §12: pressed is 8% darker; disabled is muted at half opacity.
             UnityEngine.UI.ColorBlock colors = button.colors;

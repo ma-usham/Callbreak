@@ -60,7 +60,7 @@ namespace Callbreak.Editor
     /// 88 px and that nothing on the table answers a touch while a page covers it.
     /// Run: Tools/Unity/ueval.sh 'return Callbreak.Editor.TableSimulation.Run();'
     /// </summary>
-    public static class TableSimulation
+    public static partial class TableSimulation
     {
         public const string OutputFolder = "Temp/TableSimulation";
         public const string ReportPath = OutputFolder + "/report.txt";
@@ -419,7 +419,7 @@ namespace Callbreak.Editor
 
         // ------------------------------------------------------------------ the run
 
-        private sealed class Runner : IDisposable
+        private sealed partial class Runner : IDisposable
         {
             private readonly bool _reduceMotion;
             private readonly bool _captures;
@@ -674,6 +674,7 @@ namespace Callbreak.Editor
                 StageOnlineSession();
                 StageOnlineLastRound();
                 StageOnlineResults();
+                StageBackdrops();
                 StageTeardown();
             }
 
@@ -947,7 +948,7 @@ namespace Callbreak.Editor
                 _router = new ScreenRouter(_screens);
 
                 _tablePresenter = new TablePresenter(
-                    _table, _gameplay, _played, session, _router, _settings, _text, _audio, _haptics, _toasts, _clock, _dialogs, _flow, _cards, _avatars);
+                    _table, _gameplay, _played, session, _router, _settings, _text, _audio, _haptics, _toasts, _clock, _dialogs, _flow, _cards, _avatars, _shop);
                 _biddingPresenter = new BiddingPresenter(_bidding, _played, session, _router, _settings, _text, _audio, _advisor);
                 _menuPresenter = new MatchMenuPresenter(_menu, _router, session, _settings, _text, _dialogs, _flow, _audio, _rooms);
                 if (_roundResults != null)

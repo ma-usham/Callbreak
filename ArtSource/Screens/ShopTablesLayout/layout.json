@@ -1,0 +1,798 @@
+{
+  "name": "ShopTablesLayout",
+  "mockup": "21-table-styles.png",
+  "mockW": 1672,
+  "mockH": 941,
+  "background": "Assets/_Project/Art/Backgrounds/BG_Menu_Wide.png",
+  "backgroundRect": [
+    -279,
+    -157,
+    2230,
+    1255
+  ],
+  "backgroundPpu": 0,
+  "nodes": [
+    {
+      "id": "Title2",
+      "kind": "label",
+      "text": "Table Collection",
+      "font": "SerifBold",
+      "rect": [
+        540,
+        44,
+        590,
+        88
+      ],
+      "key": "ui.shop.tables.title",
+      "inkBox": [
+        551.61,
+        54.28,
+        1118.69,
+        120.88
+      ],
+      "capTop": 60,
+      "baseline": 120,
+      "color": "#78090F",
+      "colorTop": "#940710",
+      "colorBottom": "#620A0F"
+    },
+    {
+      "id": "Subtitle2",
+      "kind": "label",
+      "text": "MAKE EVERY HAND FEEL SPECIAL",
+      "font": "SansSemiBold",
+      "tracked": true,
+      "rect": [
+        510,
+        133,
+        652,
+        32
+      ],
+      "key": "ui.shop.tables.subtitle",
+      "inkBox": [
+        520.82,
+        139.35,
+        1151.67,
+        158.85
+      ],
+      "capTop": 140,
+      "baseline": 159,
+      "color": "#63432C"
+    },
+    {
+      "id": "Panel",
+      "shape": "roundrect",
+      "radius": 25.5,
+      "rect": [
+        328.6,
+        198.1,
+        978.4,
+        538.2
+      ],
+      "use": "UI/Panels/UI_Panel_Card.png",
+      "sliceScale": 0.898,
+      "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
+      "shadowSpread": 12,
+      "shadowDrop": 2,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card.png",
+      "spriteRect": [
+        328.6,
+        198.1,
+        978.4,
+        538.2
+      ],
+      "spritePpu": 0,
+      "checkError": 22.56
+    },
+    {
+      "id": "Tile0",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 19.5,
+      "rect": [
+        399.8,
+        224.1,
+        266.1,
+        426.9
+      ],
+      "use": "UI/Panels/UI_Panel_Card_Light.png",
+      "sliceScale": 1.157,
+      "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
+      "shadowSpread": 12,
+      "shadowDrop": 2,
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card_Light.png",
+      "spriteRect": [
+        399.8,
+        224.1,
+        266.1,
+        426.9
+      ],
+      "spritePpu": 0,
+      "checkError": 17.7
+    },
+    {
+      "id": "TablePicture0",
+      "parent": "Tile0",
+      "rect": [
+        401.85,
+        262,
+        262,
+        275
+      ],
+      "use": "Shop/Tables/Preview_HimalayanIvory.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Shop/Tables/Preview_HimalayanIvory.png",
+      "spriteRect": [
+        401.85,
+        262,
+        262,
+        275
+      ],
+      "spritePpu": 0,
+      "checkError": 24.84
+    },
+    {
+      "id": "Name0",
+      "kind": "label",
+      "parent": "Tile0",
+      "text": "Himalayan Ivory",
+      "font": "SerifBold",
+      "rect": [
+        420,
+        537,
+        226,
+        44
+      ],
+      "inkBox": [
+        428.76,
+        541.29,
+        637.31,
+        572.49
+      ],
+      "capTop": 549,
+      "baseline": 565,
+      "color": "#1C1D1D"
+    },
+    {
+      "id": "RadioOn0",
+      "parent": "Tile0",
+      "rect": [
+        458.4,
+        588.1,
+        40.4,
+        40.4
+      ],
+      "use": "UI/Controls/UI_Radio_On.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Radio_On.png",
+      "spriteRect": [
+        458.4,
+        588.1,
+        40.4,
+        40.4
+      ],
+      "spritePpu": 0,
+      "checkError": 17.04
+    },
+    {
+      "id": "Status0",
+      "kind": "label",
+      "parent": "Tile0",
+      "text": "Equipped",
+      "font": "SansMedium",
+      "align": "left",
+      "rect": [
+        506,
+        592,
+        112,
+        35
+      ],
+      "inkBox": [
+        514.74,
+        598.11,
+        610.16,
+        623.2
+      ],
+      "capTop": 604,
+      "baseline": 618,
+      "color": "#623C23"
+    },
+    {
+      "id": "Tile1",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 21,
+      "rect": [
+        683.4,
+        224.4,
+        268.5,
+        427.1
+      ],
+      "use": "UI/Panels/UI_Panel_Card_Light.png",
+      "sliceScale": 1.157,
+      "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
+      "shadowSpread": 12,
+      "shadowDrop": 2,
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card_Light.png",
+      "spriteRect": [
+        683.4,
+        224.4,
+        268.5,
+        427.1
+      ],
+      "spritePpu": 0,
+      "checkError": 40.81
+    },
+    {
+      "id": "Outline1",
+      "parent": "Tile1",
+      "rect": [
+        681.0,
+        222.0,
+        273.3,
+        431.9
+      ],
+      "use": "UI/Controls/UI_Outline_Thin_Selected.png",
+      "sliceScale": 1.27,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Outline_Thin_Selected.png",
+      "spriteRect": [
+        681,
+        222,
+        273.3,
+        431.9
+      ],
+      "spritePpu": 0,
+      "checkError": 41.11
+    },
+    {
+      "id": "TablePicture1",
+      "parent": "Tile1",
+      "rect": [
+        686.65,
+        262,
+        262,
+        275
+      ],
+      "use": "Shop/Tables/Preview_RoyalCrimson.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Shop/Tables/Preview_RoyalCrimson.png",
+      "spriteRect": [
+        686.65,
+        262,
+        262,
+        275
+      ],
+      "spritePpu": 0,
+      "checkError": 38.67
+    },
+    {
+      "id": "Name1",
+      "kind": "label",
+      "parent": "Tile1",
+      "text": "Royal Crimson",
+      "font": "SerifBold",
+      "rect": [
+        718,
+        537,
+        200,
+        44
+      ],
+      "inkBox": [
+        727.59,
+        541.29,
+        912.24,
+        571.98
+      ],
+      "capTop": 549,
+      "baseline": 565,
+      "color": "#1B1C1D"
+    },
+    {
+      "id": "Coin1",
+      "parent": "Tile1",
+      "rect": [
+        759.90,
+        584.85,
+        45.20,
+        45.20
+      ],
+      "use": "UI/Icons/Icon_Coin.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Coin.png",
+      "spriteRect": [
+        759.9,
+        584.85,
+        45.2,
+        45.2
+      ],
+      "spritePpu": 0,
+      "checkError": 19.54
+    },
+    {
+      "id": "Price1",
+      "kind": "label",
+      "parent": "Tile1",
+      "text": "350",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        814,
+        589,
+        70,
+        38
+      ],
+      "inkBox": [
+        821.11,
+        596.19,
+        874.77,
+        620.88
+      ],
+      "capTop": 596,
+      "baseline": 621,
+      "color": "#50301A"
+    },
+    {
+      "id": "Tile2",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 20.5,
+      "rect": [
+        971.7,
+        224.1,
+        266.3,
+        426.9
+      ],
+      "use": "UI/Panels/UI_Panel_Card_Light.png",
+      "sliceScale": 1.157,
+      "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
+      "shadowSpread": 12,
+      "shadowDrop": 2,
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card_Light.png",
+      "spriteRect": [
+        971.7,
+        224.1,
+        266.3,
+        426.9
+      ],
+      "spritePpu": 0,
+      "checkError": 19.13
+    },
+    {
+      "id": "TablePicture2",
+      "parent": "Tile2",
+      "rect": [
+        973.85,
+        262,
+        262,
+        275
+      ],
+      "use": "Shop/Tables/Preview_HeritageWalnut.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Shop/Tables/Preview_HeritageWalnut.png",
+      "spriteRect": [
+        973.85,
+        262,
+        262,
+        275
+      ],
+      "spritePpu": 0,
+      "checkError": 27.13
+    },
+    {
+      "id": "Name2",
+      "kind": "label",
+      "parent": "Tile2",
+      "text": "Heritage Walnut",
+      "font": "SerifBold",
+      "rect": [
+        994,
+        537,
+        222,
+        44
+      ],
+      "inkBox": [
+        1005.08,
+        541.39,
+        1206.82,
+        572.33
+      ],
+      "capTop": 544,
+      "baseline": 565,
+      "color": "#1C1D1E"
+    },
+    {
+      "id": "Coin2",
+      "parent": "Tile2",
+      "rect": [
+        1046.98,
+        584.83,
+        45.25,
+        45.25
+      ],
+      "use": "UI/Icons/Icon_Coin.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Coin.png",
+      "spriteRect": [
+        1046.98,
+        584.83,
+        45.25,
+        45.25
+      ],
+      "spritePpu": 0,
+      "checkError": 15.29
+    },
+    {
+      "id": "Price2",
+      "kind": "label",
+      "parent": "Tile2",
+      "text": "250",
+      "font": "SansSemiBold",
+      "align": "left",
+      "rect": [
+        1102,
+        589,
+        70,
+        38
+      ],
+      "inkBox": [
+        1109.34,
+        596.28,
+        1162.82,
+        620.86
+      ],
+      "capTop": 596,
+      "baseline": 621,
+      "color": "#51301B"
+    },
+    {
+      "id": "PrevButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        334.8,
+        395.4,
+        65.4,
+        65.4
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        334.8,
+        395.4,
+        65.4,
+        65.4
+      ],
+      "spritePpu": 0,
+      "checkError": 27.95
+    },
+    {
+      "id": "PrevIcon",
+      "parent": "PrevButton",
+      "shape": "ink",
+      "rect": [
+        352,
+        410,
+        30,
+        38
+      ],
+      "use": "UI/Icons/Icon_Chevron.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Chevron.png",
+      "spriteRect": [
+        352,
+        410,
+        30,
+        38
+      ],
+      "spritePpu": 0,
+      "color": "#040609",
+      "checkError": 65.78
+    },
+    {
+      "id": "NextButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        1234.8,
+        395.5,
+        65.4,
+        65.4
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        1234.8,
+        395.5,
+        65.4,
+        65.4
+      ],
+      "spritePpu": 0,
+      "checkError": 21.17
+    },
+    {
+      "id": "NextIcon",
+      "parent": "NextButton",
+      "shape": "ink",
+      "rect": [
+        1253,
+        410,
+        30,
+        38
+      ],
+      "use": "UI/Icons/Icon_Chevron.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Chevron.png",
+      "spriteRect": [
+        1253,
+        410,
+        30,
+        38
+      ],
+      "spritePpu": 0,
+      "color": "#080B0E",
+      "checkError": 40.07
+    },
+    {
+      "id": "SwipeHint",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Swipe to browse",
+      "font": "SansRegular",
+      "rect": [
+        747,
+        694,
+        178,
+        33
+      ],
+      "inkBox": [
+        755.83,
+        700.48,
+        911.87,
+        722.34
+      ],
+      "capTop": 706,
+      "baseline": 718,
+      "color": "#845A41"
+    },
+    {
+      "id": "PrimaryButton",
+      "kind": "button",
+      "shape": "roundrect",
+      "radius": 41.5,
+      "rect": [
+        562.9,
+        764.4,
+        545.9,
+        93.7
+      ],
+      "use": "UI/Controls/UI_Button_Crimson.png",
+      "shadowUse": "UI/Controls/UI_Button_Crimson_Shadow.png",
+      "shadowDrop": 6,
+      "shadowOpacity": 0.25,
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Button_Crimson.png",
+      "spriteRect": [
+        562.9,
+        764.4,
+        545.9,
+        93.7
+      ],
+      "spritePpu": 0,
+      "checkError": 18.87
+    },
+    {
+      "id": "BuyLabel",
+      "kind": "label",
+      "parent": "PrimaryButton",
+      "text": "Buy for",
+      "font": "SerifSemiBold",
+      "ink": "light",
+      "style": "buttonLabel",
+      "align": "left",
+      "rect": [
+        700,
+        786,
+        136,
+        54
+      ],
+      "key": "ui.shop.buy_for",
+      "inkBox": [
+        707.47,
+        793.22,
+        829.64,
+        833.39
+      ],
+      "capTop": 796,
+      "baseline": 824,
+      "color": "#FEFCFC"
+    },
+    {
+      "id": "BuyCoin",
+      "parent": "PrimaryButton",
+      "rect": [
+        839.93,
+        786.28,
+        46.75,
+        46.75
+      ],
+      "use": "UI/Icons/Icon_Coin.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Coin.png",
+      "spriteRect": [
+        839.93,
+        786.28,
+        46.75,
+        46.75
+      ],
+      "spritePpu": 0,
+      "checkError": 14.54
+    },
+    {
+      "id": "BuyPrice",
+      "kind": "label",
+      "parent": "PrimaryButton",
+      "text": "350",
+      "font": "SerifSemiBold",
+      "ink": "light",
+      "style": "buttonLabel",
+      "align": "left",
+      "rect": [
+        892,
+        788,
+        80,
+        44
+      ],
+      "inkBox": [
+        898.66,
+        795.54,
+        964.81,
+        825
+      ],
+      "capTop": 796,
+      "baseline": 825,
+      "color": "#FDFBFB"
+    },
+    {
+      "id": "Drawer",
+      "group": "HeaderRight",
+      "rect": [
+        1439.8,
+        -0.8,
+        232.2,
+        942.6
+      ],
+      "use": "UI/Panels/UI_Drawer.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Drawer.png",
+      "spriteRect": [
+        1439.8,
+        -0.8,
+        232.2,
+        942.6
+      ],
+      "spritePpu": 0,
+      "checkError": 13.17
+    },
+    {
+      "id": "CategoryLabel0",
+      "kind": "label",
+      "parent": "Drawer",
+      "text": "Cards",
+      "font": "SerifSemiBold",
+      "rect": [
+        1512,
+        365,
+        98,
+        40
+      ],
+      "inkBox": [
+        1519.23,
+        371.41,
+        1601.22,
+        397.77
+      ],
+      "capTop": 374,
+      "baseline": 397,
+      "color": "#462A1A"
+    },
+    {
+      "id": "CategoryLabel1",
+      "kind": "label",
+      "parent": "Drawer",
+      "text": "Backgrounds",
+      "font": "SerifSemiBold",
+      "rect": [
+        1480,
+        571,
+        162,
+        43
+      ],
+      "inkBox": [
+        1486.34,
+        578.11,
+        1634.86,
+        607.47
+      ],
+      "capTop": 586,
+      "baseline": 601,
+      "color": "#4C2D1B"
+    },
+    {
+      "id": "CategoryButton2",
+      "kind": "button",
+      "parent": "Drawer",
+      "shape": "ellipse",
+      "rect": [
+        1490.18,
+        634.73,
+        139.55,
+        139.55
+      ],
+      "use": "UI/Buttons/UI_ButtonDisc_Selected.png",
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonDisc_Selected.png",
+      "spriteRect": [
+        1490.18,
+        634.73,
+        139.55,
+        139.55
+      ],
+      "spritePpu": 0,
+      "checkError": 10.1
+    },
+    {
+      "id": "CategoryIcon2",
+      "parent": "CategoryButton2",
+      "rect": [
+        1513.53,
+        681.26,
+        92.85,
+        61.88
+      ],
+      "use": "UI/Icons/Icon_TableOval_Ivory.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_TableOval_Ivory.png",
+      "spriteRect": [
+        1513.53,
+        681.26,
+        92.85,
+        61.88
+      ],
+      "spritePpu": 0,
+      "checkError": 11.84
+    },
+    {
+      "id": "CategoryLabel2",
+      "kind": "label",
+      "parent": "Drawer",
+      "text": "Tables",
+      "font": "SerifSemiBold",
+      "rect": [
+        1514,
+        779,
+        94,
+        36
+      ],
+      "inkBox": [
+        1519.71,
+        784.57,
+        1600.72,
+        808.48
+      ],
+      "capTop": 786,
+      "baseline": 808,
+      "color": "#9B1317"
+    }
+  ]
+}

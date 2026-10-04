@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Callbreak.Application.Cosmetics;
+using Callbreak.Application.Economy;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
@@ -19,7 +20,8 @@ namespace Callbreak.Presentation.Screens
     /// GDD §11 screen 00: one tap to every mode. The card fan shows the four aces of the player's
     /// deck. Online entry points need a connection; without one a toast points to Play Offline. While an unfinished offline match exists a banner offers
     /// "Resume match"; the match is also offered back ("Resume your offline match?") once when the app
-    /// opens and whenever Play Offline is tapped. Android back asks "Exit Callbreak?".
+    /// opens and whenever Play Offline is tapped. Android back asks "Exit Callbreak?". The coin
+    /// wallet (mockup 23) shows the balance as it changes; its "+" opens Earn Coins.
     /// </summary>
     public sealed class MainMenuPresenter : IStartable, IDisposable
     {
@@ -38,6 +40,7 @@ namespace Callbreak.Presentation.Screens
         private readonly AvatarLibrary _avatars;
         private readonly ICosmeticsService _cosmetics;
         private readonly CardSpriteProvider _cards;
+        private readonly IWallet _wallet;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private bool _asking;
@@ -58,7 +61,8 @@ namespace Callbreak.Presentation.Screens
             IAppExit exit,
             AvatarLibrary avatars,
             ICosmeticsService cosmetics,
-            CardSpriteProvider cards)
+            CardSpriteProvider cards,
+            IWallet wallet)
         {
             _view = view;
             _router = router;
@@ -75,6 +79,7 @@ namespace Callbreak.Presentation.Screens
             _avatars = avatars;
             _cosmetics = cosmetics;
             _cards = cards;
+            _wallet = wallet;
         }
 
         public void Start()
@@ -82,6 +87,7 @@ namespace Callbreak.Presentation.Screens
             _view.ProfileClicked += OnProfile;
             _view.SettingsClicked += OnSettings;
             _view.ShopClicked += OnShop;
+            _view.EarnCoinsClicked += OnEarnCoins;
             _view.PlayOnlineClicked += OnPlayOnline;
             _view.PlayWithFriendsClicked += OnPlayWithFriends;
             _view.PlayOfflineClicked += OnPlayOffline;
@@ -90,10 +96,12 @@ namespace Callbreak.Presentation.Screens
             _profile.Changed += Render;
             _settings.Changed += RenderMotion;
             _cosmetics.Changed += RenderFan;
+            _wallet.Changed += RenderCoins;
             _network.Changed += OnNetworkChanged;
             _router.Changed += OnScreenChanged;
             Render();
             RenderFan();
+            RenderCoins();
             RenderMotion();
             RenderResume();
             OnNetworkChanged(_network.IsOnline);
@@ -110,6 +118,7 @@ namespace Callbreak.Presentation.Screens
             _view.ProfileClicked -= OnProfile;
             _view.SettingsClicked -= OnSettings;
             _view.ShopClicked -= OnShop;
+            _view.EarnCoinsClicked -= OnEarnCoins;
             _view.PlayOnlineClicked -= OnPlayOnline;
             _view.PlayWithFriendsClicked -= OnPlayWithFriends;
             _view.PlayOfflineClicked -= OnPlayOffline;
@@ -118,6 +127,7 @@ namespace Callbreak.Presentation.Screens
             _profile.Changed -= Render;
             _settings.Changed -= RenderMotion;
             _cosmetics.Changed -= RenderFan;
+            _wallet.Changed -= RenderCoins;
             _network.Changed -= OnNetworkChanged;
             _router.Changed -= OnScreenChanged;
 
@@ -144,6 +154,8 @@ namespace Callbreak.Presentation.Screens
                 _view.SetFanFace((Suit)suit, _cards.Face(deck, new Card((Suit)suit, Rank.Ace)));
             }
         }
+
+        private void RenderCoins() => _view.SetCoins(CoinsFormat.Coins(_wallet.Coins));
 
         private void RenderResume() => _view.SetResumeAvailable(_offlineStore.HasSave);
 
@@ -182,7 +194,9 @@ namespace Callbreak.Presentation.Screens
 
         private void OnSettings() => _router.Push(ScreenId.Settings);
 
-        private void OnShop() => _router.Push(ScreenId.CardCollection);
+        private void OnShop() => _router.Push(ScreenId.Shop);
+
+        private void OnEarnCoins() => _router.Push(ScreenId.EarnCoins);
 
         private void OnPlayOffline()
         {

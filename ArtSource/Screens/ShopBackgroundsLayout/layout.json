@@ -1,0 +1,800 @@
+{
+  "name": "ShopBackgroundsLayout",
+  "mockup": "20-backgrounds.png",
+  "mockW": 1672,
+  "mockH": 941,
+  "background": "Assets/_Project/Art/Backgrounds/BG_Menu_Wide.png",
+  "backgroundRect": [
+    -279,
+    -157,
+    2230,
+    1255
+  ],
+  "backgroundPpu": 0,
+  "nodes": [
+    {
+      "id": "Title1",
+      "kind": "label",
+      "text": "Background Collection",
+      "font": "SerifBold",
+      "rect": [
+        482,
+        48,
+        708,
+        86
+      ],
+      "key": "ui.shop.backgrounds.title",
+      "inkBox": [
+        494.14,
+        60.55,
+        1178.67,
+        131.21
+      ],
+      "capTop": 79,
+      "baseline": 116,
+      "color": "#890A14",
+      "colorTop": "#9D0714",
+      "colorBottom": "#6F0F14"
+    },
+    {
+      "id": "Subtitle1",
+      "kind": "label",
+      "text": "CHOOSE YOUR VIEW",
+      "font": "SansSemiBold",
+      "tracked": true,
+      "rect": [
+        650,
+        133,
+        372,
+        31
+      ],
+      "key": "ui.shop.backgrounds.subtitle",
+      "inkBox": [
+        660.13,
+        139.09,
+        1011.71,
+        157.83
+      ],
+      "capTop": 139,
+      "baseline": 157,
+      "color": "#705036"
+    },
+    {
+      "id": "Panel",
+      "shape": "roundrect",
+      "radius": 24.5,
+      "rect": [
+        329.0,
+        198.7,
+        978.0,
+        537.1
+      ],
+      "use": "UI/Panels/UI_Panel_Card.png",
+      "sliceScale": 0.898,
+      "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
+      "shadowSpread": 12,
+      "shadowDrop": 2,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card.png",
+      "spriteRect": [
+        329,
+        198.7,
+        978,
+        537.1
+      ],
+      "spritePpu": 0,
+      "checkError": 31.26
+    },
+    {
+      "id": "Tile0",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 20,
+      "rect": [
+        377.4,
+        224.5,
+        285.0,
+        425.9
+      ],
+      "use": "UI/Panels/UI_Panel_Card_Light.png",
+      "sliceScale": 1.157,
+      "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
+      "shadowSpread": 12,
+      "shadowDrop": 2,
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card_Light.png",
+      "spriteRect": [
+        377.4,
+        224.5,
+        285,
+        425.9
+      ],
+      "spritePpu": 0,
+      "checkError": 52.34
+    },
+    {
+      "id": "Outline0",
+      "parent": "Tile0",
+      "rect": [
+        375.0,
+        222.1,
+        289.8,
+        430.7
+      ],
+      "use": "UI/Controls/UI_Outline_Thin_Selected.png",
+      "sliceScale": 1.27,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Outline_Thin_Selected.png",
+      "spriteRect": [
+        375,
+        222.1,
+        289.8,
+        430.7
+      ],
+      "spritePpu": 0,
+      "checkError": 52.3
+    },
+    {
+      "id": "Thumb0",
+      "parent": "Tile0",
+      "shape": "roundrect",
+      "radius": 10,
+      "rect": [
+        390.0,
+        239.2,
+        261.7,
+        292.7
+      ],
+      "use": "Shop/Backgrounds/Thumb_KathmanduCourtyard.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Shop/Backgrounds/Thumb_KathmanduCourtyard.png",
+      "spriteRect": [
+        390,
+        239.2,
+        261.7,
+        292.7
+      ],
+      "spritePpu": 0,
+      "checkError": 52.26
+    },
+    {
+      "id": "Name0",
+      "kind": "label",
+      "parent": "Tile0",
+      "text": "Kathmandu Courtyard",
+      "font": "SerifBold",
+      "rect": [
+        395,
+        540,
+        252,
+        42
+      ],
+      "inkBox": [
+        402.13,
+        547.63,
+        641.2,
+        574.76
+      ],
+      "capTop": 554,
+      "baseline": 569,
+      "color": "#1D1F20"
+    },
+    {
+      "id": "RadioOn0",
+      "parent": "Tile0",
+      "rect": [
+        447.9,
+        589.3,
+        40.4,
+        40.4
+      ],
+      "use": "UI/Controls/UI_Radio_On.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Radio_On.png",
+      "spriteRect": [
+        447.9,
+        589.3,
+        40.4,
+        40.4
+      ],
+      "spritePpu": 0,
+      "checkError": 36.36
+    },
+    {
+      "id": "Status0",
+      "kind": "label",
+      "parent": "Tile0",
+      "text": "Selected",
+      "font": "SansMedium",
+      "align": "left",
+      "rect": [
+        497,
+        593,
+        106,
+        34
+      ],
+      "inkBox": [
+        504.14,
+        600.1,
+        595.79,
+        620.17
+      ],
+      "capTop": 605,
+      "baseline": 620,
+      "color": "#5F3E26"
+    },
+    {
+      "id": "Tile1",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 14,
+      "rect": [
+        684.1,
+        225.0,
+        282.8,
+        426.1
+      ],
+      "use": "UI/Panels/UI_Panel_Card_Light.png",
+      "sliceScale": 1.157,
+      "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
+      "shadowSpread": 12,
+      "shadowDrop": 2,
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card_Light.png",
+      "spriteRect": [
+        684.1,
+        225,
+        282.8,
+        426.1
+      ],
+      "spritePpu": 0,
+      "checkError": 31.95
+    },
+    {
+      "id": "Thumb1",
+      "parent": "Tile1",
+      "shape": "roundrect",
+      "radius": 8,
+      "rect": [
+        698.6,
+        239.3,
+        254.3,
+        292.6
+      ],
+      "use": "Shop/Backgrounds/Thumb_VillageTerrace.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Shop/Backgrounds/Thumb_VillageTerrace.png",
+      "spriteRect": [
+        698.6,
+        239.3,
+        254.3,
+        292.6
+      ],
+      "spritePpu": 0,
+      "checkError": 48.42
+    },
+    {
+      "id": "Name1",
+      "kind": "label",
+      "parent": "Tile1",
+      "text": "Village Terrace",
+      "font": "SerifBold",
+      "rect": [
+        735,
+        540,
+        182,
+        42
+      ],
+      "inkBox": [
+        744.44,
+        547.72,
+        906.71,
+        574.74
+      ],
+      "capTop": 549,
+      "baseline": 569,
+      "color": "#1F2122"
+    },
+    {
+      "id": "RadioOff1",
+      "parent": "Tile1",
+      "rect": [
+        759.3,
+        589.3,
+        40.4,
+        40.4
+      ],
+      "use": "UI/Controls/UI_Radio_Off.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Radio_Off.png",
+      "spriteRect": [
+        759.3,
+        589.3,
+        40.4,
+        40.4
+      ],
+      "spritePpu": 0,
+      "checkError": 19.36
+    },
+    {
+      "id": "Status1",
+      "kind": "label",
+      "parent": "Tile1",
+      "text": "Owned",
+      "font": "SansMedium",
+      "align": "left",
+      "rect": [
+        806,
+        593,
+        90,
+        34
+      ],
+      "inkBox": [
+        814.84,
+        600.07,
+        885.88,
+        619.44
+      ],
+      "capTop": 602,
+      "baseline": 619,
+      "color": "#62422B"
+    },
+    {
+      "id": "Tile2",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 13,
+      "rect": [
+        980.8,
+        225.1,
+        280.9,
+        425.8
+      ],
+      "use": "UI/Panels/UI_Panel_Card_Light.png",
+      "sliceScale": 1.157,
+      "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png",
+      "shadowSpread": 12,
+      "shadowDrop": 2,
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Card_Light.png",
+      "spriteRect": [
+        980.8,
+        225.1,
+        280.9,
+        425.8
+      ],
+      "spritePpu": 0,
+      "checkError": 27.47
+    },
+    {
+      "id": "Thumb2",
+      "parent": "Tile2",
+      "shape": "roundrect",
+      "radius": 9.5,
+      "rect": [
+        995.2,
+        239.8,
+        252.3,
+        289.3
+      ],
+      "use": "Shop/Backgrounds/Thumb_VintageHome.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/Shop/Backgrounds/Thumb_VintageHome.png",
+      "spriteRect": [
+        995.2,
+        239.8,
+        252.3,
+        289.3
+      ],
+      "spritePpu": 0,
+      "checkError": 40.93
+    },
+    {
+      "id": "Name2",
+      "kind": "label",
+      "parent": "Tile2",
+      "text": "Vintage Home",
+      "font": "SerifBold",
+      "rect": [
+        1037,
+        540,
+        168,
+        42
+      ],
+      "inkBox": [
+        1043.61,
+        548.35,
+        1199.37,
+        574.77
+      ],
+      "capTop": 554,
+      "baseline": 569,
+      "color": "#1D1F21"
+    },
+    {
+      "id": "RadioOff2",
+      "parent": "Tile2",
+      "rect": [
+        1056.7,
+        589.2,
+        40.4,
+        40.4
+      ],
+      "use": "UI/Controls/UI_Radio_Off.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Radio_Off.png",
+      "spriteRect": [
+        1056.7,
+        589.2,
+        40.4,
+        40.4
+      ],
+      "spritePpu": 0,
+      "checkError": 22.5
+    },
+    {
+      "id": "Status2",
+      "kind": "label",
+      "parent": "Tile2",
+      "text": "Owned",
+      "font": "SansMedium",
+      "align": "left",
+      "rect": [
+        1103,
+        593,
+        90,
+        34
+      ],
+      "inkBox": [
+        1111.31,
+        600.09,
+        1182.76,
+        619.42
+      ],
+      "capTop": 602,
+      "baseline": 619,
+      "color": "#603F27"
+    },
+    {
+      "id": "PrevButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        306.3,
+        395.1,
+        65.4,
+        65.4
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        306.3,
+        395.1,
+        65.4,
+        65.4
+      ],
+      "spritePpu": 0,
+      "checkError": 26.46
+    },
+    {
+      "id": "PrevIcon",
+      "parent": "PrevButton",
+      "shape": "ink",
+      "rect": [
+        323,
+        409,
+        30,
+        38
+      ],
+      "use": "UI/Icons/Icon_Chevron.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Chevron.png",
+      "spriteRect": [
+        323,
+        413,
+        29,
+        34
+      ],
+      "spritePpu": 0,
+      "color": "#040608",
+      "checkError": 61.53
+    },
+    {
+      "id": "NextButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        1263.5,
+        394.9,
+        65.4,
+        65.4
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        1263.5,
+        394.9,
+        65.4,
+        65.4
+      ],
+      "spritePpu": 0,
+      "checkError": 19.59
+    },
+    {
+      "id": "NextIcon",
+      "parent": "NextButton",
+      "shape": "ink",
+      "rect": [
+        1282,
+        409,
+        30,
+        38
+      ],
+      "use": "UI/Icons/Icon_Chevron.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Chevron.png",
+      "spriteRect": [
+        1282,
+        409,
+        30,
+        38
+      ],
+      "spritePpu": 0,
+      "color": "#05080B",
+      "checkError": 42.06
+    },
+    {
+      "id": "SwipeHint",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Swipe to browse",
+      "font": "SansRegular",
+      "rect": [
+        747,
+        694,
+        178,
+        33
+      ],
+      "inkBox": [
+        756.12,
+        700.36,
+        912.16,
+        721.55
+      ],
+      "capTop": 705,
+      "baseline": 717,
+      "color": "#7F5B41"
+    },
+    {
+      "id": "PrimaryButton",
+      "kind": "button",
+      "shape": "roundrect",
+      "radius": 36.5,
+      "rect": [
+        565.2,
+        764.1,
+        543.9,
+        92.2
+      ],
+      "use": "UI/Controls/UI_Button_Crimson.png",
+      "shadowUse": "UI/Controls/UI_Button_Crimson_Shadow.png",
+      "shadowDrop": 6,
+      "shadowOpacity": 0.25,
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Button_Crimson.png",
+      "spriteRect": [
+        565.2,
+        764.1,
+        543.9,
+        92.2
+      ],
+      "spritePpu": 0,
+      "checkError": 16.62
+    },
+    {
+      "id": "UseLabel1",
+      "kind": "label",
+      "parent": "PrimaryButton",
+      "text": "Use Selected Background",
+      "font": "SerifSemiBold",
+      "ink": "light",
+      "style": "buttonLabel",
+      "rect": [
+        632,
+        786,
+        410,
+        54
+      ],
+      "key": "ui.shop.backgrounds.use",
+      "inkBox": [
+        643.2,
+        794.84,
+        1029.23,
+        832.33
+      ],
+      "capTop": 804,
+      "baseline": 824,
+      "color": "#FDFBFB"
+    },
+    {
+      "id": "Drawer",
+      "group": "HeaderRight",
+      "rect": [
+        1439.8,
+        -0.8,
+        232.2,
+        942.6
+      ],
+      "use": "UI/Panels/UI_Drawer.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Drawer.png",
+      "spriteRect": [
+        1439.8,
+        -0.8,
+        232.2,
+        942.6
+      ],
+      "spritePpu": 0,
+      "checkError": 11.43
+    },
+    {
+      "id": "CategoryButton0",
+      "kind": "button",
+      "parent": "Drawer",
+      "shape": "ellipse",
+      "rect": [
+        1490.93,
+        221.03,
+        138.95,
+        138.95
+      ],
+      "use": "UI/Buttons/UI_ButtonDisc_Normal.png",
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonDisc_Normal.png",
+      "spriteRect": [
+        1490.93,
+        221.03,
+        138.95,
+        138.95
+      ],
+      "spritePpu": 0,
+      "checkError": 7.91
+    },
+    {
+      "id": "CategoryIcon0",
+      "parent": "CategoryButton0",
+      "rect": [
+        1517.30,
+        251.48,
+        85.07,
+        85.17
+      ],
+      "use": "UI/Icons/Icon_CardsStacked_Brown.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_CardsStacked_Brown.png",
+      "spriteRect": [
+        1517.3,
+        251.48,
+        85.07,
+        85.17
+      ],
+      "spritePpu": 0,
+      "checkError": 12.4
+    },
+    {
+      "id": "CategoryLabel0",
+      "kind": "label",
+      "parent": "Drawer",
+      "text": "Cards",
+      "font": "SerifSemiBold",
+      "rect": [
+        1512,
+        365,
+        98,
+        40
+      ],
+      "inkBox": [
+        1518.75,
+        371.23,
+        1601.2,
+        397.43
+      ],
+      "capTop": 373,
+      "baseline": 397,
+      "color": "#502F1C"
+    },
+    {
+      "id": "CategoryButton1",
+      "kind": "button",
+      "parent": "Drawer",
+      "shape": "ellipse",
+      "rect": [
+        1486.60,
+        422.25,
+        147.00,
+        147.00
+      ],
+      "use": "UI/Buttons/UI_ButtonDisc_Selected.png",
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonDisc_Selected.png",
+      "spriteRect": [
+        1486.6,
+        422.25,
+        147,
+        147
+      ],
+      "spritePpu": 0,
+      "checkError": 6.13
+    },
+    {
+      "id": "CategoryIcon1",
+      "parent": "CategoryButton1",
+      "rect": [
+        1514.09,
+        469.28,
+        92.63,
+        50.86
+      ],
+      "use": "UI/Icons/Icon_Mountains_Ivory.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Mountains_Ivory.png",
+      "spriteRect": [
+        1514.09,
+        469.28,
+        92.63,
+        50.86
+      ],
+      "spritePpu": 0,
+      "checkError": 7.74
+    },
+    {
+      "id": "CategoryLabel1",
+      "kind": "label",
+      "parent": "Drawer",
+      "text": "Backgrounds",
+      "font": "SerifSemiBold",
+      "rect": [
+        1476,
+        574,
+        170,
+        40
+      ],
+      "inkBox": [
+        1478.27,
+        577.28,
+        1639.95,
+        607.35
+      ],
+      "capTop": 585,
+      "baseline": 601,
+      "color": "#981319"
+    },
+    {
+      "id": "CategoryLabel2",
+      "kind": "label",
+      "parent": "Drawer",
+      "text": "Tables",
+      "font": "SerifSemiBold",
+      "rect": [
+        1514,
+        779,
+        94,
+        36
+      ],
+      "inkBox": [
+        1520.46,
+        785.22,
+        1599.42,
+        808.51
+      ],
+      "capTop": 787,
+      "baseline": 808,
+      "color": "#553721"
+    }
+  ]
+}

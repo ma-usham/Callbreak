@@ -115,7 +115,7 @@ namespace Callbreak.Presentation.Screens
 
         private void OnSettings() => _router.Push(ScreenId.Settings);
 
-        private void OnShop() => _router.Push(ScreenId.CardCollection);
+        private void OnShop() => _router.Push(ScreenId.Shop);
 
         /// <summary>Cancel, the back arrow and Android back all leave the search, except during a found table's start countdown.</summary>
         private void OnCancel()

@@ -1,0 +1,122 @@
+// Outer-edge tracer, second attempt. Works per parameter angle t along the elliptical normal:
+//  1) s_in: where the ivory first meets the orange key band (median-filtered so motifs drop out)
+//  2) groove: darkest point just outside the band
+//  3) outer edge: DP over the window [groove + 2 px, groove + maxLip] maximising the colour step,
+//     with a bias toward the outermost step and a smoothness penalty.
+'use strict';
+const fs = require('fs');
+const P = require('./png.js');
+const [, , inp, outj, t0s, t1s] = process.argv;
+const E = { cx: 1114.251, cy: 742.242, a: 780.172, b: 301.418 };
+const im = P.read(inp);
+const T0 = +(t0s || 175), T1 = +(t1s || 365), DT = 0.1;
+function samp(x, y, c) {
+  x = Math.min(Math.max(x, 0), im.w - 1.001); y = Math.min(Math.max(y, 0), im.h - 1.001);
+  const x0 = Math.floor(x), y0 = Math.floor(y), tx = x - x0, ty = y - y0, i = (y0 * im.w + x0) * 4;
+  return (im.data[i + c] * (1 - tx) + im.data[i + 4 + c] * tx) * (1 - ty) + (im.data[i + im.w * 4 + c] * (1 - tx) + im.data[i + im.w * 4 + 4 + c] * tx) * ty;
+}
+const rgb = (x, y) => [samp(x, y, 0), samp(x, y, 1), samp(x, y, 2)];
+const pt = (t, s) => [E.cx + s * E.a * Math.cos(t), E.cy + s * E.b * Math.sin(t)];
+// ds per pixel along the normal at t
+const dsPerPx = t => 1 / Math.hypot(E.a * Math.cos(t), E.b * Math.sin(t));
+const cols = Math.round((T1 - T0) / DT) + 1;
+const sIn = new Float64Array(cols);
+for (let k = 0; k < cols; k++) {
+  const t = (T0 + k * DT) * Math.PI / 180, d = dsPerPx(t);
+  let hit = 0.9;
+  for (let s = 0.9; s < 1.1; s += d * 0.25) {
+    const [x, y] = pt(t, s); const [r, g, b] = rgb(x, y);
+    if (r > 120 && (r - b) / r > 0.55 && g / r < 0.75) {
+      const [x2, y2] = pt(t, s + d * 1.5); const [r2, g2, b2] = rgb(x2, y2);
+      if (r2 > 120 && (r2 - b2) / r2 > 0.5) { hit = s; break; }
+    }
+  }
+  sIn[k] = hit;
+}
+// median filter over +-4 degrees, then take the max of (median, raw) only where raw is close
+const med = new Float64Array(cols), R = Math.round(4 / DT);
+for (let k = 0; k < cols; k++) { const w = []; for (let q = Math.max(0, k - R); q <= Math.min(cols - 1, k + R); q++) w.push(sIn[q]); w.sort((a, b) => a - b); med[k] = w[Math.floor(w.length * 0.6)]; }
+// groove: darkest luminance within s_in + [3 px, 50 px] scanning outward (first strong minimum)
+const lum = (x, y) => { const [r, g, b] = rgb(x, y); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+const groove = new Float64Array(cols);
+for (let k = 0; k < cols; k++) {
+  const t = (T0 + k * DT) * Math.PI / 180, d = dsPerPx(t);
+  // the band is ~12-40 px wide; groove is the first point after the band where luminance < 70
+  let gs = med[k] + d * 12, best = 1e9;
+  for (let p = 6; p < 70; p += 0.5) {
+    const s = med[k] + d * p; const [x, y] = pt(t, s); const L = lum(x, y);
+    if (L < best) { best = L; gs = s; }
+    if (best < 60 && L > best + 60) break; // passed the groove
+  }
+  groove[k] = gs;
+}
+// edge strength map in a window of +-4 px around groove + expected lip width
+const NP = 33; // samples at 0.25 px: -4..+4 px
+const expPx = new Float64Array(cols);
+const cost = new Float32Array(cols * NP);
+// smooth the groove (median of +-2 deg, then mean of +-0.5 deg)
+const gm = new Float64Array(cols);
+for (let k = 0; k < cols; k++) { const w = []; for (let q = Math.max(0, k - 20); q <= Math.min(cols - 1, k + 20); q++) w.push(groove[q]); w.sort((a, b) => a - b); gm[k] = w[w.length >> 1]; }
+for (let k = 0; k < cols; k++) { let sum = 0, n = 0; for (let q = Math.max(0, k - 5); q <= Math.min(cols - 1, k + 5); q++) { sum += gm[q]; n++; } groove[k] = sum / n; }
+for (let k = 0; k < cols; k++) {
+  const t = (T0 + k * DT) * Math.PI / 180, d = dsPerPx(t);
+  const ds = 0.0400 + 0.0040 * Math.cos(t) * Math.cos(t);
+  expPx[k] = ds / d;
+  for (let j = 0; j < NP; j++) {
+    const off = expPx[k] - 4 + j * 0.25;
+    const a = [0, 0, 0], b = [0, 0, 0];
+    for (let q = 1; q <= 3; q++) {
+      const [xi, yi] = pt(t, groove[k] + d * (off - q)); const ci = rgb(xi, yi);
+      const [xo, yo] = pt(t, groove[k] + d * (off + q)); const co = rgb(xo, yo);
+      for (let c = 0; c < 3; c++) { a[c] += ci[c] / 3; b[c] += co[c] / 3; }
+    }
+    cost[k * NP + j] = -Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) + 0.8 * Math.abs(j - 16) * 0.25;
+  }
+}
+const J = 2, lambda = 3;
+const acc = new Float32Array(cols * NP), from = new Int16Array(cols * NP);
+for (let j = 0; j < NP; j++) acc[j] = cost[j];
+for (let k = 1; k < cols; k++) for (let j = 0; j < NP; j++) {
+  let best = Infinity, bj = j;
+  for (let dd = -J; dd <= J; dd++) { const jj = j + dd; if (jj < 0 || jj >= NP) continue; const v = acc[(k - 1) * NP + jj] + lambda * Math.abs(dd); if (v < best) { best = v; bj = jj; } }
+  acc[k * NP + j] = best + cost[k * NP + j]; from[k * NP + j] = bj;
+}
+let bj = 0, bv = Infinity;
+for (let j = 0; j < NP; j++) if (acc[(cols - 1) * NP + j] < bv) { bv = acc[(cols - 1) * NP + j]; bj = j; }
+const path = new Array(cols);
+for (let k = cols - 1; k >= 0; k--) { path[k] = bj; bj = from[k * NP + bj]; }
+
+// measured offsets (s units) and their edge strength
+const meas = [];
+for (let k = 0; k < cols; k++) {
+  const t = (T0 + k * DT) * Math.PI / 180, d = dsPerPx(t);
+  const off = expPx[k] - 4 + path[k] * 0.25;
+  const strength = -cost[k * NP + path[k]];
+  meas.push({ t, ds: off * d, w: Math.max(strength, 0) });
+}
+const basis = t => [1, Math.cos(t), Math.sin(t), Math.cos(2 * t), Math.sin(2 * t), Math.cos(3 * t), Math.sin(3 * t), Math.cos(4 * t), Math.sin(4 * t)];
+function wls(ws) {
+  const n = 9, M = Array.from({ length: n }, () => new Array(n).fill(0)), v = new Array(n).fill(0);
+  meas.forEach((m, i) => { const f = basis(m.t), w = ws[i]; for (let a = 0; a < n; a++) { v[a] += w * f[a] * m.ds; for (let b = 0; b < n; b++) M[a][b] += w * f[a] * f[b]; } });
+  for (let i = 0; i < n; i++) { let piv = i; for (let k = i + 1; k < n; k++) if (Math.abs(M[k][i]) > Math.abs(M[piv][i])) piv = k; [M[i], M[piv]] = [M[piv], M[i]]; [v[i], v[piv]] = [v[piv], v[i]]; for (let k = i + 1; k < n; k++) { const f = M[k][i] / M[i][i]; for (let j = i; j < n; j++) M[k][j] -= f * M[i][j]; v[k] -= f * v[i]; } }
+  const c = new Array(n).fill(0); for (let i = n - 1; i >= 0; i--) { let t = v[i]; for (let j = i + 1; j < n; j++) t -= M[i][j] * c[j]; c[i] = t / M[i][i]; }
+  return c;
+}
+let ws = meas.map(m => m.w * m.w);
+let coef = wls(ws);
+for (let it = 0; it < 6; it++) {
+  ws = meas.map(m => { const f = basis(m.t); const pred = f.reduce((a, b, i) => a + b * coef[i], 0); const rpx = (m.ds - pred) / dsPerPx(m.t); return m.w * m.w / (1 + (rpx / 1.0) ** 2); });
+  coef = wls(ws);
+}
+const fitDs = t => basis(t).reduce((a, b, i) => a + b * coef[i], 0);
+let rsum = 0, rn = 0; meas.forEach(m => { const r = (m.ds - fitDs(m.t)) / dsPerPx(m.t); if (m.w > 40) { rsum += r * r; rn++; } });
+console.log('fit rms px (strong edges)', Math.sqrt(rsum / rn).toFixed(2), 'n', rn);
+const res = [];
+for (let k = 0; k < cols; k++) {
+  const t = (T0 + k * DT) * Math.PI / 180, d = dsPerPx(t);
+  const s = groove[k] + fitDs(t); const sSnap = groove[k] + d * (expPx[k] - 4 + path[k] * 0.25);
+  const [x, y] = pt(t, s), [xi, yi] = pt(t, med[k]), [xg, yg] = pt(t, groove[k]);
+  const [xs2, ys2] = pt(t, sSnap); res.push({ t: +(T0 + k * DT).toFixed(1), s: +s.toFixed(5), xs: +xs2.toFixed(2), ys: +ys2.toFixed(2), sg: +groove[k].toFixed(5), x: +x.toFixed(2), y: +y.toFixed(2), xin: +xi.toFixed(2), yin: +yi.toFixed(2), xg: +xg.toFixed(2), yg: +yg.toFixed(2) });
+}
+fs.writeFileSync(outj, JSON.stringify(res));
+for (let k = 0; k < cols; k += 50) console.log(res[k].t, 'out', res[k].x, res[k].y, 'in', res[k].xin, res[k].yin, 'groove', res[k].xg, res[k].yg);

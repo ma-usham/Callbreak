@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Callbreak.Application.Cosmetics;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Online;
 using Callbreak.Application.Ports;
@@ -77,6 +78,7 @@ namespace Callbreak.Presentation.Table
         private readonly IClock _clock;
         private readonly IDialogs _dialogs;
         private readonly IAppFlow _flow;
+        private readonly ICosmeticsShop _shop;
 
         private readonly MatchEventPlayer _player;
         private readonly TableSkin _skin;
@@ -114,7 +116,8 @@ namespace Callbreak.Presentation.Table
             IDialogs dialogs,
             IAppFlow flow,
             CardSpriteProvider cards,
-            AvatarLibrary avatars)
+            AvatarLibrary avatars,
+            ICosmeticsShop shop)
         {
             _view = view;
             _gameplay = gameplay;
@@ -129,9 +132,10 @@ namespace Callbreak.Presentation.Table
             _clock = clock;
             _dialogs = dialogs;
             _flow = flow;
+            _shop = shop;
             _player = new MatchEventPlayer(this);
             _player.Faulted += OnPlaybackFaulted;
-            _skin = new TableSkin(cards, avatars);
+            _skin = new TableSkin(cards, avatars, view.Backdrops);
             _renderer = new TableRenderer(view, _skin, session, settings, localization) { ShowTrickCounter = view.ShowTrickCounter };
         }
 
@@ -190,8 +194,23 @@ namespace Callbreak.Presentation.Table
             _audio.PlayMusic(MusicTrack.Table);
             _view.Emotes.Close();
             _view.SetReconnecting(_session.Status == SessionStatus.Reconnecting);
+            ShowBackdrop();
             RememberConnections();
             RenderAll(false);
+        }
+
+        /// <summary>
+        /// Behind everything: the background and the table this player has equipped in the shop, as
+        /// they are when the table opens, so a change in the shop shows from the next match on. Each
+        /// player sees their own, offline and online alike, as with decks (ADR 031); nothing about it
+        /// goes over the network.
+        /// </summary>
+        private void ShowBackdrop()
+        {
+            if (_skin.HasBackdrops)
+            {
+                _view.SetBackdrop(_skin.Backdrop(_shop.Equipped(CosmeticKind.Background), _shop.Equipped(CosmeticKind.Table)));
+            }
         }
 
         /// <summary>

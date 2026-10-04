@@ -43,16 +43,29 @@ if [ $compile -eq 1 ]; then
   run eval --timeout 120 --code 'UnityEditor.AssetDatabase.Refresh(); return "refreshed";' >/dev/null
   r=$(run recompile)
   case "$r" in *timed\ out*) poke; r=$(run recompile) ;; esac
+  compiled=0
   for i in $(seq 1 90); do
     s=$(run recompile_status | tr -d '\r\n')
     case "$s" in
-      *'"status": "completed"'*|*up_to_date*) break ;;
+      *'"status": "completed"'*|*up_to_date*) compiled=1; break ;;
       *'"failed": true'*) echo "Editor compile failed: $s" | cut -c1-2000; exit 6 ;;
       *timed\ out*) poke ;;
     esac
     sleep 2
   done
+  if [ $compiled -ne 1 ]; then echo "the Editor did not finish compiling in 3 minutes: the tests would run old code"; exit 6; fi
 fi
+
+# A file the Editor never registered once left every compile failing while the old assemblies
+# still ran the tests and passed (4 Oct 2026): refuse to run on a failed compile, with or without
+# --no-compile.
+cf=$(run eval --timeout 60 --code 'return "scripts " + (UnityEditor.EditorUtility.scriptCompilationFailed ? "broken" : "sound");')
+case "$cf" in *timed\ out*) poke; cf=$(run eval --timeout 60 --code 'return "scripts " + (UnityEditor.EditorUtility.scriptCompilationFailed ? "broken" : "sound");') ;; esac
+case "$cf" in
+  *"scripts sound"*) ;;
+  *"scripts broken"*) echo "the Editor's last script compile failed: the tests would run old code (see the Editor console)"; exit 6 ;;
+  *) echo "could not ask the Editor whether its scripts compiled: $(echo "$cf" | tr -d '\r\n' | cut -c1-300)"; exit 6 ;;
+esac
 
 out="$repo/Temp/utest-$mode.json"
 args=(--mode "$mode" --timeout 1500)

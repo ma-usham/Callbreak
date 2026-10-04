@@ -170,7 +170,7 @@ namespace Callbreak.Presentation.Screens
 
         private void OnSettings() => Open(ScreenId.Settings);
 
-        private void OnShop() => Open(ScreenId.CardCollection);
+        private void OnShop() => Open(ScreenId.Shop);
 
         private void Open(ScreenId screen)
         {

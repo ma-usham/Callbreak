@@ -131,7 +131,7 @@ namespace Callbreak.Tests.PlayMode
 
             yield return OpenAndReturn(router, "SettingsButton", ScreenId.Settings);
             yield return OpenAndReturn(router, "ProfileButton", ScreenId.Profile);
-            yield return OpenAndReturn(router, "ShopButton", ScreenId.CardCollection);
+            yield return OpenAndReturn(router, "ShopButton", ScreenId.Shop);
             yield return OpenAndReturn(router, "PlayOfflineButton", ScreenId.OfflineSetup);
             yield return OpenAndReturn(router, "PlayOnlineButton", ScreenId.Matchmaking);
 
