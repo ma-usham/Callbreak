@@ -49,8 +49,9 @@ echo
 grep -q '^Succeeded' "$report" || exit 6
 
 # The debug variant signs with the Android debug key (AGP's own debug signing config), whatever
-# keystore the exported project names.
-echo "android.buildTypes.debug.signingConfig = android.signingConfigs.debug" >> "$project/launcher/build.gradle"
+# keystore the exported project names. The exported script can end without a newline (the AdMob
+# plugin appends an apply line), so start a new line first.
+printf '\n%s\n' "android.buildTypes.debug.signingConfig = android.signingConfigs.debug" >> "$project/launcher/build.gradle"
 echo "gradle assembleDebug ($(date +%H:%M:%S))"
 gradle_log="$repo/Temp/AndroidApk-gradle.log"
 JAVA_HOME="$android/OpenJDK" "$android/OpenJDK/bin/java.exe" -Xmx64m \
