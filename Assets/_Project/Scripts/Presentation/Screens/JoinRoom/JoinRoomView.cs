@@ -12,7 +12,8 @@ namespace Callbreak.Presentation.Screens
     /// line with the message. Not interactable (fewer than six valid characters): the Join
     /// button's disabled look, label and chevron dimmed. Busy (while joining): the button keeps
     /// its look, a spinner takes the chevron's place, and the button, the code boxes and Paste
-    /// ignore taps.
+    /// ignore taps. While the boxes have the keyboard, the content rises so they stay just above
+    /// the on-screen keyboard (<see cref="KeyboardFollower"/>), and settles back when it goes.
     /// </summary>
     public sealed class JoinRoomView : UIScreen
     {
@@ -34,6 +35,7 @@ namespace Callbreak.Presentation.Screens
 
         private bool _joinInteractable = true;
         private bool _busy;
+        private KeyboardFollower _keyboard;
 
         public event Action BackClicked;
         public event Action ProfileClicked;
@@ -59,8 +61,30 @@ namespace Callbreak.Presentation.Screens
             }
         }
 
-        /// <summary>Reduce motion (GDD §13): an error no longer shakes the boxes; they only take their error look.</summary>
-        public void SetReduceMotion(bool on) => _codeInput.ReduceMotion = on;
+        /// <summary>
+        /// The on-screen keyboard's height in screen pixels, 0 while it is down (the presenter gives
+        /// the device's; without one the screen never moves).
+        /// </summary>
+        public Func<float> KeyboardHeight
+        {
+            get => Keyboard.KeyboardHeight;
+            set => Keyboard.KeyboardHeight = value;
+        }
+
+        /// <summary>How far the content is lifted to keep the code boxes above the keyboard, in canvas units.</summary>
+        public float Lift => Keyboard.Lift;
+
+        private KeyboardFollower Keyboard => _keyboard ??= new KeyboardFollower(SlideTarget, (RectTransform)_codeInput.transform, () => _codeInput.IsFocused);
+
+        /// <summary>
+        /// Reduce motion (GDD §13): an error no longer shakes the boxes; they only take their error
+        /// look. The content moves for the keyboard at once.
+        /// </summary>
+        public void SetReduceMotion(bool on)
+        {
+            _codeInput.ReduceMotion = on;
+            Keyboard.ReduceMotion = on;
+        }
 
         /// <summary>Fills the boxes (e.g. after Paste or from an invite link); does not raise <see cref="CodeChanged"/>.</summary>
         public void SetCode(string code) => _codeInput.SetCodeWithoutNotify(code);
@@ -118,7 +142,11 @@ namespace Callbreak.Presentation.Screens
             _pasteButton.onClick.RemoveListener(OnPaste);
             _joinButton.onClick.RemoveListener(OnJoin);
             _codeInput.Changed -= OnCodeChanged;
+            _keyboard?.Settle();
         }
+
+        /// <summary>The content follows the keyboard, after a screen transition has placed it for the frame.</summary>
+        private void LateUpdate() => Keyboard.Tick(Time.unscaledDeltaTime);
 
         private void RenderJoinButton()
         {

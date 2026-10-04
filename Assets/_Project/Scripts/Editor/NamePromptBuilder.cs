@@ -198,6 +198,10 @@ namespace Callbreak.Editor
             so.FindProperty("m_LineType").enumValueIndex = (int)TMP_InputField.LineType.SingleLine;
             so.FindProperty("m_ContentType").enumValueIndex = (int)TMP_InputField.ContentType.Standard;
             so.FindProperty("m_RichText").boolValue = false;
+
+            // Typed in place, not in the keyboard's own box: only then does a phone draw the field's
+            // caret (the owner, 3 Oct 2026: no cursor showed). The panel rises above the keyboard.
+            so.FindProperty("m_HideMobileInput").boolValue = true;
             so.FindProperty("m_CaretColor").colorValue = Ink;
             so.FindProperty("m_CustomCaretColor").boolValue = true;
             so.FindProperty("m_CaretWidth").intValue = 2;

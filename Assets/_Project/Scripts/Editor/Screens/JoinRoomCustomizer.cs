@@ -25,6 +25,8 @@ namespace Callbreak.Editor.Screens
         private const float HeaderGap = 20f;                                    // mockup px kept free between the player name and the logo
         private const float SpinnerArc = 0.75f;                                 // the part of the ring that is drawn
         private const float ErrorGap = 10f;                                     // mockup px between the error line and the footer rules
+        private const float CaretWidth = 4f;                                    // canvas units: a text caret's bar, at the boxes' size
+        private const float CaretHeight = 0.5f;                                 // of a box's height: about a letter's cap height
         private static readonly Color ErrorColor = new Color32(0x7A, 0x10, 0x16, 0xFF);  // Heading Burgundy (GDD §12)
 
         public static void Customize(ScreenBuildContext ctx)
@@ -122,10 +124,12 @@ namespace Callbreak.Editor.Screens
                 letters[i].color = reference.color;
             }
 
+            Image caret = AddCaret(root, boxes[0], reference);
             TMP_InputField input = AddHiddenInput(ctx, root, reference);
             var codeInput = root.gameObject.AddComponent<CodeInput>();
             var so = new SerializedObject(codeInput);
             so.FindProperty("_input").objectReferenceValue = input;
+            so.FindProperty("_caret").objectReferenceValue = caret;
             SetArray(so.FindProperty("_letters"), letters);
             SetArray(so.FindProperty("_boxes"), boxes);
             so.FindProperty("_normalBox").objectReferenceValue = normalBox;
@@ -149,8 +153,29 @@ namespace Callbreak.Editor.Screens
         }
 
         /// <summary>
+        /// The caret the boxes show (the owner, 3 Oct 2026: a cursor where the next character goes): a
+        /// bar in the letters' ink, half a box tall, over the boxes and letters and under the hidden
+        /// field that takes the taps. <see cref="CodeInput"/> puts it in the next box to fill and
+        /// blinks it while the field has focus; it is hidden until then.
+        /// </summary>
+        private static Image AddCaret(RectTransform root, Image box, TMP_Text reference)
+        {
+            var caretObject = new GameObject("Caret", typeof(RectTransform));
+            var caret = (RectTransform)caretObject.transform;
+            caret.SetParent(root, false);
+            caret.anchorMin = caret.anchorMax = caret.pivot = new Vector2(0.5f, 0.5f);
+            caret.sizeDelta = new Vector2(CaretWidth, Mathf.Round(box.rectTransform.rect.height * CaretHeight));
+            var image = caretObject.AddComponent<Image>();
+            image.color = new Color(reference.color.r, reference.color.g, reference.color.b, 1f);
+            image.raycastTarget = false;
+            image.enabled = false;
+            return image;
+        }
+
+        /// <summary>
         /// A transparent input field over all six boxes: tapping any box focuses it (and opens the
-        /// keyboard); its own text and caret are invisible, the boxes show the characters.
+        /// keyboard); its own text and caret are invisible, the boxes show the characters and the
+        /// caret of their own (<see cref="AddCaret"/>).
         /// </summary>
         private static TMP_InputField AddHiddenInput(ScreenBuildContext ctx, RectTransform root, TMP_Text reference)
         {

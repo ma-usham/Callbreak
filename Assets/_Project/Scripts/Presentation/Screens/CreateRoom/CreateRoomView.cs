@@ -13,7 +13,9 @@ namespace Callbreak.Presentation.Screens
     /// dimmed. Busy (the room is being created): the button keeps its look, a spinner takes the
     /// chevron's place and taps are ignored, so a double tap never creates two rooms. An error
     /// (offline, service unavailable, rate-limited) shows its message where the "Private room"
-    /// line is; the presenter makes the button read Retry meanwhile.
+    /// line is; the presenter makes the button read Retry meanwhile. While the name field has the
+    /// keyboard, the content rises so the field stays just above the on-screen keyboard
+    /// (<see cref="KeyboardFollower"/>), and settles back when it goes.
     /// </summary>
     public sealed class CreateRoomView : UIScreen
     {
@@ -39,6 +41,7 @@ namespace Callbreak.Presentation.Screens
 
         private bool _createInteractable = true;
         private bool _busy;
+        private KeyboardFollower _keyboard;
 
         public event Action BackClicked;
         public event Action ProfileClicked;
@@ -47,6 +50,28 @@ namespace Callbreak.Presentation.Screens
         public event Action CreateClicked;
         public event Action<string> RoomNameChanged;
         public event Action<int> TurnSecondsChanged;
+
+        /// <summary>
+        /// The on-screen keyboard's height in screen pixels, 0 while it is down (the presenter gives
+        /// the device's; without one the screen never moves).
+        /// </summary>
+        public Func<float> KeyboardHeight
+        {
+            get => Keyboard.KeyboardHeight;
+            set => Keyboard.KeyboardHeight = value;
+        }
+
+        /// <summary>How far the content is lifted to keep the name field above the keyboard, in canvas units.</summary>
+        public float Lift => Keyboard.Lift;
+
+        /// <summary>Reduce motion (GDD §14): the content moves for the keyboard at once.</summary>
+        public bool ReduceMotion
+        {
+            get => Keyboard.ReduceMotion;
+            set => Keyboard.ReduceMotion = value;
+        }
+
+        private KeyboardFollower Keyboard => _keyboard ??= new KeyboardFollower(SlideTarget, (RectTransform)_roomNameField.transform, () => _roomNameField.isFocused);
 
         public void SetPlayerName(string playerName) => SetText(_playerName, playerName);
 
@@ -129,7 +154,11 @@ namespace Callbreak.Presentation.Screens
             _createButton.onClick.RemoveListener(OnCreate);
             _roomNameField.onValueChanged.RemoveListener(OnRoomNameChanged);
             _turnSelector.Changed -= OnTurnOptionChanged;
+            _keyboard?.Settle();
         }
+
+        /// <summary>The content follows the keyboard, after a screen transition has placed it for the frame.</summary>
+        private void LateUpdate() => Keyboard.Tick(Time.unscaledDeltaTime);
 
         private void RenderCreateButton()
         {

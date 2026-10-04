@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Reflection;
 using Callbreak.Application.Profile;
 using Callbreak.Application.Settings;
 using Callbreak.Presentation.Framework;
@@ -117,6 +118,39 @@ namespace Callbreak.Tests.PlayMode
 
             prompt.KeyboardHeight = () => 0f;
             yield return GameFixture.Until(() => prompt.Lift == 0f, "the question to settle back once the keyboard has gone");
+        }
+
+        [UnityTest]
+        public IEnumerator TheNameField_DrawsItsOwnCaret_AlsoOnAPhone()
+        {
+            // The owner, 3 Oct 2026: no cursor in the name field on an Android phone. TMP_InputField
+            // draws its caret only while it edits in place; a phone does that only with the
+            // keyboard's own input box hidden, and otherwise leaves the cursor to that box.
+            yield return _game.Boot(freshInstall: true);
+            NamePromptView prompt = Prompt();
+            yield return GameFixture.Until(() => prompt.IsShowing, "the name question to open");
+            TMP_InputField field = prompt.GetComponentInChildren<TMP_InputField>(true);
+
+            Assert.IsTrue(field.shouldHideMobileInput, "the field edits in place");
+            Assert.IsTrue(HidesMobileInputOnAPhone(field), "on a phone too: the keyboard's own box is hidden and the field draws the caret");
+            Assert.AreEqual(1f, field.caretColor.a, 1e-3f, "the caret is opaque");
+            Assert.GreaterOrEqual(field.caretWidth, 2, "the caret is at least 2 wide");
+
+            yield return GameFixture.Until(() => field.isFocused, "the field to take the keyboard as the question opens");
+            TMP_SelectionCaret caret = field.textViewport.GetComponentInChildren<TMP_SelectionCaret>(true);
+            Assert.IsNotNull(caret, "TMP's caret is under the text area");
+            Assert.IsTrue(caret.gameObject.activeInHierarchy, "the caret is shown while the field has focus");
+        }
+
+        /// <summary>
+        /// The flag a phone reads (Android, iOS): in the Editor <see cref="TMP_InputField.shouldHideMobileInput"/>
+        /// always answers true, whatever the field says.
+        /// </summary>
+        private static bool HidesMobileInputOnAPhone(TMP_InputField field)
+        {
+            FieldInfo flag = typeof(TMP_InputField).GetField("m_HideMobileInput", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.IsNotNull(flag, "TMP_InputField keeps the flag in m_HideMobileInput");
+            return (bool)flag.GetValue(field);
         }
 
         /// <summary>The bottom (corner 0) or top (corner 1) of a rect on the overlay canvas, in screen pixels.</summary>

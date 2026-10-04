@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
+using Callbreak.Application.Settings;
 using Callbreak.Core.Scoring;
 using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
@@ -13,7 +14,8 @@ namespace Callbreak.Presentation.Screens
     /// <summary>
     /// GDD §11 screen 14: the player's name, avatar preset and play statistics. Save stays disabled
     /// until the name changes to something valid, an invalid name says why, and the pencil steps
-    /// through the avatar presets.
+    /// through the avatar presets. The screen rises above the device's keyboard while the name
+    /// field has it.
     /// </summary>
     public sealed class ProfilePresenter : IStartable, IDisposable
     {
@@ -24,6 +26,8 @@ namespace Callbreak.Presentation.Screens
         private readonly ILocalization _localization;
         private readonly IToast _toast;
         private readonly AvatarLibrary _avatars;
+        private readonly ISettingsService _settings;
+        private readonly IOnScreenKeyboard _keyboard;
 
         private string _draft = string.Empty;
 
@@ -34,7 +38,9 @@ namespace Callbreak.Presentation.Screens
             IStatsService stats,
             ILocalization localization,
             IToast toast,
-            AvatarLibrary avatars)
+            AvatarLibrary avatars,
+            ISettingsService settings,
+            IOnScreenKeyboard keyboard)
         {
             _view = view;
             _router = router;
@@ -43,6 +49,8 @@ namespace Callbreak.Presentation.Screens
             _localization = localization;
             _toast = toast;
             _avatars = avatars;
+            _settings = settings;
+            _keyboard = keyboard;
         }
 
         public void Start()
@@ -55,7 +63,13 @@ namespace Callbreak.Presentation.Screens
             _profile.Changed += RenderIdentity;
             _stats.Changed += RenderStats;
             _localization.LanguageChanged += RenderAll;
+            _settings.Changed += RenderMotion;
+
+            // The name field rises above the device's keyboard, so it is never under it.
+            IOnScreenKeyboard keyboard = _keyboard;
+            _view.KeyboardHeight = keyboard != null ? () => keyboard.Height : (Func<float>)null;
             RenderAll();
+            RenderMotion();
         }
 
         public void Dispose()
@@ -68,7 +82,10 @@ namespace Callbreak.Presentation.Screens
             _profile.Changed -= RenderIdentity;
             _stats.Changed -= RenderStats;
             _localization.LanguageChanged -= RenderAll;
+            _settings.Changed -= RenderMotion;
         }
+
+        private void RenderMotion() => _view.ReduceMotion = _settings.ReduceMotion;
 
         private void OnScreenChanged(ScreenId id)
         {

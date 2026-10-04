@@ -10,7 +10,9 @@ namespace Callbreak.Presentation.Screens
     /// GDD §11 screen 14: the player's identity and play statistics. The pencil (or the avatar)
     /// opens the preset picker; the display name is edited in the field and saved with Save
     /// Changes; the line under the field shows the note or a validation message. A Save button
-    /// that is not interactable shows its disabled look with its label dimmed.
+    /// that is not interactable shows its disabled look with its label dimmed. While the field has
+    /// the keyboard, the content rises so the field stays just above the on-screen keyboard
+    /// (<see cref="KeyboardFollower"/>), and settles back when it goes.
     /// </summary>
     public sealed class ProfileView : UIScreen
     {
@@ -27,6 +29,8 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private TMP_InputField _nameField;
         [SerializeField] private ProfileNameMessage _nameMessage;
 
+        private KeyboardFollower _keyboard;
+
         public event Action BackClicked;
         public event Action EditAvatarClicked;
 
@@ -34,6 +38,28 @@ namespace Callbreak.Presentation.Screens
         public event Action<string> NameChanged;
 
         public event Action SaveClicked;
+
+        /// <summary>
+        /// The on-screen keyboard's height in screen pixels, 0 while it is down (the presenter gives
+        /// the device's; without one the screen never moves).
+        /// </summary>
+        public Func<float> KeyboardHeight
+        {
+            get => Keyboard.KeyboardHeight;
+            set => Keyboard.KeyboardHeight = value;
+        }
+
+        /// <summary>How far the content is lifted to keep the name field above the keyboard, in canvas units.</summary>
+        public float Lift => Keyboard.Lift;
+
+        /// <summary>Reduce motion (GDD §14): the content moves for the keyboard at once.</summary>
+        public bool ReduceMotion
+        {
+            get => Keyboard.ReduceMotion;
+            set => Keyboard.ReduceMotion = value;
+        }
+
+        private KeyboardFollower Keyboard => _keyboard ??= new KeyboardFollower(SlideTarget, (RectTransform)_nameField.transform, () => _nameField.isFocused);
 
         /// <summary>The name shown under the avatar.</summary>
         public void SetName(string playerName)
@@ -93,7 +119,11 @@ namespace Callbreak.Presentation.Screens
             _editAvatarButton.onClick.RemoveListener(OnEditAvatar);
             _saveButton.onClick.RemoveListener(OnSave);
             _nameField.onValueChanged.RemoveListener(OnNameChanged);
+            _keyboard?.Settle();
         }
+
+        /// <summary>The content follows the keyboard, after a screen transition has placed it for the frame.</summary>
+        private void LateUpdate() => Keyboard.Tick(Time.unscaledDeltaTime);
 
         private static void SetText(TMP_Text label, string text)
         {

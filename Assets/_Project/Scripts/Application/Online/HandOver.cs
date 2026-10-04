@@ -73,24 +73,31 @@ namespace Callbreak.Application.Online
     }
 
     /// <summary>
-    /// Keeps this device's seat in an online match when hosts come and go (ADR 030). One per device and
-    /// match, driven from the service's tick.
+    /// Keeps this device's seat in an online match when hosts come and go (ADR 030; the owner's backup
+    /// host, 3 Oct 2026). One per device and match, driven from the service's tick.
     /// <list type="bullet">
     /// <item>A guest that hears nothing from its host for <see cref="Protocol.HostLostSeconds"/>, or loses
-    /// the connection, takes the host as lost. If it is the next host in line and holds the package for
-    /// that generation, it takes the match over: it hosts the room's next generation and waits for the
-    /// other players' reports (<see cref="TakeOverCollector"/>), up to
-    /// <see cref="Protocol.HandOverWaitSeconds"/>, then rebuilds the table (<see cref="TableRebuild"/>) and
-    /// hosts it. Otherwise it tries the next host in line with its report and the old host with a hello,
-    /// in turn, each for <see cref="Protocol.HandOverAttemptSeconds"/>, until one seats it or the seat
-    /// hold is over: a player whose own connection dropped finds its old host still there.</item>
-    /// <item>A player taking over also tries the old host meanwhile, and while its new table has nobody
-    /// else at it: if the old host answers with other people still at its table, this player's
-    /// connection had dropped, not the host: it gives the take-over up and stays where it was.</item>
-    /// <item>A host whose players have all dropped tries the next host in line it last named, one
-    /// generation up: if that player hosts the room now, the match was taken over while this host was
-    /// away; it lets its own table go and rejoins the new host as a player, with its report. The newer
-    /// generation always wins, so two hosts of one room never both carry on.</item>
+    /// the connection, takes the host as lost. The host named its line of succession
+    /// (<see cref="NextHostNotice"/>). The next host in line takes the match over at once, one generation
+    /// up, from the same trick. The k-th in line (k ≥ 2) keeps its package, which holds no cards, and
+    /// takes the match over itself, k generations up, if no host has seated it after (k − 1) ×
+    /// <see cref="Protocol.BackupTakeOverSeconds"/>: the round in play is then dealt again. Taking over, a
+    /// player hosts that generation and waits for the other players' reports
+    /// (<see cref="TakeOverCollector"/>), up to <see cref="Protocol.HandOverWaitSeconds"/>, then rebuilds
+    /// the table (<see cref="TableRebuild"/>) and hosts it. Until a host seats it, a player tries every
+    /// successor in the line with its report and the old host with a hello, one at a time, each for
+    /// <see cref="Protocol.HandOverAttemptSeconds"/>, until the seat hold is over: a player whose own
+    /// connection dropped finds its old host still there.</item>
+    /// <item>A player taking over also looks at the room's other hosts. The old host and the successors
+    /// before it answer with other people at their table only if this player's own connection was what
+    /// dropped: it gives the take-over up and stays there. A successor after it whose connection opens
+    /// hosts a newer generation already: it gives the take-over up and goes there with its report.</item>
+    /// <item>A host whose players have all dropped looks the same way at the successors it named, each at
+    /// the generation it would host, and, for a seat hold after it took the match over, at the hosts
+    /// before it. Between tables nobody else is at, the newer generation wins; a table with other people
+    /// at it wins over a take-over nobody is at; so two hosts of one room never both carry on.</item>
+    /// <item>A player who gives up at the end of the seat hold while its own device is online is not
+    /// charged the match: it was left behind, not the one who dropped out (the owner, 3 Oct 2026).</item>
     /// </list>
     /// </summary>
     internal sealed class HandOver : IDisposable
@@ -101,7 +108,7 @@ namespace Callbreak.Application.Online
         /// <summary>A guest whose connection went tries its host again after this pause, as a room member reconnecting does (GDD §27).</summary>
         private const double ReconnectSeconds = 1.0;
 
-        /// <summary>How often a host whose players all dropped, or a lone new host, looks for the other one.</summary>
+        /// <summary>How often a host whose players all dropped, or a player taking over, looks at the room's other hosts.</summary>
         private const double ProbeSeconds = 2.0;
 
         /// <summary>Every device refusing, for this long, means the room is gone: nobody took the match over.</summary>
@@ -112,6 +119,9 @@ namespace Callbreak.Application.Online
         private readonly HandOverRoom _room;
         private readonly INetworkStatus _network;
         private readonly HandlerFaults _faults = new HandlerFaults();
+        private readonly List<Target> _targets = new List<Target>();
+        private readonly List<Target> _probes = new List<Target>();
+        private readonly List<Place> _named = new List<Place>();
 
         private Mode _mode = Mode.Watching;
         private double _now;
@@ -121,22 +131,33 @@ namespace Callbreak.Application.Online
         private double _nextTryAt;
         private double _refusedSince = double.NaN;
         private Try _try;
-        private Place _nextHost;
-        private Place _oldHost;
-        private bool _nextFirst;
         private bool _declared;
+        private double _declaredAt;
 
-        // Taking over.
+        // The host taken as lost: its line of succession as it last said it (null when it never did),
+        // and where it is (null once it left: it hosts nothing any more).
+        private NextHostNotice _line;
+        private Place _oldHost;
+        private int _nextTarget;
+
+        // Taking over: this player's place in the line (1 for the next host in line, 0 out of it), and
+        // a take-over still to come (a backup's, or one whose room did not open) with its turn, which
+        // comes no sooner than its wait after this device was last offline.
+        private int _place;
+        private SuccessionPackage _standby;
+        private double _turnAt;
+        private double _turnWait;
         private SuccessionPackage _package;
+        private int _generation;
         private CancellationTokenSource _openAbort;
         private Task<HostLinkResult> _opening;
         private IHostLink _openedLink;
         private TakeOverCollector _collector;
 
         // Hosting.
-        private NextHostNotice _lastNext;
-        private Place _previousHost;
+        private NextHostNotice _remembered;
         private double _probeUntil;
+        private int _nextProbe;
 
         public HandOver(IHandOverTransport transport, IHandOverHolder holder, HandOverRoom room, INetworkStatus network, double now)
         {
@@ -165,14 +186,17 @@ namespace Callbreak.Application.Online
 
         private enum Aim : byte
         {
-            /// <summary>The next host in line, with this player's report.</summary>
+            /// <summary>A successor in the line, with this player's report.</summary>
             NextHost,
 
             /// <summary>The old host, with a hello: this player's own connection may be what dropped.</summary>
             OldHost,
 
-            /// <summary>The other host of the room (the old one while taking over, the newer one while hosting alone), only to see whether it is there.</summary>
+            /// <summary>A host before this device's own generation, only to see whether other people are at its table.</summary>
             Probe,
+
+            /// <summary>A successor after this device's own generation: its connection alone says it hosts the room there.</summary>
+            Newer,
         }
 
         /// <summary>True once the hand-over has nothing left to do: the match ended, or this device left it.</summary>
@@ -265,12 +289,14 @@ namespace Callbreak.Application.Online
             _giveUpAt = _now + Protocol.SeatHoldSeconds;
             _refusedSince = double.NaN;
             _oldHost = leaving ? null
-                : notice != null ? new Place(notice.Generation, notice.HostAddress)
-                : new Place(0, _room.HostAddress);
-            _nextHost = null;
+                : notice != null ? new Place(notice.Generation, notice.HostAddress, notice.HostSeat)
+                : new Place(0, _room.HostAddress, NextHostNotice.NoSeat);
             _declared = false;
+            _line = null;
+            _standby = null;
             _mode = Mode.Rehoming;
             _nextTryAt = _now + ReconnectSeconds;
+            Look(client, null);
             if (silent || leaving)
             {
                 DeclareLost(client, leaving);
@@ -279,88 +305,125 @@ namespace Callbreak.Application.Online
 
         /// <summary>
         /// The host is lost: nothing came from it for <see cref="Protocol.HostLostSeconds"/>, or it said
-        /// it leaves (<paramref name="hostLeft"/>). The next host in line takes the match over; everyone
-        /// else tries the next host in line with its report, and, unless it left, the old host with a
-        /// hello, in turn.
+        /// it leaves (<paramref name="hostLeft"/>). The next host in line takes the match over at once; a
+        /// later successor that holds its package waits for its turn (the owner's backup host, 3 Oct
+        /// 2026); meanwhile everyone tries the places <see cref="Look"/> names, in turn.
         /// </summary>
         private void DeclareLost(RoomClient client, bool hostLeft)
         {
             _declared = true;
+            _declaredAt = _now;
             NextHostNotice notice = client.NextHost;
             SuccessionPackage package = client.Package;
-            if (notice != null && notice.HasNext && notice.NextSeat == client.LocalSeatIndex
-                && package != null && package.Generation == notice.Generation)
+            _line = notice;
+            if (hostLeft)
             {
-                DropTry();
-                BeginTakeOver(client, notice, package, hostLeft);
-                return;
+                _oldHost = null;
             }
 
-            _nextHost = notice != null && notice.HasNext && notice.NextSeat != client.LocalSeatIndex
-                ? new Place(notice.Generation + 1, notice.NextAddress)
-                : null;
-            _nextFirst = true;
+            _place = notice != null ? notice.PlaceOf(client.LocalSeatIndex) : 0;
+            _standby = null;
+            if (_place >= 1 && package != null && package.Generation == notice.Generation)
+            {
+                if (_place == 1)
+                {
+                    DropTry();
+                    BeginTakeOver(package);
+                    return;
+                }
+
+                // A backup: the successors before it may have gone with the host. It takes the match
+                // over itself should no host have seated it by its turn, each place one wait after the
+                // place before it.
+                _standby = package;
+                _turnWait = (_place - 1) * Protocol.BackupTakeOverSeconds;
+                _turnAt = _now + _turnWait;
+            }
+
+            Look(client, null);
             _nextTryAt = _now;
         }
 
         /// <summary>
-        /// A host whose players all dropped looks for the next host in line it last named, one
-        /// generation up; a host that took the match over and has nobody at its table yet looks for the
-        /// old host. Either way the one it finds settles who goes on.
+        /// A host whose players all dropped looks at the room's other hosts (<see cref="Probe"/>): a
+        /// successor it named may have taken the match over while it was away, and a host before it may
+        /// still have people at its table.
         /// </summary>
         private void WatchAsHost(RoomClient client, RoomHost host)
         {
-            NextHostNotice named = host.NextHost;
-            if (named != null && named.HasNext)
-            {
-                _lastNext = named;
-            }
-
-            bool alone = host.InMatch && !host.HasConnectedGuests;
-            Place target = null;
-            if (alone && _lastNext != null && host.Table != null && host.Table.IsHuman((Seat)_lastNext.NextSeat))
-            {
-                target = new Place(_lastNext.Generation + 1, _lastNext.NextAddress);
-            }
-            else if (alone && _previousHost != null && _now < _probeUntil)
-            {
-                target = _previousHost;
-            }
-
-            if (target == null)
+            Remember(host.NextHost);
+            if (!host.InMatch || host.HasConnectedGuests)
             {
                 DropTry();
                 return;
             }
 
+            Probe(client, host);
+        }
+
+        /// <summary>
+        /// Keeps every successor this host has named, each at the generation it would host the room at:
+        /// one that took the match over while this host was away is found there.
+        /// </summary>
+        private void Remember(NextHostNotice named)
+        {
+            if (named == null || named == _remembered)
+            {
+                return;
+            }
+
+            _remembered = named;
+            for (int j = 0; j < named.Line.Count; j++)
+            {
+                var place = new Place(named.Generation + j + 1, named.Line[j].Address, named.Line[j].Seat);
+                if (!_named.Exists(known => known.Same(place)))
+                {
+                    _named.Add(place);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Looks at the room's other hosts (<see cref="ProbeTargets"/>), one at a time, every
+        /// <see cref="ProbeSeconds"/>: a newer one whose connection opens is gone to (<see cref="Yield"/>);
+        /// one before this device's own that answers is stayed at if other people are there
+        /// (<see cref="Settle"/>).
+        /// </summary>
+        /// <param name="host">The table this device hosts; null while it takes the match over.</param>
+        private void Probe(RoomClient client, RoomHost host)
+        {
             if (_try == null)
             {
                 if (_now >= _nextTryAt && Online())
                 {
-                    StartTry(target == _previousHost ? Aim.Probe : Aim.NextHost, target, client);
+                    ProbeTargets(client, host);
+                    if (_probes.Count > 0)
+                    {
+                        Target next = _probes[_nextProbe % _probes.Count];
+                        _nextProbe++;
+                        StartTry(next.Aim, next.Place, client);
+                    }
                 }
 
                 return;
             }
 
-            Outcome outcome = Advance(_try, client);
+            Try done = _try;
+            Outcome outcome = Advance(done, client);
             if (outcome == Outcome.Pending)
             {
                 return;
             }
 
-            Try done = _try;
             _try = null;
             _nextTryAt = _now + ProbeSeconds;
-            if (outcome == Outcome.Connected && done.Aim == Aim.NextHost)
+            if (outcome == Outcome.Connected)
             {
-                // The next host in line hosts the room one generation up: the match went on without
-                // this host. It lets its own table go and goes there as a player, with what it holds.
-                Yield(client, host, done, target);
+                Yield(client, done);
                 return;
             }
 
-            if (outcome == Outcome.Answered && done.Aim == Aim.Probe)
+            if (outcome == Outcome.Answered)
             {
                 Settle(client, done);
                 return;
@@ -369,39 +432,116 @@ namespace Callbreak.Application.Online
             Dispose(done);
         }
 
-        /// <summary>This host was taken over while it was away: it becomes a player at the new host's table.</summary>
-        private void Yield(RoomClient client, RoomHost host, Try done, Place newHost)
+        /// <summary>
+        /// The room's other hosts this device looks at. First the successors after its own generation,
+        /// newest first, from the line of the host taken as lost and from the lines this device named
+        /// itself, leaving out one whose seat at its table is no longer a person's. Then, while it takes
+        /// the match over and for a seat hold after, the hosts before it, newest first: the successors
+        /// before it in the line, and the lost host unless it left.
+        /// </summary>
+        private void ProbeTargets(RoomClient client, RoomHost host)
         {
-            IHostLink hostLink = _holder.HostLink;
-            Task<RoomError> report = client.ReportAsync(done.Link, done.Abort.Token);
-            _holder.Hold(null, null, done.Link);
-            try
+            _probes.Clear();
+            int own = host != null ? host.Generation : _generation;
+            bool older = host == null || _now < _probeUntil;
+            var newer = new List<Target>();
+            var before = new List<Target>();
+            if (_line != null)
             {
-                host.Dispose();
-            }
-            catch (Exception e)
-            {
-                _faults.Keep(e);
+                for (int j = 0; j < _line.Line.Count; j++)
+                {
+                    NextHostNotice.Successor s = _line.Line[j];
+                    var place = new Place(_line.Generation + j + 1, s.Address, s.Seat);
+                    if (s.Seat == client.LocalSeatIndex)
+                    {
+                        continue;
+                    }
+
+                    if (place.Generation > own && IsPerson(host, s.Seat))
+                    {
+                        newer.Add(new Target(Aim.Newer, place));
+                    }
+                    else if (place.Generation < own && older)
+                    {
+                        before.Add(new Target(Aim.Probe, place));
+                    }
+                }
             }
 
-            Dispose(hostLink);
-            _lastNext = null;
-            _previousHost = null;
-            _oldHost = newHost;
-            _nextHost = null;
+            foreach (Place place in _named)
+            {
+                if (place.Generation > own && IsPerson(host, place.Seat))
+                {
+                    newer.Add(new Target(Aim.Newer, place));
+                }
+            }
+
+            if (_oldHost != null && _oldHost.Generation < own && older)
+            {
+                before.Add(new Target(Aim.Probe, _oldHost));
+            }
+
+            newer.Sort(NewestFirst);
+            before.Sort(NewestFirst);
+            foreach (Target target in newer)
+            {
+                Add(_probes, target);
+            }
+
+            foreach (Target target in before)
+            {
+                Add(_probes, target);
+            }
+        }
+
+        private static int NewestFirst(Target a, Target b) => b.Place.Generation.CompareTo(a.Place.Generation);
+
+        /// <summary>Whether <paramref name="seat"/> is still a person's at <paramref name="host"/>'s table; true when there is no table to ask.</summary>
+        private static bool IsPerson(RoomHost host, int seat) =>
+            host == null || host.Table == null || seat < 0 || seat >= SeatExtensions.Count || host.Table.IsHuman((Seat)seat);
+
+        /// <summary>
+        /// A host of the room at a newer generation was found while this device took the match over, or
+        /// hosted it with nobody else at its table: the match went on there. It lets its own take-over or
+        /// table go and goes there as a player, with what it holds.
+        /// </summary>
+        private void Yield(RoomClient client, Try done)
+        {
+            RoomHost host = _holder.Host;
+            IHostLink hostLink = _holder.HostLink;
+            SuccessionPackage package = _package;
+            DropTakeOver();
+            Task<RoomError> report = client.ReportAsync(done.Link, done.Abort.Token);
+            _holder.Hold(null, null, done.Link);
+            if (host != null)
+            {
+                try
+                {
+                    host.Dispose();
+                }
+                catch (Exception e)
+                {
+                    _faults.Keep(e);
+                }
+
+                Dispose(hostLink);
+            }
+
             _declared = true;
+            KeepForLater(package);
             _giveUpAt = _now + Protocol.SeatHoldSeconds;
             _refusedSince = double.NaN;
             _mode = Mode.Rehoming;
-            _try = done;
-            done.Aim = Aim.OldHost;
+            done.Aim = Aim.NextHost;
             done.Hello = report;
+            _try = done;
+            Look(client, new Target(Aim.NextHost, done.Place));
         }
 
         /// <summary>
-        /// The old host answered a probe. With other people still at its table, this player's own
-        /// connection was what dropped: it gives up its new table, or its take-over, and stays a
-        /// player there. With nobody else there, the old host will come here instead.
+        /// A host before this device's own answered a probe. With other people still at its table, this
+        /// player's own connection was what dropped: it gives up its take-over, or its new table, and
+        /// stays a player there. With nobody else there, that host will come here instead.
         /// </summary>
         private void Settle(RoomClient client, Try done)
         {
@@ -417,6 +557,7 @@ namespace Callbreak.Application.Online
             done.Prober = null;
             RoomHost host = _holder.Host;
             IHostLink hostLink = _holder.HostLink;
+            SuccessionPackage package = _package;
             DropTakeOver();
             Task<RoomError> hello = client.RejoinAsync(link, done.Abort.Token);
             _holder.Hold(null, null, link);
@@ -434,13 +575,13 @@ namespace Callbreak.Application.Online
                 Dispose(hostLink);
             }
 
-            _previousHost = null;
-            _lastNext = null;
-            _nextHost = null;
             _declared = true;
+            KeepForLater(package);
             _giveUpAt = _now + Protocol.SeatHoldSeconds;
+            _refusedSince = double.NaN;
             _mode = Mode.Rehoming;
-            _try = new Try(Aim.OldHost, _oldHost) { Link = link, Hello = hello, Abort = done.Abort };
+            _try = new Try(Aim.OldHost, done.Place) { Link = link, Hello = hello, Abort = done.Abort };
+            Look(client, new Target(Aim.OldHost, done.Place));
         }
 
         /// <summary>Whether the room the probe sees has a person connected besides this player and its host.</summary>
@@ -466,8 +607,9 @@ namespace Callbreak.Application.Online
 
         /// <summary>
         /// The connection went: the old host is tried. Once nothing has come from it for
-        /// <see cref="Protocol.HostLostSeconds"/>, it is lost (<see cref="DeclareLost"/>): the next host in
-        /// line with this player's report, and the old host with a hello, in turn.
+        /// <see cref="Protocol.HostLostSeconds"/>, it is lost (<see cref="DeclareLost"/>): every place
+        /// <see cref="Look"/> names, in turn, until a host seats this player, its own turn to take the
+        /// match over comes, or the seat hold is over.
         /// </summary>
         private void Rehome(RoomClient client)
         {
@@ -481,9 +623,17 @@ namespace Callbreak.Application.Online
                 }
             }
 
+            if (_standby != null && TurnCame())
+            {
+                // No host seated this player in time: it takes the match over itself.
+                DropTry();
+                BeginTakeOver(_standby);
+                return;
+            }
+
             if (_try == null)
             {
-                if (_nextHost == null && _oldHost == null)
+                if (_targets.Count == 0 && _standby == null)
                 {
                     // The host left, and nobody here can take the match over: there is nowhere to go.
                     GiveUp(client, RoomError.HostLeft);
@@ -492,23 +642,26 @@ namespace Callbreak.Application.Online
 
                 if (_now >= _giveUpAt)
                 {
-                    GiveUp(client, RoomError.ConnectionLost);
+                    // Nobody seated this player for the whole seat hold. One whose own device was online
+                    // all along was left behind, not the one who dropped out: it is not charged the match
+                    // (the owner, 3 Oct 2026).
+                    GiveUp(client, RoomError.ConnectionLost, countsAsLeft: !Online());
                     return;
                 }
 
-                if (!double.IsNaN(_refusedSince) && _now - _refusedSince >= RefusedForSeconds)
+                if (_standby == null && !double.IsNaN(_refusedSince) && _now - _refusedSince >= RefusedForSeconds && _now >= RefusalFloor())
                 {
-                    // Every device turned this player down, again and again: the host left, and nobody
-                    // took the match over.
+                    // Every device turned this player down, again and again, since the last backup could
+                    // have hosted: the host left, and nobody took the match over.
                     GiveUp(client, RoomError.HostLeft);
                     return;
                 }
 
-                if (_now >= _nextTryAt && Online())
+                if (_targets.Count > 0 && _now >= _nextTryAt && Online())
                 {
-                    bool next = _nextHost != null && (_nextFirst || _oldHost == null);
-                    _nextFirst = !next;
-                    StartTry(next ? Aim.NextHost : Aim.OldHost, next ? _nextHost : _oldHost, client);
+                    Target next = _targets[_nextTarget % _targets.Count];
+                    _nextTarget++;
+                    StartTry(next.Aim, next.Place, client);
                 }
 
                 return;
@@ -525,9 +678,7 @@ namespace Callbreak.Application.Online
                     _try = null;
                     _holder.Hold(null, null, current.Link);
                     current.Abort.Dispose();
-                    _mode = Mode.Watching;
-                    _heardCount = client.Heard;
-                    _heardAt = _now;
+                    Seated(client);
                     return;
 
                 case Outcome.Fatal:
@@ -562,21 +713,145 @@ namespace Callbreak.Application.Online
             _nextTryAt = _now + RetrySeconds;
         }
 
-        /// <param name="hostLeft">The old host said it leaves: there is no point looking for it.</param>
-        private void BeginTakeOver(RoomClient client, NextHostNotice notice, SuccessionPackage package, bool hostLeft)
+        /// <summary>
+        /// The turn of the take-over still to come (<see cref="_standby"/>) has come: this device is
+        /// online, and no try is about to seat this player. Offline, nothing can be tried, so the turn
+        /// comes no sooner than its wait after this device is back online.
+        /// </summary>
+        private bool TurnCame()
+        {
+            if (!Online())
+            {
+                _turnAt = Math.Max(_turnAt, _now + _turnWait);
+                return false;
+            }
+
+            return _now >= _turnAt && !Seating(_try);
+        }
+
+        /// <summary>
+        /// A take-over given up, or one whose room did not open, keeps its package (null: none was under
+        /// way) until a host seats this player: if none has by then, it takes the match over again
+        /// <see cref="Protocol.BackupTakeOverSeconds"/> later.
+        /// </summary>
+        private void KeepForLater(SuccessionPackage package)
+        {
+            _standby = package;
+            _turnWait = Protocol.BackupTakeOverSeconds;
+            _turnAt = _now + _turnWait;
+        }
+
+        /// <summary>A try that reached a host and waits for its answer: this player may be seated any moment.</summary>
+        private static bool Seating(Try attempt) =>
+            attempt != null && attempt.Hello != null && !attempt.Hello.IsCompleted && (attempt.Aim == Aim.NextHost || attempt.Aim == Aim.OldHost);
+
+        /// <summary>
+        /// The earliest a player that every device turns down gives up: <see cref="RefusedForSeconds"/>
+        /// after the turn of the last backup in the line, so a live backup is never given up on before it
+        /// could host.
+        /// </summary>
+        private double RefusalFloor() =>
+            _line == null ? 0.0 : _declaredAt + ((Math.Max(1, _line.Line.Count) - 1) * Protocol.BackupTakeOverSeconds) + RefusedForSeconds;
+
+        /// <summary>A host seated this player: it plays at that table now, with nothing kept for a take-over.</summary>
+        private void Seated(RoomClient client)
+        {
+            _mode = Mode.Watching;
+            _heardCount = client.Heard;
+            _heardAt = _now;
+            _declared = false;
+            _line = null;
+            _oldHost = null;
+            _standby = null;
+            _targets.Clear();
+            _named.Clear();
+            _remembered = null;
+        }
+
+        /// <summary>
+        /// The places this player tries in turn while it looks for a host. Until the host is taken as
+        /// lost, the old host alone. Then every successor in the line but this player, each at the
+        /// generation it would host, with this player's report, and the old host unless it left, with a
+        /// hello; and, once this device hosted, the successors it named. <paramref name="first"/>, a host
+        /// this device found itself, comes first.
+        /// </summary>
+        private void Look(RoomClient client, Target first)
+        {
+            _targets.Clear();
+            _nextTarget = 0;
+            if (first != null)
+            {
+                Add(_targets, first);
+            }
+
+            if (_declared && _line != null)
+            {
+                for (int j = 0; j < _line.Line.Count; j++)
+                {
+                    NextHostNotice.Successor s = _line.Line[j];
+                    if (s.Seat != client.LocalSeatIndex)
+                    {
+                        Add(_targets, new Target(Aim.NextHost, new Place(_line.Generation + j + 1, s.Address, s.Seat)));
+                    }
+                }
+            }
+
+            if (_oldHost != null)
+            {
+                Add(_targets, new Target(Aim.OldHost, _oldHost));
+            }
+
+            if (_declared)
+            {
+                foreach (Place place in _named)
+                {
+                    Add(_targets, new Target(Aim.NextHost, place));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Adds <paramref name="target"/> unless it is this device, or a place of the same generation and
+        /// device is there already. A place without an address is looked up by the room's code, under
+        /// which only a private room is listed: a Quick Match table's hosts are reached by address alone.
+        /// </summary>
+        private void Add(List<Target> targets, Target target)
+        {
+            Place place = target.Place;
+            if (place.Address == null ? !_room.Listed : place.Address == _transport.LocalAddress)
+            {
+                return;
+            }
+
+            foreach (Target known in targets)
+            {
+                if (known.Place.Same(place))
+                {
+                    return;
+                }
+            }
+
+            targets.Add(target);
+        }
+
+        /// <summary>Hosts the generation of this player's place in the line, to take the match over with <paramref name="package"/>.</summary>
+        private void BeginTakeOver(SuccessionPackage package)
         {
             _package = package;
-            _previousHost = hostLeft ? null : new Place(notice.Generation, notice.HostAddress);
+            _standby = null;
+            _generation = _line.Generation + _place;
             _mode = Mode.TakingOver;
+            _nextProbe = 0;
+            _nextTryAt = _now;
             _openAbort = new CancellationTokenSource();
             CancellationToken token = _openAbort.Token;
             string code = _room.Code;
-            int generation = notice.Generation + 1;
+            int generation = _generation;
             bool listed = _room.Listed;
             _opening = Call(() => _transport.TakeOverAsync(code, generation, listed, token));
         }
 
-        /// <summary>Opening the room's next generation, then taking the reports, then rebuilding the table.</summary>
+        /// <summary>Opening the room's generation, then taking the reports while looking at its other hosts, then rebuilding the table.</summary>
         private void TakeOver(RoomClient client)
         {
             if (_opening != null)
@@ -590,10 +865,14 @@ namespace Callbreak.Application.Online
                 _opening = null;
                 if (!opened.Succeeded)
                 {
-                    // The room cannot be taken over from here: look for the old host as any player would.
+                    // The room cannot be taken over from here for now: this player looks for a host as any
+                    // player would, and tries again a little later while nobody has seated it.
+                    SuccessionPackage package = _package;
+                    DropTry();
                     DropTakeOver();
+                    KeepForLater(package);
                     _mode = Mode.Rehoming;
-                    _nextHost = null;
+                    Look(client, null);
                     _nextTryAt = _now;
                     return;
                 }
@@ -609,48 +888,40 @@ namespace Callbreak.Application.Online
                 return;
             }
 
-            // Meanwhile the old host is tried, unless it left: this player's own connection may be what dropped.
-            if (_try == null)
-            {
-                if (_previousHost != null && _now >= _nextTryAt && Online())
-                {
-                    StartTry(Aim.Probe, _previousHost, client);
-                }
-
-                return;
-            }
-
-            Try done = _try;
-            Outcome outcome = Advance(done, client);
-            if (outcome == Outcome.Pending)
-            {
-                return;
-            }
-
-            _try = null;
-            _nextTryAt = _now + ProbeSeconds;
-            if (outcome == Outcome.Answered)
-            {
-                Settle(client, done);
-                return;
-            }
-
-            Dispose(done);
+            // Meanwhile it looks at the room's other hosts: this player's own connection may be what
+            // dropped, or a successor after it may host the room already.
+            Probe(client, null);
         }
 
         /// <summary>
-        /// The people the rebuild waits for: everyone at the table besides this player and the lost
-        /// host who was there as far as this player knows.
+        /// The people the rebuild waits for: everyone at the table besides this player who was there as
+        /// far as it knows, but the lost host and, for a backup, the successors before it in the line:
+        /// they are why it took the match over, and come back as any returning player does.
         /// </summary>
         private IEnumerable<Seat> Expected(RoomClient client)
         {
             IMatchSession match = client.Match;
+            var skipped = new bool[SeatExtensions.Count];
+            skipped[client.LocalSeatIndex] = true;
+            if (_line != null)
+            {
+                if (_line.HostSeat >= 0 && _line.HostSeat < SeatExtensions.Count)
+                {
+                    skipped[_line.HostSeat] = true;
+                }
+
+                for (int j = 0; j < _place - 1 && j < _line.Line.Count; j++)
+                {
+                    skipped[_line.Line[j].Seat] = true;
+                }
+            }
+
             var expected = new List<Seat>();
             for (int s = 0; s < SeatExtensions.Count; s++)
             {
                 var seat = (Seat)s;
                 SessionSeat at = match.Seats[s];
-                if (s == client.LocalSeatIndex || seat == (Seat)HostSeatOf(client) || at.IsBot || _package.IsBot(seat))
+                if (skipped[s] || at.IsBot || _package.IsBot(seat))
                 {
                     continue;
                 }
@@ -664,15 +935,17 @@ namespace Callbreak.Application.Online
             return expected;
         }
 
-        private static int HostSeatOf(RoomClient client) => client.NextHost != null ? client.NextHost.HostSeat : -1;
-
-        /// <summary>Rebuilds the table from what everyone brought and hosts it: the match goes on.</summary>
+        /// <summary>
+        /// Rebuilds the table from what everyone brought and hosts it: the match goes on, from the same
+        /// trick with the bots' cards the next host in line was sent, or with the round in play dealt
+        /// again by a backup, which has none (the owner, 3 Oct 2026).
+        /// </summary>
         private void Commit(RoomClient client)
         {
             IMatchSession match = client.Match;
             var reports = new List<SeatReport> { new SeatReport((Seat)client.LocalSeatIndex, ((OnlineMatchSession)match).LastSeq, match.View) };
             reports.AddRange(_collector.Reports);
-            RebuiltTable rebuilt = TableRebuild.Rebuild(reports, _package);
+            RebuiltTable rebuilt = _package.HasCards ? TableRebuild.Rebuild(reports, _package) : TableRebuild.DealAgain(reports);
             PlayerView latest = rebuilt.Latest;
 
             var present = new HashSet<int> { client.LocalSeatIndex };
@@ -735,9 +1008,11 @@ namespace Callbreak.Application.Online
             _openAbort?.Dispose();
             _openAbort = null;
             _package = null;
-            _lastNext = null;
+            _named.Clear();
+            _remembered = null;
             _probeUntil = _now + Protocol.SeatHoldSeconds;
             _nextTryAt = _now + ProbeSeconds;
+            _nextProbe = 0;
             _mode = Mode.Watching;
         }
 
@@ -771,9 +1046,9 @@ namespace Callbreak.Application.Online
                 }
 
                 attempt.Link = linked.Link;
-                if (_mode == Mode.Watching && attempt.Aim == Aim.NextHost)
+                if (attempt.Aim == Aim.Newer)
                 {
-                    // A host looking for the next host in line: the connection alone says it hosts the next generation.
+                    // The connection alone says that device hosts the room at a newer generation.
                     return Outcome.Connected;
                 }
 
@@ -817,12 +1092,13 @@ namespace Callbreak.Application.Online
             return seatGone ? Outcome.Fatal : Outcome.Failed;
         }
 
-        private void GiveUp(RoomClient client, RoomError reason)
+        /// <param name="countsAsLeft">Whether a lost connection records the match as left (<see cref="RoomClient.Close(RoomError, bool)"/>).</param>
+        private void GiveUp(RoomClient client, RoomError reason, bool countsAsLeft = true)
         {
             Stop();
             try
             {
-                client.Close(reason);
+                client.Close(reason, countsAsLeft);
             }
             catch (Exception e)
             {
@@ -966,7 +1242,7 @@ namespace Callbreak.Application.Online
         {
             Pending,
 
-            /// <summary>The connection opened (a host looking for the next host in line asks no more).</summary>
+            /// <summary>The connection to a newer host opened: that alone says it hosts the room.</summary>
             Connected,
 
             /// <summary>A probe was answered: the room is there, as <see cref="Try.Prober"/> sees it.</summary>
@@ -985,18 +1261,38 @@ namespace Callbreak.Application.Online
             Fatal,
         }
 
-        /// <summary>A host of the room: its generation, and its device's address (null: look the code up).</summary>
+        /// <summary>A host of the room: its generation, its device's address (null: look the code up), and its player's seat when known.</summary>
         private sealed class Place
         {
-            public Place(int generation, string address)
+            public Place(int generation, string address, int seat)
             {
                 Generation = generation;
                 Address = string.IsNullOrEmpty(address) ? null : address;
+                Seat = seat;
             }
 
             public int Generation { get; }
 
             public string Address { get; }
+
+            /// <summary>The seat of the player whose device it is; <see cref="NextHostNotice.NoSeat"/> when not known.</summary>
+            public int Seat { get; }
+
+            public bool Same(Place other) => other != null && other.Generation == Generation && other.Address == Address;
+        }
+
+        /// <summary>A place to try, and how: with a report, a hello, or only a look.</summary>
+        private sealed class Target
+        {
+            public Target(Aim aim, Place place)
+            {
+                Aim = aim;
+                Place = place;
+            }
+
+            public Aim Aim { get; }
+
+            public Place Place { get; }
         }
 
         /// <summary>One try to reach a host: connecting, then saying hello (or a report) and waiting for the answer.</summary>

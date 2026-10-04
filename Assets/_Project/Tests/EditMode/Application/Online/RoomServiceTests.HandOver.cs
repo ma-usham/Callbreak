@@ -242,8 +242,9 @@ namespace Callbreak.Tests.EditMode.Application.Online
         /// Every message of a whole match with a hand-over, put back together from the packets and
         /// searched for every hand any seat held (as the 8-byte card set the wire carries): a person's
         /// cards go only to that person, and from that person to the new host in its report; a bot's
-        /// only in the package the host sends the next host in line, and only to the player it names
-        /// (ADR 030).
+        /// only in a package with cards, which the host sends the next host in line alone, the player
+        /// it names first in its line (ADR 030). A package without cards goes only to a later successor
+        /// the host names (the owner's backup host, 3 Oct 2026).
         /// </summary>
         [Test]
         public void HandOver_PayloadScan_APersonsCardsReachOnlyItsOwnerAndTheNewHost_ABotsOnlyTheNextInLine()
@@ -271,8 +272,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 [PeerRoomTransport.ChannelOf(code, 1)] = next.Network.Address,
             };
             var streams = new Dictionary<string, PacketAssembler>();
-            var named = new List<(string Host, int Seat)>();
-            var packages = new List<(int At, string Host, string To)>();
+            var named = new List<(string Host, NextHostNotice Notice)>();
+            var packages = new List<(int At, string Host, string To, bool WithCards)>();
             int ownHands = 0;
             int reports = 0;
             foreach (var sent in _peers.Sent)
@@ -291,14 +292,15 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
                 bool fromHost = sent.From == channelHost;
                 byte kind = message[0];
+                bool withCards = fromHost && kind == (byte)HostMessageKind.Succession && SuccessionPackage.Read(new WireReader(message, 1, message.Length - 1)).HasCards;
                 if (fromHost && kind == (byte)HostMessageKind.NextHost)
                 {
                     var reader = new WireReader(message, 1, message.Length - 1);
-                    named.Add((sent.From, NextHostNotice.Read(reader).NextSeat));
+                    named.Add((sent.From, NextHostNotice.Read(reader)));
                 }
                 else if (fromHost && kind == (byte)HostMessageKind.Succession)
                 {
-                    packages.Add((named.Count, sent.From, sent.To));
+                    packages.Add((named.Count, sent.From, sent.To, withCards));
                 }
                 else if (!fromHost && kind == (byte)ClientMessageKind.Report)
                 {
@@ -316,7 +318,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
                     string what = (fromHost ? "host message " + kind : "member message " + kind) + " from " + sent.From + " to " + sent.To + " on " + sent.Channel + " carries seat " + seat + "'s cards";
                     if (botSeats.Contains(seat))
                     {
-                        Assert.IsTrue(fromHost && kind == (byte)HostMessageKind.Succession, what + ": a bot's, outside the package");
+                        Assert.IsTrue(withCards, what + ": a bot's, outside a package with cards");
                         continue;
                     }
 
@@ -329,13 +331,42 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
             Assert.Greater(ownHands, 20, "the scan sees each person's own hand in its updates");
             Assert.AreEqual(1, reports, "one report reached the new host: the only other person's");
-            Assert.That(packages, Is.Not.Empty, "the next host in line was sent the bot's hand");
+            Assert.That(packages.FindAll(p => p.WithCards), Is.Not.Empty, "the next host in line was sent the bot's hand");
+            Assert.That(packages.FindAll(p => !p.WithCards), Is.Not.Empty, "the later successor was sent a package without cards");
             foreach (var package in packages)
             {
+                // The notices its host sent last before the package and first after it: a package goes out
+                // just before the notice that names its player there.
                 int to = seatAt[package.To];
-                (string Host, int Seat) before = named.FindLast(n => n.Host == package.Host && named.IndexOf(n) < package.At);
-                (string Host, int Seat) after = named.Find(n => n.Host == package.Host && named.IndexOf(n) >= package.At);
-                Assert.IsTrue(before.Seat == to || after.Seat == to, "a package goes only to the next host in line its host names");
+                NextHostNotice before = null;
+                NextHostNotice after = null;
+                for (int i = 0; i < named.Count; i++)
+                {
+                    if (named[i].Host != package.Host)
+                    {
+                        continue;
+                    }
+
+                    if (i < package.At)
+                    {
+                        before = named[i].Notice;
+                    }
+                    else if (after == null)
+                    {
+                        after = named[i].Notice;
+                    }
+                }
+
+                int placeBefore = before != null ? before.PlaceOf(to) : 0;
+                int placeAfter = after != null ? after.PlaceOf(to) : 0;
+                if (package.WithCards)
+                {
+                    Assert.IsTrue(placeBefore == 1 || placeAfter == 1, "a package with cards goes only to the next host in line its host names");
+                }
+                else
+                {
+                    Assert.IsTrue(placeBefore >= 2 || placeAfter >= 2, "a package without cards goes only to a later successor its host names");
+                }
             }
         }
 
@@ -615,22 +646,28 @@ namespace Callbreak.Tests.EditMode.Application.Online
         }
 
         /// <summary>
-        /// ADR 030's known limit: with the host and the next host in line lost together nobody takes the
-        /// match over, so the last player waits out the seat hold and its room closes with ConnectionLost,
-        /// as before. Its service gives up cleanly: no tick throws on the way.
+        /// ADR 030 had a known limit here: with the host and the next host in line lost together nobody
+        /// took the match over. Now the last player does, as the backup host (the owner, 3 Oct 2026). Only
+        /// when it cannot host either (its device will not open the room) does it wait out the seat hold,
+        /// after which its room closes with ConnectionLost, as before. Its service gives up cleanly: no
+        /// tick throws on the way. Online all along, it was left behind and the match is not recorded;
+        /// offline, it is the one who dropped out, and the match counts as left, a loss.
         /// </summary>
-        [Test]
-        public void HandOver_PrivateRoom_HostAndNextInLineLostTogether_TheLastPlayerGivesUpAfterTheHoldWithoutAFault()
+        [TestCase(true)]
+        [TestCase(false)]
+        public void HandOver_PrivateRoom_HostAndNextInLineLostTogether_TheLastPlayerCannotHostEither_GivesUpAfterTheHoldWithoutAFault(bool online)
         {
             UsePeers();
             Device host = NewPeerDevice("Hari");
-            Device asha = NewPeerDevice("Asha");
-            Device suman = NewPeerDevice("Suman");
+            Device asha = NewSwitchedPeerDevice("Asha", out TakeOverSwitch ashaTakeOvers);
+            Device suman = NewSwitchedPeerDevice("Suman", out TakeOverSwitch sumanTakeOvers);
             OpenPeerRoom(host, asha, suman);
             StartPeerMatch(host, asha, suman);
             PlayPeersUntil(() => MidTrick(host.Rooms.Host, 1), host, asha, suman);
             Device next = DeviceAt(host.Rooms.Host.NextHost.NextSeat, asha, suman);
             Device last = next == asha ? suman : asha;
+            TakeOverSwitch takeOvers = last == asha ? ashaTakeOvers : sumanTakeOvers;
+            takeOvers.Refuses = true;
             var session = (OnlineMatchSession)last.Rooms.Current.Match;
             var closed = new List<RoomError>();
             double closedAt = double.NaN;
@@ -643,6 +680,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
             double lostAt = _now;
             Unplug(host);
             Unplug(next);
+            last.Network.IsOnline = online;
             Assert.DoesNotThrow(() => Settle(Protocol.SeatHoldSeconds + 30.0), "the service gives up without a fault from its tick");
 
             CollectionAssert.AreEqual(new[] { RoomError.ConnectionLost }, closed, "the room closes once, the connection lost");
@@ -651,6 +689,18 @@ namespace Callbreak.Tests.EditMode.Application.Online
             Assert.AreEqual(RoomError.ConnectionLost, session.FailureReason);
             Assert.IsNull(last.Rooms.Current);
             Assert.IsFalse(last.Tickets.TryGet(out _), "nothing to rejoin");
+            if (online)
+            {
+                Assert.Greater(takeOvers.Refused, 1, "it tried to take the match over at its turn, and again later");
+                Assert.AreEqual(0, last.Stats.Current.gamesPlayed, "online all along, it was left behind: the match is not recorded");
+            }
+            else
+            {
+                Assert.AreEqual(0, takeOvers.Refused, "offline, it never tried to host");
+                Assert.AreEqual(1, last.Stats.Current.gamesPlayed, "offline, it dropped out: the match counts as left");
+                Assert.AreEqual(0, last.Stats.Current.wins, "a loss");
+            }
+
             Assert.That(_peerFaults, Is.Empty);
         }
 

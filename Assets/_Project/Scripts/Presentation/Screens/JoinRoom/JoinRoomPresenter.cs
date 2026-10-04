@@ -16,7 +16,8 @@ namespace Callbreak.Presentation.Screens
     /// GDD §11 screen 03: join a friend's table with its 6-character code. Join is enabled only
     /// for a complete valid code, Paste finds the code in whatever the clipboard holds (the bare
     /// code in any case, with spaces or dashes, or the whole invite message), and every error
-    /// shows its own message while the boxes shake.
+    /// shows its own message while the boxes shake. The screen rises above the device's keyboard
+    /// while the boxes have it.
     /// </summary>
     public sealed class JoinRoomPresenter : IStartable, IDisposable
     {
@@ -29,6 +30,7 @@ namespace Callbreak.Presentation.Screens
         private readonly IDeepLinks _deepLinks;
         private readonly ISettingsService _settings;
         private readonly AvatarLibrary _avatars;
+        private readonly IOnScreenKeyboard _keyboard;
 
         private string _code = string.Empty;
         private bool _busy;
@@ -43,7 +45,8 @@ namespace Callbreak.Presentation.Screens
             ILocalization localization,
             IDeepLinks deepLinks,
             ISettingsService settings,
-            AvatarLibrary avatars)
+            AvatarLibrary avatars,
+            IOnScreenKeyboard keyboard)
         {
             _view = view;
             _router = router;
@@ -54,6 +57,7 @@ namespace Callbreak.Presentation.Screens
             _deepLinks = deepLinks;
             _settings = settings;
             _avatars = avatars;
+            _keyboard = keyboard;
         }
 
         public void Start()
@@ -68,6 +72,10 @@ namespace Callbreak.Presentation.Screens
             _router.Changed += OnScreenChanged;
             _profile.Changed += RenderHeader;
             _settings.Changed += RenderMotion;
+
+            // The code boxes rise above the device's keyboard, so they are never under it.
+            IOnScreenKeyboard keyboard = _keyboard;
+            _view.KeyboardHeight = keyboard != null ? () => keyboard.Height : (Func<float>)null;
             RenderHeader();
             RenderMotion();
         }

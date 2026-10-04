@@ -15,7 +15,9 @@ namespace Callbreak.Presentation.Widgets
     /// looks of the same size: the next box to fill has the focus look while the field has focus
     /// (GDD §12: focus = gold outline), all six have the error look while an error shows
     /// (<see cref="SetError"/>), and the normal look otherwise. An error also shakes the row
-    /// (<see cref="Shake"/>, unless <see cref="ReduceMotion"/> is on).
+    /// (<see cref="Shake"/>, unless <see cref="ReduceMotion"/> is on). While the field has focus a
+    /// caret blinks in the next box to fill (the owner, 3 Oct 2026), at the field's blink rate; the
+    /// hidden field's own caret stays invisible.
     /// </summary>
     public sealed class CodeInput : MonoBehaviour
     {
@@ -33,16 +35,32 @@ namespace Callbreak.Presentation.Widgets
         [SerializeField] private RectTransform _shakeTarget;
         [SerializeField] private float _shakeDistance = 12f;
 
+        // The caret drawn over the boxes; null in a JoinRoom prefab built before it existed.
+        [SerializeField] private Graphic _caret;
+
         private MotionHandle _shake;
         private Vector2 _restPosition;
         private bool _restKnown;
         private bool _focused;
         private bool _error;
+        private float _blinkFrom;
 
         /// <summary>Raised when the user types, deletes or pastes; carries the normalised code.</summary>
         public event Action<string> Changed;
 
         public string Code => _input.text;
+
+        /// <summary>The hidden field has the keyboard (the on-screen keyboard is up on a phone).</summary>
+        public bool IsFocused => _input.isFocused;
+
+        /// <summary>
+        /// The box the caret stands in, blinking or not: the next box to fill while the field has
+        /// focus; -1 while there is none (no focus, all six filled, or no caret in this prefab).
+        /// </summary>
+        public int CaretBox => _caret != null && _focused && Code.Length < Length ? Code.Length : -1;
+
+        /// <summary>The caret's bar, for a check of where it is drawn; null in an older prefab.</summary>
+        public Graphic Caret => _caret;
 
         public bool Interactable
         {
@@ -61,7 +79,9 @@ namespace Callbreak.Presentation.Widgets
         {
             _input.SetTextWithoutNotify(RoomCode.Normalize(code));
             _input.stringPosition = _input.text.Length;
+            _blinkFrom = Time.unscaledTime;
             Render();
+            UpdateCaret();
         }
 
         /// <summary>Gives the field keyboard focus (opens the on-screen keyboard on phones).</summary>
@@ -111,6 +131,14 @@ namespace Callbreak.Presentation.Widgets
             _input.onValidateInput -= Validate;
             _input.onValueChanged.RemoveListener(OnValueChanged);
             StopShake();
+
+            // Switched off, the field loses the keyboard; LateUpdate looks again once it is back,
+            // so the boxes never come back with a focus they no longer have.
+            _focused = false;
+            if (_caret != null)
+            {
+                _caret.enabled = false;
+            }
         }
 
         private void LateUpdate()
@@ -119,15 +147,18 @@ namespace Callbreak.Presentation.Widgets
             int end = _input.text.Length;
             if (focused && (_input.selectionStringAnchorPosition != end || _input.selectionStringFocusPosition != end))
             {
-                // A tap or an arrow key moved the (invisible) caret: typing continues at the end.
+                // A tap or an arrow key moved the hidden field's caret: typing continues at the end.
                 _input.stringPosition = end;
             }
 
             if (focused != _focused)
             {
                 _focused = focused;
+                _blinkFrom = Time.unscaledTime;
                 Render();
             }
+
+            UpdateCaret();
         }
 
         private static char Validate(string text, int charIndex, char addedChar)
@@ -138,8 +169,58 @@ namespace Callbreak.Presentation.Widgets
 
         private void OnValueChanged(string value)
         {
+            // Typing shows the caret at once, in its new box, as a text field does.
+            _blinkFrom = Time.unscaledTime;
             Render();
+            UpdateCaret();
             Changed?.Invoke(value);
+        }
+
+        /// <summary>
+        /// The caret in the next box to fill, centred on it, on for the first half of each blink;
+        /// hidden while <see cref="CaretBox"/> is -1.
+        /// </summary>
+        private void UpdateCaret()
+        {
+            if (_caret == null)
+            {
+                return;
+            }
+
+            int box = CaretBox;
+            bool on = box >= 0 && box < _boxes.Length && BlinkOn();
+            if (on)
+            {
+                // Placed in its parent's space: the bar and the boxes move as one (the row's shake,
+                // a screen sliding in), so it only changes when the caret goes to another box and
+                // the canvas is not rebuilt every frame.
+                RectTransform target = _boxes[box].rectTransform;
+                RectTransform bar = _caret.rectTransform;
+                Vector3 centre = bar.parent.InverseTransformPoint(target.TransformPoint(target.rect.center));
+                Vector3 position = new Vector3(centre.x - bar.rect.center.x, centre.y - bar.rect.center.y, bar.localPosition.z);
+                if (bar.localPosition != position)
+                {
+                    bar.localPosition = position;
+                }
+            }
+
+            if (_caret.enabled != on)
+            {
+                _caret.enabled = on;
+            }
+        }
+
+        /// <summary>The field's own blink: <see cref="TMP_InputField.caretBlinkRate"/> blinks a second, on for half of each.</summary>
+        private bool BlinkOn()
+        {
+            float rate = _input.caretBlinkRate;
+            if (rate <= 0f)
+            {
+                return true;
+            }
+
+            float period = 1f / rate;
+            return (Time.unscaledTime - _blinkFrom) % period < period * 0.5f;
         }
 
         private void Render()

@@ -1,9 +1,14 @@
+using System;
 using System.Collections;
+using System.Reflection;
+using Callbreak.Application.Ports;
 using Callbreak.Presentation.Framework;
+using Callbreak.Presentation.Screens;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
+using VContainer;
 
 namespace Callbreak.Tests.PlayMode
 {
@@ -12,16 +17,19 @@ namespace Callbreak.Tests.PlayMode
     /// (screen 14): what is typed starts where the field's words start at rest, like the
     /// placeholder, also after deleting what was there. TMP_InputField scrolls by moving its text
     /// and, after a deletion, moves it back to where it expects the text to rest; a text that did
-    /// not fill its typing area was pulled to the middle of the field.
+    /// not fill its typing area was pulled to the middle of the field. Both fields stay above the
+    /// on-screen keyboard (a stand-in here) and edit in place, so a phone draws their caret.
     /// </summary>
     public sealed class NameFieldTests
     {
         private GameFixture _game;
+        private ScreenKeyboard _keyboard;
 
         [SetUp]
         public void SetUp()
         {
             _game = new GameFixture();
+            _keyboard = new ScreenKeyboard();
         }
 
         [UnityTearDown]
@@ -71,6 +79,73 @@ namespace Callbreak.Tests.PlayMode
             yield return Type(field, "abc");
 
             Assert.AreEqual(atRest, PenStart(field.textComponent), 1f, "the new name starts where the old one did, not mid-field");
+        }
+
+        [UnityTest]
+        public IEnumerator CreateRoom_TheKeyboard_LiftsTheScreen_SoTheNameStaysAboveIt()
+        {
+            yield return _game.Boot(extra: builder => builder.RegisterInstance<IOnScreenKeyboard>(_keyboard));
+            ScreenRouter router = _game.MenuRouter;
+            GameFixture.Press(router, "PlayWithFriendsButton");
+            GameFixture.Press(router, "CreateButton");
+            yield return null;
+            Assert.AreEqual(ScreenId.CreateRoom, router.Current);
+            CreateRoomView view = router.Get<CreateRoomView>(ScreenId.CreateRoom);
+            yield return KeyboardLiftsTheField(Field(router, ScreenId.CreateRoom), () => view.Lift);
+        }
+
+        [UnityTest]
+        public IEnumerator Profile_TheKeyboard_LiftsTheScreen_SoTheNameStaysAboveIt()
+        {
+            yield return _game.Boot(extra: builder => builder.RegisterInstance<IOnScreenKeyboard>(_keyboard));
+            ScreenRouter router = _game.MenuRouter;
+            GameFixture.Press(router, "ProfileButton");
+            yield return null;
+            Assert.AreEqual(ScreenId.Profile, router.Current);
+            ProfileView view = router.Get<ProfileView>(ScreenId.Profile);
+            yield return KeyboardLiftsTheField(Field(router, ScreenId.Profile), () => view.Lift);
+        }
+
+        /// <summary>
+        /// A phone held sideways: the keyboard covers 60% of the screen, over the field. The field
+        /// edits in place (so a phone draws its caret, as on the name question) and the screen
+        /// rises until the field is above the keyboard, then settles back once it has gone.
+        /// </summary>
+        private IEnumerator KeyboardLiftsTheField(TMP_InputField field, Func<float> lift)
+        {
+            Assert.IsTrue(HidesMobileInputOnAPhone(field), "on a phone the field edits in place: the keyboard's own box is hidden and the field draws the caret");
+            yield return Settle(field);
+            var rect = (RectTransform)field.transform;
+            float keyboard = Screen.height * 0.6f;
+            Assert.Less(Edge(rect, 0), keyboard, "at rest the keyboard would cover the field");
+
+            _keyboard.Height = keyboard;
+            yield return Focus(field);
+            yield return GameFixture.Until(() => lift() > 0f && Edge(rect, 0) > keyboard, "the screen to rise until the field is above the keyboard");
+            Assert.Less(Edge(rect, 1), Screen.height, "the field stays on the screen");
+
+            _keyboard.Height = 0f;
+            yield return GameFixture.Until(() => lift() == 0f, "the screen to settle back once the keyboard has gone");
+            Assert.Less(Edge(rect, 0), keyboard, "the field is back where it was");
+        }
+
+        /// <summary>
+        /// The flag a phone reads (Android, iOS): in the Editor <see cref="TMP_InputField.shouldHideMobileInput"/>
+        /// always answers true, whatever the field says.
+        /// </summary>
+        private static bool HidesMobileInputOnAPhone(TMP_InputField field)
+        {
+            FieldInfo flag = typeof(TMP_InputField).GetField("m_HideMobileInput", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.IsNotNull(flag, "TMP_InputField keeps the flag in m_HideMobileInput");
+            return (bool)flag.GetValue(field);
+        }
+
+        /// <summary>The bottom (corner 0) or top (corner 1) of a rect on the overlay canvas, in screen pixels.</summary>
+        private static float Edge(RectTransform rect, int corner)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            return corners[corner].y;
         }
 
         private static TMP_InputField Field(ScreenRouter router, ScreenId screen)
@@ -131,6 +206,12 @@ namespace Callbreak.Tests.PlayMode
 
             yield return null;
             Assert.AreEqual(text, field.text, "the keys were typed into the field");
+        }
+
+        /// <summary>An on-screen keyboard the test puts up (its height in screen pixels) and takes down (0).</summary>
+        private sealed class ScreenKeyboard : IOnScreenKeyboard
+        {
+            public float Height { get; set; }
         }
 
         /// <summary>Where the first letter's pen position is, in world space: the start of the words.</summary>

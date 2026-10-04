@@ -10,9 +10,11 @@ using NUnit.Framework;
 namespace Callbreak.Tests.EditMode.Application.Online
 {
     /// <summary>
-    /// The hand-over's messages on the wire (ADR 030): who the next host is, what that player alone is
-    /// sent, and the report a player brings the new host. Each survives the wire whole; one that is
-    /// malformed is refused; and a report at every limit still fits what a new host takes.
+    /// The hand-over's messages on the wire (ADR 030): the line of succession, what each successor is
+    /// sent (the bots' cards for the next host in line alone, nothing but identities for a backup, the
+    /// owner's backup host, 3 Oct 2026), and the report a player brings the new host. Each survives the
+    /// wire whole; one that is malformed is refused; and a report at every limit still fits what a new
+    /// host takes.
     /// </summary>
     public sealed class SuccessionWireTests
     {
@@ -36,6 +38,32 @@ namespace Callbreak.Tests.EditMode.Application.Online
             Assert.AreEqual(nextSeat >= 0, back.HasNext);
         }
 
+        [Test]
+        public void NextHost_TheWholeLine_SurvivesTheWireInOrder()
+        {
+            var line = new[] { new NextHostNotice.Successor(2, "device-3"), new NextHostNotice.Successor(3, "device-4"), new NextHostNotice.Successor(0, "device-1") };
+            var notice = new NextHostNotice(5, 1, "device-2", line);
+            var w = new WireWriter();
+            notice.WriteTo(w);
+            var reader = new WireReader(w.ToArray());
+
+            NextHostNotice back = NextHostNotice.Read(reader);
+
+            Assert.IsTrue(reader.AtEnd);
+            Assert.AreEqual(notice, back);
+            Assert.AreEqual(3, back.Line.Count);
+            Assert.AreEqual(2, back.NextSeat, "the first in line is the next host");
+            Assert.AreEqual("device-3", back.NextAddress);
+            for (int i = 0; i < line.Length; i++)
+            {
+                Assert.AreEqual(line[i], back.Line[i]);
+                Assert.AreEqual(i + 1, back.PlaceOf(line[i].Seat), "its place, the next host in line first");
+            }
+
+            Assert.AreEqual(0, back.PlaceOf(1), "the host is not in its own line");
+            Assert.AreNotEqual(notice, new NextHostNotice(5, 1, "device-2", new[] { line[0], line[2], line[1] }), "another order is another line");
+        }
+
         [TestCase(4)]
         [TestCase(200)]
         public void NextHost_SeatThatIsNoSeat_IsRefused(byte seat)
@@ -44,8 +72,47 @@ namespace Callbreak.Tests.EditMode.Application.Online
             w.UInt16(1);
             w.Byte(0);
             w.String("device-1");
+            w.Byte(1);
             w.Byte(seat);
             w.String("device-2");
+
+            Assert.Throws<WireFormatException>(() => NextHostNotice.Read(new WireReader(w.ToArray())));
+        }
+
+        /// <param name="first">The first successor's seat (the host sits in seat 1).</param>
+        /// <param name="second">The second successor's seat.</param>
+        /// <param name="secondAddress">Where the second successor is.</param>
+        [TestCase(1, 2, "device-3")]
+        [TestCase(2, 2, "device-3")]
+        [TestCase(2, 3, "")]
+        public void NextHost_LineNamingTheHostASeatTwiceOrNoAddress_IsRefused(int first, int second, string secondAddress)
+        {
+            var w = new WireWriter();
+            w.UInt16(1);
+            w.Byte(1);
+            w.String("device-2");
+            w.Byte(2);
+            w.Byte((byte)first);
+            w.String("device-9");
+            w.Byte((byte)second);
+            w.String(secondAddress);
+
+            Assert.Throws<WireFormatException>(() => NextHostNotice.Read(new WireReader(w.ToArray())));
+        }
+
+        [Test]
+        public void NextHost_LineLongerThanTheTableHasSeatsAfterTheHost_IsRefused()
+        {
+            var w = new WireWriter();
+            w.UInt16(1);
+            w.Byte(0);
+            w.String("device-1");
+            w.Byte(NextHostNotice.MaxLine + 1);
+            for (int seat = 1; seat <= NextHostNotice.MaxLine + 1; seat++)
+            {
+                w.Byte((byte)(seat % 4));
+                w.String("device-" + seat);
+            }
 
             Assert.Throws<WireFormatException>(() => NextHostNotice.Read(new WireReader(w.ToArray())));
         }
@@ -62,6 +129,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
             SuccessionPackage back = SuccessionPackage.Read(reader);
 
             Assert.IsTrue(reader.AtEnd);
+            Assert.IsTrue(back.HasCards, "the next host in line's package");
             Assert.AreEqual(2, back.Generation);
             Assert.AreEqual(4, back.Round);
             Assert.AreEqual("id-south", back.IdentityOf(Seat.South));
@@ -74,6 +142,38 @@ namespace Callbreak.Tests.EditMode.Application.Online
             Assert.IsTrue(west.IsEmpty);
         }
 
+        [Test]
+        public void Package_WithoutCards_SurvivesTheWire_AndCarriesNoCardAtAll()
+        {
+            SuccessionPackage package = SuccessionPackage.WithoutCards(2, new[] { "id-south", null, "id-north", null });
+            var w = new WireWriter();
+            package.WriteTo(w);
+            byte[] bytes = w.ToArray();
+            var reader = new WireReader(bytes);
+
+            SuccessionPackage back = SuccessionPackage.Read(reader);
+
+            Assert.IsTrue(reader.AtEnd);
+            Assert.IsFalse(back.HasCards, "a backup's package");
+            Assert.AreEqual(2, back.Generation);
+            Assert.AreEqual(0, back.Round);
+            Assert.AreEqual("id-south", back.IdentityOf(Seat.South));
+            Assert.AreEqual("id-north", back.IdentityOf(Seat.North));
+            Assert.IsNull(back.IdentityOf(Seat.East));
+            Assert.IsTrue(back.IsBot(Seat.East));
+            Assert.IsTrue(back.IsBot(Seat.West));
+            Assert.IsFalse(back.IsBot(Seat.South));
+            foreach (Seat seat in new[] { Seat.South, Seat.East, Seat.North, Seat.West })
+            {
+                Assert.IsFalse(back.TryGetDealtHand(seat, out CardSet hand), "no seat's cards, a bot's included");
+                Assert.IsTrue(hand.IsEmpty);
+            }
+
+            // The generation, the round, the flag, and each seat's kind with a person's identity: nothing else.
+            int identities = (2 + "id-south".Length) + (2 + "id-north".Length);
+            Assert.AreEqual(2 + 1 + 1 + 4 + identities, bytes.Length, "not one card on the wire");
+        }
+
         [TestCase(0)]
         [TestCase(3)]
         public void Package_SeatOfNoKnownKind_IsRefused(byte kind)
@@ -81,6 +181,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
             var w = new WireWriter();
             w.UInt16(1);
             w.Byte(1);
+            w.Bool(true);
             w.Byte(kind);
             Assert.Throws<WireFormatException>(() => SuccessionPackage.Read(new WireReader(w.ToArray())));
         }
@@ -91,8 +192,20 @@ namespace Callbreak.Tests.EditMode.Application.Online
             var w = new WireWriter();
             w.UInt16(1);
             w.Byte(1);
+            w.Bool(true);
             w.Byte(1);
             w.String(string.Empty);
+            Assert.Throws<WireFormatException>(() => SuccessionPackage.Read(new WireReader(w.ToArray())));
+        }
+
+        [Test]
+        public void Package_WhoseCardsFlagIsNeitherYesNorNo_IsRefused()
+        {
+            var w = new WireWriter();
+            w.UInt16(1);
+            w.Byte(1);
+            w.Byte(2);
+            w.Byte(2);
             Assert.Throws<WireFormatException>(() => SuccessionPackage.Read(new WireReader(w.ToArray())));
         }
 

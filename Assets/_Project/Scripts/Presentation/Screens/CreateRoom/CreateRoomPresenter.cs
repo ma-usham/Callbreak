@@ -18,7 +18,8 @@ namespace Callbreak.Presentation.Screens
     /// 3-20 characters and pass the name filter; until the player types one of their own it is
     /// "{Name}'s Table". The last clock choice is remembered, and Create shows a spinner and
     /// cannot be tapped twice. On success the lobby replaces this screen; a failure stays here
-    /// with its message in the screen and the button reading Retry.
+    /// with its message in the screen and the button reading Retry. The screen rises above the
+    /// device's keyboard while the name field has it.
     /// </summary>
     public sealed class CreateRoomPresenter : IStartable, IDisposable
     {
@@ -30,6 +31,7 @@ namespace Callbreak.Presentation.Screens
         private readonly ILocalization _localization;
         private readonly NameFilter _names;
         private readonly AvatarLibrary _avatars;
+        private readonly IOnScreenKeyboard _keyboard;
 
         private string _roomName = string.Empty;
         private bool _nameEdited;
@@ -45,7 +47,8 @@ namespace Callbreak.Presentation.Screens
             ISettingsService settings,
             ILocalization localization,
             NameFilter names,
-            AvatarLibrary avatars)
+            AvatarLibrary avatars,
+            IOnScreenKeyboard keyboard)
         {
             _view = view;
             _router = router;
@@ -55,6 +58,7 @@ namespace Callbreak.Presentation.Screens
             _localization = localization;
             _names = names;
             _avatars = avatars;
+            _keyboard = keyboard;
         }
 
         public void Start()
@@ -70,8 +74,14 @@ namespace Callbreak.Presentation.Screens
             _router.Changed += OnScreenChanged;
             _profile.Changed += RenderHeader;
             _localization.LanguageChanged += RenderFixedValues;
+            _settings.Changed += RenderMotion;
+
+            // The name field rises above the device's keyboard, so it is never under it.
+            IOnScreenKeyboard keyboard = _keyboard;
+            _view.KeyboardHeight = keyboard != null ? () => keyboard.Height : (Func<float>)null;
             RenderHeader();
             RenderFixedValues();
+            RenderMotion();
         }
 
         public void Dispose()
@@ -87,8 +97,11 @@ namespace Callbreak.Presentation.Screens
             _router.Changed -= OnScreenChanged;
             _profile.Changed -= RenderHeader;
             _localization.LanguageChanged -= RenderFixedValues;
+            _settings.Changed -= RenderMotion;
             _attempt?.Cancel();
         }
+
+        private void RenderMotion() => _view.ReduceMotion = _settings.ReduceMotion;
 
         private void OnScreenChanged(ScreenId id)
         {

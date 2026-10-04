@@ -86,6 +86,10 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("m_LineType").enumValueIndex = (int)TMP_InputField.LineType.SingleLine;
             so.FindProperty("m_ContentType").enumValueIndex = (int)TMP_InputField.ContentType.Standard;
             so.FindProperty("m_RichText").boolValue = false;
+
+            // Typed in place, not in the keyboard's own box: only then does a phone draw the field's
+            // caret. The screen rises above the keyboard (ProfileView), so the field stays in sight.
+            so.FindProperty("m_HideMobileInput").boolValue = true;
             so.FindProperty("m_CaretColor").colorValue = new Color(text.color.r, text.color.g, text.color.b, 1f);
             so.FindProperty("m_CustomCaretColor").boolValue = true;
             so.FindProperty("m_CaretWidth").intValue = 2;
