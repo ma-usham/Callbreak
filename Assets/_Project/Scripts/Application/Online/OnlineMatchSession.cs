@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Callbreak.Application.Economy;
 using Callbreak.Application.Profile;
 using Callbreak.Application.Rooms;
 using Callbreak.Application.Sessions;
@@ -33,6 +34,7 @@ namespace Callbreak.Application.Online
         private readonly Action _left;
         private readonly IStatsService _stats;
         private readonly ISettingsService _settings;
+        private readonly IStakeLedger _stakes;
         private readonly SessionSeat[] _seats = new SessionSeat[SeatExtensions.Count];
         private readonly List<PendingIntent> _pending = new List<PendingIntent>();
         private readonly HandlerFaults _faults = new HandlerFaults();
@@ -56,6 +58,12 @@ namespace Callbreak.Application.Online
         /// backs alike, whatever deck anyone else at the table chose (ADR 031). Null or empty draws
         /// each seat in the deck its profile names.
         /// </param>
+        /// <param name="stakes">
+        /// Where a Stake Match settles (the owner, 5 Oct 2026): at the end this player's place is paid
+        /// its prize, leaving or not coming back in time loses the stake, and a match called off through
+        /// no fault of this player gives it back. Only a match whose stake was taken is touched (Quick
+        /// Match takes none); null settles nothing.
+        /// </param>
         public OnlineMatchSession(
             MatchMode mode,
             PlayerView initialView,
@@ -64,7 +72,8 @@ namespace Callbreak.Application.Online
             IStatsService stats,
             ISettingsService settings,
             Action left = null,
-            string deckThemeId = null)
+            string deckThemeId = null,
+            IStakeLedger stakes = null)
         {
             _left = left;
             _deck = string.IsNullOrEmpty(deckThemeId) ? null : deckThemeId;
@@ -73,6 +82,7 @@ namespace Callbreak.Application.Online
             _send = send ?? throw new ArgumentNullException(nameof(send));
             _stats = stats;
             _settings = settings;
+            _stakes = stakes;
             ApplyStatus(initialStatus, raise: false);
         }
 
@@ -224,6 +234,12 @@ namespace Callbreak.Application.Online
             if (_started && !_finished && View.Phase != Phase.Lobby)
             {
                 RecordAbandoned();
+            }
+
+            if (!_finished)
+            {
+                // Stake Match: whoever leaves loses the stake and wins nothing.
+                Forfeit();
             }
 
             _finished = true;
@@ -386,6 +402,8 @@ namespace Callbreak.Application.Online
         /// back within the seat hold (<see cref="RoomError.ConnectionLost"/>), the player is recorded
         /// as having left, a loss, exactly as Leave is (GDD §8 L660-668, L689-690: dropping out
         /// gains nothing). When the host leaves, the match is not recorded (GDD §27 failure modes).
+        /// A Stake Match's stake goes the same way: lost by a player not back in time, given back
+        /// when the match is called off with nobody to take it over.
         /// </summary>
         public void OnRoomClosed(RoomError reason) => OnRoomClosed(reason, countsAsLeft: true);
 
@@ -402,6 +420,7 @@ namespace Callbreak.Application.Online
                 return;
             }
 
+            bool unsettled = !_finished;
             if (reason == RoomError.ConnectionLost && !_finished && View.Phase != Phase.Lobby)
             {
                 _finished = true;
@@ -409,6 +428,11 @@ namespace Callbreak.Application.Online
                 {
                     RecordAbandoned();
                 }
+            }
+
+            if (unsettled)
+            {
+                SettleStakeOnClose(reason, countsAsLeft);
             }
 
             FailureReason = reason == RoomError.None ? RoomError.Unknown : reason;
@@ -494,6 +518,7 @@ namespace Callbreak.Application.Online
             }
 
             _finished = true;
+            PayPrize(standings);
             try
             {
                 for (int i = 0; i < standings.Count; i++)
@@ -528,6 +553,84 @@ namespace Callbreak.Application.Online
             try
             {
                 _stats.RecordMatch(View.MatchId, SeatExtensions.Count, View.Scores.TotalOf(LocalSeat), abandoned: true);
+            }
+            catch (Exception e)
+            {
+                _faults.Keep(e);
+            }
+        }
+
+        /// <summary>
+        /// A Stake Match ended: this player's place after Core's tie-breaks is paid its prize, once (a
+        /// shared place as that place, so two tied 1st both win the 1st prize). Bots are paid nothing.
+        /// </summary>
+        private void PayPrize(IReadOnlyList<Standing> standings)
+        {
+            if (_stakes == null)
+            {
+                return;
+            }
+
+            try
+            {
+                for (int i = 0; i < standings.Count; i++)
+                {
+                    if (standings[i].Seat == LocalSeat)
+                    {
+                        _stakes.PayPrize(View.MatchId, standings[i].Rank);
+                        return;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                // Coins that fail to move never keep the session from reaching its end.
+                _faults.Keep(e);
+            }
+        }
+
+        /// <summary>A Stake Match left, or not come back to in time: the stake is lost and nothing is paid.</summary>
+        private void Forfeit()
+        {
+            if (_stakes == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _stakes.Forfeit(View.MatchId);
+            }
+            catch (Exception e)
+            {
+                _faults.Keep(e);
+            }
+        }
+
+        /// <summary>
+        /// The room closed before the match settled here. A player whose connection went and who
+        /// wasn't back in time loses the stake. A match called off through no fault of this player
+        /// gives it back, as it records no loss either (ADR 032): the host left with nobody to take the
+        /// match over, or the hand-over gave up while this device was online. Any other close (removed,
+        /// replaced by the same player elsewhere) leaves the stake as it is.
+        /// </summary>
+        private void SettleStakeOnClose(RoomError reason, bool countsAsLeft)
+        {
+            if (_stakes == null)
+            {
+                return;
+            }
+
+            try
+            {
+                if (reason == RoomError.HostLeft || (reason == RoomError.ConnectionLost && !countsAsLeft))
+                {
+                    _stakes.CallOff(View.MatchId);
+                }
+                else if (reason == RoomError.ConnectionLost)
+                {
+                    _stakes.Forfeit(View.MatchId);
+                }
             }
             catch (Exception e)
             {

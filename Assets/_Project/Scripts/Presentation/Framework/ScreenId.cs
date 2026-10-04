@@ -22,5 +22,6 @@ namespace Callbreak.Presentation.Framework
         Shop = 15,
         Scorecard = 16,
         EarnCoins = 22,
+        PlayOnline = 23,
     }
 }

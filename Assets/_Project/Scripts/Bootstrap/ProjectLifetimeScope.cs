@@ -11,6 +11,7 @@ using Callbreak.Application.Rooms;
 using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
 using Callbreak.Core.Randomness;
+using Callbreak.Infrastructure.Ads;
 using Callbreak.Infrastructure.Audio;
 using Callbreak.Infrastructure.Localization;
 using Callbreak.Infrastructure.Persistence;
@@ -61,15 +62,19 @@ namespace Callbreak.Bootstrap
 
             // The shop and its coins (the owner, 4 Oct 2026): the wallet, the cosmetics the player owns
             // and has equipped (one object behind the deck choice and the shop), and the Earn Coins ads.
-            // No ad network is connected yet: a stand-in completes every ad.
             builder.Register<Wallet>(Lifetime.Singleton).As<IWallet>();
             builder.Register(resolver => new CosmeticsService(resolver.Resolve<ISaveStore>(), resolver.Resolve<IWallet>()), Lifetime.Singleton)
                 .As<ICosmeticsService>()
                 .As<ICosmeticsShop>();
-            builder.Register<StandInRewardedAds>(Lifetime.Singleton).As<IRewardedAds>();
+            RegisterRewardedAds(builder);
             builder.Register<IAdRewards>(
                 resolver => new AdRewards(resolver.Resolve<IRewardedAds>(), resolver.Resolve<IWallet>(), resolver.Resolve<ISaveStore>(), () => System.DateTime.UtcNow),
                 Lifetime.Singleton);
+
+            // Stake Match (the owner, 5 Oct 2026): the online match the player chose on Play Online
+            // (Quick Match until a stake is picked), and the stakes taken and prizes paid, by match.
+            builder.Register<OnlineMatchChoice>(Lifetime.Singleton).As<IOnlineMatchChoice>();
+            builder.Register<StakeLedger>(Lifetime.Singleton).As<IStakeLedger>();
 
             builder.Register<OfflineMatchStore>(Lifetime.Singleton).As<IOfflineMatchStore>();
             builder.Register<IRejoinStore>(resolver => new RejoinStore(resolver.Resolve<ISaveStore>(), () => System.DateTime.UtcNow, resolver.Resolve<IStatsService>()), Lifetime.Singleton);
@@ -127,14 +132,40 @@ namespace Callbreak.Bootstrap
         }
 
         /// <summary>
+        /// The Earn Coins ads (the owner, 5 Oct 2026; Docs/Setup/AdMob.md). On phones, Google AdMob:
+        /// Google's consent form, then rewarded ads, one kept loaded; development builds get Google's
+        /// test ads (<see cref="AdMobIds"/>). In the Editor, in the tests and on desktop, a stand-in
+        /// completes every ad.
+        /// </summary>
+        private static void RegisterRewardedAds(IContainerBuilder builder)
+        {
+#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
+            string adUnit = AdMobIds.RewardedAdUnit(UnityEngine.Application.platform == RuntimePlatform.IPhonePlayer, Debug.isDebugBuild);
+            builder.Register<IRewardedAds>(
+                _ => new PreloadedRewardedAds(new AdMobRewardedAdNetwork(adUnit), () => System.DateTime.UtcNow, Debug.Log),
+                Lifetime.Singleton);
+#else
+            builder.Register<StandInRewardedAds>(Lifetime.Singleton).As<IRewardedAds>();
+#endif
+        }
+
+        /// <summary>
         /// Online rooms (ADR 016). Epic Online Services, peer to peer, once its config holds the
         /// client credentials (Docs/Setup/EOS.md). EOS then starts here and runs until the app
         /// quits: the plugin's EOSManager object is its own and is never destroyed. Otherwise the
         /// PurrNet relay, for development, when the Boot scene sets one. Otherwise none. The log
-        /// says which, never with a credential.
+        /// says which, never with a credential. A scope above this one that brings a transport of its
+        /// own (the PlayMode tests' GameFixture) keeps all of this off: its transport serves, and EOS
+        /// never starts.
         /// </summary>
         private void RegisterRoomTransport(IContainerBuilder builder)
         {
+            if (builder.Exists(typeof(IRoomTransport), includeInterfaceTypes: true, findParentScopes: true))
+            {
+                Debug.Log("Online rooms: the enclosing scope's transport (EOS is not started).");
+                return;
+            }
+
             if (EosPlatform.IsConfigured() && EosPlatform.Start())
             {
                 // One EOS network: rooms by code, and the directory of Quick Match tables (ADR 029).
@@ -179,7 +210,8 @@ namespace Callbreak.Bootstrap
         /// <summary>
         /// Quick Match meets real players at tables in the directory when there is one (EOS) and the
         /// transport can reach them; otherwise every match is at a table of the device's own, with
-        /// bots (ADR 029).
+        /// bots (ADR 029). Stake Match is the same search among the chosen stake's tables, and takes
+        /// the stake from the wallet when its match begins.
         /// </summary>
         private static QuickMatchService CreateQuickMatch(IObjectResolver resolver)
         {
@@ -197,7 +229,9 @@ namespace Callbreak.Bootstrap
                 NextSeed,
                 transport: resolver.Resolve<IRoomTransport>() as IQuickMatchTransport,
                 directory: directory,
-                utcNow: () => System.DateTime.UtcNow);
+                utcNow: () => System.DateTime.UtcNow,
+                choice: resolver.Resolve<IOnlineMatchChoice>(),
+                stakes: resolver.Resolve<IStakeLedger>());
         }
 
         /// <summary>GDD §22: shuffle seeds come from the OS's secure random source.</summary>

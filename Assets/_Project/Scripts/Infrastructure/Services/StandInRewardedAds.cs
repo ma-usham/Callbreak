@@ -7,11 +7,11 @@ using UnityEngine;
 namespace Callbreak.Infrastructure.Services
 {
     /// <summary>
-    /// A STAND-IN for a rewarded-ad network, for development only: it shows no ad at all, and every
-    /// "ad" completes and earns its reward after <see cref="DelaySeconds"/>, so the Earn Coins page can
-    /// be played end to end. No ad network is connected yet: the owner chooses one, with its package
-    /// and account, later. Its adapter then replaces this one in ProjectLifetimeScope. The Editor and
-    /// development builds log each stand-in ad, so it is never taken for a real one.
+    /// A STAND-IN for a rewarded-ad network, for the Editor, the tests and desktop builds: it shows
+    /// no ad at all, and every "ad" completes and earns its reward after <see cref="DelaySeconds"/>,
+    /// so the Earn Coins page can be played end to end without one. Phones get Google AdMob instead
+    /// (ProjectLifetimeScope.RegisterRewardedAds; Docs/Setup/AdMob.md). The Editor and development
+    /// builds log each stand-in ad, so it is never taken for a real one.
     /// </summary>
     public sealed class StandInRewardedAds : IRewardedAds
     {

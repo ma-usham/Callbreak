@@ -31,7 +31,9 @@ namespace Callbreak.Networking.Eos
     /// <item>Quick Match tables (<see cref="IQuickTableDirectory"/>): lobbies of the same kind in a
     /// bucket of their own, so a private room never shows among them. Each lobby has the public
     /// attributes CODE, FREE (its free seats; 0 hides it from searches) and OPENED (when its host
-    /// opened it, UTC ms). A search finds tables with free seats, oldest first.</item>
+    /// opened it, UTC ms). A search finds tables with free seats, oldest first. Each Stake Match
+    /// stake has a bucket of its own besides (<see cref="ForStake"/>: "callbreak-quick:v7:s50"), so
+    /// players only ever find tables of the stake they chose.</item>
     /// <item>Packets: EOS P2P, reliable and ordered, on channel 0 of a socket named after the
     /// channel, with NAT traversal and Epic's relays as the fallback.</item>
     /// </list>
@@ -105,6 +107,9 @@ namespace Callbreak.Networking.Eos
 
         /// <summary>The bucket of Quick Match tables, apart from private rooms (and from other protocol versions).</summary>
         private static readonly string QuickBucket = "callbreak-quick:v" + Protocol.Version;
+
+        /// <summary>The tables of each Stake Match stake, in a bucket of their own (<see cref="ForStake"/>), made when first asked for.</summary>
+        private readonly Dictionary<int, StakeTables> _stakeTables = new Dictionary<int, StakeTables>();
 
         private readonly Func<string> _displayName;
         private readonly Stopwatch _clock = Stopwatch.StartNew();
@@ -325,7 +330,38 @@ namespace Callbreak.Networking.Eos
         /// nothing listed, as with <see cref="ListAsync"/>. Listing a table that is listed already
         /// only sets its free seats.
         /// </summary>
-        public Task<RoomError> ListQuickAsync(string roomCode, int freeSeats, long openedAtUnixMs, CancellationToken ct)
+        public Task<RoomError> ListQuickAsync(string roomCode, int freeSeats, long openedAtUnixMs, CancellationToken ct) =>
+            ListQuickIn(QuickBucket, roomCode, freeSeats, openedAtUnixMs, ct);
+
+        /// <summary>
+        /// The tables of one Stake Match stake: lobbies like Quick Match's, in a bucket of the stake's
+        /// own ("callbreak-quick:v7:s50"), so a search finds only tables of that stake. 0 is Quick
+        /// Match's own bucket: this directory. A table's free seats and its unlisting go by its code,
+        /// whichever bucket it was listed in.
+        /// </summary>
+        public IQuickTableDirectory ForStake(int stake)
+        {
+            if (stake < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(stake), stake, "A stake is 0 (none) or more.");
+            }
+
+            if (stake == 0)
+            {
+                return this;
+            }
+
+            if (!_stakeTables.TryGetValue(stake, out StakeTables tables))
+            {
+                tables = new StakeTables(this, QuickBucket + ":s" + stake.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                _stakeTables.Add(stake, tables);
+            }
+
+            return tables;
+        }
+
+        /// <summary>Lists this device's table in <paramref name="bucket"/>, as <see cref="ListQuickAsync"/> describes.</summary>
+        private Task<RoomError> ListQuickIn(string bucket, string roomCode, int freeSeats, long openedAtUnixMs, CancellationToken ct)
         {
             if (string.IsNullOrEmpty(roomCode))
             {
@@ -355,7 +391,7 @@ namespace Callbreak.Networking.Eos
                 _quickOpened[roomCode] = openedAt;
             }
 
-            listing = new Listing(roomCode, true) { Free = freeSeats, OpenedAtUnixMs = openedAt };
+            listing = new Listing(roomCode, true) { Free = freeSeats, OpenedAtUnixMs = openedAt, Bucket = bucket };
             _quickListings.Add(roomCode, listing);
             listing.Making = MakeListingAsync(listing, ct);
             return ListedAsync(listing, ct);
@@ -394,14 +430,17 @@ namespace Callbreak.Networking.Eos
         /// them while it is open (its <see cref="QuickTable.HostAddress"/> is <see cref="LocalAddress"/>).
         /// None with no tables is a normal answer.
         /// </summary>
-        public Task<QuickTableSearch> FindQuickTablesAsync(CancellationToken ct)
+        public Task<QuickTableSearch> FindQuickTablesAsync(CancellationToken ct) => FindQuickIn(QuickBucket, ct);
+
+        /// <summary>The open tables in <paramref name="bucket"/>, as <see cref="FindQuickTablesAsync"/> describes.</summary>
+        private Task<QuickTableSearch> FindQuickIn(string bucket, CancellationToken ct)
         {
             if (_disposed)
             {
                 return Task.FromResult(new QuickTableSearch(null, RoomError.Unknown));
             }
 
-            return Abandonable(FindQuickCoreAsync(ct), ct, new QuickTableSearch(null, RoomError.Unknown));
+            return Abandonable(FindQuickCoreAsync(bucket, ct), ct, new QuickTableSearch(null, RoomError.Unknown));
         }
 
         /// <summary>
@@ -1536,7 +1575,7 @@ namespace Callbreak.Networking.Eos
                     }
                 }
 
-                Made made = await Answer(CreateLobbyAsync(listing.Quick ? QuickBucket : Bucket), new Made(null, RoomError.Unknown));
+                Made made = await Answer(CreateLobbyAsync(listing.Quick ? listing.Bucket : Bucket), new Made(null, RoomError.Unknown));
                 if (made.Error != RoomError.None)
                 {
                     Forget(listing);
@@ -1815,9 +1854,10 @@ namespace Callbreak.Networking.Eos
         /// The Quick Match tables with free seats, oldest first. The search keeps FREE != 0, which for
         /// seat counts is FREE >= 1 and leaves no doubt about which side the SDK compares. It also asks
         /// for OPENED nearest to 0, so that the ten tables that come back are the ten oldest. They are
-        /// put in order here again, and anything without its attributes is skipped.
+        /// put in order here again, and anything without its attributes is skipped. Only
+        /// <paramref name="bucket"/> is searched: Quick Match's, or one stake's.
         /// </summary>
-        private async Task<QuickTableSearch> FindQuickCoreAsync(CancellationToken ct)
+        private async Task<QuickTableSearch> FindQuickCoreAsync(string bucket, CancellationToken ct)
         {
             try
             {
@@ -1843,7 +1883,7 @@ namespace Callbreak.Networking.Eos
 
                 try
                 {
-                    Result set = SetEqual(search, LobbyInterface.SEARCH_BUCKET_ID, QuickBucket);
+                    Result set = SetEqual(search, LobbyInterface.SEARCH_BUCKET_ID, bucket);
                     if (set == Result.Success)
                     {
                         set = SetParameter(search, FreeKey, new AttributeDataValue { AsInt64 = 0 }, ComparisonOp.Notequal);
@@ -2129,6 +2169,33 @@ namespace Callbreak.Networking.Eos
             return done.Task;
         }
 
+        /// <summary>
+        /// The tables of one Stake Match stake (<see cref="ForStake"/>): the network's own Quick Match
+        /// directory, listing and searching in the stake's bucket.
+        /// </summary>
+        private sealed class StakeTables : IQuickTableDirectory
+        {
+            private readonly EosPeerNetwork _network;
+            private readonly string _bucket;
+
+            public StakeTables(EosPeerNetwork network, string bucket)
+            {
+                _network = network;
+                _bucket = bucket;
+            }
+
+            public Task<RoomError> ListQuickAsync(string roomCode, int freeSeats, long openedAtUnixMs, CancellationToken ct) =>
+                _network.ListQuickIn(_bucket, roomCode, freeSeats, openedAtUnixMs, ct);
+
+            public void SetQuickFreeSeats(string roomCode, int freeSeats) => _network.SetQuickFreeSeats(roomCode, freeSeats);
+
+            public void UnlistQuick(string roomCode) => _network.UnlistQuick(roomCode);
+
+            public Task<QuickTableSearch> FindQuickTablesAsync(CancellationToken ct) => _network.FindQuickIn(_bucket, ct);
+
+            public IQuickTableDirectory ForStake(int stake) => _network.ForStake(stake);
+        }
+
         /// <summary>One room code this device lists (a private room or a Quick Match table), from the moment it was asked for.</summary>
         private sealed class Listing
         {
@@ -2142,6 +2209,9 @@ namespace Callbreak.Networking.Eos
 
             /// <summary>True for a Quick Match table, false for a private room.</summary>
             public bool Quick { get; }
+
+            /// <summary>The bucket a table's lobby is made in: Quick Match's, or one stake's (<see cref="ForStake"/>).</summary>
+            public string Bucket { get; set; }
 
             /// <summary>A table's free seats as the room logic last said.</summary>
             public int Free { get; set; }

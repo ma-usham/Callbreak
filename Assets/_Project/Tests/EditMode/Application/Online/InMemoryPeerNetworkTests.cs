@@ -332,6 +332,44 @@ namespace Callbreak.Tests.EditMode.Application.Online
             Assert.AreEqual(0, world.QuickTables);
         }
 
+        [Test]
+        public void QuickTables_OfEachStake_AreListedAndFoundApart()
+        {
+            var world = new InMemoryPeerNetwork();
+            InMemoryPeerNetwork.Device a = SignedIn(world);
+            InMemoryPeerNetwork.Device b = SignedIn(world);
+            InMemoryPeerNetwork.Device c = SignedIn(world);
+            a.ListQuickAsync("AAAAAA", 3, 1000, CancellationToken.None);
+            b.ForStake(50).ListQuickAsync("BBBBBB", 3, 1000, CancellationToken.None);
+            c.ForStake(100).ListQuickAsync("CCCCCC", 3, 1000, CancellationToken.None);
+            world.Pump();
+
+            Task<QuickTableSearch> quick = c.FindQuickTablesAsync(CancellationToken.None);
+            Task<QuickTableSearch> fifty = a.ForStake(50).FindQuickTablesAsync(CancellationToken.None);
+            Task<QuickTableSearch> hundred = b.ForStake(100).FindQuickTablesAsync(CancellationToken.None);
+            world.Pump();
+
+            Assert.AreEqual(1, quick.Result.Tables.Count);
+            Assert.AreEqual("AAAAAA", quick.Result.Tables[0].RoomCode, "Quick Match finds only Quick Match's tables");
+            Assert.AreEqual(1, fifty.Result.Tables.Count);
+            Assert.AreEqual("BBBBBB", fifty.Result.Tables[0].RoomCode, "a stake finds only its own");
+            Assert.AreEqual(1, hundred.Result.Tables.Count);
+            Assert.AreEqual("CCCCCC", hundred.Result.Tables[0].RoomCode);
+            Assert.AreEqual(50, world.QuickStakeOf("BBBBBB"));
+            Assert.AreSame(a, a.ForStake(0), "no stake is Quick Match's own directory");
+            Assert.AreSame(a.ForStake(50), a.ForStake(100).ForStake(50), "asked of any of them, the same directories");
+
+            // A table's free seats and its unlisting go by its code.
+            b.SetQuickFreeSeats("BBBBBB", 0);
+            c.ForStake(100).UnlistQuick("CCCCCC");
+            Task<QuickTableSearch> fiftyLater = a.ForStake(50).FindQuickTablesAsync(CancellationToken.None);
+            world.Pump();
+
+            Assert.AreEqual(0, fiftyLater.Result.Tables.Count, "full: hidden");
+            Assert.AreEqual(-1, world.QuickStakeOf("CCCCCC"), "unlisted");
+            Assert.AreEqual(2, world.QuickTables);
+        }
+
         private static InMemoryPeerNetwork.Device SignedIn(InMemoryPeerNetwork world)
         {
             InMemoryPeerNetwork.Device device = world.AddDevice();

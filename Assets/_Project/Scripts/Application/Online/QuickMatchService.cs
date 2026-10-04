@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Callbreak.Application.Cosmetics;
+using Callbreak.Application.Economy;
 using Callbreak.Application.Matchmaking;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
@@ -51,6 +52,12 @@ namespace Callbreak.Application.Online
     /// <item>Without a table directory (no peer-to-peer network, sign-in fails, or it cannot be
     /// reached) the device plays at a table of its own, filled with bots after a short delay: Quick
     /// Match as it was before (GDD §27 "Phase 1 fallback").</item>
+    /// <item>Stake Match (the owner, 5 Oct 2026) is the same search for the stake the player chose
+    /// (<see cref="IOnlineMatchChoice"/>), among tables of that stake alone
+    /// (<see cref="IQuickTableDirectory.ForStake"/>), so players only meet players of the same stake;
+    /// bots fill as in Quick Match. The stake is taken when the match begins on this device, once
+    /// (<see cref="IStakeLedger"/>); a search that ends without a match takes nothing. The match then
+    /// settles the stake: a prize by place at its end, nothing for a player who leaves.</item>
     /// </list>
     /// A table is the same room protocol as a private room (ADR 016), so it then runs exactly like an
     /// online one (turn clock, away handling, no pause).
@@ -75,6 +82,8 @@ namespace Callbreak.Application.Online
         private readonly IQuickMatchTransport _transport;
         private readonly IQuickTableDirectory _directory;
         private readonly Func<DateTime> _utcNow;
+        private readonly IOnlineMatchChoice _choice;
+        private readonly IStakeLedger _stakes;
         private readonly IRandom _jitter;
         private readonly string _fallbackPlayerId;
         private readonly HandlerFaults _faults = new HandlerFaults();
@@ -86,6 +95,9 @@ namespace Callbreak.Application.Online
         private string _code;
         private string _hostAddress;
         private bool _listed;
+
+        /// <summary>The directory this device's table is listed in: Quick Match's, or its stake's.</summary>
+        private IQuickTableDirectory _listedIn;
         private int _listedFree = -1;
         private Search _search;
         private HandOver _handOver;
@@ -96,6 +108,8 @@ namespace Callbreak.Application.Online
         /// <param name="transport">Rooms over the peer-to-peer network; null plays every match at a table of this device's own.</param>
         /// <param name="directory">The Quick Match table directory; null, as for <paramref name="transport"/>.</param>
         /// <param name="utcNow">The wall clock the directory dates tables by; null uses the system's.</param>
+        /// <param name="choice">Quick Match or the Stake Match stake the player chose; null always searches for Quick Match.</param>
+        /// <param name="stakes">Where a Stake Match's stake is taken and its prize paid; null moves no coins.</param>
         public QuickMatchService(
             QuickMatchConfig config,
             IProfileService profile,
@@ -110,7 +124,9 @@ namespace Callbreak.Application.Online
             BotTiming timing = null,
             IQuickMatchTransport transport = null,
             IQuickTableDirectory directory = null,
-            Func<DateTime> utcNow = null)
+            Func<DateTime> utcNow = null,
+            IOnlineMatchChoice choice = null,
+            IStakeLedger stakes = null)
         {
             _config = config ?? new QuickMatchConfig();
             _profile = profile;
@@ -126,6 +142,8 @@ namespace Callbreak.Application.Online
             _transport = transport;
             _directory = directory;
             _utcNow = utcNow ?? (() => DateTime.UtcNow);
+            _choice = choice;
+            _stakes = stakes;
             _jitter = new Pcg32Random(_seedSource());
             _fallbackPlayerId = "guest-" + _seedSource().ToString("x16");
             if (_transport != null)
@@ -198,7 +216,10 @@ namespace Callbreak.Application.Online
             }
 
             Close();
-            var search = new Search(progress, _now, UnixMs());
+
+            // The stake is the one chosen as the search begins: it keeps its tables to the end.
+            int stake = _choice != null ? _choice.Stake : StakeRules.None;
+            var search = new Search(progress, _now, UnixMs(), stake, TablesFor(stake));
             _search = search;
             if (ct.CanBeCanceled)
             {
@@ -217,7 +238,7 @@ namespace Callbreak.Application.Online
                 }
             }
 
-            if (_transport == null || _directory == null)
+            if (_transport == null || search.Tables == null)
             {
                 StartLocal(search);
             }
@@ -441,7 +462,7 @@ namespace Callbreak.Application.Online
             }
 
             search.Stage = Stage.Searching;
-            search.Find = Call(() => _directory.FindQuickTablesAsync(search.Abort.Token));
+            search.Find = Call(() => search.Tables.FindQuickTablesAsync(search.Abort.Token));
         }
 
         private void AdvanceSearch(Search search, double now)
@@ -583,7 +604,7 @@ namespace Callbreak.Application.Online
                 // Connected: the host has as long again to answer the hello.
                 search.AttemptDeadline = now + _config.JoinTimeoutSeconds;
                 search.JoinLink = linked.Link;
-                search.Joiner = new RoomClient(linked.Link, Hello(search.Target.RoomCode), null, MatchMode.QuickMatch, _stats, _settings);
+                search.Joiner = new RoomClient(linked.Link, Hello(search.Target.RoomCode), null, MatchMode.QuickMatch, _stats, _settings, _stakes);
                 search.Joiner.Tick(now);
                 search.Hello = search.Joiner.JoinAsync(search.AttemptAbort.Token);
             }
@@ -687,7 +708,7 @@ namespace Callbreak.Application.Online
                 code, settings, link, _bots, _names, new Pcg32Random(_seedSource()), _cosmetics.DeckIds, _seedSource, _timing, clocks: _config.Clocks, quickTable: true,
                 heartbeatSeconds: _config.HeartbeatSeconds);
             host.Tick(now);
-            var client = new RoomClient(host.Local, Hello(code), host, MatchMode.QuickMatch, _stats, _settings);
+            var client = new RoomClient(host.Local, Hello(code), host, MatchMode.QuickMatch, _stats, _settings, _stakes);
             client.Tick(now);
             Task<RoomError> joined = client.JoinAsync(CancellationToken.None);
             if (!joined.IsCompleted || joined.Result != RoomError.None)
@@ -718,9 +739,11 @@ namespace Callbreak.Application.Online
             string code = _code;
             long openedAt = search.TapUnixMs;
             CancellationToken token = search.TableAbort.Token;
+            IQuickTableDirectory tables = search.Tables;
             _listed = true;
+            _listedIn = tables;
             _listedFree = free;
-            search.Listing = Call(() => _directory.ListQuickAsync(code, free, openedAt, token));
+            search.Listing = Call(() => tables.ListQuickAsync(code, free, openedAt, token));
         }
 
         private void AdvanceHosting(Search search, double now)
@@ -799,7 +822,7 @@ namespace Callbreak.Application.Online
             _listedFree = free;
             try
             {
-                _directory.SetQuickFreeSeats(_code, free);
+                _listedIn.SetQuickFreeSeats(_code, free);
             }
             catch (Exception e)
             {
@@ -825,7 +848,7 @@ namespace Callbreak.Application.Online
                 if (now >= search.NextSearchAt)
                 {
                     CancellationToken token = search.TableAbort.Token;
-                    search.MergeFind = Call(() => _directory.FindQuickTablesAsync(token));
+                    search.MergeFind = Call(() => search.Tables.FindQuickTablesAsync(token));
                 }
 
                 return;
@@ -903,7 +926,7 @@ namespace Callbreak.Application.Online
             _host = new RoomHost(
                 string.Empty, settings, null, _bots, _names, rng, _cosmetics.DeckIds, _seedSource, _timing, clocks: _config.Clocks);
             _host.Tick(_now);
-            _client = new RoomClient(_host.Local, Hello(string.Empty), _host, MatchMode.QuickMatch, _stats, _settings);
+            _client = new RoomClient(_host.Local, Hello(string.Empty), _host, MatchMode.QuickMatch, _stats, _settings, _stakes);
             _client.Tick(_now);
             Task<RoomError> joined = _client.JoinAsync(CancellationToken.None);
             if (!joined.IsCompleted || joined.Result != RoomError.None)
@@ -1018,8 +1041,47 @@ namespace Callbreak.Application.Online
                 // GDD: cancelling withdraws the ticket; nothing is left running.
                 Close();
             }
+            else
+            {
+                TakeStake(search);
+            }
 
             search.Completion.TrySetResult(new MatchmakingResult(result));
+        }
+
+        /// <summary>
+        /// A Stake Match's match has begun on this device: its stake is taken now, once per match,
+        /// before the table opens. A wallet that no longer covers it (coins spent during the search)
+        /// stakes nothing: the player plays the match and wins nothing. Bots pay nothing.
+        /// </summary>
+        private void TakeStake(Search search)
+        {
+            IMatchSession match = _client != null ? _client.Match : null;
+            if (search.Stake == StakeRules.None || _stakes == null || match == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _stakes.TakeStake(match.View.MatchId, search.Stake);
+            }
+            catch (Exception e)
+            {
+                // The match goes ahead all the same; the screen's handler or the save is at fault.
+                _faults.Keep(e);
+            }
+        }
+
+        /// <summary>The directory a search for <paramref name="stake"/> looks in: Quick Match's, or that stake's own; null without one.</summary>
+        private IQuickTableDirectory TablesFor(int stake)
+        {
+            if (_directory == null || stake == StakeRules.None)
+            {
+                return _directory;
+            }
+
+            return _directory.ForStake(stake);
         }
 
         /// <summary>
@@ -1095,7 +1157,7 @@ namespace Callbreak.Application.Online
             {
                 try
                 {
-                    _directory.UnlistQuick(_code);
+                    _listedIn.UnlistQuick(_code);
                 }
                 catch (Exception e)
                 {
@@ -1104,6 +1166,7 @@ namespace Callbreak.Application.Online
             }
 
             _listed = false;
+            _listedIn = null;
             _listedFree = -1;
         }
 
@@ -1330,15 +1393,23 @@ namespace Callbreak.Application.Online
 
         private sealed class Search
         {
-            public Search(IProgress<MatchmakingProgress> progress, double startedAt, long tapUnixMs)
+            public Search(IProgress<MatchmakingProgress> progress, double startedAt, long tapUnixMs, int stake, IQuickTableDirectory tables)
             {
                 Progress = progress;
                 StartedAt = startedAt;
                 ReportedAt = startedAt;
                 TapUnixMs = tapUnixMs;
+                Stake = stake;
+                Tables = tables;
             }
 
             public IProgress<MatchmakingProgress> Progress { get; }
+
+            /// <summary>The Stake Match stake searched for; <see cref="StakeRules.None"/> for Quick Match.</summary>
+            public int Stake { get; }
+
+            /// <summary>Where the search finds and lists tables: the directory of its stake alone; null without a directory.</summary>
+            public IQuickTableDirectory Tables { get; }
 
             public TaskCompletionSource<MatchmakingResult> Completion { get; } = new TaskCompletionSource<MatchmakingResult>();
 

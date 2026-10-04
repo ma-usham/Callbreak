@@ -87,7 +87,7 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(1f, BackArrow(screen).color.a, 0.001f);
             Assert.IsTrue(router.Back());
             yield return null;
-            Assert.AreEqual(ScreenId.MainMenu, router.Current, "Android back leaves the search again");
+            Assert.AreEqual(ScreenId.PlayOnline, router.Current, "Android back leaves the search again, for Play Online where it began");
             Assert.IsTrue(_search.Cancelled, "and withdraws it");
         }
 
@@ -142,6 +142,7 @@ namespace Callbreak.Tests.PlayMode
                 builder.RegisterInstance<IMatchmakingService>(_search);
             });
             GameFixture.Press(_game.MenuRouter, "PlayOnlineButton");
+            GameFixture.Press(_game.MenuRouter, "PlayQuickButton");
             yield return GameFixture.Until(() => _search.Progress != null, "the search to start");
         }
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.IO;
 using Callbreak.Application.Flow;
+using Callbreak.Application.Online;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
 using Callbreak.Application.Settings;
@@ -20,7 +21,8 @@ namespace Callbreak.Tests.PlayMode
     /// <summary>
     /// Runs the real game for a test: loads the Boot scene with its saves redirected to an empty
     /// temporary folder (so a run never touches the player's files), waits for the menu, and tears
-    /// everything down again afterwards.
+    /// everything down again afterwards. Online play stays off the internet unless a test asks for it
+    /// (<see cref="Boot"/>): no test starts Epic Online Services or signs in to Epic's servers.
     /// </summary>
     public sealed class GameFixture
     {
@@ -29,6 +31,12 @@ namespace Callbreak.Tests.PlayMode
         private const string BootScene = "Boot";
 
         private string _saveFolder;
+
+        /// <summary>
+        /// The scope above the game's that brings the online rooms' transport, one that never connects;
+        /// null when the test plays online for real.
+        /// </summary>
+        private LifetimeScope _online;
 
         public ProjectLifetimeScope Project { get; private set; }
 
@@ -56,7 +64,13 @@ namespace Callbreak.Tests.PlayMode
         /// <param name="freshInstall">False (the default) starts as a player who has already seen the rules primer and answered the name question (still called "Player").</param>
         /// <param name="seed">Writes further save files before the game starts.</param>
         /// <param name="extra">Extra registrations for the project scope (they win over the game's own).</param>
-        public IEnumerator Boot(bool freshInstall = false, Action<ISaveStore> seed = null, Action<IContainerBuilder> extra = null)
+        /// <param name="liveOnline">
+        /// True plays online as the game does: over Epic Online Services when its config is set up, so
+        /// the SDK starts and this machine signs in to Epic's servers. False (the default) leaves EOS
+        /// off: a scope above the game's brings a room transport that never connects, so rooms answer
+        /// "Couldn't connect" and Quick Match plays at a table of the device's own, with bots.
+        /// </param>
+        public IEnumerator Boot(bool freshInstall = false, Action<ISaveStore> seed = null, Action<IContainerBuilder> extra = null, bool liveOnline = false)
         {
             _saveFolder = Path.Combine(UnityEngine.Application.temporaryCachePath, "callbreak-playmode-" + Guid.NewGuid().ToString("N"));
             var saves = new JsonSaveStore(_saveFolder);
@@ -67,16 +81,34 @@ namespace Callbreak.Tests.PlayMode
             }
 
             seed?.Invoke(saves);
-            using (LifetimeScope.Enqueue(builder =>
+
+            // Built before the extra registrations are queued: they would go into this scope too.
+            if (!liveOnline)
             {
-                // A type of its own: the container refuses a second registration of the game's own store type.
-                builder.RegisterInstance<ISaveStore>(new TemporarySaves(saves));
-                extra?.Invoke(builder);
-            }))
+                _online = LifetimeScope.Create(builder => builder.RegisterInstance<IRoomTransport>(new NoRoomTransport()), "PlayModeTestOnline");
+                UnityEngine.Object.DontDestroyOnLoad(_online.gameObject);
+            }
+
+            // The project scope takes the online scope as its parent, finds a transport there and
+            // leaves EOS off (ProjectLifetimeScope.RegisterRoomTransport).
+            IDisposable parent = _online != null ? LifetimeScope.EnqueueParent(_online) : (IDisposable)null;
+            try
             {
-                // The project scope builds in Awake, inside this load; the later scenes load without the overrides.
-                yield return SceneManager.LoadSceneAsync(BootScene, LoadSceneMode.Single);
-                Project = UnityEngine.Object.FindFirstObjectByType<ProjectLifetimeScope>();
+                using (LifetimeScope.Enqueue(builder =>
+                {
+                    // A type of its own: the container refuses a second registration of the game's own store type.
+                    builder.RegisterInstance<ISaveStore>(new TemporarySaves(saves));
+                    extra?.Invoke(builder);
+                }))
+                {
+                    // The project scope builds in Awake, inside this load; the later scenes load without the overrides.
+                    yield return SceneManager.LoadSceneAsync(BootScene, LoadSceneMode.Single);
+                    Project = UnityEngine.Object.FindFirstObjectByType<ProjectLifetimeScope>();
+                }
+            }
+            finally
+            {
+                parent?.Dispose();
             }
 
             Assert.IsNotNull(Project, "the Boot scene has the project scope");
@@ -186,6 +218,14 @@ namespace Callbreak.Tests.PlayMode
             {
                 UnityEngine.Object.Destroy(Project.gameObject);
                 Project = null;
+                yield return null;
+            }
+
+            // After the project scope, its parent.
+            if (_online != null)
+            {
+                UnityEngine.Object.Destroy(_online.gameObject);
+                _online = null;
                 yield return null;
             }
 

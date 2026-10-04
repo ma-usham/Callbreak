@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Callbreak.Application.Economy;
 using Callbreak.Application.Profile;
 using Callbreak.Application.Rooms;
 using Callbreak.Application.Sessions;
@@ -32,6 +33,7 @@ namespace Callbreak.Application.Online
         private readonly MatchMode _mode;
         private readonly IStatsService _stats;
         private readonly ISettingsService _settings;
+        private readonly IStakeLedger _stakes;
         private readonly RoomSeat[] _seats = new RoomSeat[RoomSnapshot.SeatCount];
         private readonly HandlerFaults _faults = new HandlerFaults();
 
@@ -48,13 +50,15 @@ namespace Callbreak.Application.Online
         private bool _closed;
 
         /// <param name="host">The room's authority when this member is its host; null for a guest.</param>
-        public RoomClient(IClientLink link, HelloMessage identity, RoomHost host, MatchMode mode, IStatsService stats, ISettingsService settings)
+        /// <param name="stakes">Where the room's matches settle a Stake Match's coins (<see cref="OnlineMatchSession"/>); null settles none.</param>
+        public RoomClient(IClientLink link, HelloMessage identity, RoomHost host, MatchMode mode, IStatsService stats, ISettingsService settings, IStakeLedger stakes = null)
         {
             _identity = identity ?? throw new ArgumentNullException(nameof(identity));
             _host = host;
             _mode = mode;
             _stats = stats;
             _settings = settings;
+            _stakes = stakes;
             for (int i = 0; i < _seats.Length; i++)
             {
                 _seats[i] = EmptySeat(i);
@@ -584,7 +588,7 @@ namespace Callbreak.Application.Online
             }
 
             // ADR 031: this player sees every card in the deck it chose, the one its hello named.
-            _match = new OnlineMatchSession(_mode, view, status, Send, _stats, _settings, OnMatchLeft, _identity.DeckThemeId);
+            _match = new OnlineMatchSession(_mode, view, status, Send, _stats, _settings, OnMatchLeft, _identity.DeckThemeId, _stakes);
             _match.Tick(_now);
             _faults.Raise(MatchStarting);
         }

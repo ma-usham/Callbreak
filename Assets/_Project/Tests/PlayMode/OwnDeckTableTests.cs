@@ -201,6 +201,7 @@ namespace Callbreak.Tests.PlayMode
             _search.Match = _session;
 
             GameFixture.Press(_game.MenuRouter, "PlayOnlineButton");
+            GameFixture.Press(_game.MenuRouter, "PlayQuickButton");
             yield return _game.UntilTable();
             yield return GameFixture.Until(() => _sent > 0, "the table to tell the host it is ready");
             _session.OnSync(new TableUpdate(++_seq, null, view, Status(_local, TableStatus.NoClock)));

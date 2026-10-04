@@ -61,6 +61,23 @@ const netfxShims = walk(path.join(unityData, 'NetStandard', 'compat', '2.1.0', '
 const netstandard = path.join(unityData, 'NetStandard', 'ref', '2.1.0', 'netstandard.dll');
 const nunit = walk(path.join(repo, 'Library', 'PackageCache'), p => /com\.unity\.ext\.nunit@[^\\/]+[\\/].*nunit\.framework\.dll$/i.test(p))[0];
 
+// Precompiled DLLs an assembly names in precompiledReferences (with overrideReferences, as Unity
+// resolves them: by file name, anywhere in the packages or Assets). Indexed on first use only.
+let precompiled = null;
+function findPrecompiled(name) {
+  if (!precompiled) {
+    precompiled = new Map();
+    for (const root of [path.join(repo, 'Library', 'PackageCache'), path.join(repo, 'Packages'), path.join(repo, 'Assets')]) {
+      if (!fs.existsSync(root)) continue;
+      for (const dll of walk(root, p => p.toLowerCase().endsWith('.dll'))) {
+        const key = path.basename(dll).toLowerCase();
+        if (!precompiled.has(key)) precompiled.set(key, dll);
+      }
+    }
+  }
+  return precompiled.get(name.toLowerCase());
+}
+
 const order = [];
 const seen = new Set();
 function visit(a) {
@@ -90,7 +107,14 @@ for (const a of order) {
     else if (!quiet) console.log(`note: ${a.name}: reference ${r} not built yet by Unity; skipped`);
   }
   for (const p of a.json.precompiledReferences || []) {
-    if (/nunit/i.test(p) && nunit) { refs.push(nunit); refs.push(...netfxShims); }
+    if (/nunit/i.test(p)) {
+      if (nunit) { refs.push(nunit); refs.push(...netfxShims); }
+      continue;
+    }
+    // Other plugin DLLs (e.g. Google Mobile Ads) are .NET Framework builds: they need the netfx shims too.
+    const dll = findPrecompiled(p);
+    if (dll) { refs.push(dll); for (const shim of netfxShims) if (!refs.includes(shim)) refs.push(shim); }
+    else if (!quiet) console.log(`note: ${a.name}: precompiled reference ${p} not found; skipped`);
   }
   // Unity adds these to every assembly that has engine references.
   if (!a.json.noEngineReferences) {

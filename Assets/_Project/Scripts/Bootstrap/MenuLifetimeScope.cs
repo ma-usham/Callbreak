@@ -55,6 +55,7 @@ namespace Callbreak.Bootstrap
             RegisterPresenter<ProfileView, ProfilePresenter>(builder);
             RegisterPresenter<ShopView, ShopPresenter>(builder);
             RegisterPresenter<EarnCoinsView, EarnCoinsPresenter>(builder);
+            RegisterPresenter<PlayOnlineView, PlayOnlinePresenter>(builder);
 
             // Last, so every presenter is already listening when the first screen opens.
             builder.RegisterEntryPoint<MenuEntryPoint>();

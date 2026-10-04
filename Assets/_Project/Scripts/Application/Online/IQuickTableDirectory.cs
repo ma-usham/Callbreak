@@ -8,7 +8,8 @@ namespace Callbreak.Application.Online
     /// <summary>
     /// The directory of Quick Match tables (ADR 029): a device that opens a table lists it with
     /// the seats it still has free, and a device looking for a game finds the open tables, oldest
-    /// first. Kept apart from private rooms, which are only ever found by their exact code.
+    /// first. Kept apart from private rooms, which are only ever found by their exact code, and,
+    /// stake by stake, from Stake Match tables (<see cref="ForStake"/>).
     /// Implemented over EOS lobbies in Callbreak.Networking, and in memory for tests.
     /// </summary>
     public interface IQuickTableDirectory
@@ -33,6 +34,15 @@ namespace Callbreak.Application.Online
 
         /// <summary>The open tables with at least one free seat, oldest first (a handful at most).</summary>
         Task<QuickTableSearch> FindQuickTablesAsync(CancellationToken ct);
+
+        /// <summary>
+        /// The same directory for the tables of one Stake Match stake (the owner, 5 Oct 2026): each
+        /// stake lists and finds its tables apart from every other stake's and from Quick Match's, so a
+        /// player only ever meets players who chose the same stake. 0 (no stake) is Quick Match's own:
+        /// this directory's tables. A table's free seats and its unlisting go by its code, whichever
+        /// stake it was listed for. Asked of any of them, it gives the same directories.
+        /// </summary>
+        IQuickTableDirectory ForStake(int stake);
     }
 
     /// <summary>One open Quick Match table as the directory lists it.</summary>

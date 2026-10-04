@@ -36,7 +36,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
     /// that date when it is listed again after a loss; it shows in searches after <see cref="ListingDelaySeconds"/>
     /// like any listing, only with a seat free, oldest first; a change of its free seats shows after
     /// <see cref="FreeSeatsDelaySeconds"/>; its device's own table is among them; and a table taken
-    /// down while its listing was still on its way is never listed.
+    /// down while its listing was still on its way is never listed. Each Stake Match stake lists and
+    /// finds its tables apart (<see cref="IQuickTableDirectory.ForStake"/>), as the adapter's buckets do.
     /// </para>
     /// </summary>
     public sealed class InMemoryPeerNetwork
@@ -166,6 +167,20 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
         /// <summary>The Quick Match tables in the directory, shown in searches yet or not, open or full.</summary>
         public int QuickTables => _quick.Count;
+
+        /// <summary>The stake whose bucket the table <paramref name="roomCode"/> is listed in (0: Quick Match's); -1 when nobody lists it.</summary>
+        public int QuickStakeOf(string roomCode)
+        {
+            foreach (QuickListing listing in _quick.Values)
+            {
+                if (listing.Code == roomCode)
+                {
+                    return listing.Stake;
+                }
+            }
+
+            return -1;
+        }
 
         /// <summary>The address that lists <paramref name="roomCode"/> at its latest generation, shown in lookups yet or not; null when nobody does.</summary>
         public string ListedBy(string roomCode)
@@ -359,7 +374,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
         private static string QuickKey(Device device, string roomCode) => device.Address + "\n" + roomCode;
 
-        private RoomError ListQuick(Device device, string roomCode, int freeSeats, long openedAtUnixMs)
+        private RoomError ListQuick(Device device, string roomCode, int freeSeats, long openedAtUnixMs, int stake)
         {
             if (!device.IsSignedIn)
             {
@@ -379,7 +394,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 return RoomError.None;
             }
 
-            _quick[key] = new QuickListing(device.Address, roomCode, freeSeats, openedAtUnixMs, Now + ListingDelaySeconds);
+            _quick[key] = new QuickListing(device.Address, roomCode, freeSeats, openedAtUnixMs, Now + ListingDelaySeconds, stake);
             return RoomError.None;
         }
 
@@ -406,7 +421,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
             return null;
         }
 
-        private QuickTableSearch FindQuick(Device device)
+        private QuickTableSearch FindQuick(Device device, int stake)
         {
             if (!device.IsSignedIn)
             {
@@ -421,7 +436,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
             var shown = new List<QuickListing>();
             foreach (QuickListing listing in _quick.Values)
             {
-                if (listing.FreeAt(Now) > 0 && Now >= listing.ShownAt)
+                if (listing.Stake == stake && listing.FreeAt(Now) > 0 && Now >= listing.ShownAt)
                 {
                     shown.Add(listing);
                 }
@@ -700,6 +715,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
         {
             private readonly Dictionary<string, int> _quickTakenDown = new Dictionary<string, int>();
             private readonly Dictionary<string, long> _quickOpened = new Dictionary<string, long>();
+            private readonly Dictionary<int, StakeTables> _stakeTables = new Dictionary<int, StakeTables>();
 
             private readonly InMemoryPeerNetwork _network;
             private readonly Queue<(string Address, string Channel, byte[] Packet)> _inbox = new Queue<(string Address, string Channel, byte[] Packet)>();
@@ -797,7 +813,32 @@ namespace Callbreak.Tests.EditMode.Application.Online
             public void Unlist(string roomCode) => _network.Unlist(this, roomCode);
 
             /// <summary>Dated by <paramref name="openedAtUnixMs"/> (its host's tap) the first time its code is listed, as the adapter's are.</summary>
-            public Task<RoomError> ListQuickAsync(string roomCode, int freeSeats, long openedAtUnixMs, CancellationToken ct)
+            public Task<RoomError> ListQuickAsync(string roomCode, int freeSeats, long openedAtUnixMs, CancellationToken ct) =>
+                ListQuickIn(0, roomCode, freeSeats, openedAtUnixMs, ct);
+
+            /// <summary>The tables of one Stake Match stake, listed and found apart from every other stake's; 0 is Quick Match's own, this device.</summary>
+            public IQuickTableDirectory ForStake(int stake)
+            {
+                if (stake < 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(stake));
+                }
+
+                if (stake == 0)
+                {
+                    return this;
+                }
+
+                if (!_stakeTables.TryGetValue(stake, out StakeTables tables))
+                {
+                    tables = new StakeTables(this, stake);
+                    _stakeTables[stake] = tables;
+                }
+
+                return tables;
+            }
+
+            private Task<RoomError> ListQuickIn(int stake, string roomCode, int freeSeats, long openedAtUnixMs, CancellationToken ct)
             {
                 if (string.IsNullOrEmpty(roomCode))
                 {
@@ -826,7 +867,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
                     }
 
                     // Taken down while the listing was on its way: it never shows.
-                    answer.TrySetResult(TakenDown(roomCode) != takenDown ? RoomError.Unknown : _network.ListQuick(this, roomCode, freeSeats, openedAt));
+                    answer.TrySetResult(TakenDown(roomCode) != takenDown ? RoomError.Unknown : _network.ListQuick(this, roomCode, freeSeats, openedAt, stake));
                 });
                 return answer.Task;
             }
@@ -857,7 +898,9 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 _network.UnlistQuick(this, roomCode);
             }
 
-            public Task<QuickTableSearch> FindQuickTablesAsync(CancellationToken ct)
+            public Task<QuickTableSearch> FindQuickTablesAsync(CancellationToken ct) => FindQuickIn(0, ct);
+
+            private Task<QuickTableSearch> FindQuickIn(int stake, CancellationToken ct)
             {
                 QuickSearches++;
                 var answer = Pending(ct, new QuickTableSearch(null, RoomError.Unknown));
@@ -865,7 +908,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 {
                     if (!answer.Task.IsCompleted && !IsUnplugged)
                     {
-                        answer.TrySetResult(_network.FindQuick(this));
+                        answer.TrySetResult(_network.FindQuick(this, stake));
                     }
                 });
                 return answer.Task;
@@ -975,6 +1018,30 @@ namespace Callbreak.Tests.EditMode.Application.Online
                     throw new InvalidOperationException("The device is not signed in.");
                 }
             }
+
+            /// <summary>The device's directory for the tables of one stake (<see cref="ForStake"/>).</summary>
+            private sealed class StakeTables : IQuickTableDirectory
+            {
+                private readonly Device _device;
+                private readonly int _stake;
+
+                public StakeTables(Device device, int stake)
+                {
+                    _device = device;
+                    _stake = stake;
+                }
+
+                public Task<RoomError> ListQuickAsync(string roomCode, int freeSeats, long openedAtUnixMs, CancellationToken ct) =>
+                    _device.ListQuickIn(_stake, roomCode, freeSeats, openedAtUnixMs, ct);
+
+                public void SetQuickFreeSeats(string roomCode, int freeSeats) => _device.SetQuickFreeSeats(roomCode, freeSeats);
+
+                public void UnlistQuick(string roomCode) => _device.UnlistQuick(roomCode);
+
+                public Task<QuickTableSearch> FindQuickTablesAsync(CancellationToken ct) => _device.FindQuickIn(_stake, ct);
+
+                public IQuickTableDirectory ForStake(int stake) => _device.ForStake(stake);
+            }
         }
 
         /// <summary>A device's listing of a room code, at a generation (ADR 030), shown in lookups from <see cref="ShownAt"/>.</summary>
@@ -1003,7 +1070,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
             private int _shownFree;
             private double _freeShowsAt;
 
-            public QuickListing(string address, string code, int free, long openedAtUnixMs, double shownAt)
+            public QuickListing(string address, string code, int free, long openedAtUnixMs, double shownAt, int stake)
             {
                 Address = address;
                 Code = code;
@@ -1011,11 +1078,15 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 _shownFree = free;
                 OpenedAtUnixMs = openedAtUnixMs;
                 ShownAt = shownAt;
+                Stake = stake;
             }
 
             public string Address { get; }
 
             public string Code { get; }
+
+            /// <summary>The stake whose bucket the table is listed in; 0 for Quick Match's.</summary>
+            public int Stake { get; }
 
             /// <summary>The free seats searches find at <paramref name="now"/>: the latest number once it shows, the one before until then.</summary>
             public int FreeAt(double now) => now >= _freeShowsAt ? _free : _shownFree;

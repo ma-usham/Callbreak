@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 namespace Callbreak.Application.Economy
 {
     /// <summary>
-    /// A rewarded video ad (port). A real ad network is not connected yet (the owner decides which,
-    /// and its package and account); until then a stand-in completes every ad.
+    /// A rewarded video ad (port). On phones it is Google AdMob (<see cref="PreloadedRewardedAds"/>
+    /// over the AdMob adapter); in the Editor, in the tests and on desktop a stand-in completes
+    /// every ad.
     /// </summary>
     public interface IRewardedAds
     {

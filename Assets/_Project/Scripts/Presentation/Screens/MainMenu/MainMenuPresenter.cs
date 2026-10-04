@@ -209,6 +209,7 @@ namespace Callbreak.Presentation.Screens
             _launcher.Enter(ScreenId.OfflineSetup);
         }
 
+        /// <summary>The Play Online screen first: Quick Match or Stake Match (mockups 23 and 24).</summary>
         private void OnPlayOnline()
         {
             if (!RequireOnline())
@@ -216,7 +217,7 @@ namespace Callbreak.Presentation.Screens
                 return;
             }
 
-            _launcher.Enter(ScreenId.Matchmaking);
+            _launcher.Enter(_router.Has(ScreenId.PlayOnline) ? ScreenId.PlayOnline : ScreenId.Matchmaking);
         }
 
         private void OnPlayWithFriends()

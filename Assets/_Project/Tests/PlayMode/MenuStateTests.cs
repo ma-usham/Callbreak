@@ -118,6 +118,7 @@ namespace Callbreak.Tests.PlayMode
             ScreenRouter router = _game.MenuRouter;
 
             GameFixture.Press(router, "PlayOnlineButton");
+            GameFixture.Press(router, "PlayQuickButton");
             yield return GameFixture.Until(() => _game.Dialogs.IsOpen, "the search to fail and say so");
             Assert.AreEqual(ScreenId.Matchmaking, router.Current, "GDD 11 screen 05: the failure is answered on this screen");
             Assert.AreEqual(1, matchmaking.Searches);
@@ -129,12 +130,12 @@ namespace Callbreak.Tests.PlayMode
             _game.PressDialog(confirm: false);
             yield return null;
             Assert.AreEqual(ScreenId.OfflineSetup, router.Current, "\"Play Offline\" opens the offline setup");
-            Assert.AreEqual(2, router.Depth, "in the search screen's place");
+            Assert.AreEqual(3, router.Depth, "in the search screen's place, above Play Online");
             Assert.AreEqual(2, matchmaking.Searches);
         }
 
         [UnityTest]
-        public IEnumerator Matchmaking_FailureClosedWithoutAnAnswer_ReturnsToTheMainMenu()
+        public IEnumerator Matchmaking_FailureClosedWithoutAnAnswer_ReturnsToPlayOnline()
         {
             var matchmaking = new FailingMatchmaking();
             yield return _game.Boot(extra: builder =>
@@ -145,11 +146,12 @@ namespace Callbreak.Tests.PlayMode
             ScreenRouter router = _game.MenuRouter;
 
             GameFixture.Press(router, "PlayOnlineButton");
+            GameFixture.Press(router, "PlayQuickButton");
             yield return GameFixture.Until(() => _game.Dialogs.IsOpen, "the search to fail and say so");
             Assert.IsTrue(_game.Dialogs.HandleBack());
             yield return null;
 
-            Assert.AreEqual(ScreenId.MainMenu, router.Current);
+            Assert.AreEqual(ScreenId.PlayOnline, router.Current, "back where the search was started");
             Assert.AreEqual(1, matchmaking.Searches, "nothing searches behind the player's back");
         }
 
@@ -167,6 +169,7 @@ namespace Callbreak.Tests.PlayMode
             string ready = text.Get("ui.matchmaking.seat_ready");
 
             GameFixture.Press(router, "PlayOnlineButton");
+            GameFixture.Press(router, "PlayQuickButton");
             MatchmakingSeat[] seats = null;
             yield return GameFixture.Until(
                 () =>

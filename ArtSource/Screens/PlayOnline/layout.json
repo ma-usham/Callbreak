@@ -1,0 +1,1358 @@
+{
+  "name": "PlayOnline",
+  "mockup": "24-online-play-stake-100.png",
+  "mockW": 1672,
+  "mockH": 941,
+  "background": "Assets/_Project/Art/Backgrounds/BG_Menu_Wide.png",
+  "backgroundRect": [
+    -279,
+    -157,
+    2230,
+    1255
+  ],
+  "backgroundPpu": 0,
+  "nodes": [
+    {
+      "id": "BackButton",
+      "kind": "button",
+      "group": "HeaderLeft",
+      "shape": "ellipse",
+      "rect": [
+        42.6,
+        33.7,
+        87.4,
+        87.6
+      ],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Circle.png",
+      "shadowDrop": 3.5,
+      "shadowOpacity": 0.2,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonCircle_Normal.png",
+      "spriteRect": [
+        42.6,
+        33.7,
+        87.4,
+        87.6
+      ],
+      "spritePpu": 0,
+      "checkError": 9.16
+    },
+    {
+      "id": "BackIcon",
+      "parent": "BackButton",
+      "rect": [
+        66.19,
+        58.56,
+        39.61,
+        37.87
+      ],
+      "use": "UI/Icons/Icon_Back.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Back.png",
+      "spriteRect": [
+        66.19,
+        58.56,
+        39.61,
+        37.87
+      ],
+      "spritePpu": 0,
+      "checkError": 18.8
+    },
+    {
+      "id": "WalletPill",
+      "group": "HeaderRight",
+      "shape": "pill",
+      "rect": [
+        1434.0,
+        51.8,
+        194.6,
+        72.0
+      ],
+      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png",
+      "shadowDrop": 2,
+      "shadowOpacity": 0.4,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "spriteRect": [
+        1434,
+        51.8,
+        194.6,
+        72
+      ],
+      "spritePpu": 0,
+      "checkError": 10.07
+    },
+    {
+      "id": "WalletCoin",
+      "parent": "WalletPill",
+      "rect": [
+        1458.30,
+        57.30,
+        58.40,
+        58.40
+      ],
+      "use": "UI/Icons/Icon_Coin.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Coin.png",
+      "spriteRect": [
+        1458.3,
+        57.3,
+        58.4,
+        58.4
+      ],
+      "spritePpu": 0,
+      "checkError": 22.67
+    },
+    {
+      "id": "Balance",
+      "kind": "label",
+      "parent": "WalletPill",
+      "text": "250",
+      "font": "SansBold",
+      "align": "left",
+      "rect": [
+        1530,
+        70,
+        70,
+        36
+      ],
+      "inkBox": [
+        1536.53,
+        75.09,
+        1593.89,
+        100.84
+      ],
+      "capTop": 75,
+      "baseline": 100,
+      "color": "#141719"
+    },
+    {
+      "id": "Title",
+      "kind": "label",
+      "text": "Play Online",
+      "font": "SerifBold",
+      "rect": [
+        562,
+        28,
+        550,
+        108
+      ],
+      "dilate": 0.12,
+      "lineGradient": [
+        "#B20416",
+        "#590710"
+      ],
+      "key": "ui.play_online.title",
+      "inkBox": [
+        570.51,
+        33.26,
+        1100.44,
+        129.92
+      ],
+      "capTop": 39,
+      "baseline": 113,
+      "color": "#840A15",
+      "colorTop": "#A20616",
+      "colorBottom": "#630F16"
+    },
+    {
+      "id": "Subtitle",
+      "kind": "label",
+      "text": "CHOOSE YOUR MATCH",
+      "font": "SansSemiBold",
+      "tracked": true,
+      "rect": [
+        634,
+        132,
+        392,
+        28
+      ],
+      "key": "ui.play_online.subtitle",
+      "inkBox": [
+        641.24,
+        136.79,
+        1014.91,
+        154.85
+      ],
+      "capTop": 137,
+      "baseline": 155,
+      "color": "#734928"
+    },
+    {
+      "id": "SubtitleFlourishLeft",
+      "rect": [
+        564.15,
+        142.69,
+        73.91,
+        13.48
+      ],
+      "use": "UI/Decor/Deco_SubtitleFlourish_Left.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_SubtitleFlourish_Left.png",
+      "spriteRect": [
+        564.15,
+        142.69,
+        73.91,
+        13.48
+      ],
+      "spritePpu": 0,
+      "checkError": 5.22
+    },
+    {
+      "id": "SubtitleFlourishRight",
+      "rect": [
+        1025.98,
+        142.66,
+        85.22,
+        13.48
+      ],
+      "use": "UI/Decor/Deco_SubtitleFlourish_Right.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_SubtitleFlourish_Right.png",
+      "spriteRect": [
+        1025.98,
+        142.66,
+        85.22,
+        13.48
+      ],
+      "spritePpu": 0,
+      "checkError": 5.34
+    },
+    {
+      "id": "Panel",
+      "shape": "roundrect",
+      "radius": 18,
+      "rect": [
+        305.9,
+        187.1,
+        1064.9,
+        650.8
+      ],
+      "use": "UI/Panels/UI_Panel_Large.png",
+      "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png",
+      "shadowSpread": 24,
+      "shadowDrop": 3,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Panel_Large.png",
+      "spriteRect": [
+        305.9,
+        187.1,
+        1064.9,
+        650.8
+      ],
+      "spritePpu": 0,
+      "checkError": 13.06
+    },
+    {
+      "id": "QuickDisc",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        464.39,
+        263.87,
+        149.57,
+        149.57
+      ],
+      "use": "UI/Buttons/UI_ButtonDisc_Emblem.png",
+      "shadowUse": "UI/Buttons/UI_ButtonDisc_Emblem_Shadow.png",
+      "shadowSpread": 12.17,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonDisc_Emblem.png",
+      "spriteRect": [
+        464.39,
+        263.87,
+        149.57,
+        149.57
+      ],
+      "spritePpu": 0,
+      "checkError": 4.72
+    },
+    {
+      "id": "QuickIcon",
+      "parent": "QuickDisc",
+      "rect": [
+        509.64,
+        292.10,
+        60.0,
+        95.65
+      ],
+      "use": "UI/Icons/Icon_Lightning.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Lightning.png",
+      "spriteRect": [
+        509.64,
+        292.1,
+        60,
+        95.65
+      ],
+      "spritePpu": 0,
+      "checkError": 5.26
+    },
+    {
+      "id": "QuickTitle",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Quick Match",
+      "font": "SerifBold",
+      "rect": [
+        384,
+        430,
+        310,
+        66
+      ],
+      "capFit": [
+        443.1,
+        482.0
+      ],
+      "lineGradient": [
+        "#B10814",
+        "#750717"
+      ],
+      "key": "ui.play_online.quick_title",
+      "inkBox": [
+        392.18,
+        440.09,
+        686.37,
+        491.51
+      ],
+      "capTop": 443,
+      "baseline": 482,
+      "color": "#820D17",
+      "colorTop": "#950815",
+      "colorBottom": "#6E1218"
+    },
+    {
+      "id": "QuickRule",
+      "parent": "Panel",
+      "rect": [
+        371.5,
+        500.5,
+        337.39,
+        20.87
+      ],
+      "use": "UI/Decor/Deco_ModeTitleDivider_Quick.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_ModeTitleDivider_Quick.png",
+      "spriteRect": [
+        371.5,
+        500.5,
+        337.39,
+        20.87
+      ],
+      "spritePpu": 0,
+      "checkError": 5.24
+    },
+    {
+      "id": "QuickLine",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Play without a stake",
+      "font": "SerifSemiBold",
+      "rect": [
+        416,
+        526,
+        246,
+        38
+      ],
+      "key": "ui.play_online.quick_line",
+      "inkBox": [
+        423.29,
+        533.25,
+        655.21,
+        559.94
+      ],
+      "capTop": 540,
+      "baseline": 554,
+      "color": "#62371B"
+    },
+    {
+      "id": "PlayQuickButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "pill",
+      "rect": [
+        344.5,
+        692.5,
+        371.5,
+        91.0
+      ],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Primary.png",
+      "shadowDrop": 6,
+      "shadowOpacity": 0.45,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "spriteRect": [
+        344.5,
+        692.5,
+        371.5,
+        91
+      ],
+      "spritePpu": 0,
+      "checkError": 21.04
+    },
+    {
+      "id": "PlayQuickLabel",
+      "kind": "label",
+      "parent": "PlayQuickButton",
+      "text": "Play Quick",
+      "font": "SerifBold",
+      "ink": "light",
+      "style": "buttonLabel",
+      "rect": [
+        418,
+        712,
+        206,
+        54
+      ],
+      "key": "ui.play_online.quick_cta",
+      "inkBox": [
+        428.47,
+        722.12,
+        613.58,
+        759.19
+      ],
+      "capTop": 724,
+      "baseline": 751,
+      "color": "#FCFBFA"
+    },
+    {
+      "id": "PlayQuickChevron",
+      "parent": "PlayQuickButton",
+      "rect": [
+        636.78,
+        726.37,
+        14.22,
+        24.81
+      ],
+      "use": "UI/Common/Icon_Chevron_Light.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Chevron_Light.png",
+      "spriteRect": [
+        636.78,
+        726.37,
+        14.22,
+        24.81
+      ],
+      "spritePpu": 0,
+      "checkError": 16.85
+    },
+    {
+      "id": "ModeDivider",
+      "parent": "Panel",
+      "rect": [
+        737.82,
+        222.17,
+        15.652,
+        577.391
+      ],
+      "use": "UI/Decor/Deco_ModeDivider_Vertical.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_ModeDivider_Vertical.png",
+      "spriteRect": [
+        737.82,
+        222.17,
+        15.65,
+        577.39
+      ],
+      "spritePpu": 0,
+      "checkError": 4.62
+    },
+    {
+      "id": "StakeOutline",
+      "parent": "Panel",
+      "rect": [
+        766.45,
+        200.15,
+        594.1,
+        622.9
+      ],
+      "use": "UI/Controls/UI_Outline_Thin_Red.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Outline_Thin_Red.png",
+      "spriteRect": [
+        766.45,
+        200.15,
+        594.1,
+        622.9
+      ],
+      "spritePpu": 0,
+      "checkError": 18.18
+    },
+    {
+      "id": "StakeDisc",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        986.35,
+        224.36,
+        151.96,
+        151.96
+      ],
+      "use": "UI/Buttons/UI_ButtonDisc_Emblem.png",
+      "shadowUse": "UI/Buttons/UI_ButtonDisc_Emblem_Shadow.png",
+      "shadowSpread": 12.37,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonDisc_Emblem.png",
+      "spriteRect": [
+        986.35,
+        224.36,
+        151.96,
+        151.96
+      ],
+      "spritePpu": 0,
+      "checkError": 17.55
+    },
+    {
+      "id": "StakeCoins",
+      "parent": "StakeDisc",
+      "rect": [
+        1003.95,
+        249.13,
+        119.40,
+        91.25
+      ],
+      "use": "UI/Decor/Deco_StakeCoins.png",
+      "shadowUse": "UI/Decor/Deco_StakeCoins_Shadow.png",
+      "shadowSpread": 16.96,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_StakeCoins.png",
+      "spriteRect": [
+        1003.95,
+        249.13,
+        119.4,
+        91.25
+      ],
+      "spritePpu": 0,
+      "checkError": 18.64
+    },
+    {
+      "id": "StakeTitle",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Stake Match",
+      "font": "SerifBold",
+      "rect": [
+        906,
+        366,
+        312,
+        54
+      ],
+      "capFit": [
+        373.9,
+        412.6
+      ],
+      "lineGradient": [
+        "#A00714",
+        "#630812"
+      ],
+      "key": "ui.play_online.stake_title",
+      "clip": {
+        "shape": "ellipse",
+        "rect": [
+          986.2,
+          223.6,
+          152.5,
+          152.5
+        ],
+        "outside": true
+      },
+      "inkBox": [
+        917.04,
+        367.75,
+        1207.98,
+        413.44
+      ],
+      "capTop": 375,
+      "baseline": 413,
+      "color": "#750D15",
+      "colorTop": "#8D0A15",
+      "colorBottom": "#620F15"
+    },
+    {
+      "id": "StakeRule",
+      "parent": "Panel",
+      "rect": [
+        885.5,
+        423.5,
+        359.13,
+        20.0
+      ],
+      "use": "UI/Decor/Deco_ModeTitleDivider_Stake.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Decor/Deco_ModeTitleDivider_Stake.png",
+      "spriteRect": [
+        885.5,
+        423.5,
+        359.13,
+        20
+      ],
+      "spritePpu": 0,
+      "checkError": 5.87
+    },
+    {
+      "id": "StakeLine",
+      "kind": "label",
+      "parent": "Panel",
+      "text": "Choose your stake",
+      "font": "SerifSemiBold",
+      "rect": [
+        942,
+        443,
+        240,
+        38
+      ],
+      "key": "ui.play_online.stake_line",
+      "inkBox": [
+        950.7,
+        449.3,
+        1171.6,
+        476.53
+      ],
+      "capTop": 456,
+      "baseline": 470,
+      "color": "#64381B"
+    },
+    {
+      "id": "StakeChip0",
+      "kind": "button",
+      "parent": "Panel",
+      "rect": [
+        816.0,
+        488.0,
+        196.7,
+        71.2
+      ],
+      "checkError": 8.11
+    },
+    {
+      "id": "ChipSelected0",
+      "parent": "StakeChip0",
+      "rect": [
+        816.0,
+        488.0,
+        196.7,
+        71.2
+      ],
+      "use": "UI/Controls/UI_StakeChip_Selected.png",
+      "hidden": true,
+      "shadowUse": "UI/Controls/UI_StakeChip_Shadow.png",
+      "shadowSpread": 16.52,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_StakeChip_Selected.png",
+      "spriteRect": [
+        816,
+        488,
+        196.7,
+        71.2
+      ],
+      "spritePpu": 0,
+      "checkError": 8.11
+    },
+    {
+      "id": "ChipNormal0",
+      "parent": "StakeChip0",
+      "rect": [
+        816.0,
+        488.0,
+        196.7,
+        71.2
+      ],
+      "use": "UI/Controls/UI_StakeChip_Normal.png",
+      "shadowUse": "UI/Controls/UI_StakeChip_Shadow.png",
+      "shadowSpread": 16.52,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_StakeChip_Normal.png",
+      "spriteRect": [
+        816,
+        488,
+        196.7,
+        71.2
+      ],
+      "spritePpu": 0,
+      "checkError": 8.11
+    },
+    {
+      "id": "ChipCoin0",
+      "parent": "StakeChip0",
+      "rect": [
+        860.88,
+        501.88,
+        42.0,
+        42.0
+      ],
+      "use": "UI/Icons/Icon_Coin.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Coin.png",
+      "spriteRect": [
+        860.88,
+        501.88,
+        42,
+        42
+      ],
+      "spritePpu": 0,
+      "checkError": 20.85
+    },
+    {
+      "id": "ChipLabel0",
+      "kind": "label",
+      "parent": "StakeChip0",
+      "text": "50",
+      "font": "SerifSemiBold",
+      "rect": [
+        918,
+        505,
+        50,
+        38
+      ],
+      "inkBox": [
+        924.69,
+        511.22,
+        961.84,
+        536.76
+      ],
+      "capTop": 511,
+      "baseline": 536,
+      "color": "#1E1F20"
+    },
+    {
+      "id": "StakeChip1",
+      "kind": "button",
+      "parent": "Panel",
+      "rect": [
+        1025.0,
+        488.0,
+        185.9,
+        71.2
+      ],
+      "checkError": 13.84
+    },
+    {
+      "id": "ChipNormal1",
+      "parent": "StakeChip1",
+      "rect": [
+        1025.0,
+        488.0,
+        185.9,
+        71.2
+      ],
+      "use": "UI/Controls/UI_StakeChip_Normal.png",
+      "hidden": true,
+      "shadowUse": "UI/Controls/UI_StakeChip_Shadow.png",
+      "shadowSpread": 16.52,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_StakeChip_Normal.png",
+      "spriteRect": [
+        1025,
+        488,
+        185.9,
+        71.2
+      ],
+      "spritePpu": 0,
+      "checkError": 13.84
+    },
+    {
+      "id": "ChipSelected1",
+      "parent": "StakeChip1",
+      "rect": [
+        1025.0,
+        488.0,
+        185.9,
+        71.2
+      ],
+      "use": "UI/Controls/UI_StakeChip_Selected.png",
+      "shadowUse": "UI/Controls/UI_StakeChip_Shadow.png",
+      "shadowSpread": 16.52,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_StakeChip_Selected.png",
+      "spriteRect": [
+        1025,
+        488,
+        185.9,
+        71.2
+      ],
+      "spritePpu": 0,
+      "checkError": 13.84
+    },
+    {
+      "id": "ChipCoin1",
+      "parent": "StakeChip1",
+      "rect": [
+        1062.47,
+        501.89,
+        41.83,
+        41.83
+      ],
+      "use": "UI/Icons/Icon_Coin.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Coin.png",
+      "spriteRect": [
+        1062.47,
+        501.89,
+        41.83,
+        41.83
+      ],
+      "spritePpu": 0,
+      "checkError": 17.53
+    },
+    {
+      "id": "ChipLabel1",
+      "kind": "label",
+      "parent": "StakeChip1",
+      "text": "100",
+      "font": "SerifSemiBold",
+      "ink": "light",
+      "rect": [
+        1116,
+        505,
+        63,
+        38
+      ],
+      "inkBox": [
+        1122.16,
+        511.14,
+        1173.37,
+        536.82
+      ],
+      "capTop": 511,
+      "baseline": 536,
+      "color": "#FDFCFC"
+    },
+    {
+      "id": "InfoButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "ellipse",
+      "rect": [
+        1223.9,
+        490.73,
+        53.04,
+        53.04
+      ],
+      "use": "UI/Buttons/UI_ButtonInfo.png",
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonInfo.png",
+      "spriteRect": [
+        1223.9,
+        490.73,
+        53.04,
+        53.04
+      ],
+      "spritePpu": 0,
+      "checkError": 8.38
+    },
+    {
+      "id": "PlayStakeButton",
+      "kind": "button",
+      "parent": "Panel",
+      "shape": "pill",
+      "rect": [
+        790.0,
+        692.5,
+        373.0,
+        91.0
+      ],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "shadowUse": "UI/Buttons/UI_Shadow_Primary.png",
+      "shadowDrop": 6,
+      "shadowOpacity": 0.45,
+      "sprite": "Assets/_Project/Art/UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "spriteRect": [
+        790,
+        692.5,
+        373,
+        91
+      ],
+      "spritePpu": 0,
+      "checkError": 18.68
+    },
+    {
+      "id": "PlayStakeLabel",
+      "kind": "label",
+      "parent": "PlayStakeButton",
+      "text": "Play for 100 coins",
+      "font": "SerifBold",
+      "ink": "light",
+      "style": "buttonLabel",
+      "rect": [
+        838,
+        712,
+        266,
+        54
+      ],
+      "inkBox": [
+        849.56,
+        724.01,
+        1091.97,
+        756.85
+      ],
+      "capTop": 726,
+      "baseline": 750,
+      "color": "#FCFBFB"
+    },
+    {
+      "id": "PlayStakeChevron",
+      "parent": "PlayStakeButton",
+      "rect": [
+        1105.75,
+        726.14,
+        14.23,
+        24.84
+      ],
+      "use": "UI/Common/Icon_Chevron_Light.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Common/Icon_Chevron_Light.png",
+      "spriteRect": [
+        1105.75,
+        726.14,
+        14.23,
+        24.84
+      ],
+      "spritePpu": 0,
+      "checkError": 16.87
+    },
+    {
+      "id": "Popover",
+      "parent": "Panel",
+      "shape": "roundrect",
+      "radius": 12,
+      "rect": [
+        1175.0,
+        557.0,
+        283.0,
+        257.0
+      ],
+      "use": "UI/Panels/UI_Popover.png",
+      "raycast": true,
+      "shadowUse": "UI/Panels/UI_Popover_Shadow.png",
+      "shadowSpread": 29.57,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Popover.png",
+      "spriteRect": [
+        1175,
+        557,
+        283,
+        257
+      ],
+      "spritePpu": 0,
+      "checkError": 5.49
+    },
+    {
+      "id": "PopoverPointer",
+      "parent": "Popover",
+      "rect": [
+        1225.5,
+        543.0,
+        50.0,
+        22.0
+      ],
+      "use": "UI/Panels/UI_Popover_Pointer.png",
+      "shadowUse": "UI/Panels/UI_Popover_Pointer_Shadow.png",
+      "shadowSpread": 29.57,
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Panels/UI_Popover_Pointer.png",
+      "spriteRect": [
+        1225.5,
+        543,
+        50,
+        22
+      ],
+      "spritePpu": 0,
+      "checkError": 10.37
+    },
+    {
+      "id": "PrizeHeading",
+      "kind": "label",
+      "parent": "Popover",
+      "text": "100-coin prizes",
+      "font": "SerifBold",
+      "align": "left",
+      "rect": [
+        1194,
+        578,
+        192,
+        40
+      ],
+      "inkBox": [
+        1202.3,
+        587.6,
+        1377.66,
+        613.67
+      ],
+      "capTop": 593,
+      "baseline": 608,
+      "color": "#971319",
+      "colorTop": "#A60F16",
+      "colorBottom": "#7F1519"
+    },
+    {
+      "id": "CloseButton",
+      "bind": "PopoverClose",
+      "kind": "button",
+      "parent": "Popover",
+      "rect": [
+        1403,
+        565,
+        46,
+        46
+      ],
+      "hole": false,
+      "checkError": 4.21
+    },
+    {
+      "id": "CloseIcon",
+      "parent": "CloseButton",
+      "rect": [
+        1415.76,
+        578.07,
+        20.0,
+        20.0
+      ],
+      "use": "UI/Icons/Icon_Close_Brown.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Close_Brown.png",
+      "spriteRect": [
+        1415.76,
+        578.07,
+        20,
+        20
+      ],
+      "spritePpu": 0,
+      "checkError": 8.39
+    },
+    {
+      "id": "Place0",
+      "kind": "label",
+      "parent": "Popover",
+      "text": "1st",
+      "font": "SerifSemiBold",
+      "align": "left",
+      "rect": [
+        1205,
+        628,
+        45,
+        32
+      ],
+      "key": "ui.play_online.place_1",
+      "inkBox": [
+        1215.14,
+        633.11,
+        1241.41,
+        650.34
+      ],
+      "capTop": 635,
+      "baseline": 650,
+      "color": "#5D3217"
+    },
+    {
+      "id": "PrizeCoin0",
+      "parent": "Popover",
+      "rect": [
+        1304.38,
+        624.13,
+        34.25,
+        34.25
+      ],
+      "use": "UI/Icons/Icon_Coin.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Coin.png",
+      "spriteRect": [
+        1304.38,
+        624.13,
+        34.25,
+        34.25
+      ],
+      "spritePpu": 0,
+      "checkError": 21.15
+    },
+    {
+      "id": "PrizeAmount0",
+      "kind": "label",
+      "parent": "Popover",
+      "text": "200",
+      "font": "SerifBold",
+      "align": "left",
+      "rect": [
+        1352,
+        628,
+        60,
+        32
+      ],
+      "inkBox": [
+        1360.55,
+        632.56,
+        1399.63,
+        650.74
+      ],
+      "capTop": 633,
+      "baseline": 650,
+      "color": "#1C1F20"
+    },
+    {
+      "id": "PrizeRule0",
+      "parent": "Popover",
+      "rect": [
+        1200.35,
+        660.81,
+        231.3,
+        6.087
+      ],
+      "use": "UI/Controls/UI_PrizeRowLine.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_PrizeRowLine.png",
+      "spriteRect": [
+        1200.35,
+        660.81,
+        231.3,
+        6.09
+      ],
+      "spritePpu": 0,
+      "checkError": 5.87
+    },
+    {
+      "id": "Place1",
+      "kind": "label",
+      "parent": "Popover",
+      "text": "2nd",
+      "font": "SerifSemiBold",
+      "align": "left",
+      "rect": [
+        1205,
+        673,
+        55,
+        32
+      ],
+      "key": "ui.play_online.place_2",
+      "inkBox": [
+        1213.65,
+        676.18,
+        1251.34,
+        695.37
+      ],
+      "capTop": 678,
+      "baseline": 695,
+      "color": "#60331B"
+    },
+    {
+      "id": "PrizeCoin1",
+      "parent": "Popover",
+      "rect": [
+        1304.13,
+        668.28,
+        34.75,
+        34.75
+      ],
+      "use": "UI/Icons/Icon_Coin.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Coin.png",
+      "spriteRect": [
+        1304.13,
+        668.28,
+        34.75,
+        34.75
+      ],
+      "spritePpu": 0,
+      "checkError": 16.17
+    },
+    {
+      "id": "PrizeAmount1",
+      "kind": "label",
+      "parent": "Popover",
+      "text": "80",
+      "font": "SerifBold",
+      "align": "left",
+      "rect": [
+        1352,
+        673,
+        60,
+        32
+      ],
+      "inkBox": [
+        1360.66,
+        677.63,
+        1386.49,
+        695.55
+      ],
+      "capTop": 678,
+      "baseline": 695,
+      "color": "#202123"
+    },
+    {
+      "id": "PrizeRule1",
+      "parent": "Popover",
+      "rect": [
+        1200.35,
+        705.81,
+        231.3,
+        6.087
+      ],
+      "use": "UI/Controls/UI_PrizeRowLine.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_PrizeRowLine.png",
+      "spriteRect": [
+        1200.35,
+        705.81,
+        231.3,
+        6.09
+      ],
+      "spritePpu": 0,
+      "checkError": 4.52
+    },
+    {
+      "id": "Place2",
+      "kind": "label",
+      "parent": "Popover",
+      "text": "3rd",
+      "font": "SerifSemiBold",
+      "align": "left",
+      "rect": [
+        1205,
+        718,
+        50,
+        32
+      ],
+      "key": "ui.play_online.place_3",
+      "inkBox": [
+        1213.45,
+        721.34,
+        1246.51,
+        740.19
+      ],
+      "capTop": 723,
+      "baseline": 740,
+      "color": "#62341C"
+    },
+    {
+      "id": "PrizeCoin2",
+      "parent": "Popover",
+      "rect": [
+        1304.38,
+        713.48,
+        34.25,
+        34.25
+      ],
+      "use": "UI/Icons/Icon_Coin.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Coin.png",
+      "spriteRect": [
+        1304.38,
+        713.48,
+        34.25,
+        34.25
+      ],
+      "spritePpu": 0,
+      "checkError": 23.46
+    },
+    {
+      "id": "PrizeAmount2",
+      "kind": "label",
+      "parent": "Popover",
+      "text": "60",
+      "font": "SerifBold",
+      "align": "left",
+      "rect": [
+        1352,
+        718,
+        60,
+        32
+      ],
+      "inkBox": [
+        1360.77,
+        722.59,
+        1386.59,
+        740.46
+      ],
+      "capTop": 723,
+      "baseline": 740,
+      "color": "#1E2021"
+    },
+    {
+      "id": "PrizeRule2",
+      "parent": "Popover",
+      "rect": [
+        1200.35,
+        750.46,
+        231.3,
+        6.087
+      ],
+      "use": "UI/Controls/UI_PrizeRowLine.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_PrizeRowLine.png",
+      "spriteRect": [
+        1200.35,
+        750.46,
+        231.3,
+        6.09
+      ],
+      "spritePpu": 0,
+      "checkError": 6.17
+    },
+    {
+      "id": "Place3",
+      "kind": "label",
+      "parent": "Popover",
+      "text": "4th",
+      "font": "SerifSemiBold",
+      "align": "left",
+      "rect": [
+        1205,
+        763,
+        50,
+        32
+      ],
+      "key": "ui.play_online.place_4",
+      "inkBox": [
+        1213.33,
+        765.75,
+        1246.58,
+        785.19
+      ],
+      "capTop": 768,
+      "baseline": 785,
+      "color": "#5F331C"
+    },
+    {
+      "id": "PrizeCoin3",
+      "parent": "Popover",
+      "rect": [
+        1304.10,
+        758.90,
+        34.60,
+        34.60
+      ],
+      "use": "UI/Icons/Icon_Coin.png",
+      "kind": "sprite",
+      "sprite": "Assets/_Project/Art/UI/Icons/Icon_Coin.png",
+      "spriteRect": [
+        1304.1,
+        758.9,
+        34.6,
+        34.6
+      ],
+      "spritePpu": 0,
+      "checkError": 15.18
+    },
+    {
+      "id": "PrizeAmount3",
+      "kind": "label",
+      "parent": "Popover",
+      "text": "40",
+      "font": "SerifBold",
+      "align": "left",
+      "rect": [
+        1352,
+        763,
+        60,
+        32
+      ],
+      "inkBox": [
+        1360.43,
+        767.39,
+        1386.56,
+        785.44
+      ],
+      "capTop": 768,
+      "baseline": 785,
+      "color": "#1B1D1F"
+    }
+  ]
+}

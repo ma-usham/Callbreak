@@ -133,7 +133,7 @@ namespace Callbreak.Tests.PlayMode
             yield return OpenAndReturn(router, "ProfileButton", ScreenId.Profile);
             yield return OpenAndReturn(router, "ShopButton", ScreenId.Shop);
             yield return OpenAndReturn(router, "PlayOfflineButton", ScreenId.OfflineSetup);
-            yield return OpenAndReturn(router, "PlayOnlineButton", ScreenId.Matchmaking);
+            yield return OpenAndReturn(router, "PlayOnlineButton", ScreenId.PlayOnline);
 
             GameFixture.Press(router, "PlayWithFriendsButton");
             Assert.AreEqual(ScreenId.PlayWithFriends, router.Current);

@@ -98,7 +98,10 @@ namespace Callbreak.Presentation.Framework
                 case MenuEntry.PrivateLobby when _router.Has(ScreenId.PrivateLobby) && _rooms.Current != null:
                     return new[] { ScreenId.MainMenu, ScreenId.PlayWithFriends, ScreenId.PrivateLobby };
                 case MenuEntry.Matchmaking when _router.Has(ScreenId.Matchmaking):
-                    return new[] { ScreenId.MainMenu, ScreenId.Matchmaking };
+                    // The search is reached through Play Online, so its Cancel leads back there.
+                    return _router.Has(ScreenId.PlayOnline)
+                        ? new[] { ScreenId.MainMenu, ScreenId.PlayOnline, ScreenId.Matchmaking }
+                        : new[] { ScreenId.MainMenu, ScreenId.Matchmaking };
                 case MenuEntry.OfflineSetup when _router.Has(ScreenId.OfflineSetup):
                     return new[] { ScreenId.MainMenu, ScreenId.OfflineSetup };
                 default:

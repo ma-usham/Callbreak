@@ -1,0 +1,129 @@
+{
+  // Screen 23 - Play Online (the owner, 5 Oct 2026; the designer's online-match-options-prompts.md).
+  // Rects are mockup pixels on 24-online-play-stake-100.png (1672 x 941). Its 50-coin twin,
+  // 23-online-play-stake-50.png, is 1671 wide: stretched to 1672 it lines up with 24 within a pixel
+  // (measured: offsets grow from 0 at the left edge to -1 px at the right), so 24 is the frame and 23
+  // is compared after that stretch (check50/mockup-23-1672.png).
+  //
+  // Art (nothing is cut from the mockups):
+  // - the shared menu background and UI kit: the back disc and icon, the wallet (the Earn Coins pill
+  //   without its "+", coin and balance), the large panel, the crimson gold-rimmed play buttons with
+  //   the light chevron, and the coin icon;
+  // - the PlayOnline batch (ChatGPT-generated, ArtSource/Working/PlayOnline/notes.md; import settings in
+  //   ArtSource/Kit/PlayOnline.json), at the rects its notes give: the subtitle's flourishes, the ivory
+  //   badge (+ shadow) behind the lightning and behind the stacked coins (+ shadow), the dividers under
+  //   the two mode titles and between the modes, the bright red Stake Match outline, the stake chips
+  //   (one rect per chip for both looks, + shadow), the info button, and the prize popover (box, pointer
+  //   and their shadows; the pointer is drawn over the box and its shadow under it, by
+  //   PlayOnlineCustomizer), its brown x and its row lines.
+  // Where a kit piece was fitted by the art batch (the wallet coin, the play buttons, the chip and row
+  // coins), its rect is the fitted one; 100's coin sits halfway between where 24 and 23 draw it.
+  //
+  // Every word is a label. Fixed copy has a key; the presenter writes the rest: the balance, the chip
+  // amounts (StakeRules.Stakes), "Play for {0} coins", "{0}-coin prizes" and the prizes
+  // (StakeRules.PrizesFor). The texts below are 24's, as measured.
+  "name": "PlayOnline",
+  "mockup": "24-online-play-stake-100.png",
+  "background": "shared",
+  "nodes": [
+    { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [42.6, 33.7, 87.4, 87.6],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "BackIcon", "parent": "BackButton", "rect": [66.19, 58.56, 39.61, 37.87], "use": "UI/Icons/Icon_Back.png" },
+
+    // The wallet without the main menu's "+" (as on Earn Coins).
+    { "id": "WalletPill", "group": "HeaderRight", "shape": "pill", "rect": [1434.0, 51.8, 194.6, 72.0],
+      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png", "shadowDrop": 2, "shadowOpacity": 0.4 },
+    { "id": "WalletCoin", "parent": "WalletPill", "rect": [1458.30, 57.30, 58.40, 58.40], "use": "UI/Icons/Icon_Coin.png" },
+    { "id": "Balance", "kind": "label", "parent": "WalletPill", "text": "250", "font": "SansBold", "align": "left", "rect": [1530, 70, 70, 36] },
+
+    { "id": "Title", "kind": "label", "text": "Play Online", "font": "SerifBold", "rect": [562, 28, 550, 108], "dilate": 0.12,
+      "lineGradient": ["#B20416", "#590710"], "key": "ui.play_online.title" },
+    { "id": "Subtitle", "kind": "label", "text": "CHOOSE YOUR MATCH", "font": "SansSemiBold", "tracked": true, "rect": [634, 132, 392, 28], "key": "ui.play_online.subtitle" },
+    { "id": "SubtitleFlourishLeft", "rect": [564.15, 142.69, 73.91, 13.48], "use": "UI/Decor/Deco_SubtitleFlourish_Left.png" },
+    { "id": "SubtitleFlourishRight", "rect": [1025.98, 142.66, 85.22, 13.48], "use": "UI/Decor/Deco_SubtitleFlourish_Right.png" },
+
+    { "id": "Panel", "shape": "roundrect", "radius": 18, "rect": [305.9, 187.1, 1064.9, 650.8],
+      "use": "UI/Panels/UI_Panel_Large.png", "shadowUse": "UI/Common/UI_Panel_Large_Shadow.png", "shadowSpread": 24, "shadowDrop": 3 },
+
+    // Quick Match: the lightning in its ivory badge, the title, its divider, the line and Play Quick.
+    { "id": "QuickDisc", "parent": "Panel", "shape": "ellipse", "rect": [464.39, 263.87, 149.57, 149.57], "use": "UI/Buttons/UI_ButtonDisc_Emblem.png",
+      "shadowUse": "UI/Buttons/UI_ButtonDisc_Emblem_Shadow.png", "shadowSpread": 12.17 },
+    { "id": "QuickIcon", "parent": "QuickDisc", "rect": [509.64, 292.10, 60.0, 95.65], "use": "UI/Icons/Icon_Lightning.png" },
+    { "id": "QuickTitle", "kind": "label", "parent": "Panel", "text": "Quick Match", "font": "SerifBold", "rect": [384, 430, 310, 66], "capFit": [443.1, 482.0],
+      "lineGradient": ["#B10814", "#750717"], "key": "ui.play_online.quick_title" },
+    { "id": "QuickRule", "parent": "Panel", "rect": [371.5, 500.5, 337.39, 20.87], "use": "UI/Decor/Deco_ModeTitleDivider_Quick.png" },
+    { "id": "QuickLine", "kind": "label", "parent": "Panel", "text": "Play without a stake", "font": "SerifSemiBold", "rect": [416, 526, 246, 38], "key": "ui.play_online.quick_line" },
+    { "id": "PlayQuickButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [344.5, 692.5, 371.5, 91.0],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "PlayQuickLabel", "kind": "label", "parent": "PlayQuickButton", "text": "Play Quick", "font": "SerifBold", "ink": "light", "style": "buttonLabel",
+      "rect": [418, 712, 206, 54], "key": "ui.play_online.quick_cta" },
+    { "id": "PlayQuickChevron", "parent": "PlayQuickButton", "rect": [636.78, 726.37, 14.22, 24.81], "use": "UI/Common/Icon_Chevron_Light.png" },
+
+    // The vertical divider between the two matches.
+    { "id": "ModeDivider", "parent": "Panel", "rect": [737.82, 222.17, 15.652, 577.391], "use": "UI/Decor/Deco_ModeDivider_Vertical.png" },
+
+    // Stake Match: the area's red outline, the coins in their badge, the title, its divider, the
+    // line, the stake chips, the "i" and the play button.
+    { "id": "StakeOutline", "parent": "Panel", "rect": [766.45, 200.15, 594.1, 622.9], "use": "UI/Controls/UI_Outline_Thin_Red.png" },
+    { "id": "StakeDisc", "parent": "Panel", "shape": "ellipse", "rect": [986.35, 224.36, 151.96, 151.96], "use": "UI/Buttons/UI_ButtonDisc_Emblem.png",
+      "shadowUse": "UI/Buttons/UI_ButtonDisc_Emblem_Shadow.png", "shadowSpread": 12.37 },
+    { "id": "StakeCoins", "parent": "StakeDisc", "rect": [1003.95, 249.13, 119.40, 91.25], "use": "UI/Decor/Deco_StakeCoins.png",
+      "shadowUse": "UI/Decor/Deco_StakeCoins_Shadow.png", "shadowSpread": 16.96 },
+    { "id": "StakeTitle", "kind": "label", "parent": "Panel", "text": "Stake Match", "font": "SerifBold", "rect": [906, 366, 312, 54], "capFit": [373.9, 412.6],
+      "lineGradient": ["#A00714", "#630812"], "key": "ui.play_online.stake_title",
+      "clip": { "shape": "ellipse", "rect": [986.2, 223.6, 152.5, 152.5], "outside": true } },
+    { "id": "StakeRule", "parent": "Panel", "rect": [885.5, 423.5, 359.13, 20.0], "use": "UI/Decor/Deco_ModeTitleDivider_Stake.png" },
+    { "id": "StakeLine", "kind": "label", "parent": "Panel", "text": "Choose your stake", "font": "SerifSemiBold", "rect": [942, 443, 240, 38], "key": "ui.play_online.stake_line" },
+
+    // The stake chips: each a button with both looks in one rect (PlayOnlineCustomizer makes them one
+    // SelectableGroup), its coin and its amount. 24 draws 100 chosen.
+    { "id": "StakeChip0", "kind": "button", "parent": "Panel", "rect": [816.0, 488.0, 196.7, 71.2] },
+    { "id": "ChipSelected0", "parent": "StakeChip0", "rect": [816.0, 488.0, 196.7, 71.2], "use": "UI/Controls/UI_StakeChip_Selected.png", "hidden": true,
+      "shadowUse": "UI/Controls/UI_StakeChip_Shadow.png", "shadowSpread": 16.52 },
+    { "id": "ChipNormal0", "parent": "StakeChip0", "rect": [816.0, 488.0, 196.7, 71.2], "use": "UI/Controls/UI_StakeChip_Normal.png",
+      "shadowUse": "UI/Controls/UI_StakeChip_Shadow.png", "shadowSpread": 16.52 },
+    { "id": "ChipCoin0", "parent": "StakeChip0", "rect": [860.88, 501.88, 42.0, 42.0], "use": "UI/Icons/Icon_Coin.png" },
+    { "id": "ChipLabel0", "kind": "label", "parent": "StakeChip0", "text": "50", "font": "SerifSemiBold", "rect": [918, 505, 50, 38] },
+    { "id": "StakeChip1", "kind": "button", "parent": "Panel", "rect": [1025.0, 488.0, 185.9, 71.2] },
+    { "id": "ChipNormal1", "parent": "StakeChip1", "rect": [1025.0, 488.0, 185.9, 71.2], "use": "UI/Controls/UI_StakeChip_Normal.png", "hidden": true,
+      "shadowUse": "UI/Controls/UI_StakeChip_Shadow.png", "shadowSpread": 16.52 },
+    { "id": "ChipSelected1", "parent": "StakeChip1", "rect": [1025.0, 488.0, 185.9, 71.2], "use": "UI/Controls/UI_StakeChip_Selected.png",
+      "shadowUse": "UI/Controls/UI_StakeChip_Shadow.png", "shadowSpread": 16.52 },
+    { "id": "ChipCoin1", "parent": "StakeChip1", "rect": [1062.47, 501.89, 41.83, 41.83], "use": "UI/Icons/Icon_Coin.png" },
+    { "id": "ChipLabel1", "kind": "label", "parent": "StakeChip1", "text": "100", "font": "SerifSemiBold", "ink": "light", "rect": [1116, 505, 63, 38] },
+
+    { "id": "InfoButton", "kind": "button", "parent": "Panel", "shape": "ellipse", "rect": [1223.9, 490.73, 53.04, 53.04], "use": "UI/Buttons/UI_ButtonInfo.png" },
+
+    { "id": "PlayStakeButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [790.0, 692.5, 373.0, 91.0],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "PlayStakeLabel", "kind": "label", "parent": "PlayStakeButton", "text": "Play for 100 coins", "font": "SerifBold", "ink": "light", "style": "buttonLabel",
+      "rect": [838, 712, 266, 54] },
+    { "id": "PlayStakeChevron", "parent": "PlayStakeButton", "rect": [1105.75, 726.14, 14.23, 24.84], "use": "UI/Common/Icon_Chevron_Light.png" },
+
+    // The prize popover under the "i", open as drawn on both mockups (the presenter opens it with
+    // the "i"). It takes taps itself, so a tap on it does not close it.
+    { "id": "Popover", "parent": "Panel", "shape": "roundrect", "radius": 12, "rect": [1175.0, 557.0, 283.0, 257.0], "use": "UI/Panels/UI_Popover.png", "raycast": true,
+      "shadowUse": "UI/Panels/UI_Popover_Shadow.png", "shadowSpread": 29.57 },
+    { "id": "PopoverPointer", "parent": "Popover", "rect": [1225.5, 543.0, 50.0, 22.0], "use": "UI/Panels/UI_Popover_Pointer.png",
+      "shadowUse": "UI/Panels/UI_Popover_Pointer_Shadow.png", "shadowSpread": 29.57 },
+    { "id": "PrizeHeading", "kind": "label", "parent": "Popover", "text": "100-coin prizes", "font": "SerifBold", "align": "left", "rect": [1194, 578, 192, 40] },
+    { "id": "CloseButton", "bind": "PopoverClose", "kind": "button", "parent": "Popover", "rect": [1403, 565, 46, 46], "hole": false },
+    { "id": "CloseIcon", "parent": "CloseButton", "rect": [1415.76, 578.07, 20.0, 20.0], "use": "UI/Icons/Icon_Close_Brown.png" },
+
+    { "id": "Place0", "kind": "label", "parent": "Popover", "text": "1st", "font": "SerifSemiBold", "align": "left", "rect": [1205, 628, 45, 32], "key": "ui.play_online.place_1" },
+    { "id": "PrizeCoin0", "parent": "Popover", "rect": [1304.38, 624.13, 34.25, 34.25], "use": "UI/Icons/Icon_Coin.png" },
+    { "id": "PrizeAmount0", "kind": "label", "parent": "Popover", "text": "200", "font": "SerifBold", "align": "left", "rect": [1352, 628, 60, 32] },
+    { "id": "PrizeRule0", "parent": "Popover", "rect": [1200.35, 660.81, 231.3, 6.087], "use": "UI/Controls/UI_PrizeRowLine.png" },
+    { "id": "Place1", "kind": "label", "parent": "Popover", "text": "2nd", "font": "SerifSemiBold", "align": "left", "rect": [1205, 673, 55, 32], "key": "ui.play_online.place_2" },
+    { "id": "PrizeCoin1", "parent": "Popover", "rect": [1304.13, 668.28, 34.75, 34.75], "use": "UI/Icons/Icon_Coin.png" },
+    { "id": "PrizeAmount1", "kind": "label", "parent": "Popover", "text": "80", "font": "SerifBold", "align": "left", "rect": [1352, 673, 60, 32] },
+    { "id": "PrizeRule1", "parent": "Popover", "rect": [1200.35, 705.81, 231.3, 6.087], "use": "UI/Controls/UI_PrizeRowLine.png" },
+    { "id": "Place2", "kind": "label", "parent": "Popover", "text": "3rd", "font": "SerifSemiBold", "align": "left", "rect": [1205, 718, 50, 32], "key": "ui.play_online.place_3" },
+    { "id": "PrizeCoin2", "parent": "Popover", "rect": [1304.38, 713.48, 34.25, 34.25], "use": "UI/Icons/Icon_Coin.png" },
+    { "id": "PrizeAmount2", "kind": "label", "parent": "Popover", "text": "60", "font": "SerifBold", "align": "left", "rect": [1352, 718, 60, 32] },
+    { "id": "PrizeRule2", "parent": "Popover", "rect": [1200.35, 750.46, 231.3, 6.087], "use": "UI/Controls/UI_PrizeRowLine.png" },
+    { "id": "Place3", "kind": "label", "parent": "Popover", "text": "4th", "font": "SerifSemiBold", "align": "left", "rect": [1205, 763, 50, 32], "key": "ui.play_online.place_4" },
+    { "id": "PrizeCoin3", "parent": "Popover", "rect": [1304.10, 758.90, 34.60, 34.60], "use": "UI/Icons/Icon_Coin.png" },
+    { "id": "PrizeAmount3", "kind": "label", "parent": "Popover", "text": "40", "font": "SerifBold", "align": "left", "rect": [1352, 763, 60, 32] }
+  ]
+}
