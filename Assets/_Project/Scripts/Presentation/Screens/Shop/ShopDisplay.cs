@@ -1,16 +1,16 @@
 namespace Callbreak.Presentation.Screens
 {
-    /// <summary>What a shop tile says under its name (mockups 15, 20 and 21).</summary>
+    /// <summary>
+    /// What a shop tile says under its name (mockups 15, 20 and 21; the owner, 5 Oct 2026: of the
+    /// mockups' "Equipped", "Selected" and "Owned", only "Equipped" stays).
+    /// </summary>
     public enum ShopTileStatus
     {
         /// <summary>The item the player's own table shows: "Equipped" with a filled radio.</summary>
         Equipped,
 
-        /// <summary>Owned and chosen on this screen, not equipped yet: "Selected" with a filled radio (mockup 20).</summary>
-        Selected,
-
-        /// <summary>Owned, neither equipped nor chosen: "Owned" with an empty radio.</summary>
-        Owned,
+        /// <summary>Owned and not equipped: nothing under the name, chosen or not (the crimson outline shows the choice).</summary>
+        None,
 
         /// <summary>Not owned: the coin and the item's price (mockup 21).</summary>
         Price,
@@ -27,46 +27,29 @@ namespace Callbreak.Presentation.Screens
     }
 
     /// <summary>
-    /// The shop's display rules (designer's spec shop-drawer-and-tables-prompts.md): an unowned
-    /// item shows its price; an owned one is Equipped, Selected or Owned, and only the first two
-    /// fill their radio. The chosen tile also carries the crimson outline, whatever its status.
-    /// Engine-free, so it is tested outside Unity.
+    /// The shop's display rules (designer's spec shop-drawer-and-tables-prompts.md; the owner,
+    /// 5 Oct 2026): an unowned item shows its price; an owned one shows "Equipped" with a filled
+    /// radio when it is the one in use, and nothing otherwise. Tapping a picture only moves the
+    /// crimson outline; "Equipped" moves when the player uses the chosen item. Engine-free, so it is
+    /// tested outside Unity.
     /// </summary>
     public static class ShopDisplay
     {
-        public static ShopTileStatus Status(bool owned, bool equipped, bool selected)
+        public static ShopTileStatus Status(bool owned, bool equipped)
         {
             if (!owned)
             {
                 return ShopTileStatus.Price;
             }
 
-            if (equipped)
-            {
-                return ShopTileStatus.Equipped;
-            }
-
-            return selected ? ShopTileStatus.Selected : ShopTileStatus.Owned;
+            return equipped ? ShopTileStatus.Equipped : ShopTileStatus.None;
         }
 
-        /// <summary>The radio is filled for the equipped item and for an owned item that is chosen.</summary>
-        public static bool RadioFilled(ShopTileStatus status) => status == ShopTileStatus.Equipped || status == ShopTileStatus.Selected;
+        /// <summary>The radio, shown only with "Equipped", is filled.</summary>
+        public static bool RadioFilled(ShopTileStatus status) => status == ShopTileStatus.Equipped;
 
-        /// <summary>The words of a status, or null for a price (it shows the coin and a number instead).</summary>
-        public static string StatusKey(ShopTileStatus status)
-        {
-            switch (status)
-            {
-                case ShopTileStatus.Equipped:
-                    return "ui.shop.status.equipped";
-                case ShopTileStatus.Selected:
-                    return "ui.shop.status.selected";
-                case ShopTileStatus.Owned:
-                    return "ui.shop.status.owned";
-                default:
-                    return null;
-            }
-        }
+        /// <summary>The words of a status: "Equipped", or null for none and for a price (a coin and a number).</summary>
+        public static string StatusKey(ShopTileStatus status) => status == ShopTileStatus.Equipped ? "ui.shop.status.equipped" : null;
 
         /// <summary>An owned item is put to use; anything else is bought.</summary>
         public static ShopAction ActionFor(bool owned) => owned ? ShopAction.Use : ShopAction.Buy;

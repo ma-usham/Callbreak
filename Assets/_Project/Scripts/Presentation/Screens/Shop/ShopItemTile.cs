@@ -7,10 +7,10 @@ namespace Callbreak.Presentation.Screens
 {
     /// <summary>
     /// One of a shop category's three items (mockups 15, 20 and 21): its picture (a deck's back, a
-    /// background's thumbnail, a table's preview), its name, and under it either the status line
-    /// (a filled radio and "Equipped" or "Selected", an empty radio and "Owned") or the price line
-    /// (the coin and the price). The chosen tile carries the crimson outline. Both lines stay
-    /// centred under the name when their words change (<see cref="ShopRow"/>).
+    /// background's thumbnail, a table's preview), its name, and under it the status line (a filled
+    /// radio and "Equipped") for the item in use, the price line (the coin and the price) for one not
+    /// owned, or nothing (the owner, 5 Oct 2026). The chosen tile carries the crimson outline. Both
+    /// lines stay centred under the name when their words change (<see cref="ShopRow"/>).
     /// </summary>
     public sealed class ShopItemTile : MonoBehaviour
     {
@@ -45,6 +45,9 @@ namespace Callbreak.Presentation.Screens
 
         public bool RadioFilled => _statusRow.gameObject.activeSelf && _radioOn.activeSelf;
 
+        /// <summary>The status line ("Equipped") shows.</summary>
+        public bool ShowsStatus => _statusRow.gameObject.activeSelf;
+
         public bool ShowsPrice => _priceRow.gameObject.activeSelf;
 
         /// <summary>Shows an item's name and status (its picture is set by <see cref="SetPicture"/>).</summary>
@@ -53,12 +56,18 @@ namespace Callbreak.Presentation.Screens
             SetText(_name, itemName);
             _outline.SetActive(chosen);
             bool price = status == ShopTileStatus.Price;
-            _statusRow.gameObject.SetActive(!price);
+            bool line = status == ShopTileStatus.Equipped;
+            _statusRow.gameObject.SetActive(line);
             _priceRow.gameObject.SetActive(price);
             if (price)
             {
                 SetText(_price, priceText);
                 _priceRow.Refresh();
+                return;
+            }
+
+            if (!line)
+            {
                 return;
             }
 
