@@ -5,9 +5,9 @@ using Callbreak.Application.Rooms;
 namespace Callbreak.Application.Online
 {
     /// <summary>
-    /// Opens the connections a private room needs (GDD §24 Phase 1: host + relay; the room code
-    /// names the relay room). The only thing the room logic asks of the network; implemented with
-    /// PurrNet in Callbreak.Networking and in memory for tests.
+    /// Opens the connections a private room needs (GDD §24 Phase 1: a player's device hosts; the
+    /// room code finds it). The only thing the room logic asks of the network; implemented by
+    /// <see cref="PeerRoomTransport"/> over Epic Online Services (ADR 028) and in memory for tests.
     /// </summary>
     public interface IRoomTransport
     {

@@ -5,7 +5,6 @@ using Callbreak.Bootstrap;
 using Callbreak.Editor.Screens;
 using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
-using PurrNet.Transports;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -121,12 +120,8 @@ namespace Callbreak.Editor
 
             LoadingCurtain curtain = CreateCurtain(scene, root.transform);
 
-            // The relay transport of private rooms (GDD §24 Phase 1); it needs no NetworkManager.
-            GameObject network = Create(scene, "Network", root.transform, typeof(PurrTransport));
-
             var scope = root.AddComponent<ProjectLifetimeScope>();
             var so = new SerializedObject(scope);
-            so.FindProperty("_roomTransport").objectReferenceValue = network.GetComponent<PurrTransport>();
             so.FindProperty("_localization").objectReferenceValue =
                 AssetDatabase.LoadAssetAtPath<LocalizationConfig>("Assets/_Project/Config/Localization/LocalizationConfig.asset");
             so.FindProperty("_audioLibrary").objectReferenceValue =

@@ -5,7 +5,8 @@ namespace Callbreak.Application.Online
     /// <summary>
     /// The authority's end of a room's connections (GDD §24: the host device is the server in
     /// Phase 1). Messages are reliable and ordered per peer; everything is raised on the main
-    /// thread. Implemented over PurrNet in Callbreak.Networking.
+    /// thread. Implemented inside <see cref="PeerRoomTransport"/> over Epic Online Services, and in
+    /// memory for tests.
     /// </summary>
     public interface IHostLink : IDisposable
     {

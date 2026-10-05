@@ -15,7 +15,8 @@ namespace Callbreak.Application.Online
     /// room never sees. Room messages are cut to the network's small packets and put back together
     /// per sender (<see cref="PacketFramer"/>); a guest's message longer than
     /// <see cref="Protocol.MaxClientPayloadBytes"/> is dropped as soon as its size is known. In
-    /// everything the room logic sees it behaves like the relay's transport (PurrRoomTransport).
+    /// everything the room logic sees it behaves like the PurrNet relay transport it replaced
+    /// (ADR 028; removed in ADR 037).
     /// <para>
     /// The network's events only note what happened. The room logic hears of it from
     /// <see cref="Tick"/>, in the order it happened (what arrived before a connection dropped is

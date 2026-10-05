@@ -18,11 +18,9 @@ using Callbreak.Infrastructure.Localization;
 using Callbreak.Infrastructure.Persistence;
 using Callbreak.Infrastructure.Platform;
 using Callbreak.Infrastructure.Services;
-using Callbreak.Networking;
 using Callbreak.Networking.Eos;
 using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
-using PurrNet.Transports;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -44,7 +42,6 @@ namespace Callbreak.Bootstrap
         [SerializeField] private DialogView _dialog;
         [SerializeField] private AvatarLibrary _avatars;
         [SerializeField] private CardSpriteProvider _cardSprites;
-        [SerializeField] private GenericTransport _roomTransport;
 
         protected override void Awake()
         {
@@ -222,15 +219,14 @@ namespace Callbreak.Bootstrap
         }
 
         /// <summary>
-        /// Online rooms (ADR 016). Epic Online Services, peer to peer, once its config holds the
+        /// Online rooms (ADR 016, 028). Epic Online Services, peer to peer, once its config holds the
         /// client credentials (Docs/Setup/EOS.md). EOS then starts here and runs until the app
-        /// quits: the plugin's EOSManager object is its own and is never destroyed. Otherwise the
-        /// PurrNet relay, for development, when the Boot scene sets one. Otherwise none. The log
-        /// says which, never with a credential. A scope above this one that brings a transport of its
-        /// own (the PlayMode tests' GameFixture) keeps all of this off: its transport serves, and EOS
-        /// never starts.
+        /// quits: the plugin's EOSManager object is its own and is never destroyed. Otherwise none
+        /// (the PurrNet relay that once stood in is gone, ADR 037). The log says which, never with a
+        /// credential. A scope above this one that brings a transport of its own (the PlayMode tests'
+        /// GameFixture) keeps all of this off: its transport serves, and EOS never starts.
         /// </summary>
-        private void RegisterRoomTransport(IContainerBuilder builder)
+        private static void RegisterRoomTransport(IContainerBuilder builder)
         {
             if (builder.Exists(typeof(IRoomTransport), includeInterfaceTypes: true, findParentScopes: true))
             {
@@ -250,16 +246,8 @@ namespace Callbreak.Bootstrap
                 return;
             }
 
-            if (_roomTransport != null)
-            {
-                GenericTransport relay = _roomTransport;
-                builder.Register(_ => new PurrRoomTransport(relay), Lifetime.Singleton).As<IRoomTransport>();
-                Debug.Log("Online rooms: PurrNet relay (development fallback: EOS is not set up, or did not start).");
-                return;
-            }
-
             builder.Register<NoRoomTransport>(Lifetime.Singleton).As<IRoomTransport>();
-            Debug.Log("Online rooms: off (EOS is not set up, or did not start, and no relay is set).");
+            Debug.Log("Online rooms: off (EOS is not set up, or did not start).");
         }
 
         private static RoomService CreateRoomService(IObjectResolver resolver)

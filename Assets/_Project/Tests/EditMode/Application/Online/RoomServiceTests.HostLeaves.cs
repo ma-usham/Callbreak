@@ -166,7 +166,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
         [Test]
         public void HostLeaves_PrivateRoomOverTheRelay_TheRoomStillClosesForEveryone()
         {
-            // The relay (PurrNet) hands nothing over: today's "host left" stays.
+            // A transport that can't hand over (as the old PurrNet relay couldn't) keeps "host left".
             Device host = NewDevice("Hari");
             Device guest = NewDevice("Asha");
             JoinRoom(host, guest);

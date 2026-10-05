@@ -7,8 +7,8 @@ over EOS P2P (`Callbreak.Networking.Eos.EosPeerNetwork`).
 
 The plugin reads its config from `Assets/StreamingAssets/EOS/`. Those files hold the client
 credentials, so they are **gitignored**, and every fresh clone repeats the steps below. Until the
-credentials are complete, the game uses the PurrNet relay (development only) when the Boot
-scene sets one, and has no online rooms otherwise. The Boot log says which.
+credentials are complete, the game has no online rooms (the PurrNet relay that once stood in was
+removed, ADR 037). The Boot log says which.
 
 ## Values from the Developer Portal (not secret)
 

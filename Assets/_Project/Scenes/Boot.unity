@@ -1148,7 +1148,6 @@ MonoBehaviour:
   _dialog: {fileID: 1591459986}
   _avatars: {fileID: 11400000, guid: 15ced230e17e8da4b8e45d11a4d8264b, type: 2}
   _cardSprites: {fileID: 11400000, guid: 592b9b95372b92e458cd5d1e8b7ac9da, type: 2}
-  _roomTransport: {fileID: 1935784295}
 --- !u!4 &1518571376
 Transform:
   m_ObjectHideFlags: 0
@@ -1167,7 +1166,6 @@ Transform:
   - {fileID: 675362130}
   - {fileID: 1591459987}
   - {fileID: 1875577011}
-  - {fileID: 1935784296}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1581447882
@@ -1545,66 +1543,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 5862759878545609473, guid: 20bb95bef69fb9a4da9284112fe9b5cf, type: 3}
   m_PrefabInstance: {fileID: 1875577009}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &1935784294
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1935784296}
-  - component: {fileID: 1935784295}
-  m_Layer: 0
-  m_Name: Network
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1935784295
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1935784294}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 332e746c3c3253246aacad4d5559f1fb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: PurrNet.Runtime::PurrNet.Transports.PurrTransport
-  _masterServer: https://purrtransport.purrservers.com/
-  _roomName: d73f44072e4c40998c422a210b61840a
-  _region: eu-central
-  _host: 
-  _timeoutInSeconds: 5
-  _useNat: 0
-  _natResolveTimeout: 8
-  _networkSimulation:
-    includeInBuild: 0
-    simulateLatency: 0
-    minLatency: 30
-    maxLatency: 100
-    simulatePacketLoss: 0
-    packetLossChance: 10
-  _useWebRtcP2P: 0
-  _webRtcStunServer: stun:stun.cloudflare.com:3478
---- !u!4 &1935784296
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1935784294}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1518571376}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
