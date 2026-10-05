@@ -47,7 +47,7 @@ namespace Callbreak.Editor.Screens
             Fill(view, Cards,
                 new[] { "Classic Crimson", "Himalayan Ivory", "Kathmandu Gold" },
                 new[] { Back("ClassicCrimson"), Back("HimalayanIvory"), Back("KathmanduGold") },
-                new[] { ShopTileStatus.Equipped, ShopTileStatus.Owned, ShopTileStatus.Owned },
+                new[] { ShopTileStatus.Equipped, ShopTileStatus.None, ShopTileStatus.None },
                 null,
                 chosen: 0);
 
@@ -55,7 +55,7 @@ namespace Callbreak.Editor.Screens
             Fill(view, Backgrounds,
                 new[] { "Himalayan Vista", "Pokhara Lakeside", "Monastery Garden" },
                 System.Array.ConvertAll(backgrounds, id => view.Picture(CosmeticKind.Background, id)),
-                new[] { ShopTileStatus.Equipped, ShopTileStatus.Selected, ShopTileStatus.Owned },
+                new[] { ShopTileStatus.Equipped, ShopTileStatus.None, ShopTileStatus.None },
                 null,
                 chosen: 1);
 
@@ -88,20 +88,7 @@ namespace Callbreak.Editor.Screens
             }
         }
 
-        private static string StatusText(ShopTileStatus status)
-        {
-            switch (status)
-            {
-                case ShopTileStatus.Equipped:
-                    return "Equipped";
-                case ShopTileStatus.Selected:
-                    return "Selected";
-                case ShopTileStatus.Owned:
-                    return "Owned";
-                default:
-                    return null;
-            }
-        }
+        private static string StatusText(ShopTileStatus status) => status == ShopTileStatus.Equipped ? "Equipped" : null;
 
         private static Sprite Back(string deck) => AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/_Project/Art/Cards/{deck}/Back_{deck}.png");
     }

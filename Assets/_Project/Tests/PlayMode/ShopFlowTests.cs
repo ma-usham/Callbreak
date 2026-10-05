@@ -57,7 +57,8 @@ namespace Callbreak.Tests.PlayMode
             ShopItemTile classic = Tile(Cards, 0);
             Assert.IsTrue(classic.IsChosen && classic.RadioFilled, "mockup 15: Classic Crimson chosen, filled radio");
             Assert.AreEqual(Text("ui.shop.status.equipped"), classic.StatusLabel.text);
-            Assert.AreEqual(Text("ui.shop.status.owned"), Tile(Cards, 1).StatusLabel.text);
+            Assert.IsFalse(Tile(Cards, 1).ShowsStatus, "the owner, 5 Oct 2026: no \"Owned\" under an owned deck");
+            Assert.IsFalse(Tile(Cards, 1).ShowsPrice);
             Assert.IsFalse(Tile(Cards, 1).RadioFilled);
             Assert.IsFalse(View.ShowsBuy);
             Assert.IsFalse(View.PrimaryInteractable, "Use Selected Style is off while the chosen deck is equipped");
@@ -157,8 +158,10 @@ namespace Callbreak.Tests.PlayMode
 
             Assert.IsTrue(Tile(Backgrounds, 0).IsChosen, "the shop opens with each choice on its equipped item");
             Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Backgrounds, 0).StatusLabel.text, "the Himalayan Vista is the default");
-            Assert.AreEqual(Text("ui.shop.status.owned"), Tile(Backgrounds, 1).StatusLabel.text, "every background is owned");
-            Assert.AreEqual(Text("ui.shop.status.owned"), Tile(Backgrounds, 2).StatusLabel.text);
+            for (int i = 1; i < TilesShown; i++)
+            {
+                Assert.IsFalse(Tile(Backgrounds, i).ShowsStatus || Tile(Backgrounds, i).ShowsPrice, "every background is owned: nothing under its name");
+            }
         }
 
         [UnityTest]
@@ -187,9 +190,9 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(Backgrounds, View.Drawer.Active);
             Press("Tile1");
             Assert.IsTrue(Tile(Backgrounds, 1).IsChosen);
-            Assert.AreEqual(Text("ui.shop.status.selected"), Tile(Backgrounds, 1).StatusLabel.text, "mockup 20: owned, chosen, not equipped");
-            Assert.IsTrue(Tile(Backgrounds, 1).RadioFilled);
-            Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Backgrounds, 0).StatusLabel.text);
+            Assert.IsFalse(Tile(Backgrounds, 1).ShowsStatus, "choosing only moves the outline: no \"Selected\" (the owner, 5 Oct 2026)");
+            Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Backgrounds, 0).StatusLabel.text, "the one in use stays Equipped");
+            Assert.IsTrue(Tile(Backgrounds, 0).ShowsStatus && Tile(Backgrounds, 0).RadioFilled);
 
             Press("CategoryButton2");
             Assert.AreEqual(Tables, View.Category);
@@ -211,14 +214,15 @@ namespace Callbreak.Tests.PlayMode
 
             Press("CategoryButton1");
             Press("Tile2");
-            Assert.AreEqual(Text("ui.shop.status.selected"), Tile(Backgrounds, 2).StatusLabel.text);
+            Assert.IsFalse(Tile(Backgrounds, 2).ShowsStatus, "chosen, not in use yet: no words");
             Assert.IsTrue(View.PrimaryInteractable, "Use Selected Background");
             Press("PrimaryButton");
             yield return null;
 
             Assert.AreEqual(CosmeticCatalog.Backgrounds.MonasteryGarden, shop.Equipped(CosmeticKind.Background), "the scenery for the next match");
-            Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Backgrounds, 2).StatusLabel.text);
-            Assert.AreEqual(Text("ui.shop.status.owned"), Tile(Backgrounds, 0).StatusLabel.text);
+            Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Backgrounds, 2).StatusLabel.text, "Equipped once it is used");
+            Assert.IsTrue(Tile(Backgrounds, 2).ShowsStatus);
+            Assert.IsFalse(Tile(Backgrounds, 0).ShowsStatus, "and no longer on the one before");
             Assert.IsFalse(View.PrimaryInteractable, "off while it is equipped");
         }
 
@@ -255,7 +259,7 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(150, wallet.Coins, "for 350 coins");
             Assert.AreEqual(CosmeticCatalog.Tables.HimalayanIvory, shop.Equipped(CosmeticKind.Table), "buying does not equip");
             Assert.IsFalse(Tile(Tables, 1).ShowsPrice);
-            Assert.AreEqual(Text("ui.shop.status.selected"), Tile(Tables, 1).StatusLabel.text);
+            Assert.IsFalse(Tile(Tables, 1).ShowsStatus, "bought and chosen: no words until it is used");
             Assert.IsFalse(View.ShowsBuy, "the button turns to Use Selected Table");
             Assert.IsTrue(View.PrimaryInteractable);
 
@@ -263,7 +267,7 @@ namespace Callbreak.Tests.PlayMode
             yield return null;
             Assert.AreEqual(CosmeticCatalog.Tables.RoyalCrimson, shop.Equipped(CosmeticKind.Table), "Use equips it");
             Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Tables, 1).StatusLabel.text);
-            Assert.AreEqual(Text("ui.shop.status.owned"), Tile(Tables, 0).StatusLabel.text);
+            Assert.IsFalse(Tile(Tables, 0).ShowsStatus, "the table before shows nothing now");
             Assert.IsFalse(View.PrimaryInteractable, "off while it is equipped");
         }
 
@@ -304,16 +308,50 @@ namespace Callbreak.Tests.PlayMode
             var cosmetics = _game.Services.Resolve<ICosmeticsService>();
 
             Press("Tile1");
-            Assert.AreEqual(Text("ui.shop.status.selected"), Tile(Cards, 1).StatusLabel.text);
+            Assert.IsFalse(Tile(Cards, 1).ShowsStatus, "chosen, not in use yet: no words");
             Assert.IsTrue(View.PrimaryInteractable, "Use Selected Style");
             Press("PrimaryButton");
             yield return null;
 
             Assert.AreEqual(CosmeticCatalog.Decks.HimalayanIvory, cosmetics.SelectedDeckId, "the deck for the next match");
             Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Cards, 1).StatusLabel.text);
-            Assert.AreEqual(Text("ui.shop.status.owned"), Tile(Cards, 0).StatusLabel.text);
+            Assert.IsFalse(Tile(Cards, 0).ShowsStatus, "\"Equipped\" moved to the deck in use");
             Assert.IsFalse(Tile(Cards, 0).RadioFilled);
             Assert.IsFalse(View.PrimaryInteractable);
+        }
+
+        [UnityTest]
+        public IEnumerator TappingTheDrawerButtons_LeavesEachAtItsOwnSize()
+        {
+            yield return OpenShop();
+            yield return UntilSettled();
+            var buttons = new Button[ShopView.CategoryCount];
+            var sizes = new Vector3[ShopView.CategoryCount];
+            for (int c = 0; c < ShopView.CategoryCount; c++)
+            {
+                buttons[c] = Find("CategoryButton" + c).GetComponent<Button>();
+                sizes[c] = buttons[c].transform.localScale;
+                Assert.Less(sizes[c].x, 1f, $"button {c} is built smaller than full size");
+            }
+
+            // Tapped one after another, twice round, the way a player tries them (the owner, 5 Oct 2026).
+            for (int round = 0; round < 2; round++)
+            {
+                for (int c = 0; c < ShopView.CategoryCount; c++)
+                {
+                    yield return Tap(buttons[c].gameObject);
+                    Assert.AreEqual(c, View.Category);
+                }
+            }
+
+            yield return new WaitForSecondsRealtime(0.4f);
+            for (int c = 0; c < ShopView.CategoryCount; c++)
+            {
+                Assert.AreEqual(sizes[c].x, buttons[c].transform.localScale.x, 0.001f, $"button {c} is back at its own size, not full size");
+                Assert.AreEqual(sizes[c].y, buttons[c].transform.localScale.y, 0.001f);
+            }
+
+            Assert.AreEqual(Tables, View.Drawer.Active, "only the last one tapped is the crimson one");
         }
 
         [UnityTest]
@@ -353,6 +391,17 @@ namespace Callbreak.Tests.PlayMode
         }
 
         private void Press(string button) => GameFixture.PressIn(View, button);
+
+        /// <summary>A finger on the button, lifted a moment later: the press effect runs as on a phone.</summary>
+        private static IEnumerator Tap(GameObject button)
+        {
+            var data = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left };
+            ExecuteEvents.Execute(button, data, ExecuteEvents.pointerDownHandler);
+            yield return new WaitForSecondsRealtime(0.05f);
+            ExecuteEvents.Execute(button, data, ExecuteEvents.pointerUpHandler);
+            ExecuteEvents.Execute(button, data, ExecuteEvents.pointerClickHandler);
+            yield return new WaitForSecondsRealtime(0.05f);
+        }
 
         private ShopItemTile Tile(int category, int index)
         {

@@ -149,3 +149,25 @@ The owner's changes:
   as one group, for any text.
 - **Suites:** EditMode 1912 and PlayMode 86; the table simulation has 0 failures in both modes
   (480 and 467 kinds of check).
+
+## Addendum, 5 Oct 2026 (night): only "Equipped", and drawer buttons that keep their size
+
+The owner's changes:
+- **Tile labels.** Of the mockups' "Equipped", "Selected" and "Owned", only "Equipped" stays (the
+  owner chose "Yes, always on the item in use").
+  - "Equipped", with its filled radio, is always on the item in use, the default included.
+  - An owned item that isn't in use shows nothing under its name, whether chosen or not. Tapping a
+    picture only moves the crimson outline. "Equipped" moves when the player presses Use Selected.
+  - Items not owned still show their price.
+  - `ShopTileStatus` is now Equipped, None or Price, and the `ui.shop.status.selected` and `.owned`
+    rows are gone.
+- **The drawer's buttons kept growing.** They are built at 0.68 of the mockups' size (the addendum
+  above). The shared press effect, `ButtonFeedback`, sprang every tapped button back to full size, so
+  each tapped category stayed big.
+  - The press now works on the size the button rests at, and the button settles back there.
+  - A button hidden mid-press returns to its own size. An untouched one is never resized.
+  - This also fixes Settings' smaller Privacy options button.
+- **Tests:**
+  - ShopStateRulesTests and ShopFlowTests follow the new labels;
+  - a new ShopFlowTests case taps the three drawer buttons twice round and checks each keeps its size;
+  - ButtonFeedbackTests (5 PlayMode) cover the press at any size.

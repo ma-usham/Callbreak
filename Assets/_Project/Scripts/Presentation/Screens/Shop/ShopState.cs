@@ -86,7 +86,7 @@ namespace Callbreak.Presentation.Screens
         public ShopTileStatus StatusOf(CosmeticKind kind, int index)
         {
             CosmeticItem item = _shop.Catalog(kind)[index];
-            return ShopDisplay.Status(_shop.IsOwned(kind, item.Id), _shop.Equipped(kind) == item.Id, index == ChosenIndex(kind));
+            return ShopDisplay.Status(_shop.IsOwned(kind, item.Id), _shop.Equipped(kind) == item.Id);
         }
 
         /// <summary>What the primary button does for the chosen item of a category.</summary>

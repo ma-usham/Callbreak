@@ -54,21 +54,22 @@ namespace Callbreak.Tests.EditMode.Presentation
         }
 
         [Test]
-        public void Mockup15_TheEquippedDeckIsEquipped_TheOthersOwned()
+        public void TheEquippedDeckIsEquipped_TheOthersSayNothing()
         {
-            AssertStatuses(CosmeticKind.Deck, ShopTileStatus.Equipped, ShopTileStatus.Owned, ShopTileStatus.Owned);
+            AssertStatuses(CosmeticKind.Deck, ShopTileStatus.Equipped, ShopTileStatus.None, ShopTileStatus.None);
             Assert.AreEqual(ShopAction.Use, _state.ActionFor(CosmeticKind.Deck));
             Assert.IsFalse(_state.CanUse(CosmeticKind.Deck), "Use Selected Style is off while the chosen deck is the equipped one");
         }
 
         [Test]
-        public void Mockup20_ChoosingAnOwnedBackground_SaysSelected_AndTheEquippedOneStaysEquipped()
+        public void ChoosingAnOwnedBackground_OnlyMovesTheChoice_AndTheEquippedOneStaysEquipped()
         {
-            AssertStatuses(CosmeticKind.Background, ShopTileStatus.Equipped, ShopTileStatus.Owned, ShopTileStatus.Owned);
+            AssertStatuses(CosmeticKind.Background, ShopTileStatus.Equipped, ShopTileStatus.None, ShopTileStatus.None);
 
             Assert.IsTrue(_state.Choose(CosmeticKind.Background, 1));
 
-            AssertStatuses(CosmeticKind.Background, ShopTileStatus.Equipped, ShopTileStatus.Selected, ShopTileStatus.Owned);
+            AssertStatuses(CosmeticKind.Background, ShopTileStatus.Equipped, ShopTileStatus.None, ShopTileStatus.None);
+            Assert.AreEqual(1, _state.ChosenIndex(CosmeticKind.Background), "the crimson outline moves");
             Assert.AreEqual(ShopAction.Use, _state.ActionFor(CosmeticKind.Background));
             Assert.IsTrue(_state.CanUse(CosmeticKind.Background), "Use Selected Background equips it");
         }
@@ -87,12 +88,12 @@ namespace Callbreak.Tests.EditMode.Presentation
         }
 
         [Test]
-        public void ABoughtTable_IsSelectedNotEquipped_AndTheButtonUsesIt()
+        public void ABoughtTable_SaysNothingUntilItIsUsed_AndTheButtonUsesIt()
         {
             _state.Choose(CosmeticKind.Table, 1);
             _shop.OwnedIds.Add((CosmeticKind.Table, "royal-crimson"));
 
-            AssertStatuses(CosmeticKind.Table, ShopTileStatus.Equipped, ShopTileStatus.Selected, ShopTileStatus.Price);
+            AssertStatuses(CosmeticKind.Table, ShopTileStatus.Equipped, ShopTileStatus.None, ShopTileStatus.Price);
             Assert.AreEqual(ShopAction.Use, _state.ActionFor(CosmeticKind.Table));
             Assert.IsTrue(_state.CanUse(CosmeticKind.Table), "Use Selected Table");
         }
@@ -104,7 +105,7 @@ namespace Callbreak.Tests.EditMode.Presentation
             _state.Choose(CosmeticKind.Background, 0);
 
             Assert.AreEqual(ShopTileStatus.Equipped, _state.StatusOf(CosmeticKind.Background, 0));
-            Assert.AreEqual(ShopTileStatus.Owned, _state.StatusOf(CosmeticKind.Background, 2));
+            Assert.AreEqual(ShopTileStatus.None, _state.StatusOf(CosmeticKind.Background, 2));
             Assert.IsFalse(_state.CanUse(CosmeticKind.Background));
         }
 
@@ -166,23 +167,19 @@ namespace Callbreak.Tests.EditMode.Presentation
             Assert.AreEqual(0, _state.ChosenIndex(CosmeticKind.Table));
         }
 
-        [TestCase(false, false, false, ShopTileStatus.Price)]
-        [TestCase(false, false, true, ShopTileStatus.Price)]
-        [TestCase(true, true, true, ShopTileStatus.Equipped)]
-        [TestCase(true, true, false, ShopTileStatus.Equipped)]
-        [TestCase(true, false, true, ShopTileStatus.Selected)]
-        [TestCase(true, false, false, ShopTileStatus.Owned)]
-        public void TheStatusRules(bool owned, bool equipped, bool selected, ShopTileStatus expected)
+        [TestCase(false, false, ShopTileStatus.Price)]
+        [TestCase(true, true, ShopTileStatus.Equipped)]
+        [TestCase(true, false, ShopTileStatus.None)]
+        public void TheStatusRules(bool owned, bool equipped, ShopTileStatus expected)
         {
-            Assert.AreEqual(expected, ShopDisplay.Status(owned, equipped, selected));
+            Assert.AreEqual(expected, ShopDisplay.Status(owned, equipped));
         }
 
         [Test]
-        public void OnlyEquippedAndSelected_FillTheRadio()
+        public void OnlyEquipped_FillsTheRadio()
         {
             Assert.IsTrue(ShopDisplay.RadioFilled(ShopTileStatus.Equipped));
-            Assert.IsTrue(ShopDisplay.RadioFilled(ShopTileStatus.Selected));
-            Assert.IsFalse(ShopDisplay.RadioFilled(ShopTileStatus.Owned));
+            Assert.IsFalse(ShopDisplay.RadioFilled(ShopTileStatus.None));
             Assert.IsFalse(ShopDisplay.RadioFilled(ShopTileStatus.Price));
         }
 
@@ -190,8 +187,7 @@ namespace Callbreak.Tests.EditMode.Presentation
         public void StatusWords_AndPrices()
         {
             Assert.AreEqual("ui.shop.status.equipped", ShopDisplay.StatusKey(ShopTileStatus.Equipped));
-            Assert.AreEqual("ui.shop.status.selected", ShopDisplay.StatusKey(ShopTileStatus.Selected));
-            Assert.AreEqual("ui.shop.status.owned", ShopDisplay.StatusKey(ShopTileStatus.Owned));
+            Assert.IsNull(ShopDisplay.StatusKey(ShopTileStatus.None), "an owned item not in use says nothing (the owner, 5 Oct 2026)");
             Assert.IsNull(ShopDisplay.StatusKey(ShopTileStatus.Price), "a price shows a coin and a number");
             Assert.AreEqual("350", ShopDisplay.Price(350));
             Assert.AreEqual("1250", ShopDisplay.Price(1250));
