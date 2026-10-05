@@ -1,4 +1,3 @@
-using System;
 using Callbreak.Presentation.Framework;
 using LitMotion;
 using TMPro;
@@ -22,6 +21,10 @@ namespace Callbreak.Presentation.Table
     {
         [SerializeField] private RectTransform _anchor;
         [SerializeField] private Image _avatar;
+
+        // The avatar's button, from when a tap on an opponent muted their quick phrases (GDD §8).
+        // The owner removed the mute (5 Oct 2026, ADR 038): the prefab keeps the button, but it takes
+        // no tap, so a tap on an avatar does nothing.
         [SerializeField] private Button _avatarButton;
         [SerializeField] private TMP_Text _name;
         [SerializeField] private TMP_Text _status;
@@ -64,11 +67,7 @@ namespace Callbreak.Presentation.Table
         private int _shownSeconds = int.MinValue;
         private string _fittedStatus;
         private bool _met;
-        private bool _muted;
         private bool _chipBusy;
-
-        /// <summary>The opponent tapped: the presenter mutes or unmutes this seat's emotes.</summary>
-        public event Action AvatarClicked;
 
         /// <summary>The avatar's centre: where dealt and swept cards fly to and played cards come from.</summary>
         public RectTransform Anchor => _anchor;
@@ -285,35 +284,16 @@ namespace Callbreak.Presentation.Table
                 });
         }
 
-        /// <summary>A muted opponent's avatar is dimmed; their quick phrases are not shown.</summary>
-        public void SetMuted(bool muted)
-        {
-            if (_muted == muted)
-            {
-                return;
-            }
-
-            _muted = muted;
-            Color color = _avatar.color;
-            color.a = muted ? 0.45f : 1f;
-            _avatar.color = color;
-        }
-
-        private void OnEnable()
+        private void Awake()
         {
             if (_avatarButton != null)
             {
-                _avatarButton.onClick.AddListener(OnAvatarClicked);
+                _avatarButton.interactable = false;
             }
         }
 
         private void OnDisable()
         {
-            if (_avatarButton != null)
-            {
-                _avatarButton.onClick.RemoveListener(OnAvatarClicked);
-            }
-
             _speech?.Stop();
             _chatSpeech?.Stop();
             Cancel(ref _pulseMotion);
@@ -325,8 +305,6 @@ namespace Callbreak.Presentation.Table
                 _statusPill.rectTransform.localScale = Vector3.one;
             }
         }
-
-        private void OnAvatarClicked() => AvatarClicked?.Invoke();
 
         /// <summary>
         /// The pill's width for its words: their width and the pill's margins, and never narrower

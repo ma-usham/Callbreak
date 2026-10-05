@@ -110,7 +110,7 @@ namespace Callbreak.Tests.EditMode.Presentation
         }
 
         [Test]
-        public void TheFinishedTrick_LeavesTheTable_AndIsKeptForThePeek()
+        public void TheFinishedTrick_LeavesTheTable_AndIsKeptAsTheLastTrick()
         {
             var state = new TableState(Seat.South, Rules);
             state.Apply(new RoundStarted(1, Seat.West));

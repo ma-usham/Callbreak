@@ -27,6 +27,9 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private UnityEngine.UI.Button _settingsButton;
         [SerializeField] private UnityEngine.UI.Button _emoteButton;
         [SerializeField] private UnityEngine.UI.Button _tableTap;
+
+        // The trick area's own catcher, from when a tap there showed the previous trick (GDD screen
+        // 08). The owner removed that peek (5 Oct 2026, ADR 038): a tap there is a tap on the table.
         [SerializeField] private UnityEngine.UI.Button _trickTap;
         [SerializeField] private TMP_Text _roundLabel;
         [SerializeField] private TMP_Text _trickLabel;
@@ -69,11 +72,11 @@ namespace Callbreak.Presentation.Table
 
         public event Action EmoteClicked;
 
-        /// <summary>A tap on the table itself, beside every control: skips a long animation.</summary>
+        /// <summary>
+        /// A tap on the table itself, beside every control, the trick area included (it closes the
+        /// emote panel; it skips no animation and shows no earlier trick).
+        /// </summary>
         public event Action TableTapped;
-
-        /// <summary>A tap on the trick area: skips an animation, or peeks at the previous trick (GDD screen 08).</summary>
-        public event Action TrickTapped;
 
         /// <summary>The table was touched while the local seat is Away: the player is back (GDD §8, in place of the "I'm back" banner).</summary>
         public event Action ImBackClicked;
@@ -282,7 +285,7 @@ namespace Callbreak.Presentation.Table
             _settingsButton.onClick.AddListener(OnSettings);
             _emoteButton.onClick.AddListener(OnEmote);
             _tableTap.onClick.AddListener(OnTableTap);
-            _trickTap.onClick.AddListener(OnTrickTap);
+            _trickTap.onClick.AddListener(OnTableTap);
             _imBackButton.onClick.AddListener(OnImBack);
             _hand.Touched += OnTableTap;
         }
@@ -294,7 +297,7 @@ namespace Callbreak.Presentation.Table
             _settingsButton.onClick.RemoveListener(OnSettings);
             _emoteButton.onClick.RemoveListener(OnEmote);
             _tableTap.onClick.RemoveListener(OnTableTap);
-            _trickTap.onClick.RemoveListener(OnTrickTap);
+            _trickTap.onClick.RemoveListener(OnTableTap);
             _imBackButton.onClick.RemoveListener(OnImBack);
             _hand.Touched -= OnTableTap;
             UiMotion.Finish(ref _coverMotion);
@@ -309,8 +312,6 @@ namespace Callbreak.Presentation.Table
         private void OnEmote() => EmoteClicked?.Invoke();
 
         private void OnTableTap() => TableTapped?.Invoke();
-
-        private void OnTrickTap() => TrickTapped?.Invoke();
 
         private void OnImBack() => ImBackClicked?.Invoke();
 

@@ -6,7 +6,7 @@ namespace Callbreak.Presentation.Table
     /// When the table takes input (GDD §11 screens 09-13 and 16). The results, the scorecard, the
     /// match menu, the settings and the rules open over the table, and online the match runs on
     /// under them. A touch that reaches the table while one of them is the router's top screen
-    /// must not play a card, make a call, open the emotes, mute a seat or peek at a trick: the
+    /// must not play a card, make a call or open the emotes: the
     /// table and the call panel act only while nothing covers them. The pages
     /// take every touch themselves; this is the second lock on the same door.
     /// </summary>

@@ -11,6 +11,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 using VContainer;
 
 namespace Callbreak.Tests.PlayMode
@@ -166,6 +167,62 @@ namespace Callbreak.Tests.PlayMode
             }
         }
 
+        [UnityTest]
+        public IEnumerator TapsInTheMiddleAndOnTheAvatars_ShowNoEarlierTrick_AndChangeNothing()
+        {
+            yield return StartOfflineMatch();
+            IMatchSession session = Session();
+            BiddingPanelView panel = UnityEngine.Object.FindFirstObjectByType<BiddingPanelView>(FindObjectsInactive.Include);
+            yield return GameFixture.Until(() => GameFixture.CanPress(panel, "Chip2"), "the call panel to open", TurnTimeout);
+            GameFixture.PressIn(panel, "Chip2");
+            GameFixture.PressIn(panel, "ConfirmButton");
+
+            // A quiet table with a finished trick behind it: my turn after the first trick, which
+            // the bots wait for.
+            PlayedTable shown = _game.Table.Container.Resolve<PlayedTable>();
+            HandView hand = UnityEngine.Object.FindFirstObjectByType<HandView>();
+            yield return GameFixture.Until(() => shown.State.IsLocalPlayTurn && hand.Interactable, "the table to show my first turn to play", TurnTimeout);
+            Swipe(hand, session.View.LegalCards().Lowest(), 260f);
+            yield return GameFixture.Until(
+                () => shown.State.TricksCompleted >= 1 && shown.State.IsLocalPlayTurn && hand.Interactable, "my turn after the first trick", TurnTimeout);
+
+            TableView table = UnityEngine.Object.FindFirstObjectByType<TableView>();
+            CardViewPool pool = table.Cards;
+            int rented = pool.Created - pool.Free;
+            int lying = table.Trick.Count;
+
+            // The owner, 5 Oct 2026 (ADR 038): a tap in the middle of the table shows no earlier trick.
+            GameObject middle = TapAt(CentreOf(table.Trick.Area));
+            Assert.IsTrue(middle.transform.IsChildOf(table.Trick.Area), "a tap in the middle reaches the trick area's catcher, not " + middle.name);
+            yield return null;
+            Assert.AreEqual(rented, pool.Created - pool.Free, "a tap in the middle of the table shows no earlier trick");
+            Assert.AreEqual(lying, table.Trick.Count, "a tap in the middle of the table leaves the trick as it lies");
+
+            // A tap on an opponent's avatar reaches that seat, never the trick area, and changes
+            // nothing: nobody can be muted (the owner, the same day), so nothing dims and no card shows.
+            for (int rel = 1; rel < TableView.SeatCount; rel++)
+            {
+                SeatView seat = table.Seat(rel);
+                Image[] images = seat.Anchor.GetComponentsInChildren<Image>();
+                var alphas = new float[images.Length];
+                for (int i = 0; i < images.Length; i++)
+                {
+                    alphas[i] = images[i].color.a;
+                }
+
+                GameObject reached = TapAt(CentreOf(seat.Anchor));
+                Assert.IsTrue(reached.transform.IsChildOf(seat.transform), "a tap on seat " + rel + "'s avatar reaches that seat, not " + reached.name);
+                yield return null;
+                for (int i = 0; i < images.Length; i++)
+                {
+                    Assert.AreEqual(alphas[i], images[i].color.a, "a tap on seat " + rel + "'s avatar dims nothing (" + images[i].name + ")");
+                }
+            }
+
+            Assert.AreEqual(rented, pool.Created - pool.Free, "a tap on an avatar shows no card");
+            Assert.AreEqual(lying, table.Trick.Count, "a tap on an avatar leaves the trick as it lies");
+        }
+
         private static Vector2 CentreOf(RectTransform rect)
         {
             var corners = new Vector3[4];
@@ -180,6 +237,21 @@ namespace Callbreak.Tests.PlayMode
             var hits = new List<RaycastResult>();
             EventSystem.current.RaycastAll(pointer, hits);
             return hits.Count > 0 ? hits[0].gameObject : null;
+        }
+
+        /// <summary>
+        /// A tap at that screen point, as a finger's: the event system picks what the touch reaches,
+        /// and the first object from there up that takes a click is clicked. Returns that object.
+        /// </summary>
+        private static GameObject TapAt(Vector2 screenPoint)
+        {
+            GameObject hit = TopHit(screenPoint);
+            Assert.IsNotNull(hit, "something takes a touch at " + screenPoint);
+            GameObject clicked = ExecuteEvents.GetEventHandler<IPointerClickHandler>(hit);
+            Assert.IsNotNull(clicked, "a touch on " + hit.name + " reaches something that takes a click");
+            var pointer = new PointerEventData(EventSystem.current) { position = screenPoint, button = PointerEventData.InputButton.Left };
+            ExecuteEvents.Execute(clicked, pointer, ExecuteEvents.pointerClickHandler);
+            return clicked;
         }
 
         private IEnumerator StartOfflineMatch()

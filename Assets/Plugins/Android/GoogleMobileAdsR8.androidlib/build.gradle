@@ -1,0 +1,25 @@
+// The R8 rule the Google Mobile Ads plugin needs in a minified release build (proguard-rules.pro,
+// ADR 035). A library with no code: its consumer rules reach the app's R8.
+apply plugin: 'com.android.library'
+
+android {
+    namespace "com.dayzerogames.callbreak.gmar8"
+    compileSdk getProperty("unity.compileSdkVersion") as int
+    buildToolsVersion getProperty("unity.buildToolsVersion")
+
+    compileOptions {
+        sourceCompatibility JavaVersion.valueOf(getProperty("unity.javaCompatabilityVersion"))
+        targetCompatibility JavaVersion.valueOf(getProperty("unity.javaCompatabilityVersion"))
+    }
+
+    defaultConfig {
+        minSdk getProperty("unity.minSdkVersion") as int
+        consumerProguardFiles 'proguard-rules.pro'
+    }
+
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+        }
+    }
+}

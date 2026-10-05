@@ -230,7 +230,8 @@ namespace Callbreak.Editor.Screens
             TMP_Text statusStyle = ctx.Nodes["SeatStatus3"].GetComponent<TMP_Text>();
             TMP_Text nameStyle = ctx.Nodes["SeatName3"].GetComponent<TMP_Text>();
 
-            // A tap on the table itself skips a long animation; everything else sits above this.
+            // A tap on the table itself closes the emote panel and skips no animation (ADR 038);
+            // everything else sits above this.
             RectTransform tap = Stretched("TableTap", ctx.Content);
             tap.SetAsFirstSibling();
             var tapImage = tap.gameObject.AddComponent<Image>();
@@ -355,7 +356,8 @@ namespace Callbreak.Editor.Screens
             so.ApplyModifiedPropertiesWithoutUndo();
             ctx.Bound["_trick"] = trick;
 
-            // A tap on the trick area peeks at the previous trick (GDD screen 08); cards lie above it.
+            // A tap on the trick area is a tap on the table: it no longer peeks at the previous trick
+            // (GDD screen 08; ADR 038). Cards lie above it.
             RectTransform tap = Stretched("Tap", area);
             tap.SetAsFirstSibling();
             var tapImage = tap.gameObject.AddComponent<Image>();
@@ -532,7 +534,9 @@ namespace Callbreak.Editor.Screens
 
             if (!local)
             {
-                // Tapping an opponent mutes their quick phrases (GDD §8).
+                // The avatar's button: a tap on an opponent muted their quick phrases (GDD §8) until
+                // the owner removed the mute (5 Oct 2026, ADR 038). SeatView now keeps it from taking
+                // a tap, so a tap on an avatar does nothing.
                 Image ringFace = ring.Find("Face").GetComponent<Image>();
                 ringFace.raycastTarget = true;
                 var button = ring.gameObject.AddComponent<Button>();

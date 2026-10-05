@@ -32,8 +32,8 @@ namespace Callbreak.Presentation.Table
     /// input stays locked until that play's own event has played, the session refuses it, or two
     /// seconds pass, when the card rolls back; an illegal tap shakes the card and flashes the prompt
     /// that says what the rules ask for. It also drives the HUD, the turn prompt, the turn clock,
-    /// emotes, the peek at the previous trick and the way into the match menu,
-    /// scorecard and settings, and pauses an offline match while one of those covers the table.
+    /// emotes and the way into the match menu, scorecard and settings, and pauses an offline
+    /// match while one of those covers the table.
     /// While a page covers the table, nothing on the table answers a touch (<see cref="TableInput"/>).
     /// An event whose playback throws ends like a resync: the error is logged and the table is
     /// rebuilt from the session's view (GDD §17 principle 9).
@@ -85,9 +85,7 @@ namespace Callbreak.Presentation.Table
         private readonly TableRenderer _renderer;
         private readonly PlayLock _playLock = new PlayLock();
         private readonly EmoteLimiter _emoteLimiter = new EmoteLimiter();
-        private readonly bool[] _muted = new bool[SeatExtensions.Count];
         private readonly SeatConnection[] _connections = new SeatConnection[SeatExtensions.Count];
-        private readonly Action[] _avatarHandlers = new Action[SeatExtensions.Count];
         private readonly List<Card> _dealOrder = new List<Card>(Deck.HandSize);
         private readonly List<string> _emotePhrases = new List<string>(6);
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
@@ -168,18 +166,11 @@ namespace Callbreak.Presentation.Table
             _view.SettingsClicked += OnSettings;
             _view.EmoteClicked += OnEmoteButton;
             _view.TableTapped += OnTableTapped;
-            _view.TrickTapped += OnTrickTapped;
             _view.ImBackClicked += OnImBack;
             _view.AppPaused += OnAppPaused;
             _view.Hand.CardChosen += OnCardChosen;
             _view.Emotes.EmoteChosen += OnEmoteChosen;
             _view.Emotes.Dismissed += OnEmotesDismissed;
-            for (int rel = 1; rel < TableView.SeatCount; rel++)
-            {
-                int captured = rel;
-                _avatarHandlers[rel] = () => OnAvatarClicked(captured);
-                _view.Seat(rel).AvatarClicked += _avatarHandlers[rel];
-            }
 
             _lastNow = _clock.Now;
             _started = true;
@@ -247,16 +238,11 @@ namespace Callbreak.Presentation.Table
                 _view.SettingsClicked -= OnSettings;
                 _view.EmoteClicked -= OnEmoteButton;
                 _view.TableTapped -= OnTableTapped;
-                _view.TrickTapped -= OnTrickTapped;
                 _view.ImBackClicked -= OnImBack;
                 _view.AppPaused -= OnAppPaused;
                 _view.Hand.CardChosen -= OnCardChosen;
                 _view.Emotes.EmoteChosen -= OnEmoteChosen;
                 _view.Emotes.Dismissed -= OnEmotesDismissed;
-                for (int rel = 1; rel < TableView.SeatCount; rel++)
-                {
-                    _view.Seat(rel).AvatarClicked -= _avatarHandlers[rel];
-                }
 
                 // Last: a cancelled await continues at once, and must find this presenter stopped.
                 _lifetime.Cancel();
@@ -341,7 +327,6 @@ namespace Callbreak.Presentation.Table
 
             _optimistic = null;
             _playLock.Release();
-            EndPeek();
             State.Reset(view);
             _view.Prompt.Hide();
             RenderAll(false);
@@ -489,7 +474,6 @@ namespace Callbreak.Presentation.Table
             {
                 case RoundStarted _:
                     AbandonOptimisticPlay();
-                    EndPeek();
                     State.Apply(e);
                     _emoteLimiter.ResetRound();
                     _view.Prompt.Hide();
@@ -536,8 +520,6 @@ namespace Callbreak.Presentation.Table
                 }
 
                 case CardPlayed played:
-                    // The peek lasts until the next card is played (GDD screen 08).
-                    EndPeek();
                     return BeginCardPlayed(played);
 
                 case TrickCompleted completed:
@@ -844,8 +826,6 @@ namespace Callbreak.Presentation.Table
                 return;
             }
 
-            EndPeek();
-
             // Optimistic: the card leaves at once, and nothing else can be played until this play
             // is settled.
             _playLock.Begin(card, now);
@@ -936,6 +916,7 @@ namespace Callbreak.Presentation.Table
             _playLock.Release();
         }
 
+        /// <summary>A tap on the table, the trick area included (the view sends both here).</summary>
         private void OnTableTapped()
         {
             if (!TableIsOpen)
@@ -943,68 +924,14 @@ namespace Callbreak.Presentation.Table
                 return;
             }
 
+            // A tap no longer skips an animation (the owner, 5 Oct 2026, replacing GDD §6's tap to
+            // skip; ADR 038): the shuffle, the deal and a won trick's sweep always play out. Nor does
+            // a tap on the trick area show the previous trick (the owner, the same day, replacing GDD
+            // screen 08's peek). A tap on the table only closes the emote panel.
             if (_view.Emotes.IsOpen)
             {
                 _view.Emotes.Close();
-                return;
             }
-
-            // A tap skips any animation longer than 0.3 s (GDD §6).
-            _player.Skip();
-        }
-
-        /// <summary>
-        /// A tap on the trick area: it skips a running animation like any tap on the table; on a
-        /// quiet table it shows the previous trick in the slots, the winning card glowing, until the
-        /// next card is played or the area is tapped again (GDD screen 08).
-        /// </summary>
-        private void OnTrickTapped()
-        {
-            if (!TableIsOpen)
-            {
-                return;
-            }
-
-            if (_view.Emotes.IsOpen)
-            {
-                _view.Emotes.Close();
-                return;
-            }
-
-            if (!_player.IsIdle)
-            {
-                _player.Skip();
-                return;
-            }
-
-            if (_view.Trick.IsPeeking)
-            {
-                EndPeek();
-                return;
-            }
-
-            TableState state = State;
-            if (state.Phase != TablePhase.Playing || !state.HasLastTrick || _playLock.IsLocked)
-            {
-                return;
-            }
-
-            CompletedTrick last = state.LastTrick;
-            _view.Trick.BeginPeek();
-            for (int i = 0; i < last.Trick.Count; i++)
-            {
-                Seat seat = last.Trick.SeatAt(i);
-                Card card = last.Trick[i];
-                CardView shown = _view.Cards.Rent(_view.Trick.Area);
-                shown.ShowFace(card, _skin.Face(_renderer.LocalDeck, card));
-                _view.Trick.AdoptPeek(_renderer.RelativeSeat(seat), shown);
-                shown.SetGlow(seat == last.Winner);
-            }
-        }
-
-        private void EndPeek()
-        {
-            _view.Trick.EndPeek(_view.Cards);
         }
 
         // ------------------------------------------------------------------ turn clock
@@ -1179,9 +1106,13 @@ namespace Callbreak.Presentation.Table
             }
         }
 
+        /// <summary>
+        /// A quick phrase, from any seat: nobody can be muted (the owner, 5 Oct 2026, ADR 038, in
+        /// place of GDD §8's tap on an opponent to mute them), so every phrase shows, a bot's too.
+        /// </summary>
         private void OnEmoteReceived(Seat seat, int emoteId)
         {
-            if (emoteId < 0 || emoteId >= EmoteKeys.Count || _muted[(int)seat])
+            if (emoteId < 0 || emoteId >= EmoteKeys.Count)
             {
                 return;
             }
@@ -1189,26 +1120,6 @@ namespace Callbreak.Presentation.Table
             // Every phrase, the player's own too, shows in the speech box just above its speaker's avatar (ADR 027).
             string phrase = _localization.Get(EmoteKeys[emoteId]);
             _view.Seat(_renderer.RelativeSeat(seat)).ShowChat(phrase, EmoteHoldSeconds, ReduceMotion);
-        }
-
-        /// <summary>Tapping an opponent mutes or unmutes their quick phrases for the match (GDD §8).</summary>
-        private void OnAvatarClicked(int relativeSeat)
-        {
-            if (!TableIsOpen)
-            {
-                return;
-            }
-
-            Seat seat = _renderer.SeatAt(relativeSeat);
-            bool muted = !_muted[(int)seat];
-            _muted[(int)seat] = muted;
-            SeatView seatView = _view.Seat(relativeSeat);
-            seatView.SetMuted(muted);
-            if (muted)
-            {
-                seatView.HideBubble();
-                seatView.HideChat();
-            }
         }
 
         /// <summary>

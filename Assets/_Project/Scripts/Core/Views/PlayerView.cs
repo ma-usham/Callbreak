@@ -224,7 +224,7 @@ namespace Callbreak.Core.Views
             return Scores.TotalOf(seat);
         }
 
-        /// <summary>The last finished trick of this round, for the "peek" (GDD §11 screen 08).</summary>
+        /// <summary>The last finished trick of this round.</summary>
         /// <param name="previous">The trick, or default when none has finished this round.</param>
         /// <returns>Whether a trick has finished this round.</returns>
         public bool TryGetPreviousTrick(out CompletedTrick previous)

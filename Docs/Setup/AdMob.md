@@ -162,3 +162,9 @@ their choice later. Settings then shows a **Privacy options** button under its p
   project's own keystore is left alone), then checks the app id in the APK's manifest.
 - **After a Unity upgrade**, copy the new Editor's `mainTemplate.gradle` over the project's and run
   Force Resolve, so the template matches the new Unity.
+- **Release builds (R8).** The plugin's AAR carries wrappers for the GMA Next-Gen SDK
+  (`com.google.unity.ads.nextgen.*`), which the game doesn't use or include. R8 stopped the owner's
+  first release App Bundle on those missing classes (5 Oct 2026).
+  `Assets/Plugins/Android/GoogleMobileAdsR8.androidlib` adds
+  `-dontwarn com.google.android.libraries.ads.mobile.sdk.**` as a consumer rule. With it, the same
+  build's R8 step succeeds.

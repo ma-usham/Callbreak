@@ -86,7 +86,7 @@ namespace Callbreak.Presentation.Table
         /// </summary>
         public Trick Trick { get; private set; }
 
-        /// <summary>This round has a finished trick (for the peek at the previous trick).</summary>
+        /// <summary>This round has a finished trick (the table no longer shows it, ADR 038).</summary>
         public bool HasLastTrick { get; private set; }
 
         /// <summary>The trick finished last this round; meaningful while <see cref="HasLastTrick"/>.</summary>

@@ -47,8 +47,8 @@ namespace Callbreak.Presentation.Table.Playback
     /// the winning card glows on top of the others, then all four sweep to the winner in 0.35 s
     /// (InOutCubic), shrinking and fading as they arrive. The winning card keeps its size (ADR 024:
     /// the GDD's lift made it look larger than the rest). With Reduce motion the sweep is a 150 ms
-    /// fade. A tap skips it. The cards are returned to the pool by the table once the event has
-    /// played.
+    /// fade. No tap skips it (ADR 038). The cards are returned to the pool by the table once the
+    /// event has played.
     /// </summary>
     public static class TrickSweep
     {

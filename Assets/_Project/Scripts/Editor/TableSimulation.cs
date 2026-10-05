@@ -1230,6 +1230,9 @@ namespace Callbreak.Editor
             /// <summary>The face or back a card view shows.</summary>
             private static Sprite SpriteOf(CardView card) => Field<Image>(card, "_face").sprite;
 
+            /// <summary>The cards rented from the pool: every card the table shows.</summary>
+            private int Rented => _table.Cards.Created - _table.Cards.Free;
+
             // -------------------------------------------------------------- the player
 
             private void Act()
@@ -1268,7 +1271,7 @@ namespace Callbreak.Editor
                         }
                         else if (state.Phase == TablePhase.Playing && _tablePresenter.Player.Current is TrickCompleted)
                         {
-                            SkipTheSweep();
+                            TapDuringTheSweep();
                         }
 
                         break;
@@ -1631,8 +1634,8 @@ namespace Callbreak.Editor
             /// <summary>
             /// The scorecard over the local turn (online the match runs on under it, GDD §11 screen 16).
             /// The page takes every touch; the table's own handlers are the second lock: a touch that
-            /// got through plays no card, opens no emotes, mutes nobody, peeks at nothing and opens
-            /// nothing from the HUD.
+            /// got through plays no card, opens no emotes, shows nothing in the trick area and opens
+            /// nothing from the HUD. An avatar tapped changes nothing, here as anywhere (ADR 038).
             /// </summary>
             private void StageCoveredTable(Card legal)
             {
@@ -1645,11 +1648,14 @@ namespace Callbreak.Editor
                 Equal(held, _table.Hand.Count, "a card thrown under the scorecard stays in the hand");
                 Click(Field<Button>(_table, "_emoteButton"));
                 Check(!_table.Emotes.IsOpen, "the emote button under the scorecard does nothing");
+                int rented = Rented;
                 Click(Field<Button>(_table, "_trickTap"));
-                Check(!_table.Trick.IsPeeking, "the trick area under the scorecard shows no peek");
+                Equal(rented, Rented, "the trick area under the scorecard shows nothing");
                 SeatView opponent = _table.Seat(1);
+                Image avatar = Field<Image>(opponent, "_avatar");
+                float shade = avatar.color.a;
                 Click(Field<Button>(opponent, "_avatarButton"));
-                Check(!Field<bool>(opponent, "_muted"), "an avatar tapped under the scorecard is not muted");
+                Equal(shade, avatar.color.a, "an avatar tapped under the scorecard changes nothing");
                 Click(Field<Button>(_table, "_homeButton"));
                 Click(Field<Button>(_table, "_settingsButton"));
                 Equal(ScreenId.Scorecard, _router.Current, "the HUD under the scorecard opens nothing");
@@ -1700,9 +1706,9 @@ namespace Callbreak.Editor
             private void WhileWaiting()
             {
                 TableState state = State;
-                if (state.TricksCompleted >= 1 && Once("peek"))
+                if (state.TricksCompleted >= 1 && Once("trick tap"))
                 {
-                    Peek();
+                    TapTheTrickArea();
                 }
                 else if (state.TricksCompleted >= 2 && Once("menu"))
                 {
@@ -1730,24 +1736,34 @@ namespace Callbreak.Editor
                 }
             }
 
-            private void Peek()
+            /// <summary>
+            /// A tap on the trick area on a quiet table, a trick having been won: it shows nothing
+            /// (the owner, 5 Oct 2026, in place of GDD screen 08's peek at the previous trick; ADR
+            /// 038). Like a tap on the table, it only closes the emote picker.
+            /// </summary>
+            private void TapTheTrickArea()
             {
                 Button tap = Field<Button>(_table, "_trickTap");
                 TrickAreaView trick = _table.Trick;
-                int rented = _table.Cards.Created - _table.Cards.Free;
-                int lying = trick.Count;
-                Check(Click(tap), "the trick area can be tapped");
-                Check(trick.IsPeeking, "a tap on the trick area shows the previous trick");
-                Equal(rented + 4, _table.Cards.Created - _table.Cards.Free, "the peek shows four cards");
-                Equal(lying, trick.Count, "the peek does not change the current trick");
-                Snapshot("Table_peek");
-                Click(tap);
-                Check(!trick.IsPeeking, "a second tap ends the peek");
-                Equal(rented, _table.Cards.Created - _table.Cards.Free, "the peeked cards go back to the pool");
+                int rented = Rented;
+                var lying = new CardView[TrickAreaView.Slots];
+                for (int rel = 0; rel < lying.Length; rel++)
+                {
+                    lying[rel] = trick.CardAt(rel);
+                }
 
-                // Left open, the peek ends when the next card is played.
+                Check(Click(tap), "the trick area can be tapped");
+                Equal(rented, Rented, "a tap on the trick area shows no earlier trick");
+                for (int rel = 0; rel < lying.Length; rel++)
+                {
+                    CardView card = trick.CardAt(rel);
+                    Check(card == lying[rel] && (card == null || AlphaOf(card) == 1f), "a tap on the trick area leaves the trick as it lies", "slot " + rel);
+                }
+
+                Check(Click(Field<Button>(_table, "_emoteButton")) && _table.Emotes.IsOpen, "the emote button opens the picker over a quiet table");
                 Click(tap);
-                Check(trick.IsPeeking, "the peek can be opened again");
+                Check(!_table.Emotes.IsOpen, "a tap on the trick area closes the emote picker, as a tap on the table does");
+                Equal(rented, Rented, "a tap on the trick area that closes the picker shows nothing either");
             }
 
             private void MatchMenu()
@@ -2031,23 +2047,23 @@ namespace Callbreak.Editor
                 Seat seat = (Seat)(((int)Local + 2) % SeatExtensions.Count);
                 string namaste = _text.Get(TablePresenter.EmoteKeys[0]);
                 Button avatarButton = Field<Button>(opponent, "_avatarButton");
+                Image opponentAvatar = Field<Image>(opponent, "_avatar");
 
                 // (Its call bubble may still hold its call: bubbles never time out here.)
-                GameObject bubble = Field<RectTransform>(opponent, "_bubble").gameObject;
                 opponent.HideBubble();
                 opponent.HideChat();
                 _session.RaiseEmote(seat, 0);
                 Equal(namaste, opponent.ChatText, "an opponent's phrase shows in its speech box");
 
-                // Muting an opponent (GDD §8): tap the avatar. The phrase it is showing goes, and
-                // the next is not shown (in neither the speech box nor the call bubble).
-                Click(avatarButton);
-                Check(opponent.ChatText == null && !bubble.activeSelf, "muting an opponent hides the phrase it is showing", opponent.ChatText);
+                // Nobody can be muted (the owner, 5 Oct 2026, ADR 038, in place of GDD §8's tap on an
+                // opponent): the avatar takes no tap, and a tap there changes nothing. The phrase it
+                // is showing stays, and the next one shows too.
+                float shade = opponentAvatar.color.a;
+                Check(!Click(avatarButton), "an opponent's avatar takes no tap");
+                Check(opponent.ChatText == namaste && opponentAvatar.color.a == shade, "an avatar tap changes nothing", opponent.ChatText);
+                opponent.HideChat();
                 _session.RaiseEmote(seat, 0);
-                Check(opponent.ChatText == null && !bubble.activeSelf, "a muted opponent's phrase is not shown", opponent.ChatText);
-                Click(avatarButton);
-                _session.RaiseEmote(seat, 0);
-                Equal(namaste, opponent.ChatText, "an unmuted opponent's phrase is shown");
+                Equal(namaste, opponent.ChatText, "after a tap on its avatar, an opponent's next phrase still shows");
                 opponent.HideChat();
                 you.HideChat();
             }
@@ -2273,17 +2289,21 @@ namespace Callbreak.Editor
                 _nextTapAt = _clock.Now + 0.2;
             }
 
-            private void SkipTheSweep()
+            /// <summary>Taps the table and the trick area while a won trick sweeps away: it plays on (ADR 038).</summary>
+            private void TapDuringTheSweep()
             {
-                if (!Once("skip") || _reduceMotion)
+                if (!Once("tap-sweep") || _reduceMotion)
                 {
                     return;
                 }
 
                 MatchEvent sweeping = _tablePresenter.Player.Current;
+                int rented = Rented;
                 Click(Field<Button>(_table, "_tableTap"));
+                Click(Field<Button>(_table, "_trickTap"));
+                Equal(rented, Rented, "a tap during the sweep shows no earlier trick");
                 Step();
-                Check(_tablePresenter.Player.Current != sweeping, "a tap on the table skips the trick sweep");
+                Check(_tablePresenter.Player.Current == sweeping, "a tap on the table or the trick area leaves the trick sweep playing");
             }
 
             // -------------------------------------------------------------- results
@@ -2533,6 +2553,16 @@ namespace Callbreak.Editor
                 Check(_bidding.IsPanelShown == Field<GameObject>(_bidding, "_panel").activeSelf, "once its slide has settled, the call panel is up exactly while it is shown");
                 if (_dealBeganAt >= 0.0)
                 {
+                    // A second into the deal, taps on the table and the trick area: the deal plays on
+                    // (ADR 038), which the check of its 2.7 s as it ends would catch otherwise.
+                    if (!_reduceMotion && _clock.Now - _dealBeganAt >= 1.0 && Once("tap-deal"))
+                    {
+                        int rented = Rented;
+                        Click(Field<Button>(_table, "_tableTap"));
+                        Click(Field<Button>(_table, "_trickTap"));
+                        Equal(rented, Rented, "a tap during the deal shows no earlier trick");
+                    }
+
                     // How the deal was played, for when it took the wrong time.
                     _dealFastFrames += _tablePresenter.Player.Speed > 1f ? 1 : 0;
                     if (_tablePresenter.Player.Behind > _dealMostBehind)
@@ -2753,7 +2783,6 @@ namespace Callbreak.Editor
                                 "a played card comes to rest exactly at its slot", $"at {at.Position} scale {at.Scale} flat {at.Flat}; slot {slot.Position} scale {slot.Scale}");
                         }
 
-                        Check(!_table.Trick.IsPeeking, "the peek ends when the next card is played");
                         break;
                     }
 
@@ -3069,7 +3098,7 @@ namespace Callbreak.Editor
                     Check(inDeck, "every face on the table is in the player's deck (ADR 031)", inDeck ? null : trick[i] + " in the trick");
                 }
 
-                onTable += _table.Trick.Count + (_table.Trick.IsPeeking ? 4 : 0);
+                onTable += _table.Trick.Count;
                 Equal(onTable, _table.Cards.Created - _table.Cards.Free, "every rented card is in the hand, a fan or the trick");
                 Equal(_text.Format("ui.table.round", Math.Max(1, state.Round), state.Rules.Rounds), Field<TMP_Text>(_table, "_roundLabel").text, "the HUD shows the round");
                 for (int rel = 0; rel < TableView.SeatCount; rel++)

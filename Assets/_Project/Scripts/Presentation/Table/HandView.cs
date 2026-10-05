@@ -75,7 +75,7 @@ namespace Callbreak.Presentation.Table
         /// <summary>A card was thrown: let go far enough above the hand, or flicked upwards. It is where the finger left it.</summary>
         public event Action<Card> CardChosen;
 
-        /// <summary>The hand was touched while it takes no input, or beside every card (a tap that may skip an animation).</summary>
+        /// <summary>The hand was touched while it takes no input, or beside every card (a tap on the table).</summary>
         public event Action Touched;
 
         /// <summary>While false, touches only raise <see cref="Touched"/> and a touched card is only looked at.</summary>
