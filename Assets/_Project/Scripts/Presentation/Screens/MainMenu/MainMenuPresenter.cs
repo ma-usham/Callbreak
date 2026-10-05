@@ -21,7 +21,9 @@ namespace Callbreak.Presentation.Screens
     /// deck. Online entry points need a connection; without one a toast points to Play Offline. While an unfinished offline match exists a banner offers
     /// "Resume match"; the match is also offered back ("Resume your offline match?") once when the app
     /// opens and whenever Play Offline is tapped. Android back asks "Exit Callbreak?". The coin
-    /// wallet (mockup 23) shows the balance as it changes; its "+" opens Earn Coins.
+    /// wallet (mockup 23) shows the balance as it changes; its "+" opens Earn Coins. The No Ads
+    /// button left of it sells the one-time purchase that removes the ads between matches
+    /// (<see cref="NoAdsOffer"/>).
     /// </summary>
     public sealed class MainMenuPresenter : IStartable, IDisposable
     {
@@ -41,6 +43,7 @@ namespace Callbreak.Presentation.Screens
         private readonly ICosmeticsService _cosmetics;
         private readonly CardSpriteProvider _cards;
         private readonly IWallet _wallet;
+        private readonly NoAdsOffer _noAds;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private bool _asking;
@@ -62,7 +65,8 @@ namespace Callbreak.Presentation.Screens
             AvatarLibrary avatars,
             ICosmeticsService cosmetics,
             CardSpriteProvider cards,
-            IWallet wallet)
+            IWallet wallet,
+            INoAds noAds)
         {
             _view = view;
             _router = router;
@@ -80,6 +84,7 @@ namespace Callbreak.Presentation.Screens
             _cosmetics = cosmetics;
             _cards = cards;
             _wallet = wallet;
+            _noAds = new NoAdsOffer(noAds, toast, localization);
         }
 
         public void Start()
@@ -88,6 +93,7 @@ namespace Callbreak.Presentation.Screens
             _view.SettingsClicked += OnSettings;
             _view.ShopClicked += OnShop;
             _view.EarnCoinsClicked += OnEarnCoins;
+            _view.NoAdsClicked += OnNoAds;
             _view.PlayOnlineClicked += OnPlayOnline;
             _view.PlayWithFriendsClicked += OnPlayWithFriends;
             _view.PlayOfflineClicked += OnPlayOffline;
@@ -97,11 +103,14 @@ namespace Callbreak.Presentation.Screens
             _settings.Changed += RenderMotion;
             _cosmetics.Changed += RenderFan;
             _wallet.Changed += RenderCoins;
+            _noAds.Changed += RenderNoAds;
+            _noAds.Start();
             _network.Changed += OnNetworkChanged;
             _router.Changed += OnScreenChanged;
             Render();
             RenderFan();
             RenderCoins();
+            RenderNoAds();
             RenderMotion();
             RenderResume();
             OnNetworkChanged(_network.IsOnline);
@@ -119,6 +128,7 @@ namespace Callbreak.Presentation.Screens
             _view.SettingsClicked -= OnSettings;
             _view.ShopClicked -= OnShop;
             _view.EarnCoinsClicked -= OnEarnCoins;
+            _view.NoAdsClicked -= OnNoAds;
             _view.PlayOnlineClicked -= OnPlayOnline;
             _view.PlayWithFriendsClicked -= OnPlayWithFriends;
             _view.PlayOfflineClicked -= OnPlayOffline;
@@ -128,10 +138,13 @@ namespace Callbreak.Presentation.Screens
             _settings.Changed -= RenderMotion;
             _cosmetics.Changed -= RenderFan;
             _wallet.Changed -= RenderCoins;
+            _noAds.Changed -= RenderNoAds;
+            _noAds.Dispose();
             _network.Changed -= OnNetworkChanged;
             _router.Changed -= OnScreenChanged;
 
-            // A question still open is answered "no" and closes with the screen.
+            // A question still open is answered "no" and closes with the screen; a No Ads purchase
+            // still open is no longer waited for (the store finishes it on its own).
             _disposed = true;
             _lifetime.Cancel();
             _lifetime.Dispose();
@@ -156,6 +169,8 @@ namespace Callbreak.Presentation.Screens
         }
 
         private void RenderCoins() => _view.SetCoins(CoinsFormat.Coins(_wallet.Coins));
+
+        private void RenderNoAds() => _view.SetNoAdsVisible(_noAds.Visible);
 
         private void RenderResume() => _view.SetResumeAvailable(_offlineStore.HasSave);
 
@@ -197,6 +212,24 @@ namespace Callbreak.Presentation.Screens
         private void OnShop() => _router.Push(ScreenId.Shop);
 
         private void OnEarnCoins() => _router.Push(ScreenId.EarnCoins);
+
+        private void OnNoAds() => _ = BuyNoAdsAsync();
+
+        /// <summary>The store's sheet is the confirmation; the offer says in a toast what became of it.</summary>
+        private async Task BuyNoAdsAsync()
+        {
+            try
+            {
+                await _noAds.TapAsync(_lifetime.Token);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
 
         private void OnPlayOffline()
         {

@@ -143,3 +143,40 @@ EOS sign-in, dropped it within a minute, and then refused the same valid token w
 
 **Suites with everything above:** EditMode 1987, PlayMode 94 (no EOS lines), dotnet 1971 (Release).
 The table simulation has 0 failures in both modes (480 and 467 kinds of check).
+
+## Addendum, 5 Oct 2026 (afternoon): the owner's answers
+
+The owner answered the open points: "implement the wording you proposed", "chips after a restart",
+"Refund is fine", "Add privacy option", "Farming is fine as well". This supersedes "Proposed, not
+built" above and the privacy-options line under Consent.
+
+- **Copy:** as proposed. Not enough coins: "Not enough coins" / "This match needs {0} coins. You have
+  {1}. Watch ads to earn more." / "Earn Coins" / "Not now". The results line: "+{0} coins".
+- **The results line is built.**
+  - It shows a gold coin and "+N coins" on the local player's row only, between the name and the
+    points. It shows only when the match paid this player a prize (the stake Paid, a prize above 0),
+    so a Quick Match, a forfeit, a refund or an unsettled stake shows nothing.
+  - It re-renders on `IStakeLedger.Changed`, so a prize paid after the standings still appears.
+  - The coin is crown-sized and the text is set like the name.
+- **The chips remember the last stake** across restarts.
+  - `IOnlineMatchChoice` has `LastStake` and `RememberStake`, saved under `online-match`
+    (`OnlineMatchChoiceData`).
+  - A chip tap counts as choosing a stake, following this ADR's wording.
+  - Each launch still starts on Quick.
+- **Called-off matches refund,** as built. **Coin farming** against tables of bots is fine.
+- **Privacy options.**
+  - Settings shows "Privacy options" only while Google's consent platform (UMP) says one is
+    required, e.g. in the EEA, the UK and Switzerland. A tap opens Google's privacy options form.
+  - The code: `IAdPrivacy`, with `AdMobAdPrivacy` on phones (sharing the rewarded network's consent
+    flow) and `StandInAdPrivacy` elsewhere.
+  - The button is How to Play's at 0.68 scale with the kit's lock icon, centred under the panel (a
+    proposal). In Nepal it never shows; a development-build debug geography would let the owner see
+    it.
+- **Tests:**
+  - the stake follow-ups: 16 EditMode, 5 PlayMode;
+  - privacy options: 4 EditMode, 4 PlayMode.
+- **Open for the owner:**
+  - whether a chip tap or only a stake actually played should count;
+  - the prize line's style;
+  - the privacy button's place;
+  - the Nepali copy.

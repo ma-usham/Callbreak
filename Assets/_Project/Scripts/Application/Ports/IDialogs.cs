@@ -10,11 +10,17 @@ namespace Callbreak.Application.Ports
     public sealed class DialogRequest
     {
         public DialogRequest(string title, string body, string confirmLabel, string cancelLabel)
+            : this(title, body, confirmLabel, cancelLabel, dismissable: true)
+        {
+        }
+
+        public DialogRequest(string title, string body, string confirmLabel, string cancelLabel, bool dismissable)
         {
             Title = title;
             Body = body;
             ConfirmLabel = confirmLabel;
             CancelLabel = cancelLabel;
+            Dismissable = dismissable;
         }
 
         public string Title { get; }
@@ -27,6 +33,14 @@ namespace Callbreak.Application.Ports
 
         /// <summary>The secondary button; null or empty for a dialog with a single button.</summary>
         public string CancelLabel { get; }
+
+        /// <summary>
+        /// True (the default) for a dialog the player may close without an answer. False for one they
+        /// must answer ("Update required"): a tap outside the panel and Android back leave it up, and a
+        /// newer dialog does not take its place but is answered <see cref="DialogChoice.Dismissed"/> at
+        /// once. Only its asker can close it, by cancelling the token it was asked with.
+        /// </summary>
+        public bool Dismissable { get; }
     }
 
     /// <summary>How a dialog was answered.</summary>
@@ -45,7 +59,10 @@ namespace Callbreak.Application.Ports
         Cancel,
     }
 
-    /// <summary>Shows one dialog at a time: asking again closes the open one as dismissed.</summary>
+    /// <summary>
+    /// Shows one dialog at a time: asking again closes the open one as dismissed, unless the open one
+    /// is not <see cref="DialogRequest.Dismissable"/>; the newer one is then dismissed at once.
+    /// </summary>
     public interface IDialogs
     {
         bool IsOpen { get; }
@@ -63,7 +80,10 @@ namespace Callbreak.Application.Ports
         /// </summary>
         Task<DialogChoice> AskAsync(DialogRequest request, CancellationToken ct);
 
-        /// <summary>Android back: dismisses the open dialog. True when one was open.</summary>
+        /// <summary>
+        /// Android back: dismisses the open dialog (one that is not dismissable stays up). True when
+        /// one was open.
+        /// </summary>
         bool HandleBack();
     }
 }

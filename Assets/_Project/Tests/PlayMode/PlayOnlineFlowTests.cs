@@ -121,6 +121,7 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(Format("ui.play_online.stake_cta", "100"), Label("PlayStakeLabel").text);
             Assert.AreEqual("Play for 100 coins", Label("PlayStakeLabel").text);
             Assert.IsEmpty(_choice.Chosen, "a chip only shows the stake");
+            Assert.AreEqual(100, _choice.LastStake, "and the chips remember it");
             Assert.AreEqual(500, Wallet.Coins, "and takes no coins");
             Assert.AreEqual(ScreenId.PlayOnline, Router.Current);
 
@@ -150,6 +151,11 @@ namespace Callbreak.Tests.PlayMode
             Assert.IsTrue(DialogShows(Text("ui.play_online.not_enough.title")));
             Assert.IsTrue(DialogShows(Format("ui.play_online.not_enough.body", "50", "40")));
             Assert.IsTrue(DialogShows(Text("ui.play_online.not_enough.earn")) && DialogShows(Text("ui.play_online.not_enough.later")));
+
+            // The copy the owner approved (5 Oct 2026), as the player reads it.
+            Assert.IsTrue(DialogShows("Not enough coins"));
+            Assert.IsTrue(DialogShows("This match needs 50 coins. You have 40. Watch ads to earn more."));
+            Assert.IsTrue(DialogShows("Earn Coins") && DialogShows("Not now"));
             Assert.AreEqual(ScreenId.PlayOnline, Router.Current);
             Assert.AreEqual(0, _search.Searches);
             Assert.IsEmpty(_choice.Chosen, "nothing is chosen");
@@ -359,10 +365,12 @@ namespace Callbreak.Tests.PlayMode
             return false;
         }
 
-        /// <summary>The player's online match choice, with every choice made on the screen.</summary>
+        /// <summary>The player's online match choice, with every choice made on the screen (the chips' memory is not saved).</summary>
         private sealed class RecordingChoice : IOnlineMatchChoice
         {
             public int Stake { get; private set; } = StakeRules.None;
+
+            public int LastStake { get; private set; } = StakeRules.Stakes[0];
 
             public List<int> Chosen { get; } = new List<int>();
 
@@ -374,7 +382,22 @@ namespace Callbreak.Tests.PlayMode
                 }
 
                 Stake = stake;
+                if (stake != StakeRules.None)
+                {
+                    LastStake = stake;
+                }
+
                 Chosen.Add(stake);
+            }
+
+            public void RememberStake(int stake)
+            {
+                if (!StakeRules.IsStake(stake))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(stake), stake, "A stake.");
+                }
+
+                LastStake = stake;
             }
         }
 

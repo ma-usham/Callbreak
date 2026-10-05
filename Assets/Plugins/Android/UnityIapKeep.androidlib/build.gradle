@@ -1,0 +1,25 @@
+// The keep rules Unity IAP's Google Play billing needs in a minified release build (proguard-rules.pro,
+// Docs/Setup/PlayBilling.md). A library with no code: its consumer rules reach the app's R8.
+apply plugin: 'com.android.library'
+
+android {
+    namespace "com.dayzerogames.callbreak.iapkeep"
+    compileSdk getProperty("unity.compileSdkVersion") as int
+    buildToolsVersion getProperty("unity.buildToolsVersion")
+
+    compileOptions {
+        sourceCompatibility JavaVersion.valueOf(getProperty("unity.javaCompatabilityVersion"))
+        targetCompatibility JavaVersion.valueOf(getProperty("unity.javaCompatabilityVersion"))
+    }
+
+    defaultConfig {
+        minSdk getProperty("unity.minSdkVersion") as int
+        consumerProguardFiles 'proguard-rules.pro'
+    }
+
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+        }
+    }
+}

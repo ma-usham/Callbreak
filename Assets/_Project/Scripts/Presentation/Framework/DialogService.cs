@@ -8,7 +8,9 @@ namespace Callbreak.Presentation.Framework
 {
     /// <summary>
     /// <see cref="IDialogs"/> over the one <see cref="DialogView"/> (GDD §23 popup layer). One
-    /// dialog at a time: asking again dismisses the open one first.
+    /// dialog at a time: asking again dismisses the open one first. An open dialog that is not
+    /// <see cref="DialogRequest.Dismissable"/> ("Update required") stays: a tap outside its panel and
+    /// Android back do nothing, and a newer dialog is answered Dismissed at once, unseen.
     /// </summary>
     public sealed class DialogService : IDialogs, IDisposable
     {
@@ -18,6 +20,9 @@ namespace Callbreak.Presentation.Framework
 
         private TaskCompletionSource<DialogChoice> _pending;
         private CancellationTokenRegistration _cancellation;
+
+        // The open dialog is not dismissable.
+        private bool _holding;
 
         public DialogService(DialogView view, ISettingsService settings, IAudioService audio)
         {
@@ -43,9 +48,15 @@ namespace Callbreak.Presentation.Framework
                 throw new ArgumentNullException(nameof(request));
             }
 
+            if (_holding && IsOpen)
+            {
+                return Task.FromResult(DialogChoice.Dismissed);
+            }
+
             Complete(DialogChoice.Dismissed);
             var pending = new TaskCompletionSource<DialogChoice>();
             _pending = pending;
+            _holding = !request.Dismissable;
             if (ct.CanBeCanceled)
             {
                 _cancellation = ct.Register(() =>
@@ -75,8 +86,12 @@ namespace Callbreak.Presentation.Framework
                 return false;
             }
 
-            _audio.Play(SoundCue.UiBack);
-            Complete(DialogChoice.Dismissed);
+            if (!_holding)
+            {
+                _audio.Play(SoundCue.UiBack);
+                Complete(DialogChoice.Dismissed);
+            }
+
             return true;
         }
 
@@ -102,6 +117,11 @@ namespace Callbreak.Presentation.Framework
 
         private void OnDismissed()
         {
+            if (_holding)
+            {
+                return;
+            }
+
             _audio.Play(SoundCue.UiBack);
             Complete(DialogChoice.Dismissed);
         }
@@ -115,6 +135,7 @@ namespace Callbreak.Presentation.Framework
             }
 
             _pending = null;
+            _holding = false;
             _cancellation.Dispose();
             _cancellation = default;
             if (_view != null)

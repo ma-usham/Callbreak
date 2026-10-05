@@ -217,7 +217,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
             Device device = NewPeerDevice(name);
             var wallet = new Wallet(device.Saves);
             var stakes = new StakeLedger(device.Saves, wallet);
-            var choice = new OnlineMatchChoice();
+            var choice = new OnlineMatchChoice(device.Saves);
             choice.Choose(stake);
             ulong next = (ulong)(_quick.Count + 1) * 1000003UL;
             var service = new QuickMatchService(

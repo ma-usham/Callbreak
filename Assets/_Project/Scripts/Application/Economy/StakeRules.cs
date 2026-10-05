@@ -59,12 +59,31 @@ namespace Callbreak.Application.Economy
     /// The online match the player picked on the Play Online screen (mockups 23 and 24), read by
     /// matchmaking: Quick Match (<see cref="StakeRules.None"/>) or a Stake Match of one of
     /// <see cref="StakeRules.Stakes"/>. Players are only matched with players of the same stake.
+    /// It also remembers the stake the screen's chips start on (<see cref="LastStake"/>).
     /// </summary>
     public interface IOnlineMatchChoice
     {
+        /// <summary>The match the next search looks for: Quick Match (0) or a stake.</summary>
         int Stake { get; }
 
-        /// <summary>Picks Quick Match (0) or a stake; throws for any other amount.</summary>
+        /// <summary>
+        /// The stake the Play Online chips start on (the owner, 5 Oct 2026): the last one the player
+        /// chose there, on a chip or by playing it, kept through Quick Matches and restarts. The
+        /// smallest stake until the player chooses one.
+        /// </summary>
+        int LastStake { get; }
+
+        /// <summary>
+        /// Picks Quick Match (0) or a stake; throws for any other amount. A stake also becomes
+        /// <see cref="LastStake"/>; Quick Match leaves it as it is.
+        /// </summary>
         void Choose(int stake);
+
+        /// <summary>
+        /// The player chose this stake on the chips without playing it yet: it becomes
+        /// <see cref="LastStake"/>, and the match to look for stays as it is. Throws for an amount
+        /// that isn't a stake.
+        /// </summary>
+        void RememberStake(int stake);
     }
 }

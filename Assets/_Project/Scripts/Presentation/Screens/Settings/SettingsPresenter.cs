@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
+using System.Threading.Tasks;
+using Callbreak.Application.Economy;
 using Callbreak.Application.Online;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
@@ -17,7 +19,8 @@ namespace Callbreak.Presentation.Screens
     /// GDD §11 screen 11: sound, language and comfort options. Every change applies at once and is
     /// saved at once. The volume follows the slider while it is dragged; its file write waits until
     /// the drag settles, the screen closes or the app goes to the background. Done simply closes.
-    /// The language button steps through the languages that have strings.
+    /// The language button steps through the languages that have strings. "Privacy options" shows
+    /// while the ad network says the player must be offered them, and opens its form.
     /// </summary>
     public sealed class SettingsPresenter : IStartable, ITickable, IDisposable
     {
@@ -39,11 +42,13 @@ namespace Callbreak.Presentation.Screens
         private readonly IClock _clock;
         private readonly IHaptics _haptics;
         private readonly AvatarLibrary _avatars;
+        private readonly IAdPrivacy _privacy;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private bool _volumeDirty;
         private float _pendingVolume;
         private double _volumeSaveAt;
+        private bool _privacyFormOpen;
 
         public SettingsPresenter(
             SettingsView view,
@@ -54,7 +59,8 @@ namespace Callbreak.Presentation.Screens
             IDialogs dialogs,
             IClock clock,
             IHaptics haptics,
-            AvatarLibrary avatars)
+            AvatarLibrary avatars,
+            IAdPrivacy privacy)
         {
             _view = view;
             _router = router;
@@ -65,6 +71,7 @@ namespace Callbreak.Presentation.Screens
             _clock = clock;
             _haptics = haptics;
             _avatars = avatars;
+            _privacy = privacy;
         }
 
         public void Start()
@@ -82,9 +89,11 @@ namespace Callbreak.Presentation.Screens
             _view.ReduceMotionChanged += _settings.SetReduceMotion;
             _view.HowToPlayClicked += OnHowToPlay;
             _view.AboutClicked += OnAbout;
+            _view.PrivacyOptionsClicked += OnPrivacyOptions;
             _settings.Changed += Render;
             _profile.Changed += Render;
             _localization.LanguageChanged += Render;
+            _privacy.Changed += Render;
             Render();
         }
 
@@ -112,9 +121,11 @@ namespace Callbreak.Presentation.Screens
             _view.ReduceMotionChanged -= _settings.SetReduceMotion;
             _view.HowToPlayClicked -= OnHowToPlay;
             _view.AboutClicked -= OnAbout;
+            _view.PrivacyOptionsClicked -= OnPrivacyOptions;
             _settings.Changed -= Render;
             _profile.Changed -= Render;
             _localization.LanguageChanged -= Render;
+            _privacy.Changed -= Render;
             _lifetime.Cancel();
             _lifetime.Dispose();
         }
@@ -131,6 +142,7 @@ namespace Callbreak.Presentation.Screens
             _view.SetLanguage(NameOf(_localization.Language));
             _view.SetVibration(_settings.Vibration);
             _view.SetReduceMotion(_settings.ReduceMotion);
+            _view.SetPrivacyOptionsVisible(_privacy.IsRequired);
         }
 
         private void Close()
@@ -209,6 +221,40 @@ namespace Callbreak.Presentation.Screens
             _ = _dialogs.ConfirmAsync(
                 new DialogRequest(_localization.Get("ui.settings.about"), body, _localization.Get("ui.settings.done"), null),
                 _lifetime.Token);
+        }
+
+        /// <summary>
+        /// Google's privacy options form, where the player can change their consent to ads at any
+        /// time. One at a time: taps while it is up open nothing more.
+        /// </summary>
+        private void OnPrivacyOptions()
+        {
+            if (!_privacyFormOpen)
+            {
+                _ = ShowPrivacyOptionsAsync();
+            }
+        }
+
+        private async Task ShowPrivacyOptionsAsync()
+        {
+            _privacyFormOpen = true;
+            try
+            {
+                await _privacy.ShowAsync(_lifetime.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // The page went away first.
+            }
+            catch (Exception e)
+            {
+                // The port never throws; a broken one must not take the page with it.
+                Debug.LogException(e);
+            }
+            finally
+            {
+                _privacyFormOpen = false;
+            }
         }
 
         /// <summary>The build's own id, shortened; a run in the Editor has none.</summary>

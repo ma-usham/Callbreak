@@ -15,8 +15,9 @@ namespace Callbreak.Presentation.Screens
     /// Screen 23, Play Online (the owner, 5 Oct 2026; mockups 23 and 24 and the designer's
     /// online-match-options-prompts.md), opened by the main menu's PLAY ONLINE. Quick Match plays
     /// without a stake; Stake Match offers the stakes of <see cref="StakeRules"/>, the smallest
-    /// chosen at first. The chosen stake is kept while the menu is up, and a menu that opens after
-    /// a stake match starts on the stake played (<see cref="IOnlineMatchChoice"/>). Choosing a stake
+    /// chosen at first. The chips start on the last stake the player chose, on a chip or by playing
+    /// it, also after a Quick Match and after a restart (the owner, 5 Oct 2026;
+    /// <see cref="IOnlineMatchChoice.LastStake"/>). Choosing a stake
     /// or looking at its prizes takes no coins. Play Quick picks Quick Match and "Play for N coins"
     /// picks that stake, then the search opens as before (screen 05); when the wallet can't cover
     /// the stake (<see cref="IStakeLedger.CanAfford"/>), the shop's "Not enough coins" question
@@ -81,8 +82,8 @@ namespace Callbreak.Presentation.Screens
             _settings.Changed += RenderMotion;
             _router.Changed += OnScreenChanged;
 
-            // A stake match just played comes back chosen; otherwise the smallest stake.
-            _stake = StakeRules.IsStake(_choice.Stake) ? _choice.Stake : StakeRules.Stakes[0];
+            // The chips start on the last stake chosen, after a Quick Match and a restart too.
+            _stake = StakeRules.IsStake(_choice.LastStake) ? _choice.LastStake : StakeRules.Stakes[0];
             RenderMotion();
             Render();
         }
@@ -167,8 +168,10 @@ namespace Callbreak.Presentation.Screens
                 return;
             }
 
-            // Only shown: nothing is chosen for the search, and no coins move, until Play.
+            // Only shown: nothing is chosen for the search, and no coins move, until Play. The
+            // chips remember it for the next time the screen opens.
             _stake = stakes[index];
+            _choice.RememberStake(_stake);
             _view.SetPlayStake(_localization.Format("ui.play_online.stake_cta", CoinsFormat.Coins(_stake)));
             RenderPrizes();
         }

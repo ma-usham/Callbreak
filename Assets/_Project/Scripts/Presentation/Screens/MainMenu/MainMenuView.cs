@@ -9,11 +9,11 @@ using UnityEngine;
 namespace Callbreak.Presentation.Screens
 {
     /// <summary>
-    /// GDD §11 screen 00, the home hub (with mockup 23's coin wallet). Shows who the player is and
-    /// how many coins they have, and raises one event per entry point; the presenter decides where
-    /// each one leads. The first time it shows after the menu loads, the three play buttons and the
-    /// line under them rise into place one after another (ADR 023); with Reduce motion they are
-    /// simply there.
+    /// GDD §11 screen 00, the home hub (with mockup 23's coin wallet and the No Ads button left of
+    /// it). Shows who the player is and how many coins they have, and raises one event per entry
+    /// point; the presenter decides where each one leads. The first time it shows after the menu
+    /// loads, the three play buttons and the line under them rise into place one after another
+    /// (ADR 023); with Reduce motion they are simply there.
     /// </summary>
     public sealed class MainMenuView : UIScreen
     {
@@ -28,6 +28,10 @@ namespace Callbreak.Presentation.Screens
         // before the wallet has neither; the menu then simply shows none.
         [SerializeField] private TMP_Text _coinsText;
         [SerializeField] private UnityEngine.UI.Button _earnCoinsButton;
+
+        // The No Ads button left of the wallet (the owner, 5 Oct 2026). A prefab built before it has
+        // none; the menu then simply offers none.
+        [SerializeField] private UnityEngine.UI.Button _noAdsButton;
         [SerializeField] private UnityEngine.UI.Button _playOnlineButton;
         [SerializeField] private UnityEngine.UI.Button _playWithFriendsButton;
         [SerializeField] private UnityEngine.UI.Button _playOfflineButton;
@@ -54,6 +58,9 @@ namespace Callbreak.Presentation.Screens
         /// <summary>The wallet's "+" was tapped.</summary>
         public event Action EarnCoinsClicked;
 
+        /// <summary>The No Ads button was tapped.</summary>
+        public event Action NoAdsClicked;
+
         public event Action PlayOnlineClicked;
         public event Action PlayWithFriendsClicked;
         public event Action PlayOfflineClicked;
@@ -75,6 +82,15 @@ namespace Callbreak.Presentation.Screens
             if (_coinsText != null && _coinsText.text != coins)
             {
                 _coinsText.text = coins;
+            }
+        }
+
+        /// <summary>Shows or hides the No Ads button; the presenter shows it while No Ads can be bought.</summary>
+        public void SetNoAdsVisible(bool visible)
+        {
+            if (_noAdsButton != null && _noAdsButton.gameObject.activeSelf != visible)
+            {
+                _noAdsButton.gameObject.SetActive(visible);
             }
         }
 
@@ -167,6 +183,11 @@ namespace Callbreak.Presentation.Screens
                 _earnCoinsButton.onClick.AddListener(OnEarnCoinsClicked);
             }
 
+            if (_noAdsButton != null)
+            {
+                _noAdsButton.onClick.AddListener(OnNoAdsClicked);
+            }
+
             _playOnlineButton.onClick.AddListener(OnPlayOnlineClicked);
             _playWithFriendsButton.onClick.AddListener(OnPlayWithFriendsClicked);
             _playOfflineButton.onClick.AddListener(OnPlayOfflineClicked);
@@ -181,6 +202,11 @@ namespace Callbreak.Presentation.Screens
             if (_earnCoinsButton != null)
             {
                 _earnCoinsButton.onClick.RemoveListener(OnEarnCoinsClicked);
+            }
+
+            if (_noAdsButton != null)
+            {
+                _noAdsButton.onClick.RemoveListener(OnNoAdsClicked);
             }
 
             _playOnlineButton.onClick.RemoveListener(OnPlayOnlineClicked);
@@ -202,6 +228,8 @@ namespace Callbreak.Presentation.Screens
         private void OnShopClicked() => ShopClicked?.Invoke();
 
         private void OnEarnCoinsClicked() => EarnCoinsClicked?.Invoke();
+
+        private void OnNoAdsClicked() => NoAdsClicked?.Invoke();
 
         private void OnPlayOnlineClicked() => PlayOnlineClicked?.Invoke();
 

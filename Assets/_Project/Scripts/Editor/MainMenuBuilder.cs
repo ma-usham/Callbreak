@@ -18,7 +18,8 @@ namespace Callbreak.Editor
     /// is a centre measured on 00-main-menu.png in mockup pixels; the parts were fitted to the
     /// mockup by re-composing it from the exported sprites (ArtSource/Prompts/MainMenu_Batch.md).
     /// The coin wallet left of the settings disc is mockup 23's (23-coinsection.png, which is
-    /// mockup 00 with the wallet added; everything else stands where it did).
+    /// mockup 00 with the wallet added; everything else stands where it did). The No Ads button
+    /// left of the wallet is on no mockup (see <see cref="NoAdsIconPath"/>).
     /// Re-running overwrites the prefab, so layout changes belong here until the screen is signed
     /// off. Like the screens built from layouts, its buttons carry press feedback, its fixed
     /// labels carry string-table keys, and its corner groups follow the device's safe area.
@@ -69,6 +70,13 @@ namespace Callbreak.Editor
 
         // The "+" takes a touch a little beyond its disc (GDD: touch targets of about 88 px).
         private const float WalletPlusHitGrowth = 15f;
+
+        // The No Ads button (the owner, 5 Oct 2026) is on no mockup. ChatGPT's main menu with it added
+        // (ArtSource/Working/MainMenu/chatgpt/NoAds_MainMenu_a1.png) puts a disc like the gear's left of
+        // the wallet; it is the gear's disc and shadow, kept from the wallet by the gap the gear keeps
+        // on the wallet's other side, with the No Ads glyph (ChatGPT's, ArtSource/Working/MainMenu/
+        // chatgpt/NoAds_prompts.md) centred on it.
+        private const string NoAdsIconPath = "Icons/Icon_NoAds.png";
 
         // The fan: the four aces of the player's deck (GDD §13), laid as mockup 00 draws its four
         // cards. For each, the middle of its top edge and its tilt (mockup pixels; degrees,
@@ -223,7 +231,7 @@ namespace Callbreak.Editor
             TextMeshProUGUI playerName = Label(
                 "PlayerName", headerLeft, Screen, "Player", sansBold, UiBuildKit.Hex("#151617"), PlayerNameText, false);
 
-            // Header, right: the coin wallet, settings and shop
+            // Header, right: the coin wallet, settings and shop, then No Ads left of the wallet
             UnityEngine.UI.Button earnCoins = BuildWallet(headerRight, sansBold, secondary, out TextMeshProUGUI coins);
 
             var settingsCentre = new Vector2(1402f, 97f);
@@ -239,6 +247,8 @@ namespace Callbreak.Editor
             UnityEngine.UI.Button shop = CreateButton(
                 "ShopButton", headerRight, shopCentre, UiBuildKit.NativeSize(circle), circle, circleShadow, 1f, 0f, 4f, 0.2f);
             Place("Icon", shop.transform, new Vector2(1548.75f, 96f), shopCentre, Ui("Icons/Icon_Shop.png"));
+
+            UnityEngine.UI.Button noAds = BuildNoAdsButton(headerRight, settingsCentre, circle, circleShadow);
 
             var view = rootObject.AddComponent<MainMenuView>();
             var serialized = new SerializedObject(view);
@@ -260,6 +270,7 @@ namespace Callbreak.Editor
             serialized.FindProperty("_shopButton").objectReferenceValue = shop;
             serialized.FindProperty("_coinsText").objectReferenceValue = coins;
             serialized.FindProperty("_earnCoinsButton").objectReferenceValue = earnCoins;
+            serialized.FindProperty("_noAdsButton").objectReferenceValue = noAds;
             serialized.FindProperty("_playOnlineButton").objectReferenceValue = playOnline;
             serialized.FindProperty("_playWithFriendsButton").objectReferenceValue = playWithFriends;
             serialized.FindProperty("_playOfflineButton").objectReferenceValue = playOffline;
@@ -389,6 +400,22 @@ namespace Callbreak.Editor
             UnityEngine.UI.Image faceImage = UiBuildKit.AddImage(face, UiBuildKit.LoadSpriteAt(WalletPlusPath, 0f), true);
             faceImage.raycastPadding = -Vector4.one * WalletPlusHitGrowth;
             return MakeButton(plus, faceImage);
+        }
+
+        /// <summary>
+        /// The No Ads button: the gear's disc, shadow and press feedback, left of the wallet, with the
+        /// No Ads glyph centred on it. Built hidden; the presenter shows it while No Ads can be bought.
+        /// </summary>
+        private static UnityEngine.UI.Button BuildNoAdsButton(RectTransform headerRight, Vector2 settingsCentre, Sprite circle, Sprite circleShadow)
+        {
+            float radius = UiBuildKit.NativeSize(circle).x / UiBuildKit.ScaleX / 2f;
+            float gap = (settingsCentre.x - radius) - WalletPill.xMax;
+            var centre = new Vector2(WalletPill.xMin - gap - radius, settingsCentre.y);
+            UnityEngine.UI.Button button = CreateButton(
+                "NoAdsButton", headerRight, centre, UiBuildKit.NativeSize(circle), circle, circleShadow, 1f, 0f, 4f, 0.2f);
+            Place("Icon", button.transform, centre, centre, Ui(NoAdsIconPath));
+            button.gameObject.SetActive(false);
+            return button;
         }
 
         /// <summary>

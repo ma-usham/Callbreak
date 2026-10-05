@@ -3,6 +3,7 @@ using System.Linq;
 using Callbreak.Application.Ports;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Widgets;
+using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,11 +13,29 @@ namespace Callbreak.Editor.Screens
     /// <summary>
     /// Screen 11: turns every "toggle" node into a <see cref="ToggleSwitch"/> drawn by the Controls
     /// kit's ON and OFF looks (both fill the same box), assembles the volume <see cref="Slider"/>
-    /// from the kit's track, fill and knob, and gives the controls that are lower than the GDD's
-    /// 88 px touch target a taller one where the layout has room.
+    /// from the kit's track, fill and knob, gives the controls that are lower than the GDD's 88 px
+    /// touch target a taller one where the layout has room, and adds the hidden "Privacy options"
+    /// button under the panel.
     /// </summary>
     public static class SettingsCustomizer
     {
+        private const string PrivacyOptionsKey = "ui.settings.privacy_options";
+        private const string PrivacyOptionsText = "Privacy options";
+        private const string PrivacyOptionsIcon = "UI/Icons/Icon_Lock.png";
+
+        /// <summary>The privacy button is How to Play's at this size, to fit the band between the panel and the bottom of the screen.</summary>
+        private const float PrivacyOptionsScale = 0.68f;
+
+        /// <summary>The lock's height on How to Play's button (mockup px): a little under the book's 52, as it is a solid shape.</summary>
+        private const float LockHeight = 48f;
+
+        /// <summary>Mockup px from the button's words to its chevron, as on How to Play, and the least a longer translation keeps.</summary>
+        private const float WordsToChevron = 52.15f;
+        private const float MinWordsToChevron = 16f;
+
+        /// <summary>GDD: touch targets of at least 88 px (canvas).</summary>
+        private const float TouchTarget = 88f;
+
         public static void Customize(ScreenBuildContext ctx)
         {
             foreach (LayoutNode node in ctx.Layout.nodes.Where(n => n.kind == "toggle"))
@@ -33,6 +52,122 @@ namespace Callbreak.Editor.Screens
             ScreenExtras.LimitWidth(ctx, "PlayerName", 330f);
 
             GrowTouchTargets(ctx);
+            BuildPrivacyOptionsButton(ctx);
+        }
+
+        /// <summary>
+        /// "Privacy options" (Google's consent rules for ads; the owner, 5 Oct 2026). No mockup draws
+        /// it, so it is How to Play's button at <see cref="PrivacyOptionsScale"/>: the same ivory
+        /// pill, shadow, lettering and chevron, the kit's lock for its icon, and as wide as its words
+        /// need. It is centred under the panel, in the band between the panel and the bottom of the
+        /// screen (below Done), and its touch target grows to 88 px, still more than 16 px from
+        /// Done's. It is built hidden and moves nothing else: the presenter shows it only while the
+        /// ad network requires it, and hidden the page is exactly mockup 11. Its words start after
+        /// the lock, and a longer translation runs on towards the chevron, then shrinks.
+        /// </summary>
+        private static void BuildPrivacyOptionsButton(ScreenBuildContext ctx)
+        {
+            if (!ctx.Nodes.TryGetValue("HowToPlayButton", out RectTransform source) || !ctx.Nodes.TryGetValue("Panel", out RectTransform panel))
+            {
+                ctx.Warnings.Add("PrivacyOptionsButton: needs the HowToPlayButton and Panel nodes; no privacy options");
+                return;
+            }
+
+            Sprite lockSprite = UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/{PrivacyOptionsIcon}", 0f);
+            var root = (RectTransform)Object.Instantiate(source.gameObject, panel.parent, false).transform;
+            root.name = "PrivacyOptionsButton";
+            root.SetSiblingIndex(panel.GetSiblingIndex() + 1);
+            var shadow = root.Find("Shadow") as RectTransform;
+            var face = root.Find("Face") as RectTransform;
+            var icon = root.Find("HowToPlayIcon") as RectTransform;
+            var label = root.Find("HowToPlayLabel") as RectTransform;
+            var chevron = root.Find("HowToPlayChevron") as RectTransform;
+            var iconFace = icon != null ? icon.Find("Face") as RectTransform : null;
+            TMP_Text words = label != null ? label.GetComponent<TMP_Text>() : null;
+            LocalizedText localized = label != null ? label.GetComponent<LocalizedText>() : null;
+            if (shadow == null || face == null || iconFace == null || words == null || localized == null || chevron == null || lockSprite == null)
+            {
+                Object.DestroyImmediate(root.gameObject);
+                ctx.Warnings.Add("PrivacyOptionsButton: How to Play's button lacks a part, or the lock is missing; no privacy options");
+                return;
+            }
+
+            icon.name = "PrivacyOptionsIcon";
+            label.name = "PrivacyOptionsLabel";
+            chevron.name = "PrivacyOptionsChevron";
+
+            // How to Play's measures (mockup px), which the copy keeps from its own ends.
+            LayoutNode button = ctx.Node("HowToPlayButton");
+            LayoutNode book = ctx.Node("HowToPlayIcon");
+            LayoutNode arrow = ctx.Node("HowToPlayChevron");
+            float[] bookWords = ctx.Node("HowToPlayLabel").inkBox;
+            float iconStart = book.rect[0] - button.rect[0];
+            float iconToWords = bookWords[0] - (book.rect[0] + book.rect[2]);
+            float chevronToEnd = button.rect[0] + button.rect[2] - (arrow.rect[0] + arrow.rect[2]);
+
+            // The lock in the book's place, on the same line.
+            var lockSize = new Vector2(LockHeight * lockSprite.rect.width / lockSprite.rect.height, LockHeight);
+            iconFace.GetComponent<Image>().sprite = lockSprite;
+            icon.sizeDelta = UiBuildKit.FromMock(lockSize.x, lockSize.y);
+            iconFace.sizeDelta = icon.sizeDelta;
+            iconFace.anchoredPosition = Vector2.zero;
+
+            // The words, set as How to Play's are, from their left edge.
+            var key = new SerializedObject(localized);
+            key.FindProperty("_key").stringValue = PrivacyOptionsKey;
+            key.ApplyModifiedPropertiesWithoutUndo();
+            words.text = PrivacyOptionsText;
+            words.alignment = TextAlignmentOptions.BaselineLeft;
+            label.pivot = new Vector2(0f, label.pivot.y);
+            if (!UiBuildKit.InkBounds(words, out Rect ink, out _))
+            {
+                Object.DestroyImmediate(root.gameObject);
+                ctx.Warnings.Add("PrivacyOptionsButton: its words have no ink; no privacy options");
+                return;
+            }
+
+            // As wide as the words need, every part as far from its end as on How to Play.
+            float wordsWidth = ink.width / UiBuildKit.ScaleX;
+            float width = iconStart + lockSize.x + iconToWords + wordsWidth + WordsToChevron + arrow.rect[2] + chevronToEnd;
+            float half = width / 2f;
+            float grow = (width - button.rect[2]) * UiBuildKit.ScaleX;
+            root.sizeDelta = new Vector2(width * UiBuildKit.ScaleX, root.sizeDelta.y);
+            face.sizeDelta += new Vector2(grow, 0f);
+            shadow.sizeDelta += new Vector2(grow, 0f);
+            icon.anchoredPosition = new Vector2((iconStart + (lockSize.x / 2f) - half) * UiBuildKit.ScaleX, icon.anchoredPosition.y);
+            label.anchoredPosition = new Vector2(((iconStart + lockSize.x + iconToWords - half) * UiBuildKit.ScaleX) - ink.xMin, label.anchoredPosition.y);
+            chevron.anchoredPosition = new Vector2((half - chevronToEnd - (arrow.rect[2] / 2f)) * UiBuildKit.ScaleX, chevron.anchoredPosition.y);
+
+            // A longer translation runs on towards the chevron, then shrinks, then ends in an ellipsis.
+            label.sizeDelta = new Vector2((wordsWidth + WordsToChevron - MinWordsToChevron) * UiBuildKit.ScaleX, label.sizeDelta.y);
+            words.enableAutoSizing = true;
+            words.fontSizeMax = words.fontSize;
+            words.fontSizeMin = words.fontSize * 0.7f;
+            words.overflowMode = TextOverflowModes.Ellipsis;
+
+            // Everything smaller about the button's centre. The root keeps its own scale: the press
+            // feedback animates it.
+            float scale = PrivacyOptionsScale;
+            foreach (RectTransform part in root)
+            {
+                part.localScale = new Vector3(scale, scale, 1f);
+                part.anchoredPosition *= scale;
+            }
+
+            root.sizeDelta *= scale;
+
+            // Centred under the panel, halfway between its edge and the bottom of the screen.
+            LayoutNode panelNode = ctx.Node("Panel");
+            var centre = new Vector2(panelNode.Centre.x, (panelNode.rect[1] + panelNode.rect[3] + UiBuildKit.MockHeight) / 2f);
+            root.anchoredPosition = new Vector2((centre.x - UiBuildKit.ScreenCentre.x) * UiBuildKit.ScaleX, -(centre.y - UiBuildKit.ScreenCentre.y) * UiBuildKit.ScaleY);
+
+            // GDD: an 88 px touch target. The face is drawn scaled, so its padding is in its own units.
+            float drawn = face.sizeDelta.y * scale;
+            float pad = Mathf.Max(0f, (TouchTarget - drawn) / 2f) / scale;
+            face.GetComponent<Image>().raycastPadding = new Vector4(0f, -pad, 0f, -pad);
+
+            root.gameObject.SetActive(false);
+            ctx.Bound["_privacyOptionsButton"] = root.GetComponent<Button>();
         }
 
         /// <summary>

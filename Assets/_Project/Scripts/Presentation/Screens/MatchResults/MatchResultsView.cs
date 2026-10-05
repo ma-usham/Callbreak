@@ -10,7 +10,9 @@ namespace Callbreak.Presentation.Screens
     /// GDD §11 screen 10: the final standings and what comes next. The headline follows the local
     /// player's place ("You Win!", "Shared Victory!", "2nd Place"...); the trophy shows only for a
     /// win; every winner's row carries a crown (ties share first place); the gold band marks the
-    /// local player's row. Rows are numbered 0-3 from the top. Each time the page is shown its
+    /// local player's row. After a Stake Match that paid this player, its row also shows the prize,
+    /// the gold coin and "+200 coins", between the name and the points (the owner, 5 Oct 2026).
+    /// Rows are numbered 0-3 from the top. Each time the page is shown its
     /// panel rises into place, and the first time the trophy is seen it drops in and sparkles
     /// (GDD §14 "Results" and "Victory"), unless <see cref="ReduceMotion"/> is set.
     /// </summary>
@@ -37,6 +39,10 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private TMP_Text[] _rowName;
         [SerializeField] private TMP_Text[] _rowTotal;
         [SerializeField] private GameObject[] _rowSeparator;
+
+        // Each row's Stake Match prize, hidden unless it is the paid player's: the coin and its line.
+        [SerializeField] private GameObject[] _rowPrize;
+        [SerializeField] private TMP_Text[] _rowPrizeLabel;
         [SerializeField] private RectTransform _highlightBand;
         [SerializeField] private Color _totalColor = new Color32(0x19, 0x19, 0x14, 0xFF);
         [SerializeField] private Color _negativeColor = new Color32(0x82, 0x12, 0x16, 0xFF);
@@ -125,6 +131,32 @@ namespace Callbreak.Presentation.Screens
 
         /// <summary>Puts the gold band on the local player's row; -1 hides it.</summary>
         public void SetHighlightRow(int row) => ResultsTableRows.Highlight(_highlightBand, _row, _rowSeparator, row);
+
+        /// <summary>
+        /// The coin and <paramref name="prize"/> ("+200 coins") on one row, the prize a Stake Match
+        /// paid; every other row shows none. -1, or no text, hides it everywhere.
+        /// </summary>
+        public void SetStakePrize(int row, string prize)
+        {
+            if (_rowPrize == null || _rowPrizeLabel == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _rowPrize.Length && i < _rowPrizeLabel.Length; i++)
+            {
+                bool show = i == row && !string.IsNullOrEmpty(prize);
+                if (show)
+                {
+                    ResultsTableRows.SetText(_rowPrizeLabel[i], prize);
+                }
+
+                if (_rowPrize[i].activeSelf != show)
+                {
+                    _rowPrize[i].SetActive(show);
+                }
+            }
+        }
 
         /// <summary>"5 rounds completed"; the rules either side follow the text.</summary>
         public void SetFooter(string footer)

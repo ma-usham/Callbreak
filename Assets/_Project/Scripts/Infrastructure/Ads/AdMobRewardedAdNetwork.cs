@@ -18,7 +18,9 @@ namespace Callbreak.Infrastructure.Ads
     /// consent form when the law asks for it (the messages set up in AdMob's Privacy &amp;
     /// messaging). The SDK starts, and an ad is requested, only while
     /// <see cref="ConsentInformation.CanRequestAds"/>; a player whose consent from an earlier session
-    /// still holds gets ads at once while it is checked again.
+    /// still holds gets ads at once while it is checked again. After the update, and after the
+    /// consent form, the privacy options (<see cref="AdMobAdPrivacy"/>) read again whether Settings
+    /// must offer them.
     /// </para>
     /// The plugin calls back on other threads (on Android often only once the game resumes after the
     /// ad), so every callback is handed to the main thread through the plugin's
@@ -28,16 +30,19 @@ namespace Callbreak.Infrastructure.Ads
     /// </summary>
     public sealed class AdMobRewardedAdNetwork : IRewardedAdNetwork
     {
-        private const string LogPrefix = "[AdMob] ";
+        internal const string LogPrefix = "[AdMob] ";
 
         private readonly string _adUnitId;
+        private readonly AdMobAdPrivacy _privacy;
         private Task<bool> _initialized;
         private Task _consent;
 
         /// <param name="adUnitId">The rewarded ad unit; null or empty where there is none, and then no ad is ever requested.</param>
-        public AdMobRewardedAdNetwork(string adUnitId)
+        /// <param name="privacy">The privacy options, told whenever the consent information may have changed; none when null.</param>
+        public AdMobRewardedAdNetwork(string adUnitId, AdMobAdPrivacy privacy = null)
         {
             _adUnitId = adUnitId;
+            _privacy = privacy;
         }
 
         public async Task<bool> StartAsync()
@@ -132,6 +137,8 @@ namespace Callbreak.Infrastructure.Ads
                             return;
                         }
 
+                        // From here on UMP knows whether Settings must offer the privacy options.
+                        _privacy?.Refresh();
                         if (ConsentInformation.CanRequestAds())
                         {
                             done.TrySetResult(true);
@@ -146,6 +153,7 @@ namespace Callbreak.Infrastructure.Ads
                                     Debug.LogWarning(LogPrefix + "Consent form not shown: " + Describe(formError));
                                 }
 
+                                _privacy?.Refresh();
                                 done.TrySetResult(true);
                             },
                             () => done.TrySetResult(false)));
@@ -205,7 +213,7 @@ namespace Callbreak.Infrastructure.Ads
         }
 
         /// <summary>Runs a plugin callback's work on the main thread; when it throws, logs it and runs <paramref name="onError"/>.</summary>
-        private static void OnMainThread(Action action, Action onError = null)
+        internal static void OnMainThread(Action action, Action onError = null)
         {
             try
             {
@@ -230,7 +238,7 @@ namespace Callbreak.Infrastructure.Ads
 
         private static string Describe(AdError error) => error == null ? "no ad, and no error" : error.GetCode() + " " + error.GetMessage();
 
-        private static string Describe(FormError error) => error.ErrorCode + " " + error.Message;
+        internal static string Describe(FormError error) => error.ErrorCode + " " + error.Message;
 
         /// <summary>One loaded AdMob rewarded ad.</summary>
         private sealed class LoadedAd : IRewardedAd

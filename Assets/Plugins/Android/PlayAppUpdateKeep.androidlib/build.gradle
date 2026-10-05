@@ -1,0 +1,25 @@
+// The keep rules Google's Play In-app Updates plugin needs in a minified release build (ADR 036).
+// A library with no code: its consumer rules (proguard-rules.pro) reach the app's R8.
+apply plugin: 'com.android.library'
+
+android {
+    namespace "com.dayzerogames.callbreak.playupdatekeep"
+    compileSdk getProperty("unity.compileSdkVersion") as int
+    buildToolsVersion getProperty("unity.buildToolsVersion")
+
+    compileOptions {
+        sourceCompatibility JavaVersion.valueOf(getProperty("unity.javaCompatabilityVersion"))
+        targetCompatibility JavaVersion.valueOf(getProperty("unity.javaCompatabilityVersion"))
+    }
+
+    defaultConfig {
+        minSdk getProperty("unity.minSdkVersion") as int
+        consumerProguardFiles 'proguard-rules.pro'
+    }
+
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+        }
+    }
+}

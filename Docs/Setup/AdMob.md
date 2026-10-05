@@ -1,10 +1,12 @@
-# AdMob setup (Earn Coins ads)
+# AdMob setup (Earn Coins ads and ads between matches)
 
-The Earn Coins page pays its coins for Google AdMob rewarded ads on phones. They come through the
+The Earn Coins page pays its coins for Google AdMob rewarded ads on phones, and a full-screen AdMob
+interstitial ad can show between matches (below, "Ads between matches"). They come through the
 Google Mobile Ads Unity plugin (`com.google.ads.mobile` 11.5.0, from OpenUPM) and the External
 Dependency Manager it brings (`com.google.external-dependency-manager` 1.2.187, EDM4U). In the
-Editor, in the tests and in desktop builds a stand-in completes every ad (`StandInRewardedAds`), so
-no ad network is touched there.
+Editor, in the tests and in desktop builds stand-ins take their place: one completes every Earn
+Coins ad (`StandInRewardedAds`), the other never has an ad between matches
+(`StandInInterstitialAds`). No ad network is touched there.
 
 ## Identifiers (not secret: they ship inside the app)
 
@@ -12,7 +14,8 @@ no ad network is touched there.
 | --- | --- |
 | AdMob app (Android) | `ca-app-pub-1025159441369051~3176202879` |
 | Rewarded ad unit, Earn Coins (Android) | `ca-app-pub-1025159441369051/8532471334` |
-| Banner `.../6484892497`, interstitial `.../4319920270` | not used anywhere |
+| Interstitial ad unit, between matches (Android) | `ca-app-pub-1025159441369051/4319920270` |
+| Banner `.../6484892497` | not used anywhere |
 
 They live in code, in `Assets/_Project/Scripts/Infrastructure/Ads/AdMobIds.cs`. Before every Android
 build, `Callbreak.Editor.AdMobSetup` writes the app id into the plugin's settings,
@@ -23,10 +26,45 @@ plugin's own **Assets > Google Mobile Ads > Settings...** window shows the same 
 ## Test ads and real ads
 
 - **Development builds** (Development Build ticked; `Debug.isDebugBuild`) always use Google's test
-  rewarded unit, `ca-app-pub-3940256099942544/5224354917`. Those ads say "Test Ad", work on any phone
-  and need no AdMob review.
-- **Release builds** use the real unit. Never tap your own live ads: AdMob can suspend the account.
+  units: rewarded `ca-app-pub-3940256099942544/5224354917`, interstitial
+  `ca-app-pub-3940256099942544/1033173712` (iOS: `.../1712485313` and `.../4411468910`). Those ads
+  say "Test Ad", work on any phone and need no AdMob review.
+- **Release builds** use the real units. Never tap your own live ads: AdMob can suspend the account.
   To try a release build on a phone, make it a test device first (below).
+
+## Ads between matches
+
+The owner's rule (5 Oct 2026). As the player leaves the results of a finished match, a full-screen
+interstitial ad shows before the next screen:
+
+| Mode | Play Again | Main Menu |
+| --- | --- | --- |
+| Offline | the ad, then the new match is dealt | the ad, then the main menu |
+| Quick or Stake Match | the ad, then the search (before its countdown) | the ad, then the main menu |
+| Private room | no ad: back to the lobby, where the friends wait | the room is left, then the ad, then the main menu |
+
+- **Never:** during play, on a round's results, in matchmaking or in the lobby; after a match that
+  ended early (left from the match menu, or called off: it has no results to leave); after the
+  player's very first match (the statistics count every match played, finished or left early);
+  for a player who owns **No Ads**.
+- **At most one every three minutes**, on the wall clock, from when the last one came up. That time
+  is kept in memory, so each launch starts afresh.
+- **Never waited for:** if no ad is loaded at that moment, the game goes on without one.
+- A private room whose host left under the results sends Play Again to the main menu: that counts
+  as Main Menu, and the message saying why comes after the ad.
+- **Loading.** One ad is kept loaded, tried again after 5 s, 10 s, 20 s ... at most every two
+  minutes, and replaced after 55 minutes (AdMob's ads expire after an hour). A player who owns No
+  Ads gets nothing requested: buying it lets the loaded ad go, and a refund starts loading again.
+- **Consent.** The ads between matches start AdMob through the Earn Coins ads' start (consent,
+  then the SDK), so the consent form never shows twice and the SDK starts once. An ad is requested
+  only while UMP says ads may be requested.
+- **Sound.** No game sound plays over an ad: Unity pauses on Android while a full-screen ad shows,
+  and on iOS `MobileAds.SetiOSAppPauseOnBackground(true)` does the same.
+- **The pieces:** the ports `Application/Economy/IInterstitialAdNetwork.cs` and
+  `IBetweenMatchAds.cs`; the rule `BetweenMatchAds.cs`; the loading `PreloadedInterstitialAds.cs`;
+  the stand-in `StandInInterstitialAds.cs`; the AdMob side `Infrastructure/Ads/AdMobInterstitialAdNetwork.cs`;
+  the hook in `Presentation/Overlays/MatchResultsPresenter.cs`; registered next to the rewarded ads
+  in `ProjectLifetimeScope`.
 
 ## How the app asks for consent
 
@@ -37,6 +75,24 @@ ads may be requested. A player whose consent from an earlier session still holds
 while it is checked again. If the form can't load (no network), the app tries again after 5 s, 10 s,
 20 s ... at most every two minutes.
 
+**Privacy options.** Where a consent form applies, Google's policy asks that players can change
+their choice later. Settings then shows a **Privacy options** button under its panel (copy
+`ui.settings.privacy_options`), which opens Google's privacy options form
+(`ConsentForm.ShowPrivacyOptionsForm`); a second tap while the form is up opens nothing more.
+
+- The button shows only while UMP says an entry point is required
+  (`ConsentInformation.PrivacyOptionsRequirementStatus` is `Required`), as Google's guidance asks.
+  Elsewhere Settings looks exactly as it did before.
+- UMP knows this once the consent information has been updated at start, and the app reads it again
+  after the consent form and after the privacy options form. It appears while Settings is open if
+  the answer comes then.
+- If that update fails at start (no network) while the player's earlier consent still lets ads be
+  requested, the button stays hidden until the next start.
+- In the Editor, the tests and desktop builds a stand-in (`StandInAdPrivacy`) never requires it.
+- The pieces: the port `Application/Economy/IAdPrivacy.cs`, the AdMob side
+  `Infrastructure/Ads/AdMobAdPrivacy.cs` (told by `AdMobRewardedAdNetwork` when the consent
+  information may have changed), registered next to the rewarded ads in `ProjectLifetimeScope`.
+
 ## What the owner does
 
 1. **Test devices.** AdMob > Settings > Test devices > Add test device: Android, with the phone's
@@ -46,14 +102,15 @@ while it is checked again. If the form can't load (no network), the app tries ag
    regulations** (GDPR) message for the Callbreak app; add a **US state regulations** message if you
    want one. Without a published GDPR message, players in the EEA, the UK and Switzerland see no
    form, and AdMob limits their ads.
-3. **A privacy options entry point (your decision).** Where a consent form applies, Google's policy
-   asks that players can change their choice later. The plugin has the call
-   (`ConsentForm.ShowPrivacyOptionsForm`, needed when `ConsentInformation.PrivacyOptionsRequirementStatus`
-   is `Required`); the game has no button for it yet. It needs a button, its copy and its place, for
-   example in Settings.
+3. **Privacy options: check the button.** Settings' **Privacy options** button (above, under "How
+   the app asks for consent") is built. Its place under the panel, its size (How to Play's button,
+   smaller) and its lock icon are proposals for you to confirm. It shows only for players UMP says
+   need it (for example in the EEA, the UK and Switzerland), so it never shows on a phone in Nepal:
+   the app sets no UMP debug geography.
 4. **Link the Play listing.** Once the game is on Google Play: AdMob > Apps > Callbreak > App
    settings > link the app to its store listing. AdMob then reviews the app; until then it shows
-   "Requires review, limited ad serving", and real ads are few or none (test ads are not affected).
+   "Requires review, limited ad serving", and real ads, rewarded and between matches, are few or
+   none (test ads are not affected).
 5. **app-ads.txt.** The Play listing needs a developer website. Put a file at
    `https://<that domain>/app-ads.txt` with this line:
 
@@ -62,7 +119,8 @@ while it is checked again. If the form can't load (no network), the app tries ag
    ```
 
 6. **Play Console.**
-   - App content > Ads: "Yes, my app contains ads".
+   - App content > Ads: "Yes, my app contains ads" (rewarded ads, and full-screen ads between
+     matches).
    - App content > Advertising ID: the app uses it, for advertising (the SDK adds the
      `com.google.android.gms.permission.AD_ID` permission).
    - Data safety: declare the data the Google Mobile Ads SDK collects and shares (see Google's
@@ -72,8 +130,8 @@ while it is checked again. If the form can't load (no network), the app tries ag
      tagged; today nothing is tagged.
 7. **iOS (later).** There is no iOS AdMob app yet. With the plugin installed, an iOS build stops in
    the plugin's build step ("iOS Google Mobile Ads app ID is empty") until an iOS app id is entered
-   in the plugin's settings, and a release iOS build shows no ads until `AdMobIds` has an iOS unit.
-   Development iOS builds would use Google's iOS test unit.
+   in the plugin's settings, and a release iOS build shows no ads until `AdMobIds` has iOS units.
+   Development iOS builds would use Google's iOS test units.
 
 ## The Android build
 

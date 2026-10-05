@@ -72,6 +72,9 @@ namespace Callbreak.Bootstrap
             builder.RegisterEntryPoint<RejoinOffer>();
             builder.RegisterEntryPoint<JoinLinkHandler>();
 
+            // A newer version on Google Play, whenever the main menu is on top again (ADR 036).
+            builder.RegisterEntryPoint<ForcedUpdateMoments>();
+
             // Last of all: the first-run guide only acts on a bare main menu.
             builder.RegisterEntryPoint<FirstRunGuide>();
         }

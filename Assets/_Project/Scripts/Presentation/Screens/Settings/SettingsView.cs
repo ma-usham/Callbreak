@@ -9,6 +9,8 @@ namespace Callbreak.Presentation.Screens
     /// <summary>
     /// GDD §11 screen 11: sound, language and comfort options. Every control raises its intent
     /// the moment it changes; the presenter applies and saves it. Setters never raise events.
+    /// Below the panel, "Privacy options" (no mockup draws it) shows only while the ad network
+    /// requires it.
     /// </summary>
     public sealed class SettingsView : UIScreen
     {
@@ -28,6 +30,7 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private UnityEngine.UI.Button _howToPlayButton;
         [SerializeField] private UnityEngine.UI.Button _aboutButton;
         [SerializeField] private UnityEngine.UI.Button _doneButton;
+        [SerializeField] private UnityEngine.UI.Button _privacyOptionsButton;
 
         public event Action BackClicked;
         public event Action ProfileClicked;
@@ -43,6 +46,9 @@ namespace Callbreak.Presentation.Screens
         public event Action HowToPlayClicked;
         public event Action AboutClicked;
         public event Action DoneClicked;
+
+        /// <summary>"Privacy options": the ad network's form, where the player can change their consent to ads.</summary>
+        public event Action PrivacyOptionsClicked;
 
         /// <summary>The app is going to the background: anything not yet written should be written now.</summary>
         public event Action Suspended;
@@ -75,6 +81,18 @@ namespace Callbreak.Presentation.Screens
 
         public void SetReduceMotion(bool on) => _reduceMotionToggle.SetIsOnWithoutNotify(on);
 
+        /// <summary>
+        /// Shows "Privacy options" only while the player must be offered them (Google's consent
+        /// rules). Hidden, the page is exactly what it was without it.
+        /// </summary>
+        public void SetPrivacyOptionsVisible(bool visible)
+        {
+            if (_privacyOptionsButton != null && _privacyOptionsButton.gameObject.activeSelf != visible)
+            {
+                _privacyOptionsButton.gameObject.SetActive(visible);
+            }
+        }
+
         private static void SetText(TMP_Text label, string text)
         {
             if (label.text != text)
@@ -97,6 +115,10 @@ namespace Callbreak.Presentation.Screens
             _howToPlayButton.onClick.AddListener(OnHowToPlay);
             _aboutButton.onClick.AddListener(OnAbout);
             _doneButton.onClick.AddListener(OnDone);
+            if (_privacyOptionsButton != null)
+            {
+                _privacyOptionsButton.onClick.AddListener(OnPrivacyOptions);
+            }
         }
 
         private void OnDisable()
@@ -113,6 +135,10 @@ namespace Callbreak.Presentation.Screens
             _howToPlayButton.onClick.RemoveListener(OnHowToPlay);
             _aboutButton.onClick.RemoveListener(OnAbout);
             _doneButton.onClick.RemoveListener(OnDone);
+            if (_privacyOptionsButton != null)
+            {
+                _privacyOptionsButton.onClick.RemoveListener(OnPrivacyOptions);
+            }
         }
 
         private void OnApplicationPause(bool paused)
@@ -146,5 +172,7 @@ namespace Callbreak.Presentation.Screens
         private void OnAbout() => AboutClicked?.Invoke();
 
         private void OnDone() => DoneClicked?.Invoke();
+
+        private void OnPrivacyOptions() => PrivacyOptionsClicked?.Invoke();
     }
 }
