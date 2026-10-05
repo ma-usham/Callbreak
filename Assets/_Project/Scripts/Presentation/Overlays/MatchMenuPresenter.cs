@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Callbreak.Application.Economy;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Rooms;
@@ -22,7 +23,8 @@ namespace Callbreak.Presentation.Overlays
     /// keeps the match for later; online the game goes on, so the menu says "Online game" and its
     /// first button reads "Back to Game" (<see cref="MatchMenuText"/>), and leaving counts as a
     /// loss. The host of a private room is told that leaving closes the room for everybody (GDD §8:
-    /// the host's device is the room).
+    /// the host's device is the room). Once the player has left (a private room too), a full-screen
+    /// ad shows before the main menu when one is due (the owner, 5 Oct 2026; <see cref="IBetweenMatchAds"/>).
     /// </summary>
     public sealed class MatchMenuPresenter : IStartable, IDisposable
     {
@@ -44,11 +46,13 @@ namespace Callbreak.Presentation.Overlays
         private readonly IAppFlow _flow;
         private readonly IAudioService _audio;
         private readonly IRoomService _rooms;
+        private readonly IBetweenMatchAds _ads;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private bool _started;
         private bool _leaving;
 
+        /// <param name="ads">The full-screen ad after a match left early; none when null.</param>
         public MatchMenuPresenter(
             MatchMenuView view,
             ScreenRouter router,
@@ -58,7 +62,8 @@ namespace Callbreak.Presentation.Overlays
             IDialogs dialogs,
             IAppFlow flow,
             IAudioService audio,
-            IRoomService rooms)
+            IRoomService rooms,
+            IBetweenMatchAds ads = null)
         {
             _view = view;
             _router = router;
@@ -69,6 +74,7 @@ namespace Callbreak.Presentation.Overlays
             _flow = flow;
             _audio = audio;
             _rooms = rooms;
+            _ads = ads;
         }
 
         private bool IsOffline => _session.Mode == MatchMode.Offline;
@@ -190,6 +196,12 @@ namespace Callbreak.Presentation.Overlays
                 }
 
                 await _session.LeaveAsync(CancellationToken.None);
+                await LeaveRoomAsync();
+                if (_ads != null)
+                {
+                    await _ads.ShowIfDueAsync(AfterMatch.LeftEarly, CancellationToken.None);
+                }
+
                 await _flow.GoToMenuAsync(MenuEntry.MainMenu, CancellationToken.None);
             }
             catch (OperationCanceledException)
@@ -199,6 +211,29 @@ namespace Callbreak.Presentation.Overlays
             catch (Exception e)
             {
                 _leaving = false;
+                Debug.LogException(e);
+            }
+        }
+
+        /// <summary>
+        /// A private room is left before the ad, so the others see at once that this player has gone;
+        /// the menu, which would otherwise leave it as it opens, then finds no room to leave.
+        /// </summary>
+        private async Task LeaveRoomAsync()
+        {
+            IRoomSession room = _session.Mode == MatchMode.PrivateRoom && _rooms != null ? _rooms.Current : null;
+            if (room == null)
+            {
+                return;
+            }
+
+            try
+            {
+                await room.LeaveAsync(CancellationToken.None);
+            }
+            catch (Exception e)
+            {
+                // The room counts itself closed before it reports a fault: the player has left all the same.
                 Debug.LogException(e);
             }
         }

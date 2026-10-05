@@ -24,21 +24,22 @@ namespace Callbreak.Application.Economy
 
     /// <summary>
     /// The ads between matches (the owner, 5 Oct 2026): a full-screen ad as the player leaves the
-    /// results of a finished match, when one is due (<see cref="BetweenMatchAds"/>). No Ads
-    /// (<see cref="INoAds"/>) removes them.
+    /// results of a finished match, or leaves a match before its end from the match menu, when one is
+    /// due (<see cref="BetweenMatchAds"/>). No Ads (<see cref="INoAds"/>) removes them.
     /// </summary>
     public interface IBetweenMatchAds
     {
         /// <summary>
-        /// The player leaves a finished match's results for <paramref name="next"/>: shows an ad when
-        /// one is due and loaded, and completes once it has gone away; at once when none is due or
-        /// none is loaded, as the game never waits for one. True when an ad was shown. It never
-        /// throws, but for the <see cref="OperationCanceledException"/> of a cancelled token.
+        /// The player leaves a finished match's results, or a match before its end, for
+        /// <paramref name="next"/>: shows an ad when one is due and loaded, and completes once it has
+        /// gone away; at once when none is due or none is loaded, as the game never waits for one. True
+        /// when an ad was shown. It never throws, but for the <see cref="OperationCanceledException"/>
+        /// of a cancelled token.
         /// </summary>
         Task<bool> ShowIfDueAsync(AfterMatch next, CancellationToken ct);
     }
 
-    /// <summary>Where the player goes from the results of a finished match.</summary>
+    /// <summary>Where the player goes from a match: from a finished one's results, or from one left early.</summary>
     public enum AfterMatch
     {
         /// <summary>Play Again offline: a new match is dealt.</summary>
@@ -52,5 +53,11 @@ namespace Callbreak.Application.Economy
 
         /// <summary>Main Menu, from any match.</summary>
         MainMenu,
+
+        /// <summary>
+        /// Leave Match from the match menu, before the match's end, for the main menu (the owner,
+        /// 5 Oct 2026: "show ads when user leaves the game in the middle").
+        /// </summary>
+        LeftEarly,
     }
 }

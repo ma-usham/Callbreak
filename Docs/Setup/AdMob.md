@@ -43,10 +43,15 @@ interstitial ad shows before the next screen:
 | Quick or Stake Match | the ad, then the search (before its countdown) | the ad, then the main menu |
 | Private room | no ad: back to the lobby, where the friends wait | the room is left, then the ad, then the main menu |
 
-- **Never:** during play, on a round's results, in matchmaking or in the lobby; after a match that
-  ended early (left from the match menu, or called off: it has no results to leave); after the
-  player's very first match (the statistics count every match played, finished or left early);
-  for a player who owns **No Ads**.
+**Leaving a match early** (the owner, 5 Oct 2026, evening: "show ads when user leaves the game in
+the middle"). In every mode, Leave Match in the match menu, once confirmed, first leaves for real:
+the leave, a host's hand-over and a private room left. The ad then waits one second, so those
+messages go out before the ad pauses the game. Then the ad, then the main menu.
+
+- **Never:** during play, on a round's results, in matchmaking or in the lobby; after a match
+  called off (the host lost: the player didn't leave); after the player's very first match (the
+  statistics count every match played, finished or left early; an offline match left for later is
+  not counted yet); for a player who owns **No Ads**.
 - **At most one every three minutes**, on the wall clock, from when the last one came up. That time
   is kept in memory, so each launch starts afresh.
 - **Never waited for:** if no ad is loaded at that moment, the game goes on without one.

@@ -33,7 +33,9 @@ namespace Callbreak.Tests.PlayMode
     /// opens only once it has gone; Play Again shows it before the search starts. Leaving a private
     /// room's results for the main menu leaves the room before the ad, and the menu finds no room to
     /// leave again. After the player's very first match nothing shows; buying No Ads lets the loaded ad
-    /// go, and then nothing shows or loads. Saves go to a temporary folder.
+    /// go, and then nothing shows or loads. Leaving a Quick Match early from the match menu sends the
+    /// leave first, then shows the ad, then the menu; leaving the very first match early shows none.
+    /// Saves go to a temporary folder.
     /// </summary>
     public sealed class BetweenMatchAdsFlowTests
     {
@@ -155,6 +157,53 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(1, _network.Loads, "and nothing more was requested");
         }
 
+        [UnityTest]
+        public IEnumerator LeavingAMatchEarly_SendsTheLeave_ThenShowsTheAd_ThenTheMenu()
+        {
+            yield return Open(PlayedBefore);
+            Assert.IsTrue(Ads.IsAvailable, "an ad is loaded during the match");
+            int sentBefore = _table.Sent;
+            int sentWhenShown = -1;
+            _network.OnShow = () => sentWhenShown = _table.Sent;
+
+            yield return LeaveThroughTheMatchMenu();
+
+            // The ad waits a moment for the leave to go out (BetweenMatchAds.LeaveSettle).
+            yield return GameFixture.Until(() => _network.Shows == 1, "the ad after the leave");
+            Assert.Greater(sentWhenShown, sentBefore, "the leave was sent before the ad came up");
+            Assert.AreEqual(SessionStatus.Ended, _table.Session.Status, "the player had left the match");
+            Assert.AreEqual(AppState.InMatch, _game.Flow.State, "the menu waits for the ad to go");
+
+            _network.Showing.Close();
+            yield return _game.UntilMenu();
+            Assert.AreEqual(ScreenId.MainMenu, _game.MenuRouter.Current, "then the main menu");
+            Assert.AreEqual(1, _network.Shows);
+        }
+
+        [UnityTest]
+        public IEnumerator LeavingThePlayersVeryFirstMatchEarly_ShowsNoAd()
+        {
+            yield return Open(null);
+            Assert.IsTrue(Ads.IsAvailable, "an ad is loaded all the same");
+
+            yield return LeaveThroughTheMatchMenu();
+            yield return _game.UntilMenu();
+
+            Assert.AreEqual(1, _game.Services.Resolve<IStatsService>().Current.gamesPlayed, "the match left is the player's first");
+            Assert.AreEqual(0, _network.Shows);
+        }
+
+        /// <summary>Home, then Leave Match, then yes to "Leave the match?".</summary>
+        private IEnumerator LeaveThroughTheMatchMenu()
+        {
+            GameFixture.PressIn(UnityEngine.Object.FindFirstObjectByType<Callbreak.Presentation.Table.TableView>(), "HomeButton");
+            Assert.AreEqual(ScreenId.MatchMenu, _game.TableRouter.Current, "the match menu opens");
+            GameFixture.Press(_game.TableRouter, "LeaveButton");
+            yield return null;
+            _game.PressDialog(confirm: true);
+            yield return Frames(5);
+        }
+
         /// <summary>One earlier match in the statistics, so the scripted one is not the player's first.</summary>
         private static void PlayedBefore(ISaveStore saves)
         {
@@ -221,6 +270,9 @@ namespace Callbreak.Tests.PlayMode
             /// <summary>The ad on screen; null when none is.</summary>
             public ScriptedAd Showing { get; private set; }
 
+            /// <summary>Called as an ad comes up, before anything else happens.</summary>
+            public Action OnShow { get; set; }
+
             public Task<bool> StartAsync() => Task.FromResult(true);
 
             public Task<IInterstitialAd> LoadAsync()
@@ -243,6 +295,7 @@ namespace Callbreak.Tests.PlayMode
 
                 public void Show(Action closed, Action<string> failed)
                 {
+                    _network.OnShow?.Invoke();
                     _closed = closed;
                     _network.Shows++;
                     _network.Showing = this;

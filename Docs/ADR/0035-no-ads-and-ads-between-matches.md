@@ -151,3 +151,27 @@ classes that only C# reaches by name through JNI.
   - the button's spot and glyph, and no price on it;
   - whether the first-match rule should count only finished matches. Today a player who left their
     first match early sees an ad after their first finished one.
+
+## Addendum, 5 Oct 2026 (evening): an ad when a match is left early
+
+The owner asked for an ad "when user leaves the game in the middle". This replaces "after a match
+that ended early" in the "Never" list above, for a match the player leaves; a match called off (the
+host lost) still shows none, as the player didn't leave it.
+
+- **Where:** Leave Match in the match menu, once confirmed, in every mode
+  (`MatchMenuPresenter`, `AfterMatch.LeftEarly`).
+- **Order:**
+  1. The game leaves for real: the session (its leave message, the stake forfeit, a host's
+     hand-over) and, in a private room, the room.
+  2. The ad waits `BetweenMatchAds.LeaveSettle` (1 s), so those messages leave the device before the
+     ad pauses the game. Otherwise the others could wait for a silent player, or a host's hand-over
+     could become a redeal.
+  3. The ad shows, and the main menu opens once it has gone.
+- **The same rules hold:** No Ads, the first match (a match left early counts as played; an offline
+  match kept for later doesn't yet), at most one every three minutes, never waiting for an ad that
+  isn't loaded. Without a due, loaded ad there is no wait either.
+- **Tests:** 6 EditMode (the wait, no wait when no ad is due, the three minutes, a cancelled or
+  failed wait) and 2 PlayMode (a Quick Match left early: the leave sent before the ad, then the
+  menu; the very first match left early shows none).
+- **Not verified:** on a device, whether one second is enough for the leave to go out over a slow
+  connection.

@@ -15,7 +15,8 @@ namespace Callbreak.Tests.EditMode.Application
     /// never on the way back to a private room's lobby; never after the player's very first match,
     /// never for a player who owns No Ads, at most one every three minutes on the wall clock (a clock
     /// set back starts them again), and never waiting for an ad that isn't loaded. The player goes
-    /// on once the ad has gone away. Nothing it is given makes it throw.
+    /// on once the ad has gone away. A match left early from the match menu shows one too, under the
+    /// same rules, after a moment's wait for the leave to go out. Nothing it is given makes it throw.
     /// </summary>
     public sealed class BetweenMatchAdsTests
     {
@@ -24,6 +25,7 @@ namespace Callbreak.Tests.EditMode.Application
         private StatsService _stats;
         private ScriptedAds _ads;
         private ScriptedNoAds _noAds;
+        private ScriptedWait _wait;
         private List<string> _log;
         private DateTime _now;
         private int _matches;
@@ -39,6 +41,7 @@ namespace Callbreak.Tests.EditMode.Application
             _stats = new StatsService(new InMemorySaveStore());
             _ads = new ScriptedAds();
             _noAds = new ScriptedNoAds();
+            _wait = new ScriptedWait();
             _log = new List<string>();
             _now = Start;
             _matches = 0;
@@ -74,6 +77,104 @@ namespace Callbreak.Tests.EditMode.Application
             Assert.AreEqual(0, _ads.Shows);
 
             Assert.IsTrue(ShowsAd(ads, AfterMatch.MainMenu), "leaving the room for the main menu does");
+        }
+
+        [Test]
+        public void LeavingAMatchEarly_ShowsAnAd_OnceTheLeaveHadAMomentToGoOut()
+        {
+            BetweenMatchAds ads = NewAds(played: 2);
+
+            Task<bool> leaving = ads.ShowIfDueAsync(AfterMatch.LeftEarly, CancellationToken.None);
+
+            CollectionAssert.AreEqual(new[] { BetweenMatchAds.LeaveSettle }, _wait.Requests, "it waits a moment first");
+            Assert.AreEqual(0, _ads.Shows, "no ad while the leave goes out");
+            Assert.AreEqual(TimeSpan.FromSeconds(1), BetweenMatchAds.LeaveSettle);
+
+            _wait.Finish();
+            Assert.AreEqual(1, _ads.Shows, "then the ad");
+            Assert.IsFalse(leaving.IsCompleted, "the player goes on once the ad has gone away");
+            _ads.Close();
+            Assert.IsTrue(Over(leaving));
+        }
+
+        [Test]
+        public void TheOtherExits_ShowTheirAdAtOnce_WithoutTheWait()
+        {
+            BetweenMatchAds ads = NewAds(played: 2);
+
+            Assert.IsTrue(ShowsAd(ads, AfterMatch.MainMenu));
+
+            Assert.IsEmpty(_wait.Requests, "only a match left early waits");
+        }
+
+        [Test]
+        public void LeavingEarly_WhenNoAdIsDue_GoesOnAtOnce_WithoutWaiting()
+        {
+            BetweenMatchAds first = NewAds(played: 1);
+            Assert.IsFalse(Over(first.ShowIfDueAsync(AfterMatch.LeftEarly, CancellationToken.None)), "after the player's first match");
+
+            Play();
+            BetweenMatchAds ads = NewAds(played: 0);
+            _noAds.Owned = true;
+            Assert.IsFalse(Over(ads.ShowIfDueAsync(AfterMatch.LeftEarly, CancellationToken.None)), "with No Ads");
+            _noAds.Owned = false;
+
+            _ads.IsAvailable = false;
+            Assert.IsFalse(Over(ads.ShowIfDueAsync(AfterMatch.LeftEarly, CancellationToken.None)), "with no ad loaded");
+            _ads.IsAvailable = true;
+
+            Assert.IsTrue(ShowsAd(ads, AfterMatch.MainMenu));
+            _now += TimeSpan.FromMinutes(1);
+            Assert.IsFalse(Over(ads.ShowIfDueAsync(AfterMatch.LeftEarly, CancellationToken.None)), "a minute after the last ad");
+
+            Assert.IsEmpty(_wait.Requests, "nothing waited for an ad that wasn't coming");
+            Assert.AreEqual(1, _ads.Shows);
+        }
+
+        [Test]
+        public void AnAdAfterAMatchLeftEarly_StartsTheThreeMinutesToo()
+        {
+            BetweenMatchAds ads = NewAds(played: 3);
+            Task<bool> leaving = ads.ShowIfDueAsync(AfterMatch.LeftEarly, CancellationToken.None);
+            _wait.Finish();
+            _ads.Close();
+            Assert.IsTrue(Over(leaving));
+
+            _now += BetweenMatchAds.MinInterval - TimeSpan.FromSeconds(1);
+            Assert.IsFalse(Over(ads.ShowIfDueAsync(AfterMatch.NewMatch, CancellationToken.None)));
+
+            _now += TimeSpan.FromSeconds(1);
+            Assert.IsTrue(ShowsAd(ads, AfterMatch.NewMatch));
+        }
+
+        [Test]
+        public void CancelledDuringTheWait_ShowsNoAd_AndTheThreeMinutesDoNotStart()
+        {
+            BetweenMatchAds ads = NewAds(played: 3);
+            using (var cancel = new CancellationTokenSource())
+            {
+                Task<bool> leaving = ads.ShowIfDueAsync(AfterMatch.LeftEarly, cancel.Token);
+                cancel.Cancel();
+
+                Assert.IsTrue(leaving.IsCanceled);
+            }
+
+            Assert.AreEqual(0, _ads.Shows);
+            Assert.IsTrue(ShowsAd(ads, AfterMatch.MainMenu), "no ad came up, so the next exit may show one");
+        }
+
+        [Test]
+        public void AWaitThatFails_StillLetsTheAdShow()
+        {
+            BetweenMatchAds ads = NewAds(played: 3);
+            _wait.ThrowOnWait = true;
+
+            Task<bool> leaving = ads.ShowIfDueAsync(AfterMatch.LeftEarly, CancellationToken.None);
+
+            Assert.AreEqual(1, _ads.Shows);
+            _ads.Close();
+            Assert.IsTrue(Over(leaving));
+            StringAssert.Contains("wait before the ad failed", string.Join("\n", _log));
         }
 
         [Test]
@@ -317,7 +418,7 @@ namespace Callbreak.Tests.EditMode.Application
                 Play();
             }
 
-            return new BetweenMatchAds(_ads, _stats, _noAds, () => _now, _log.Add);
+            return new BetweenMatchAds(_ads, _stats, _noAds, () => _now, _log.Add, _wait.Delay);
         }
 
         /// <summary>The player finishes one more match, which the statistics record as the session does.</summary>
@@ -366,6 +467,32 @@ namespace Callbreak.Tests.EditMode.Application
             public void Close() => _show.SetResult(true);
 
             public void Fail() => _show.SetResult(false);
+        }
+
+        /// <summary>A wait that lasts until the test finishes it, noting each time asked for.</summary>
+        private sealed class ScriptedWait
+        {
+            private TaskCompletionSource<bool> _wait;
+
+            public List<TimeSpan> Requests { get; } = new List<TimeSpan>();
+
+            public bool ThrowOnWait { get; set; }
+
+            public Task Delay(TimeSpan time, CancellationToken ct)
+            {
+                Requests.Add(time);
+                if (ThrowOnWait)
+                {
+                    throw new InvalidOperationException("a broken timer");
+                }
+
+                var wait = new TaskCompletionSource<bool>();
+                _wait = wait;
+                ct.Register(() => wait.TrySetCanceled());
+                return wait.Task;
+            }
+
+            public void Finish() => _wait.SetResult(true);
         }
 
         private sealed class ScriptedNoAds : INoAds
