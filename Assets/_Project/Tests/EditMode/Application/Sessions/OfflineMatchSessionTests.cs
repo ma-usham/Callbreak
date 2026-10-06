@@ -35,6 +35,12 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
             _stats = new StatsService(_saves);
             _store = new OfflineMatchStore(_saves);
             _profile = new ProfileService(_saves, new NameFilter());
+
+            // Every deck but the first costs coins since 6 Oct 2026: this player has bought them all.
+            var everyDeck = new CosmeticsData();
+            everyDeck.boughtDeckIds.Add(CosmeticsService.HimalayanIvory);
+            everyDeck.boughtDeckIds.Add(CosmeticsService.KathmanduGold);
+            _saves.Put(CosmeticsService.SaveKey, everyDeck);
             _cosmetics = new CosmeticsService(_saves);
         }
 

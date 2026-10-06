@@ -8,10 +8,11 @@ namespace Callbreak.Application.Cosmetics
     /// What the shop sells, in shop order (the owner, 4 and 5 Oct 2026; mockups 15, 20 and 21 and the
     /// designer's shop-drawer-and-tables-prompts.md): three items of each kind, as the shop shows
     /// exactly three per category. Ids are stable strings: save files keep them and the art is found
-    /// by them. A deck's id is its deck theme id (card-designs/full-decks/manifest.json). Every deck
-    /// and background and the Himalayan Ivory table are owned from the start (price 0); the other
-    /// tables cost coins. The defaults are the game's look before the shop: Classic Crimson cards,
-    /// the Himalayan Vista scenery and the Himalayan Ivory table. Names are localization keys: the
+    /// by them. A deck's id is its deck theme id (card-designs/full-decks/manifest.json). In every
+    /// kind the first item is owned from the start (price 0) and the other two cost coins: 500 for
+    /// the second and 750 for the third (the owner, 6 Oct 2026). The defaults are the game's look
+    /// before the shop: Classic Crimson cards, the Himalayan Vista scenery and the Himalayan Ivory
+    /// table. Names are localization keys: the
     /// decks keep theirs, the rest are <c>ui.shop.&lt;kind&gt;.&lt;id with underscores&gt;</c>. An id
     /// that has left the shop (Kathmandu Courtyard, Village Terrace and Vintage Home, 5 Oct 2026) is
     /// unknown from then on, and a save file that still names it falls back to the default.
@@ -24,6 +25,12 @@ namespace Callbreak.Application.Cosmetics
             public const string HimalayanIvory = "himalayan-ivory";
             public const string KathmanduGold = "kathmandu-gold";
             public const string Default = ClassicCrimson;
+
+            /// <summary>In coins (the owner, 6 Oct 2026).</summary>
+            public const int HimalayanIvoryPrice = 500;
+
+            /// <summary>In coins (the owner, 6 Oct 2026).</summary>
+            public const int KathmanduGoldPrice = 750;
         }
 
         public static class Backgrounds
@@ -32,6 +39,12 @@ namespace Callbreak.Application.Cosmetics
             public const string PokharaLakeside = "pokhara-lakeside";
             public const string MonasteryGarden = "monastery-garden";
             public const string Default = HimalayanVista;
+
+            /// <summary>In coins (the owner, 6 Oct 2026).</summary>
+            public const int PokharaLakesidePrice = 500;
+
+            /// <summary>In coins (the owner, 6 Oct 2026).</summary>
+            public const int MonasteryGardenPrice = 750;
         }
 
         public static class Tables
@@ -41,22 +54,22 @@ namespace Callbreak.Application.Cosmetics
             public const string HeritageWalnut = "heritage-walnut";
             public const string Default = HimalayanIvory;
 
-            /// <summary>In coins (the owner, 4 Oct 2026; placeholders to tune).</summary>
-            public const int RoyalCrimsonPrice = 350;
+            /// <summary>In coins (the owner, 6 Oct 2026; was 350).</summary>
+            public const int RoyalCrimsonPrice = 500;
 
-            /// <summary>In coins (the owner, 4 Oct 2026; placeholders to tune).</summary>
-            public const int HeritageWalnutPrice = 250;
+            /// <summary>In coins (the owner, 6 Oct 2026; was 250).</summary>
+            public const int HeritageWalnutPrice = 750;
         }
 
         private static readonly ReadOnlyCollection<CosmeticItem> DeckItems = Items(
             new CosmeticItem(CosmeticKind.Deck, Decks.ClassicCrimson, "ui.deck.classic_crimson", 0),
-            new CosmeticItem(CosmeticKind.Deck, Decks.HimalayanIvory, "ui.deck.himalayan_ivory", 0),
-            new CosmeticItem(CosmeticKind.Deck, Decks.KathmanduGold, "ui.deck.kathmandu_gold", 0));
+            new CosmeticItem(CosmeticKind.Deck, Decks.HimalayanIvory, "ui.deck.himalayan_ivory", Decks.HimalayanIvoryPrice),
+            new CosmeticItem(CosmeticKind.Deck, Decks.KathmanduGold, "ui.deck.kathmandu_gold", Decks.KathmanduGoldPrice));
 
         private static readonly ReadOnlyCollection<CosmeticItem> BackgroundItems = Items(
             new CosmeticItem(CosmeticKind.Background, Backgrounds.HimalayanVista, "ui.shop.background.himalayan_vista", 0),
-            new CosmeticItem(CosmeticKind.Background, Backgrounds.PokharaLakeside, "ui.shop.background.pokhara_lakeside", 0),
-            new CosmeticItem(CosmeticKind.Background, Backgrounds.MonasteryGarden, "ui.shop.background.monastery_garden", 0));
+            new CosmeticItem(CosmeticKind.Background, Backgrounds.PokharaLakeside, "ui.shop.background.pokhara_lakeside", Backgrounds.PokharaLakesidePrice),
+            new CosmeticItem(CosmeticKind.Background, Backgrounds.MonasteryGarden, "ui.shop.background.monastery_garden", Backgrounds.MonasteryGardenPrice));
 
         private static readonly ReadOnlyCollection<CosmeticItem> TableItems = Items(
             new CosmeticItem(CosmeticKind.Table, Tables.HimalayanIvory, "ui.shop.table.himalayan_ivory", 0),

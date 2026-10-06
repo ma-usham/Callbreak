@@ -171,3 +171,26 @@ The owner's changes:
   - ShopStateRulesTests and ShopFlowTests follow the new labels;
   - a new ShopFlowTests case taps the three drawer buttons twice round and checks each keeps its size;
   - ButtonFeedbackTests (5 PlayMode) cover the press at any size.
+
+## Addendum, 6 Oct 2026: the second and third item of every kind cost coins
+
+The owner: "for cards, background and table add 500 and 750 price for 2nd and 3rd items under all
+three."
+- **Prices.** In each category the first item stays free and owned from the start: Classic Crimson,
+  the Himalayan Vista and the Himalayan Ivory table. The second costs 500 coins and the third 750.
+  - Cards: Himalayan Ivory 500, Kathmandu Gold 750.
+  - Backgrounds: Pokhara Lakeside 500, Monastery Garden 750.
+  - Tables: Royal Crimson 500 (was 350), Heritage Walnut 750 (was 250).
+- **Only the catalogue changed** (`CosmeticCatalog`). The shop already showed prices on any tile, asked
+  before buying, and offered Earn Coins when the player was short; decks and backgrounds now go
+  through the same flow as tables. A new player's 500 starting coins buy exactly one second item.
+- **Players who had one in use.** Every deck and background was free until now. A file with a deck or
+  background equipped that now costs coins and was never bought goes back to the default at the next
+  start (the existing rule for an equipped item that isn't owned). Coins aren't touched, and nothing
+  is granted for past use. Only testers have such files. This was my default, not the owner's call;
+  keeping their equipped items is a small change if wanted.
+- **Tests:** CosmeticsShopTests and CosmeticsServiceTests follow the new prices, with new cases for
+  buying the second and third of each kind, refusing a deck not bought, and the fallback above.
+  ShopFlowTests checks the prices on Cards and Backgrounds and buys a deck. Tests that pick a paid deck
+  or background (room, offline match, backdrop, menu fan and own-deck table tests) buy it or start
+  from a file that owns it. `ShopPreview` shows the catalogue's prices.

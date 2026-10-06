@@ -16,7 +16,8 @@ namespace Callbreak.Application.Cosmetics
     /// so the equipped deck is the selected deck, and <see cref="Changed"/> is raised for any change.
     /// An unknown id is rejected; a stored id this build doesn't know (a removed seasonal item), or an
     /// equipped one no longer owned, falls back to the default. A purchase this build doesn't know
-    /// stays in the file. A version 1 file keeps its deck and starts the rest at the defaults. A file
+    /// stays in the file. A version 1 file keeps its deck while it is still owned (every deck was
+    /// free until 6 Oct 2026; now only Classic Crimson is) and starts the rest at the defaults. A file
     /// from a newer app version is ignored and never overwritten: equipping then lives in memory for
     /// this session, and nothing is sold, because this build couldn't keep the purchase.
     /// </summary>
@@ -214,7 +215,8 @@ namespace Callbreak.Application.Cosmetics
         {
             if (data.schemaVersion < FirstShopVersion)
             {
-                // Version 1 knew only the deck (every deck owned): it stays, the rest starts at the defaults.
+                // Version 1 knew only the deck, when every deck was free: it stays if it is still owned
+                // (checked below with the rest), and the rest starts at the defaults.
                 data.equippedBackgroundId = CosmeticCatalog.Backgrounds.Default;
                 data.equippedTableId = CosmeticCatalog.Tables.Default;
                 data.boughtDeckIds = new List<string>();

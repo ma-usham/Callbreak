@@ -15,14 +15,15 @@ using VContainer;
 namespace Callbreak.Tests.PlayMode
 {
     /// <summary>
-    /// The shop in the real Boot and Menu scenes, with the real wallet and cosmetics (the owner, 4
-    /// and 5 Oct 2026; mockups 15, 20 and 21): the main menu's storefront opens it on Cards; the
+    /// The shop in the real Boot and Menu scenes, with the real wallet and cosmetics (the owner, 4,
+    /// 5 and 6 Oct 2026; mockups 15, 20 and 21): the main menu's storefront opens it on Cards; the
     /// drawer is always open, with its three category buttons stacked in its middle and no
     /// storefront disc of its own; every category shows exactly three tiles side by side and
-    /// nothing scrolls; the drawer switches categories and each keeps its choice; the backgrounds
-    /// are the Himalayan Vista, Pokhara Lakeside and Monastery Garden, and one that left the shop
-    /// falls back to the Vista; a background and a deck are put to use; a table is bought after a
-    /// confirmation and then put to use; not enough coins offers the Earn Coins page or Not now;
+    /// nothing scrolls; in each the second item costs 500 coins and the third 750; the drawer
+    /// switches categories and each keeps its choice; the backgrounds are the Himalayan Vista,
+    /// Pokhara Lakeside and Monastery Garden, and one that left the shop falls back to the Vista; a
+    /// background and a deck that were bought are put to use; a table and a deck are bought after
+    /// a confirmation and then put to use; not enough coins offers the Earn Coins page or Not now;
     /// and Back leaves. Saves go to a temporary folder.
     /// </summary>
     public sealed class ShopFlowTests
@@ -57,8 +58,10 @@ namespace Callbreak.Tests.PlayMode
             ShopItemTile classic = Tile(Cards, 0);
             Assert.IsTrue(classic.IsChosen && classic.RadioFilled, "mockup 15: Classic Crimson chosen, filled radio");
             Assert.AreEqual(Text("ui.shop.status.equipped"), classic.StatusLabel.text);
-            Assert.IsFalse(Tile(Cards, 1).ShowsStatus, "the owner, 5 Oct 2026: no \"Owned\" under an owned deck");
-            Assert.IsFalse(Tile(Cards, 1).ShowsPrice);
+            Assert.IsFalse(Tile(Cards, 1).ShowsStatus, "a deck for sale shows its price, no words");
+            Assert.IsTrue(Tile(Cards, 1).ShowsPrice && Tile(Cards, 2).ShowsPrice, "the owner, 6 Oct 2026: the second and third decks are for sale");
+            Assert.AreEqual("500", Tile(Cards, 1).PriceLabel.text);
+            Assert.AreEqual("750", Tile(Cards, 2).PriceLabel.text);
             Assert.IsFalse(Tile(Cards, 1).RadioFilled);
             Assert.IsFalse(View.ShowsBuy);
             Assert.IsFalse(View.PrimaryInteractable, "Use Selected Style is off while the chosen deck is equipped");
@@ -158,9 +161,12 @@ namespace Callbreak.Tests.PlayMode
 
             Assert.IsTrue(Tile(Backgrounds, 0).IsChosen, "the shop opens with each choice on its equipped item");
             Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Backgrounds, 0).StatusLabel.text, "the Himalayan Vista is the default");
+            string[] prices = { null, "500", "750" };
             for (int i = 1; i < TilesShown; i++)
             {
-                Assert.IsFalse(Tile(Backgrounds, i).ShowsStatus || Tile(Backgrounds, i).ShowsPrice, "every background is owned: nothing under its name");
+                Assert.IsFalse(Tile(Backgrounds, i).ShowsStatus, names[i] + ": no words");
+                Assert.IsTrue(Tile(Backgrounds, i).ShowsPrice, names[i] + " is for sale (the owner, 6 Oct 2026)");
+                Assert.AreEqual(prices[i], Tile(Backgrounds, i).PriceLabel.text);
             }
         }
 
@@ -209,7 +215,7 @@ namespace Callbreak.Tests.PlayMode
         [UnityTest]
         public IEnumerator UseSelectedBackground_EquipsTheChosenBackground()
         {
-            yield return OpenShop();
+            yield return OpenShop(saves => saves.Save(CosmeticsService.SaveKey, Bought(CosmeticKind.Background, CosmeticCatalog.Backgrounds.MonasteryGarden)));
             var shop = _game.Services.Resolve<ICosmeticsShop>();
 
             Press("CategoryButton1");
@@ -236,17 +242,17 @@ namespace Callbreak.Tests.PlayMode
 
             Press("CategoryButton2");
             Assert.IsTrue(Tile(Tables, 1).ShowsPrice && Tile(Tables, 2).ShowsPrice, "mockup 21: the two tables for sale show their prices");
-            Assert.AreEqual("350", Tile(Tables, 1).PriceLabel.text);
-            Assert.AreEqual("250", Tile(Tables, 2).PriceLabel.text);
+            Assert.AreEqual("500", Tile(Tables, 1).PriceLabel.text, "the owner, 6 Oct 2026");
+            Assert.AreEqual("750", Tile(Tables, 2).PriceLabel.text);
             Press("Tile1");
-            Assert.IsTrue(View.ShowsBuy && View.PrimaryInteractable, "Buy for 350");
-            Assert.AreEqual("350", View.BuyPrice);
+            Assert.IsTrue(View.ShowsBuy && View.PrimaryInteractable, "Buy for 500");
+            Assert.AreEqual("500", View.BuyPrice);
 
             // Cancelled first: nothing changes.
             Press("PrimaryButton");
             Assert.IsTrue(_game.Dialogs.IsOpen, "a confirmation");
             Assert.IsTrue(DialogShows(Format("ui.shop.buy.title", Text("ui.shop.table.royal_crimson"))), "it names the item");
-            Assert.IsTrue(DialogShows(Format("ui.shop.buy.body", "350", "500")), "and its price");
+            Assert.IsTrue(DialogShows(Format("ui.shop.buy.body", "500", "500")), "and its price");
             _game.PressDialog(confirm: false);
             yield return null;
             Assert.IsFalse(shop.IsOwned(CosmeticKind.Table, CosmeticCatalog.Tables.RoyalCrimson));
@@ -256,7 +262,7 @@ namespace Callbreak.Tests.PlayMode
             _game.PressDialog(confirm: true);
             yield return null;
             Assert.IsTrue(shop.IsOwned(CosmeticKind.Table, CosmeticCatalog.Tables.RoyalCrimson), "bought");
-            Assert.AreEqual(150, wallet.Coins, "for 350 coins");
+            Assert.AreEqual(0, wallet.Coins, "for 500 coins, the whole starting balance");
             Assert.AreEqual(CosmeticCatalog.Tables.HimalayanIvory, shop.Equipped(CosmeticKind.Table), "buying does not equip");
             Assert.IsFalse(Tile(Tables, 1).ShowsPrice);
             Assert.IsFalse(Tile(Tables, 1).ShowsStatus, "bought and chosen: no words until it is used");
@@ -302,9 +308,38 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator BuyingADeck_AfterTheConfirmation_OwnsIt_ThenUseEquipsIt()
+        {
+            yield return OpenShop(saves => new Wallet(saves).Add(250));
+            var cosmetics = _game.Services.Resolve<ICosmeticsService>();
+            var shop = _game.Services.Resolve<ICosmeticsShop>();
+            var wallet = _game.Services.Resolve<IWallet>();
+            Assert.AreEqual(750, wallet.Coins);
+
+            Press("Tile2");
+            Assert.IsTrue(View.ShowsBuy && View.PrimaryInteractable, "Buy for 750");
+            Assert.AreEqual("750", View.BuyPrice);
+            Press("PrimaryButton");
+            Assert.IsTrue(DialogShows(Format("ui.shop.buy.title", Text("ui.deck.kathmandu_gold"))), "it names the deck");
+            _game.PressDialog(confirm: true);
+            yield return null;
+
+            Assert.IsTrue(shop.IsOwned(CosmeticKind.Deck, CosmeticCatalog.Decks.KathmanduGold), "bought");
+            Assert.AreEqual(0, wallet.Coins, "for 750 coins");
+            Assert.AreEqual(CosmeticCatalog.Decks.ClassicCrimson, cosmetics.SelectedDeckId, "buying does not equip");
+            Assert.IsFalse(Tile(Cards, 2).ShowsPrice);
+            Assert.IsFalse(View.ShowsBuy, "the button turns to Use Selected Style");
+
+            Press("PrimaryButton");
+            yield return null;
+            Assert.AreEqual(CosmeticCatalog.Decks.KathmanduGold, cosmetics.SelectedDeckId, "Use equips it");
+            Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Cards, 2).StatusLabel.text);
+        }
+
+        [UnityTest]
         public IEnumerator UseSelectedStyle_EquipsTheChosenDeck()
         {
-            yield return OpenShop();
+            yield return OpenShop(saves => saves.Save(CosmeticsService.SaveKey, Bought(CosmeticKind.Deck, CosmeticCatalog.Decks.HimalayanIvory)));
             var cosmetics = _game.Services.Resolve<ICosmeticsService>();
 
             Press("Tile1");
@@ -369,6 +404,26 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(Cards, View.Category, "Cards again");
             Assert.IsTrue(Tile(Backgrounds, 0).IsChosen, "every choice on its equipped item");
             Assert.IsFalse(Tile(Backgrounds, 2).IsChosen);
+        }
+
+        /// <summary>A cosmetics file at the defaults with one item bought.</summary>
+        private static CosmeticsData Bought(CosmeticKind kind, string id)
+        {
+            var data = new CosmeticsData();
+            switch (kind)
+            {
+                case CosmeticKind.Deck:
+                    data.boughtDeckIds.Add(id);
+                    break;
+                case CosmeticKind.Background:
+                    data.boughtBackgroundIds.Add(id);
+                    break;
+                default:
+                    data.boughtTableIds.Add(id);
+                    break;
+            }
+
+            return data;
         }
 
         private ScreenRouter Router => _game.MenuRouter;

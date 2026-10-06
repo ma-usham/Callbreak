@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Callbreak.Application.Cosmetics;
+using Callbreak.Application.Economy;
 using Callbreak.Application.Matchmaking;
 using Callbreak.Application.Online;
 using Callbreak.Application.Ports;
@@ -170,6 +171,9 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreNotSame(sprites.Back(mine), sprites.Back(theirs), "the two decks have backs of their own");
             Assert.AreNotSame(sprites.Face(mine, new Card(Suit.Spades, Rank.Ace)), sprites.Face(theirs, new Card(Suit.Spades, Rank.Ace)), "and faces of their own");
 
+            // Every deck but the first costs coins since 6 Oct 2026: this player bought theirs.
+            _game.Services.Resolve<IWallet>().Add(750);
+            _game.Services.Resolve<ICosmeticsShop>().Buy(CosmeticKind.Deck, mine);
             ICosmeticsService cosmetics = _game.Services.Resolve<ICosmeticsService>();
             cosmetics.SelectDeck(mine);
             Assert.AreEqual(mine, cosmetics.SelectedDeckId, "this player chose its deck in the card collection");

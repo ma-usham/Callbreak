@@ -1,3 +1,4 @@
+using System.Linq;
 using Callbreak.Application.Cosmetics;
 using Callbreak.Presentation.Screens;
 using UnityEditor;
@@ -7,9 +8,10 @@ namespace Callbreak.Editor.Screens
 {
     /// <summary>
     /// The shop in a state of each category, for the screen captures (the tiles are filled at run
-    /// time by the presenter): Cards as mockup 15 draws it (Classic Crimson equipped and chosen),
-    /// Backgrounds with its three (the Himalayan Vista equipped, Pokhara Lakeside chosen) and
-    /// Tables as 21 (Himalayan Ivory equipped, Royal Crimson chosen and for sale: "Buy for 350").
+    /// time by the presenter). In each the first item is equipped and the other two are for sale
+    /// at the catalogue's prices (500 and 750 since 6 Oct 2026): Cards with Classic Crimson chosen,
+    /// as mockup 15; Backgrounds with Pokhara Lakeside chosen ("Buy for 500"); Tables as 21, with
+    /// Royal Crimson chosen ("Buy for 500").
     /// </summary>
     public static class ShopPreview
     {
@@ -44,38 +46,46 @@ namespace Callbreak.Editor.Screens
                 return;
             }
 
+            ShopTileStatus[] firstOwned = { ShopTileStatus.Equipped, ShopTileStatus.Price, ShopTileStatus.Price };
+
             Fill(view, Cards,
                 new[] { "Classic Crimson", "Himalayan Ivory", "Kathmandu Gold" },
                 new[] { Back("ClassicCrimson"), Back("HimalayanIvory"), Back("KathmanduGold") },
-                new[] { ShopTileStatus.Equipped, ShopTileStatus.None, ShopTileStatus.None },
-                null,
+                firstOwned,
+                Prices(CosmeticKind.Deck),
                 chosen: 0);
 
             string[] backgrounds = { CosmeticCatalog.Backgrounds.HimalayanVista, CosmeticCatalog.Backgrounds.PokharaLakeside, CosmeticCatalog.Backgrounds.MonasteryGarden };
             Fill(view, Backgrounds,
                 new[] { "Himalayan Vista", "Pokhara Lakeside", "Monastery Garden" },
                 System.Array.ConvertAll(backgrounds, id => view.Picture(CosmeticKind.Background, id)),
-                new[] { ShopTileStatus.Equipped, ShopTileStatus.None, ShopTileStatus.None },
-                null,
+                firstOwned,
+                Prices(CosmeticKind.Background),
                 chosen: 1);
 
             string[] tables = { CosmeticCatalog.Tables.HimalayanIvory, CosmeticCatalog.Tables.RoyalCrimson, CosmeticCatalog.Tables.HeritageWalnut };
             Fill(view, Tables,
                 new[] { "Himalayan Ivory", "Royal Crimson", "Heritage Walnut" },
                 System.Array.ConvertAll(tables, id => view.Picture(CosmeticKind.Table, id)),
-                new[] { ShopTileStatus.Equipped, ShopTileStatus.Price, ShopTileStatus.Price },
-                new[] { null, "350", "250" },
+                firstOwned,
+                Prices(CosmeticKind.Table),
                 chosen: 1);
 
             view.ShowCategory(category);
-            if (category == Tables)
-            {
-                view.SetPrimaryBuy("350", true);
-            }
-            else
+            if (category == Cards)
             {
                 view.SetPrimaryUse(true);
             }
+            else
+            {
+                view.SetPrimaryBuy(Prices(category == Tables ? CosmeticKind.Table : CosmeticKind.Background)[1], true);
+            }
+        }
+
+        /// <summary>Each item's price as its tile shows it, from the catalogue; null for the free first one.</summary>
+        private static string[] Prices(CosmeticKind kind)
+        {
+            return CosmeticCatalog.Of(kind).Select(item => item.Price > 0 ? ShopDisplay.Price(item.Price) : null).ToArray();
         }
 
         private static void Fill(ShopView view, int category, string[] names, Sprite[] pictures, ShopTileStatus[] statuses, string[] prices, int chosen)

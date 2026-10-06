@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Callbreak.Application.Cosmetics;
+using Callbreak.Application.Economy;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Matchmaking;
 using Callbreak.Application.Ports;
@@ -301,6 +302,14 @@ namespace Callbreak.Tests.PlayMode
             var cards = _game.Services.Resolve<CardSpriteProvider>();
             UIScreen menu = MainMenu();
             Assert.GreaterOrEqual(cosmetics.DeckIds.Count, 3, "three decks to choose from");
+
+            // Every deck but the first costs coins since 6 Oct 2026 (500 and 750): buy them all.
+            _game.Services.Resolve<IWallet>().Add(750);
+            var shop = _game.Services.Resolve<ICosmeticsShop>();
+            foreach (string deck in cosmetics.DeckIds)
+            {
+                Assert.AreNotEqual(PurchaseResult.NotEnoughCoins, shop.Buy(CosmeticKind.Deck, deck), deck);
+            }
 
             foreach (string deck in cosmetics.DeckIds)
             {

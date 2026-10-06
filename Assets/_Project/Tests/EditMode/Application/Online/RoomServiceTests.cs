@@ -567,6 +567,17 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 Settings = new SettingsService(saves);
                 Profile = new ProfileService(saves, new NameFilter());
                 Profile.TrySetDisplayName(name);
+
+                // Every deck but the first costs coins since 6 Oct 2026: a new device has bought them
+                // all, so the tests can choose any (a device back from an app kill keeps its file).
+                if (!saves.TryLoad(CosmeticsService.SaveKey, out CosmeticsData _))
+                {
+                    var everyDeck = new CosmeticsData();
+                    everyDeck.boughtDeckIds.Add(CosmeticsService.HimalayanIvory);
+                    everyDeck.boughtDeckIds.Add(CosmeticsService.KathmanduGold);
+                    saves.Put(CosmeticsService.SaveKey, everyDeck);
+                }
+
                 Cosmetics = new CosmeticsService(saves);
                 Network = new FakeNetworkStatus();
                 Auth = new FakeAuth("player-" + name.ToLowerInvariant());

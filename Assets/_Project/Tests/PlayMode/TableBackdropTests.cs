@@ -46,7 +46,14 @@ namespace Callbreak.Tests.PlayMode
         [UnityTest]
         public IEnumerator TheEquippedBackgroundAndTable_ShowBehindEverything_AndAChangeShowsAtTheNextMatch()
         {
-            yield return _game.Boot();
+            // The two backgrounds were bought before (500 and 750 coins since 6 Oct 2026).
+            yield return _game.Boot(seed: saves =>
+            {
+                var bought = new CosmeticsData();
+                bought.boughtBackgroundIds.Add(CosmeticCatalog.Backgrounds.PokharaLakeside);
+                bought.boughtBackgroundIds.Add(CosmeticCatalog.Backgrounds.MonasteryGarden);
+                saves.Save(CosmeticsService.SaveKey, bought);
+            });
             ICosmeticsShop shop = _game.Services.Resolve<ICosmeticsShop>();
             shop.Equip(CosmeticKind.Background, CosmeticCatalog.Backgrounds.PokharaLakeside);
             Assert.AreEqual(PurchaseResult.Bought, shop.Buy(CosmeticKind.Table, CosmeticCatalog.Tables.RoyalCrimson), "the starting coins buy the Royal Crimson table");

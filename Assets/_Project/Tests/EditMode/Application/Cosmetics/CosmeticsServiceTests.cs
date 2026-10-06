@@ -1,11 +1,12 @@
 using System;
 using Callbreak.Application.Cosmetics;
+using Callbreak.Application.Economy;
 using Callbreak.Tests.EditMode.Support;
 using NUnit.Framework;
 
 namespace Callbreak.Tests.EditMode.Application
 {
-    /// <summary>GDD §13 and screen 15: the three v1 decks, the default, and rejecting unknown ids.</summary>
+    /// <summary>GDD §13 and screen 15: the three v1 decks, the default, rejecting unknown ids, and (since 6 Oct 2026) decks not bought.</summary>
     public sealed class CosmeticsServiceTests
     {
         private InMemorySaveStore _store;
@@ -29,14 +30,27 @@ namespace Callbreak.Tests.EditMode.Application
         [Test]
         public void SelectDeck_SavesAndRaisesChanged_AndSurvivesARestart()
         {
+            var wallet = new Wallet(_store);
+            wallet.Add(250);
+            var cosmetics = new CosmeticsService(_store, wallet);
+            Assert.AreEqual(PurchaseResult.Bought, cosmetics.Buy(CosmeticKind.Deck, "kathmandu-gold"), "750 coins (the owner, 6 Oct 2026)");
             int changed = 0;
-            _cosmetics.Changed += () => changed++;
+            cosmetics.Changed += () => changed++;
 
-            _cosmetics.SelectDeck("kathmandu-gold");
+            cosmetics.SelectDeck("kathmandu-gold");
 
-            Assert.AreEqual("kathmandu-gold", _cosmetics.SelectedDeckId);
+            Assert.AreEqual("kathmandu-gold", cosmetics.SelectedDeckId);
             Assert.AreEqual(1, changed);
             Assert.AreEqual("kathmandu-gold", new CosmeticsService(_store).SelectedDeckId);
+        }
+
+        [TestCase("himalayan-ivory")]
+        [TestCase("kathmandu-gold")]
+        public void SelectDeck_ADeckNotBought_IsRefused(string deckId)
+        {
+            Assert.Throws<InvalidOperationException>(() => _cosmetics.SelectDeck(deckId));
+            Assert.AreEqual("classic-crimson", _cosmetics.SelectedDeckId);
+            Assert.AreEqual(0, _store.SaveCount);
         }
 
         [Test]
@@ -79,7 +93,8 @@ namespace Callbreak.Tests.EditMode.Application
             Assert.IsTrue(cosmetics.IsReadOnly);
             Assert.AreEqual("classic-crimson", cosmetics.SelectedDeckId);
 
-            cosmetics.SelectDeck("kathmandu-gold");
+            Assert.Throws<InvalidOperationException>(() => cosmetics.SelectDeck("kathmandu-gold"), "nothing bought is read from a newer file");
+            cosmetics.SelectDeck("classic-crimson");
 
             Assert.AreEqual(0, _store.SaveCount);
             Assert.AreEqual("himalayan-ivory", _store.Peek<CosmeticsData>(CosmeticsService.SaveKey).selectedDeckId);
