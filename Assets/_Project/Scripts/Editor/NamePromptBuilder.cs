@@ -1,5 +1,6 @@
 using System.IO;
 using Callbreak.Presentation.Framework;
+using Callbreak.Presentation.Widgets;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
@@ -10,9 +11,10 @@ namespace Callbreak.Editor
     /// <summary>
     /// Builds the name question asked when the game starts (ADR 022) from the UI kit only, in the
     /// shared dialog's style (<see cref="DialogBuilder"/>): the same dim, modal panel, serif crimson
-    /// title and crimson button, with the light field of the Profile screen between them and a line
-    /// for the note or the reason a name cannot be used. No mockup draws it. Its canvas sits above
-    /// the dialog's, so a dialog that opens at the same time waits underneath.
+    /// title and crimson button, with the avatar presets to pick from (ADR 041) and the light field
+    /// of the Profile screen between them and a line for the note or the reason a name cannot be
+    /// used. No mockup draws it. Its canvas sits above the dialog's, so a dialog that opens at the
+    /// same time waits underneath.
     /// </summary>
     public static class NamePromptBuilder
     {
@@ -33,6 +35,11 @@ namespace Callbreak.Editor
         private const float ConfirmLabelSize = 40f;
         private const float TitleGap = 30f;
         private const float MessageGap = 12f;
+
+        // The five avatar presets fill the content width: 5 x 90 + 4 x 16 = 514.
+        private const float AvatarCell = 90f;
+        private const float AvatarSpacing = 16f;
+        private const float AvatarGap = 26f;
         private const float ButtonGap = 30f;
         private const float PanelShadowSpread = 27.5f;
         private const float PanelShadowDrop = 3.5f;
@@ -115,6 +122,9 @@ namespace Callbreak.Editor
             Localize(title, "ui.name_prompt.title");
 
             y += TitleGap;
+            AvatarPicker avatars = AvatarPickerBuilder.Build(panel, "Avatars", AvatarCell, AvatarSpacing);
+            ((RectTransform)avatars.transform).anchoredPosition = new Vector2(0f, -y);
+            y += AvatarCell + AvatarGap;
             TMP_InputField field = Field(panel, ref y);
 
             y += MessageGap;
@@ -137,6 +147,7 @@ namespace Callbreak.Editor
             var so = new SerializedObject(view);
             so.FindProperty("_panel").objectReferenceValue = panel;
             so.FindProperty("_title").objectReferenceValue = title;
+            so.FindProperty("_avatars").objectReferenceValue = avatars;
             so.FindProperty("_field").objectReferenceValue = field;
             so.FindProperty("_message").objectReferenceValue = message;
             so.FindProperty("_continueButton").objectReferenceValue = confirm;
@@ -145,6 +156,7 @@ namespace Callbreak.Editor
             so.FindProperty("_paddingTop").floatValue = PaddingTop;
             so.FindProperty("_paddingBottom").floatValue = PaddingBottom;
             so.FindProperty("_titleGap").floatValue = TitleGap;
+            so.FindProperty("_avatarGap").floatValue = AvatarGap;
             so.FindProperty("_messageGap").floatValue = MessageGap;
             so.FindProperty("_buttonGap").floatValue = ButtonGap;
             so.ApplyModifiedPropertiesWithoutUndo();

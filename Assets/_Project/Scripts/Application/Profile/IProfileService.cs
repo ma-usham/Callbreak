@@ -13,7 +13,7 @@ namespace Callbreak.Application.Profile
         /// <summary>"Player" until the player picks a name.</summary>
         string DisplayName { get; }
 
-        /// <summary>Index into the avatar presets (0 = the default silhouette).</summary>
+        /// <summary>Index into the avatar presets, the five portraits of ADR 041 (0 until the player picks one).</summary>
         int AvatarId { get; }
 
         int AvatarCount { get; }
@@ -21,8 +21,19 @@ namespace Callbreak.Application.Profile
         /// <summary>Validates without saving; trims first.</summary>
         NameCheck CheckName(string candidate);
 
-        /// <summary>Validates, and saves when the result is <see cref="NameCheck.Ok"/>.</summary>
+        /// <summary>
+        /// The Profile screen's Save: validates, and saves when the result is <see cref="NameCheck.Ok"/>.
+        /// While <see cref="NameChangeWait"/> lasts, a valid new name is <see cref="NameCheck.TooSoon"/>
+        /// and nothing changes.
+        /// </summary>
         NameCheck TrySetDisplayName(string candidate);
+
+        /// <summary>
+        /// How long until the name can be changed on the Profile screen (ADR 041): zero when it can
+        /// be changed now. A name saved there stays 7 days; the answer to the question at the start
+        /// (<see cref="ChooseName"/>) starts no wait.
+        /// </summary>
+        TimeSpan NameChangeWait { get; }
 
         /// <summary>
         /// True once the player has picked a name: answered the question at the start (ADR 022) or

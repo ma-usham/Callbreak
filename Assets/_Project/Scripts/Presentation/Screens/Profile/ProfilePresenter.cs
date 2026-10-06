@@ -13,9 +13,11 @@ namespace Callbreak.Presentation.Screens
 {
     /// <summary>
     /// GDD §11 screen 14: the player's name, avatar preset and play statistics. Save stays disabled
-    /// until the name changes to something valid, an invalid name says why, and the pencil steps
-    /// through the avatar presets. The screen rises above the device's keyboard while the name
-    /// field has it.
+    /// until the name changes to something valid, an invalid name says why, and a valid new name
+    /// says that it then stays 7 days (ADR 041); while it stays, the field takes no typing, its line
+    /// says how long, and a tap on the field nudges that line. The pencil (or the avatar) opens the avatar picker: a tap on a portrait
+    /// saves it at once, Done, a tap beside the panel or Android back closes it. The screen rises
+    /// above the device's keyboard while the name field has it.
     /// </summary>
     public sealed class ProfilePresenter : IStartable, IDisposable
     {
@@ -56,7 +58,11 @@ namespace Callbreak.Presentation.Screens
         public void Start()
         {
             _view.BackClicked += OnBack;
+            _view.BackRequested += OnBackRequested;
             _view.EditAvatarClicked += OnEditAvatar;
+            _view.AvatarPicked += OnAvatarPicked;
+            _view.AvatarPickerCloseClicked += OnAvatarPickerClose;
+            _view.LockedNameTapped += OnLockedNameTapped;
             _view.NameChanged += OnNameChanged;
             _view.SaveClicked += OnSave;
             _router.Changed += OnScreenChanged;
@@ -75,7 +81,11 @@ namespace Callbreak.Presentation.Screens
         public void Dispose()
         {
             _view.BackClicked -= OnBack;
+            _view.BackRequested -= OnBackRequested;
             _view.EditAvatarClicked -= OnEditAvatar;
+            _view.AvatarPicked -= OnAvatarPicked;
+            _view.AvatarPickerCloseClicked -= OnAvatarPickerClose;
+            _view.LockedNameTapped -= OnLockedNameTapped;
             _view.NameChanged -= OnNameChanged;
             _view.SaveClicked -= OnSave;
             _router.Changed -= OnScreenChanged;
@@ -125,10 +135,25 @@ namespace Callbreak.Presentation.Screens
 
         private void RenderNameState()
         {
+            // ADR 041: a saved name stays 7 days; until then the field takes no typing.
+            TimeSpan wait = _profile.NameChangeWait;
+            bool editable = wait <= TimeSpan.Zero;
+            _view.SetNameEditable(editable);
+            if (!editable)
+            {
+                _view.SetSaveInteractable(false);
+                _view.SetNameMessage(NameWait.Text(wait, _localization), false);
+                return;
+            }
+
             NameCheck check = _profile.CheckName(_draft);
             _view.SetSaveInteractable(check == NameCheck.Ok);
             switch (check)
             {
+                case NameCheck.Ok:
+                    // Said before Save: the name then stays a week.
+                    _view.SetNameMessage(_localization.Get(NameWait.WeekNoteKey), false);
+                    break;
                 case NameCheck.TooShort:
                     _view.SetNameMessage(_localization.Get("ui.error.name_too_short"), true);
                     break;
@@ -149,6 +174,31 @@ namespace Callbreak.Presentation.Screens
 
         private void OnBack() => _router.Pop();
 
+        /// <summary>Android back closes the avatar picker first, then the screen.</summary>
+        private void OnBackRequested()
+        {
+            if (_view.IsAvatarPickerOpen)
+            {
+                _view.HideAvatarPicker();
+                return;
+            }
+
+            _router.Pop();
+        }
+
+        /// <summary>
+        /// A tap on the locked field: the line under it says how long the name stays and is nudged.
+        /// A week that ended while the screen was open unlocks the field instead.
+        /// </summary>
+        private void OnLockedNameTapped()
+        {
+            RenderNameState();
+            if (!_view.NameEditable)
+            {
+                _view.NudgeNameMessage();
+            }
+        }
+
         private void OnNameChanged(string text)
         {
             _draft = text ?? string.Empty;
@@ -159,6 +209,7 @@ namespace Callbreak.Presentation.Screens
         {
             if (_profile.TrySetDisplayName(_draft) != NameCheck.Ok)
             {
+                // Not saved (TooSoon included: the line then says how long the name stays).
                 RenderNameState();
                 return;
             }
@@ -169,11 +220,21 @@ namespace Callbreak.Presentation.Screens
             _toast.Show(_localization.Get("ui.toast.profile_saved"));
         }
 
-        /// <summary>The preset picker: each tap shows the next preset, saved at once.</summary>
-        private void OnEditAvatar()
+        /// <summary>The pencil or the avatar: the picker opens with the player's portrait ringed.</summary>
+        private void OnEditAvatar() => _view.ShowAvatarPicker(_avatars.Get, _profile.AvatarId);
+
+        /// <summary>A portrait is saved at the tap; the big avatar follows (Changed) and the ring moves.</summary>
+        private void OnAvatarPicked(int index)
         {
-            int count = Math.Max(1, Math.Min(_profile.AvatarCount, _avatars.Count));
-            _profile.SetAvatar((_profile.AvatarId + 1) % count);
+            if (index < 0 || index >= Math.Min(_profile.AvatarCount, _avatars.Count))
+            {
+                return;
+            }
+
+            _profile.SetAvatar(index);
+            _view.ChooseAvatar(_profile.AvatarId);
         }
+
+        private void OnAvatarPickerClose() => _view.HideAvatarPicker();
     }
 }

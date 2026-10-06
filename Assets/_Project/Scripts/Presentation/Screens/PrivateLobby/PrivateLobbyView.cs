@@ -11,8 +11,8 @@ namespace Callbreak.Presentation.Screens
     /// GDD §11 screen 04: the private lobby. Title = room name, subtitle = lobby state, the room
     /// code with a copy button, Invite Friends, four seats (seat 0 is the host) and the primary
     /// button. The host sees Start Game; a guest sees the same button as a Ready toggle and
-    /// "Waiting for host…" in the footer's place. An empty seat shows a dimmed avatar, its name
-    /// line in muted brown and no ready dot; a player who takes it pops in (ADR 023). Holding a
+    /// "Waiting for host…" in the footer's place. An empty seat shows a dimmed dashed circle (no
+    /// silhouette since ADR 041), its name line in muted brown and no ready dot; a player who takes it pops in (ADR 023). Holding a
     /// seat raises <see cref="SeatLongPressed"/> (the host removes a player that way); the
     /// presenter decides whether it applies.
     /// </summary>
@@ -39,7 +39,7 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private CanvasGroup[] _seatAvatar;
         [SerializeField] private UnityEngine.UI.Image[] _seatPicture;
         [SerializeField] private LongPressArea[] _seatHold;
-        [SerializeField] private Sprite _defaultAvatar;
+        [SerializeField] private Sprite _emptySeat;
         [SerializeField] private GameObject[] _seatDot;
         [SerializeField] private TMP_Text[] _seatName;
         [SerializeField] private TMP_Text[] _seatStatus;
@@ -102,10 +102,10 @@ namespace Callbreak.Presentation.Screens
         /// <summary>With Reduce motion a player who takes a seat only fades in (GDD §14).</summary>
         public void SetReduceMotion(bool on) => _reduceMotion = on;
 
-        /// <summary>The seat's avatar picture (players pick their avatar); null shows the default silhouette.</summary>
+        /// <summary>The seat's portrait (ADR 041: every player has one); null, for an empty seat, shows the dashed circle of a seat still to fill.</summary>
         public void SetSeatAvatar(int index, Sprite avatar)
         {
-            _seatPicture[index].sprite = avatar != null ? avatar : _defaultAvatar;
+            _seatPicture[index].sprite = avatar != null ? avatar : _emptySeat;
         }
 
         /// <summary>Host: Start Game. Guest: the same button as a Ready toggle, and "Waiting for host…" in the footer's place.</summary>

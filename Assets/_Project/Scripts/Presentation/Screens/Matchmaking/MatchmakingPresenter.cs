@@ -252,10 +252,19 @@ namespace Callbreak.Presentation.Screens
         /// </summary>
         private void Render(MatchmakingProgress progress)
         {
-            MatchmakingScreenState state = MatchmakingDisplay.StateOf(progress, _localization, _view.SeatCount);
+            MatchmakingScreenState state = MatchmakingDisplay.StateOf(progress, _localization, _view.SeatCount, _profile.AvatarId);
             _leaveLocked = !state.CanLeave;
             _view.SetReduceMotion(_settings.ReduceMotion);
             _view.Show(state);
+
+            // Every player found shows a portrait of its own, bots too (ADR 041).
+            for (int i = 0; i < state.Seats.Count && i < _view.SeatCount; i++)
+            {
+                if (state.Seats[i].Filled)
+                {
+                    _view.SetSeatAvatar(i, _avatars.Get(state.Seats[i].AvatarId));
+                }
+            }
         }
 
         /// <summary>Progress arrives on the main thread, straight from the service's tick.</summary>

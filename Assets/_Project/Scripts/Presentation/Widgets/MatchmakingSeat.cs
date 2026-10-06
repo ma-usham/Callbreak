@@ -8,8 +8,8 @@ namespace Callbreak.Presentation.Widgets
 {
     /// <summary>
     /// One seat circle of the matchmaking screen (GDD §11 screen 05). It has both looks: filled (the
-    /// avatar disc on its ivory ring) and searching (the dashed circle with a faint silhouette), and
-    /// shows one of them. The name and status follow the look: the mockup sets a filled seat's name
+    /// player's portrait on the ivory disc in its ring; ADR 041) and searching (the dashed circle,
+    /// empty since ADR 041 took the faint silhouette out of it), and shows one of them. The name and status follow the look: the mockup sets a filled seat's name
     /// heavier and its status in green ("Ready"), a searching seat's name lighter and its status in a
     /// muted brown ("Searching"). Each look's text style is taken from a mockup label that shows it.
     /// A seat that fills while the screen is up pops its player in (ADR 023).
@@ -18,6 +18,7 @@ namespace Callbreak.Presentation.Widgets
     {
         [SerializeField] private GameObject _filledLook;
         [SerializeField] private GameObject _searchingLook;
+        [SerializeField] private UnityEngine.UI.Image _avatar;
         [SerializeField] private TMP_Text _name;
         [SerializeField] private TMP_Text _status;
         [SerializeField] private TextStyle _filledName;
@@ -35,6 +36,18 @@ namespace Callbreak.Presentation.Widgets
 
         /// <summary>The line under the name: "Ready", "Searching".</summary>
         public string Status => _status.text;
+
+        /// <summary>The portrait the filled look shows.</summary>
+        public Sprite Avatar => _avatar.sprite;
+
+        /// <summary>The player's portrait in the filled look; a null keeps the one it shows.</summary>
+        public void SetAvatar(Sprite avatar)
+        {
+            if (avatar != null && _avatar.sprite != avatar)
+            {
+                _avatar.sprite = avatar;
+            }
+        }
 
         public void Show(bool filled, string playerName, string status)
         {

@@ -12,8 +12,8 @@ namespace Callbreak.Tests.EditMode.Presentation
     /// player sees themselves in the first seat circle and the others after them in the table's seat
     /// order; the pill counts the player's own search down, then the start countdown the whole table
     /// shares, and keeps the elapsed time when the search has no countdown; nobody can leave a found
-    /// table during its countdown, and everyone can again once the search resumes. The copy is the
-    /// shipped English.
+    /// table during its countdown, and everyone can again once the search resumes. Every player
+    /// found shows their own portrait (ADR 041). The copy is the shipped English.
     /// </summary>
     public sealed class MatchmakingDisplayTests
     {
@@ -50,6 +50,19 @@ namespace Callbreak.Tests.EditMode.Presentation
             AssertSeats(state, "You", "Hari", "", "Asha");
             AssertFilled(state, true, true, false, true);
             Assert.AreEqual("3 of 4 players connected", state.Subtitle);
+        }
+
+        [Test]
+        public void EveryPlayerFound_ShowsTheirOwnPortrait_TheFirstCircleTheProfilesOne()
+        {
+            // ADR 041. The test seats sit down with avatar = seat + 1.
+            MatchmakingScreenState state = MatchmakingDisplay.StateOf(
+                Report(Seat(0, "Hari"), Empty(1), Seat(2, "Suman", local: true), Seat(3, "Asha", bot: true)), _text, Seats, 0);
+
+            Assert.AreEqual(0, state.Seats[0].AvatarId, "You: the profile's portrait");
+            Assert.AreEqual(1, state.Seats[1].AvatarId, "Hari's");
+            Assert.AreEqual(4, state.Seats[3].AvatarId, "Asha, a bot, shows the one it sat down with");
+            Assert.AreEqual(2, MatchmakingDisplay.StateOf(null, _text, Seats, 2).Seats[0].AvatarId, "before the first report too");
         }
 
         [Test]

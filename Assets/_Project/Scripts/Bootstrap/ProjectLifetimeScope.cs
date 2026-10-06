@@ -55,7 +55,9 @@ namespace Callbreak.Bootstrap
             builder.RegisterInstance<ISaveStore>(JsonSaveStore.CreateDefault());
             builder.Register<SettingsService>(Lifetime.Singleton).As<ISettingsService>();
             builder.Register<NameFilter>(Lifetime.Singleton);
-            builder.Register<ProfileService>(Lifetime.Singleton).As<IProfileService>();
+            builder.Register<IProfileService>(
+                resolver => new ProfileService(resolver.Resolve<ISaveStore>(), resolver.Resolve<NameFilter>(), () => System.DateTime.UtcNow),
+                Lifetime.Singleton);
             builder.Register<StatsService>(Lifetime.Singleton).As<IStatsService>();
 
             // The shop and its coins (the owner, 4 Oct 2026): the wallet, the cosmetics the player owns

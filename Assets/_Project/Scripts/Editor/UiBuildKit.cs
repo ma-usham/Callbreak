@@ -214,7 +214,10 @@ namespace Callbreak.Editor
                 changed |= Set(importer.spriteBorder, border, v => importer.spriteBorder = v);
             }
 
-            changed |= Set(importer.mipmapEnabled, false, v => importer.mipmapEnabled = v);
+            // The avatar portraits (ADR 041) keep mip maps: 512 px, shown from ~240 px on the Profile
+            // screen down to the scorecard's rows.
+            bool mipmaps = path.StartsWith($"{ArtRoot}/UI/Avatars/Avatar_", System.StringComparison.Ordinal);
+            changed |= Set(importer.mipmapEnabled, mipmaps, v => importer.mipmapEnabled = v);
             changed |= Set(importer.alphaIsTransparency, true, v => importer.alphaIsTransparency = v);
             changed |= Set(importer.wrapMode, TextureWrapMode.Clamp, v => importer.wrapMode = v);
             changed |= Set(importer.maxTextureSize, 4096, v => importer.maxTextureSize = v);

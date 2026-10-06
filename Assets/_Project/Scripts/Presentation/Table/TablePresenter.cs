@@ -566,9 +566,10 @@ namespace Callbreak.Presentation.Table
                     _view.Seat(_renderer.RelativeSeat(completed.Winner)).PulseStatus(ReduceMotion);
                     break;
 
+                // No sound when the player's turn comes (ADR 041: the owner found it irritating);
+                // the light buzz and the prompt above the hand say so.
                 case CallTurnStarted callTurn when callTurn.Seat == Local:
                 case PlayTurnStarted playTurn when playTurn.Seat == Local:
-                    _audio.Play(SoundCue.YourTurn);
                     _haptics.Play(HapticPattern.Light);
                     AnnounceTurnUnderOverlay();
                     break;

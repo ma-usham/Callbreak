@@ -29,10 +29,10 @@ $sprites = @(
     @('UI/Decor/Deco_ProfileDividerVertical.png', 200, '14', 'UI-7 divider sheet a1', 'vertical line with diamond'),
     @('UI/Decor/Logo_Callbreak_NoFlag.png', 200, '07 08 09 10 16', 'UI-6 a1', 'small logo without the flag from 08: dark PLAY TOGETHER and grey rules'),
     @('UI/Decor/Deco_MountainFooter.png', 200, '01', 'UI-7 a1', 'faint mountains along the bottom of the option cards; transparent overlay matted from a flat ivory ground'),
-    @('UI/Avatars/Avatar_01.png', 200, '14 (picker) and seats', 'IC-2 avatar sheet a1', 'warm-grey variant; exact circle; silhouette sized like Avatar_Default'),
-    @('UI/Avatars/Avatar_02.png', 200, '14 (picker) and seats', 'IC-2 avatar sheet a1', 'bronze variant'),
-    @('UI/Avatars/Avatar_03.png', 200, '14 (picker) and seats', 'IC-2 avatar sheet a1', 'crimson variant'),
-    @('UI/Avatars/Avatar_04.png', 200, '14 (picker) and seats', 'IC-2 avatar sheet a1', 'ivory variant with a thin brown outline')
+    @('UI/Avatars/Avatar_01.png', 200, '14 (picker) and seats', 'owner portrait 02-crimson-braid (portraits.ps1)', 'ADR 041: preset 1; cut just inside its own gold ring; 512 x 512; mipmapped'),
+    @('UI/Avatars/Avatar_02.png', 200, '14 (picker) and seats', 'owner portrait 03-himalayan-cap (portraits.ps1)', 'ADR 041: preset 2'),
+    @('UI/Avatars/Avatar_03.png', 200, '14 (picker) and seats', 'owner portrait 04-teal-shawl (portraits.ps1)', 'ADR 041: preset 3'),
+    @('UI/Avatars/Avatar_04.png', 200, '14 (picker) and seats', 'owner portrait 05-indigo-jacket (portraits.ps1)', 'ADR 041: preset 4')
 )
 Add-Type -AssemblyName System.Drawing
 $entries = @(); $sizes = @{}

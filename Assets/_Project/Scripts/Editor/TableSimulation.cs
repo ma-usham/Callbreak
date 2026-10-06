@@ -2754,6 +2754,7 @@ namespace Callbreak.Editor
                             }
 
                             Check(_table.Hand.Interactable, "the hand takes input on the local turn");
+                            Equal(0, _audio.Count(SoundCue.YourTurn), "no sound plays when the player's turn comes (ADR 041)");
                             Check(state.TryGetObligation(out PlayObligation _), "the local turn has an obligation");
                             foreach (Card card in state.Hand)
                             {

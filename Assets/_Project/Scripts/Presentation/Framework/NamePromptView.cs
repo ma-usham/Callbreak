@@ -1,4 +1,5 @@
 using System;
+using Callbreak.Presentation.Widgets;
 using LitMotion;
 using TMPro;
 using UnityEngine;
@@ -8,13 +9,13 @@ namespace Callbreak.Presentation.Framework
 {
     /// <summary>
     /// The name question when the game starts (ADR 022): a dimmed backdrop and the dialog's panel
-    /// with a title, the name field, a line under it (the note, or why a name cannot be used) and
-    /// Continue. It cannot be dismissed: the backdrop only keeps taps from reaching the menu. It
-    /// pops in and fades out like the dialog (<see cref="UiMotion"/>), on its own canvas above it;
-    /// its labels come from the UI table, and <see cref="NamePromptPresenter"/> decides when it
-    /// shows and what the line says. While the on-screen keyboard is up, the panel rises so the
-    /// field stays just above it (<see cref="KeyboardLift"/>; the keyboard's Done sends the name),
-    /// and settles back when it goes.
+    /// with a title, the avatar presets to pick from (ADR 041), the name field, a line under it (the
+    /// note, or why a name cannot be used) and Continue. It cannot be dismissed: the backdrop only
+    /// keeps taps from reaching the menu. It pops in and fades out like the dialog
+    /// (<see cref="UiMotion"/>), on its own canvas above it; its labels come from the UI table, and
+    /// <see cref="NamePromptPresenter"/> decides when it shows and what the line says. While the
+    /// on-screen keyboard is up, the panel rises so the field stays just above it
+    /// (<see cref="KeyboardLift"/>; the keyboard's Done sends the name), and settles back when it goes.
     /// </summary>
     [RequireComponent(typeof(Canvas), typeof(CanvasGroup))]
     public sealed class NamePromptView : MonoBehaviour
@@ -24,6 +25,7 @@ namespace Callbreak.Presentation.Framework
 
         [SerializeField] private RectTransform _panel;
         [SerializeField] private TMP_Text _title;
+        [SerializeField] private AvatarPicker _avatars;
         [SerializeField] private TMP_InputField _field;
         [SerializeField] private TMP_Text _message;
         [SerializeField] private Button _continueButton;
@@ -35,6 +37,7 @@ namespace Callbreak.Presentation.Framework
         [SerializeField] private float _paddingTop = 58f;
         [SerializeField] private float _paddingBottom = 60f;
         [SerializeField] private float _titleGap = 30f;
+        [SerializeField] private float _avatarGap = 26f;
         [SerializeField] private float _messageGap = 12f;
         [SerializeField] private float _buttonGap = 30f;
 
@@ -52,6 +55,9 @@ namespace Callbreak.Presentation.Framework
         /// <summary>Continue, or Done / Enter on the keyboard.</summary>
         public event Action Submitted;
 
+        /// <summary>An avatar preset was tapped (ADR 041).</summary>
+        public event Action<int> AvatarPicked;
+
         public bool IsShowing { get; private set; }
 
         /// <summary>With Reduce motion the panel only fades, and moves for the keyboard at once (GDD §14).</summary>
@@ -68,6 +74,9 @@ namespace Callbreak.Presentation.Framework
 
         public string Text => _field.text;
 
+        /// <summary>The avatar presets to pick from.</summary>
+        public AvatarPicker Avatars => _avatars;
+
         private Canvas Canvas => _canvas != null ? _canvas : _canvas = GetComponent<Canvas>();
 
         private CanvasGroup Group => _group != null ? _group : _group = GetComponent<CanvasGroup>();
@@ -83,6 +92,7 @@ namespace Callbreak.Presentation.Framework
             _field.onValueChanged.AddListener(OnValueChanged);
             _field.onSubmit.AddListener(OnSubmit);
             _continueButton.onClick.AddListener(OnContinue);
+            _avatars.Picked += OnAvatarPicked;
         }
 
         private void OnDisable()
@@ -90,6 +100,7 @@ namespace Callbreak.Presentation.Framework
             _field.onValueChanged.RemoveListener(OnValueChanged);
             _field.onSubmit.RemoveListener(OnSubmit);
             _continueButton.onClick.RemoveListener(OnContinue);
+            _avatars.Picked -= OnAvatarPicked;
         }
 
         /// <summary>Opens the panel with <paramref name="name"/> in the field and the field focused (the keyboard comes up on a phone).</summary>
@@ -119,6 +130,13 @@ namespace Callbreak.Presentation.Framework
             Animate(0f, deactivate: true);
         }
 
+        /// <summary>The portraits by preset index, and the one shown as chosen.</summary>
+        public void SetAvatars(Func<int, Sprite> pictureOf, int chosen)
+        {
+            _avatars.SetPictures(pictureOf);
+            _avatars.Choose(chosen);
+        }
+
         /// <summary>The line under the field: a note, or (in the error colour) why the name cannot be used.</summary>
         public void SetMessage(string text, bool isError)
         {
@@ -131,12 +149,15 @@ namespace Callbreak.Presentation.Framework
             }
         }
 
-        /// <summary>Title, field, line and Continue from the top of the panel; the panel fits them.</summary>
+        /// <summary>Title, avatars, field, line and Continue from the top of the panel; the panel fits them.</summary>
         private void Layout()
         {
             float y = _paddingTop;
             y = Place(_title.rectTransform, y, _title.GetPreferredValues(_title.text, _title.rectTransform.rect.width, 0f).y);
             y += _titleGap;
+            var avatars = (RectTransform)_avatars.transform;
+            y = Place(avatars, y, avatars.rect.height);
+            y += _avatarGap;
             var field = (RectTransform)_field.transform;
             y = Place(field, y, field.rect.height);
             y += _messageGap;
@@ -241,6 +262,14 @@ namespace Callbreak.Presentation.Framework
             if (IsShowing)
             {
                 Submitted?.Invoke();
+            }
+        }
+
+        private void OnAvatarPicked(int index)
+        {
+            if (IsShowing)
+            {
+                AvatarPicked?.Invoke(index);
             }
         }
 

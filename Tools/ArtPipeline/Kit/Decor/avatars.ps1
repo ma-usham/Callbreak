@@ -2,6 +2,8 @@
 # exact, anti-aliased circular edge (the cut-out's own edge is jagged), the ivory one gets its
 # thin outline re-drawn at that edge, and the silhouette is brought to the same size and place
 # as on the approved Avatar_Default. Output 222 x 222 like Avatar_Default.
+# Superseded by portraits.ps1 (ADR 041): the presets are the owner's portraits now, and -Install
+# is refused so the silhouettes cannot come back.
 #   avatars.ps1 -Src <sheet png> [-Install]
 param(
     [Parameter(Mandatory)] [string] $Src,
@@ -9,6 +11,7 @@ param(
     [switch] $NoNormalise,
     [switch] $Install
 )
+if ($Install) { throw 'Avatar_01..04 are the owner''s portraits since ADR 041 (portraits.ps1); installing these would put the silhouettes back.' }
 . (Join-Path $PSScriptRoot 'decor.ps1')
 $fitDir = "$DecorWork\fit"; New-Item -ItemType Directory -Force $fitDir | Out-Null
 $names = @('Avatar_01', 'Avatar_02', 'Avatar_03', 'Avatar_04')

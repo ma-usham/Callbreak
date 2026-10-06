@@ -3,6 +3,7 @@ using Callbreak.Application.Flow;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
 using Callbreak.Application.Settings;
+using Callbreak.Presentation.Feedback;
 using VContainer.Unity;
 
 namespace Callbreak.Presentation.Framework
@@ -12,7 +13,8 @@ namespace Callbreak.Presentation.Framework
     /// itself, until a name is chosen. The panel sits above the menu and its dialogs, so whatever
     /// else came up (the rules primer, an invite link, an offer to resume) waits underneath. The
     /// name follows the Profile screen's rules and messages; keeping "Player" is an answer too.
-    /// Android back does nothing while it is up. Once answered, the main menu shows the name.
+    /// Above the field the player picks an avatar (ADR 041), saved at the tap. Android back does
+    /// nothing while it is up. Once answered, the main menu shows the name.
     /// </summary>
     public sealed class NamePromptPresenter : IStartable, IDisposable, IBackHandler
     {
@@ -24,6 +26,7 @@ namespace Callbreak.Presentation.Framework
         private readonly ILocalization _localization;
         private readonly IAudioService _audio;
         private readonly IOnScreenKeyboard _keyboard;
+        private readonly AvatarLibrary _avatars;
 
         private string _draft = string.Empty;
         private bool _started;
@@ -34,7 +37,8 @@ namespace Callbreak.Presentation.Framework
             ISettingsService settings,
             ILocalization localization,
             IAudioService audio,
-            IOnScreenKeyboard keyboard)
+            IOnScreenKeyboard keyboard,
+            AvatarLibrary avatars)
         {
             _view = view;
             _profile = profile;
@@ -42,6 +46,7 @@ namespace Callbreak.Presentation.Framework
             _localization = localization;
             _audio = audio;
             _keyboard = keyboard;
+            _avatars = avatars;
         }
 
         public bool IsOpen => _started && _view.IsShowing;
@@ -51,6 +56,7 @@ namespace Callbreak.Presentation.Framework
             _started = true;
             _view.NameChanged += OnNameChanged;
             _view.Submitted += OnSubmitted;
+            _view.AvatarPicked += OnAvatarPicked;
             _localization.LanguageChanged += Render;
 
             // The panel rises above the device's keyboard, so the field is never under it.
@@ -60,6 +66,7 @@ namespace Callbreak.Presentation.Framework
             {
                 _draft = string.Empty;
                 _view.ReduceMotion = _settings.ReduceMotion;
+                _view.SetAvatars(PictureOf, _profile.AvatarId);
                 _view.Show(_draft);
                 Render();
             }
@@ -75,6 +82,7 @@ namespace Callbreak.Presentation.Framework
             _started = false;
             _view.NameChanged -= OnNameChanged;
             _view.Submitted -= OnSubmitted;
+            _view.AvatarPicked -= OnAvatarPicked;
             _localization.LanguageChanged -= Render;
         }
 
@@ -86,6 +94,21 @@ namespace Callbreak.Presentation.Framework
             _draft = text ?? string.Empty;
             Render();
         }
+
+        /// <summary>The avatar is saved at the tap, whatever the name field holds.</summary>
+        private void OnAvatarPicked(int index)
+        {
+            if (!IsOpen || index < 0 || index >= _profile.AvatarCount)
+            {
+                return;
+            }
+
+            _audio.Play(SoundCue.UiTap);
+            _profile.SetAvatar(index);
+            _view.SetAvatars(PictureOf, _profile.AvatarId);
+        }
+
+        private UnityEngine.Sprite PictureOf(int index) => _avatars != null ? _avatars.Get(index) : null;
 
         private void OnSubmitted()
         {

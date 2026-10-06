@@ -1,3 +1,4 @@
+using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Widgets;
 using TMPro;
 using UnityEditor;
@@ -11,7 +12,8 @@ namespace Callbreak.Editor.Screens
     /// the mockup, with the fitted "Player" label as its text (so the text sits exactly where the
     /// mockup has it), and gives the note line under it its <see cref="ProfileNameMessage"/>. The big
     /// name under the avatar may shrink: the mockup shows "Player", a 16-character name at that size
-    /// would run into the stats column.
+    /// would run into the stats column. The avatar picker (ADR 041), which no mockup draws, is built
+    /// from the kit over the whole screen, in the name question's style.
     /// </summary>
     public static class ProfileCustomizer
     {
@@ -36,12 +38,152 @@ namespace Callbreak.Editor.Screens
         /// <summary>Warm Sand #DFC8AE (GDD §12 palette) behind selected text.</summary>
         private static readonly Color SelectionColor = new Color(0.875f, 0.784f, 0.682f, 0.75f);
 
+        // The avatar picker's panel, canvas pixels: the dialog's look, wide enough for five
+        // 112-wide portraits 20 apart (640) inside its margins.
+        private const float PickerPanelWidth = 780f;
+        private const float PickerPaddingTop = 54f;
+        private const float PickerPaddingBottom = 58f;
+        private const float PickerTitleSize = 56f;
+        private const float PickerTitleGap = 34f;
+        private const float PickerCell = 112f;
+        private const float PickerSpacing = 20f;
+        private const float PickerButtonGap = 40f;
+        private const float PickerDoneWidth = 400f;
+        private const float PickerDoneHeight = 89.7f;
+        private const float PickerDoneLabelSize = 40f;
+        private const float PickerShadowSpread = 27.5f;
+        private const float PickerShadowDrop = 3.5f;
+
+        /// <summary>The name question's dim.</summary>
+        private static readonly Color PickerDim = new Color(0f, 0f, 0f, 0.817f);
+
         public static void Customize(ScreenBuildContext ctx)
         {
             ScreenExtras.Apply(ctx);   // "mirror" on the title divider's left line
             BuildNameField(ctx);
             BuildNameMessage(ctx);
             LetPlayerNameShrink(ctx);
+            BuildAvatarPicker(ctx);
+        }
+
+        /// <summary>
+        /// ADR 041: over the whole screen, the dim (a tap on it closes the picker) and the modal
+        /// panel with the serif title, the five portraits (<see cref="AvatarPickerBuilder"/>) and a
+        /// crimson Done. Hidden until the pencil or the avatar opens it.
+        /// </summary>
+        private static void BuildAvatarPicker(ScreenBuildContext ctx)
+        {
+            RectTransform sheet = Child("AvatarSheet", ctx.Root);
+            Stretch(sheet, Vector2.zero, Vector2.zero);
+            sheet.SetAsLastSibling();
+            var group = sheet.gameObject.AddComponent<CanvasGroup>();
+            group.alpha = 0f;
+            group.interactable = false;
+            group.blocksRaycasts = false;
+
+            RectTransform backdrop = Child("Backdrop", sheet);
+            Stretch(backdrop, Vector2.zero, Vector2.zero);
+            Image dim = UiBuildKit.AddImage(backdrop, null, true);
+            dim.color = PickerDim;
+            var backdropButton = backdrop.gameObject.AddComponent<Button>();
+            backdropButton.targetGraphic = dim;
+            backdropButton.transition = Selectable.Transition.None;
+            Navigation navigation = backdropButton.navigation;
+            navigation.mode = Navigation.Mode.None;
+            backdropButton.navigation = navigation;
+
+            RectTransform panel = Child("Panel", sheet);
+            panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(0.5f, 0.5f);
+
+            RectTransform shadow = Child("Shadow", panel);
+            Stretch(shadow, new Vector2(-PickerShadowSpread, -PickerShadowSpread - PickerShadowDrop), new Vector2(PickerShadowSpread, PickerShadowSpread - PickerShadowDrop));
+            UiBuildKit.AddImage(shadow, UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Common/UI_Panel_Large_Shadow.png", 0f), false);
+
+            // The panel takes the taps on it, so only a tap beside it closes the picker.
+            RectTransform face = Child("Face", panel);
+            Stretch(face, Vector2.zero, Vector2.zero);
+            UiBuildKit.AddImage(face, UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Panels/UI_Panel_Modal_Menu.png", 0f), true);
+
+            TMP_FontAsset serif = UiBuildKit.LoadFontRole("SerifBold");
+            float y = PickerPaddingTop;
+            float titleHeight = PickerTitleSize * 1.3f;
+            RectTransform titleRect = Child("Title", panel);
+            titleRect.anchorMin = titleRect.anchorMax = titleRect.pivot = new Vector2(0.5f, 1f);
+            titleRect.sizeDelta = new Vector2(PickerPanelWidth - 2f * 60f, titleHeight);
+            titleRect.anchoredPosition = new Vector2(0f, -y);
+            var title = titleRect.gameObject.AddComponent<TextMeshProUGUI>();
+            title.font = serif;
+            title.fontSize = PickerTitleSize;
+            title.alignment = TextAlignmentOptions.Top;
+            title.textWrappingMode = TextWrappingModes.NoWrap;
+            title.overflowMode = TextOverflowModes.Overflow;
+            title.enableAutoSizing = true;
+            title.fontSizeMax = PickerTitleSize;
+            title.fontSizeMin = PickerTitleSize * 0.6f;
+            title.raycastTarget = false;
+            title.enableVertexGradient = true;
+            title.colorGradient = new VertexGradient(UiBuildKit.Hex("#8E0A17"), UiBuildKit.Hex("#8E0A17"), UiBuildKit.Hex("#750A14"), UiBuildKit.Hex("#750A14"));
+            title.color = Color.white;
+            title.text = "Choose your avatar";
+            Localize(title, "ui.profile.choose_avatar");
+            y += titleHeight + PickerTitleGap;
+
+            AvatarPicker picker = AvatarPickerBuilder.Build(panel, "Avatars", PickerCell, PickerSpacing);
+            ((RectTransform)picker.transform).anchoredPosition = new Vector2(0f, -y);
+            y += PickerCell + PickerButtonGap;
+
+            Button done = DialogBuilder.KitButton(
+                "AvatarDoneButton", panel, new Vector2(PickerDoneWidth, PickerDoneHeight),
+                "UI/Controls/UI_Button_Crimson_Box.png", "UI/Controls/UI_Button_Crimson_Box_Shadow.png", 1.7f, 0.82f);
+            ((RectTransform)done.transform).anchoredPosition = new Vector2(0f, -y);
+            y += PickerDoneHeight;
+            RectTransform labelRect = Child("Label", done.transform);
+            Stretch(labelRect, Vector2.zero, Vector2.zero);
+            var label = labelRect.gameObject.AddComponent<TextMeshProUGUI>();
+            label.font = serif;
+            label.fontSize = PickerDoneLabelSize;
+            label.color = UiBuildKit.Hex("#FEFCFC");
+            label.alignment = TextAlignmentOptions.Center;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.overflowMode = TextOverflowModes.Overflow;
+            label.raycastTarget = false;
+            label.fontSharedMaterial = UiBuildKit.LoadShadowPreset(serif, "ButtonLabel", new Color(0.29f, 0.03f, 0.04f, 0.9f), new Vector2(0.25f, -0.35f), 0.2f);
+            label.text = "Done";
+            Localize(label, "ui.profile.avatar_done");
+
+            panel.sizeDelta = new Vector2(PickerPanelWidth, y + PickerPaddingBottom);
+            sheet.gameObject.SetActive(false);
+
+            ctx.Bound["_avatarSheet"] = group;
+            ctx.Bound["_avatarPanel"] = panel;
+            ctx.Bound["_avatarPicker"] = picker;
+            ctx.Bound["_avatarDone"] = done;
+            ctx.Bound["_avatarBackdrop"] = backdropButton;
+        }
+
+        private static void Localize(TMP_Text label, string key)
+        {
+            var localized = label.gameObject.AddComponent<LocalizedText>();
+            var so = new SerializedObject(localized);
+            so.FindProperty("_key").stringValue = key;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static RectTransform Child(string name, Transform parent)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.layer = LayerMask.NameToLayer("UI");
+            var rect = (RectTransform)go.transform;
+            rect.SetParent(parent, false);
+            return rect;
+        }
+
+        private static void Stretch(RectTransform rect, Vector2 offsetMin, Vector2 offsetMax)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = offsetMin;
+            rect.offsetMax = offsetMax;
         }
 
         private static void BuildNameField(ScreenBuildContext ctx)
@@ -74,6 +216,9 @@ namespace Callbreak.Editor.Screens
             {
                 face.raycastTarget = true;
             }
+
+            // A tap on the field while the name has to stay (ADR 041) nudges the line under it.
+            ctx.Bound["_nameFieldTap"] = field.gameObject.AddComponent<TapRelay>();
 
             var input = field.gameObject.AddComponent<TMP_InputField>();
             var so = new SerializedObject(input);

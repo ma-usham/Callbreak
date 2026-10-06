@@ -44,9 +44,10 @@ namespace Callbreak.Presentation.Screens
 
         /// <summary>
         /// The screen for <paramref name="progress"/> (null before the first report: only the player,
-        /// everyone else still searching) with <paramref name="seatCount"/> seat circles.
+        /// everyone else still searching) with <paramref name="seatCount"/> seat circles. A filled
+        /// circle shows its player's avatar (ADR 041): <paramref name="viewerAvatar"/> in the first.
         /// </summary>
-        public static MatchmakingScreenState StateOf(MatchmakingProgress progress, ILocalization text, int seatCount)
+        public static MatchmakingScreenState StateOf(MatchmakingProgress progress, ILocalization text, int seatCount, int viewerAvatar = 0)
         {
             IReadOnlyList<RoomSeat> order = InViewerOrder(progress?.Seats);
             var seats = new MatchmakingScreenState.Seat[Math.Max(0, seatCount)];
@@ -62,7 +63,7 @@ namespace Callbreak.Presentation.Screens
                 if (viewer || (seat != null && seat.Occupied))
                 {
                     connected++;
-                    seats[i] = new MatchmakingScreenState.Seat(true, viewer ? text.Get("ui.common.you") : seat.Name, ready);
+                    seats[i] = new MatchmakingScreenState.Seat(true, viewer ? text.Get("ui.common.you") : seat.Name, ready, viewer ? viewerAvatar : seat.AvatarId);
                 }
                 else
                 {

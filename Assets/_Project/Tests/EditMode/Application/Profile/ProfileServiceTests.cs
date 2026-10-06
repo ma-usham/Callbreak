@@ -5,17 +5,21 @@ using NUnit.Framework;
 
 namespace Callbreak.Tests.EditMode.Application
 {
-    /// <summary>GDD §11 screen 14: the display name rules, the avatar presets and persistence.</summary>
+    /// <summary>GDD §11 screen 14: the display name rules, the avatar presets and persistence; ADR 041's week between name changes.</summary>
     public sealed class ProfileServiceTests
     {
+        private static readonly DateTime Start = new DateTime(2026, 10, 6, 12, 0, 0, DateTimeKind.Utc);
+
         private InMemorySaveStore _store;
         private ProfileService _profile;
+        private DateTime _now;
 
         [SetUp]
         public void SetUp()
         {
             _store = new InMemorySaveStore();
-            _profile = new ProfileService(_store, new NameFilter());
+            _now = Start;
+            _profile = new ProfileService(_store, new NameFilter(), () => _now);
         }
 
         [Test]
@@ -173,6 +177,123 @@ namespace Callbreak.Tests.EditMode.Application
 
             _store.Put(ProfileService.SaveKey, new ProfileData { displayName = "Player" });
             Assert.IsFalse(new ProfileService(_store, new NameFilter()).HasChosenName, "still called Player: the question comes");
+        }
+
+        // ------------------------------------------------------------------ a week between name changes (ADR 041)
+
+        [Test]
+        public void NoNameSavedYet_CanChangeAtOnce()
+        {
+            Assert.AreEqual(TimeSpan.Zero, _profile.NameChangeWait);
+        }
+
+        [Test]
+        public void TrySetDisplayName_StartsAWeek_InWhichANewNameIsTooSoon()
+        {
+            Assert.AreEqual(NameCheck.Ok, _profile.TrySetDisplayName("Asha"));
+            Assert.AreEqual(TimeSpan.FromDays(7), _profile.NameChangeWait);
+            int changed = 0;
+            _profile.Changed += () => changed++;
+            int saves = _store.SaveCount;
+
+            NameCheck result = _profile.TrySetDisplayName("Bikash");
+
+            Assert.AreEqual(NameCheck.TooSoon, result);
+            Assert.AreEqual("Asha", _profile.DisplayName);
+            Assert.AreEqual(0, changed);
+            Assert.AreEqual(saves, _store.SaveCount);
+        }
+
+        [Test]
+        public void TheWeekCountsDown_AndANewNameIsSavedOnceItIsOver()
+        {
+            _profile.TrySetDisplayName("Asha");
+
+            _now = Start + TimeSpan.FromDays(6) + TimeSpan.FromHours(23);
+            Assert.AreEqual(TimeSpan.FromHours(1), _profile.NameChangeWait);
+            Assert.AreEqual(NameCheck.TooSoon, _profile.TrySetDisplayName("Bikash"));
+
+            _now = Start + TimeSpan.FromDays(7);
+            Assert.AreEqual(TimeSpan.Zero, _profile.NameChangeWait);
+            Assert.AreEqual(NameCheck.Ok, _profile.TrySetDisplayName("Bikash"));
+            Assert.AreEqual("Bikash", _profile.DisplayName);
+            Assert.AreEqual(TimeSpan.FromDays(7), _profile.NameChangeWait, "the new name starts its own week");
+        }
+
+        [Test]
+        public void DuringTheWeek_ANameThatCannotBeUsedStillSaysWhy()
+        {
+            _profile.TrySetDisplayName("Asha");
+
+            Assert.AreEqual(NameCheck.TooShort, _profile.TrySetDisplayName("Ra"));
+            Assert.AreEqual(NameCheck.NotAllowed, _profile.TrySetDisplayName("B1tch"));
+            Assert.AreEqual(NameCheck.Unchanged, _profile.TrySetDisplayName("Asha"));
+        }
+
+        [Test]
+        public void TheNameAnsweredAtTheStart_StartsNoWait()
+        {
+            Assert.AreEqual(NameCheck.Ok, _profile.ChooseName("Asha"));
+
+            Assert.AreEqual(TimeSpan.Zero, _profile.NameChangeWait);
+            Assert.AreEqual(NameCheck.Ok, _profile.TrySetDisplayName("Bikash"), "a typo at the start can be put right at once");
+        }
+
+        [Test]
+        public void TheQuestionAtTheStart_IsAnsweredEvenDuringTheWeek()
+        {
+            // A saved name the filter no longer allows falls back to "Player", and the question comes again.
+            _profile.TrySetDisplayName("Asha");
+            ProfileData data = _store.Peek<ProfileData>(ProfileService.SaveKey);
+            data.displayName = "B1tch";
+            _store.Put(ProfileService.SaveKey, data);
+            var profile = new ProfileService(_store, new NameFilter(), () => _now);
+            Assert.IsFalse(profile.HasChosenName);
+
+            Assert.AreEqual(NameCheck.Ok, profile.ChooseName("Suman"));
+            Assert.AreEqual("Suman", profile.DisplayName);
+        }
+
+        [Test]
+        public void TheWeek_SurvivesARestart()
+        {
+            _profile.TrySetDisplayName("Asha");
+            _now = Start + TimeSpan.FromDays(3);
+
+            var reloaded = new ProfileService(_store, new NameFilter(), () => _now);
+
+            Assert.AreEqual(TimeSpan.FromDays(4), reloaded.NameChangeWait);
+            Assert.AreEqual(NameCheck.TooSoon, reloaded.TrySetDisplayName("Bikash"));
+        }
+
+        [Test]
+        public void AClockPutBack_NeverMakesTheWaitLongerThanAWeek()
+        {
+            _profile.TrySetDisplayName("Asha");
+
+            _now = Start - TimeSpan.FromDays(30);
+
+            Assert.AreEqual(TimeSpan.FromDays(7), _profile.NameChangeWait);
+        }
+
+        [Test]
+        public void ASaveFromBeforeTheWeek_CanChangeAtOnce()
+        {
+            _store.Put(ProfileService.SaveKey, new ProfileData { displayName = "Suman", nameChosen = true });
+            var profile = new ProfileService(_store, new NameFilter(), () => _now);
+
+            Assert.AreEqual(TimeSpan.Zero, profile.NameChangeWait);
+            Assert.AreEqual(NameCheck.Ok, profile.TrySetDisplayName("Asha"));
+        }
+
+        [TestCase(-5L)]
+        [TestCase(long.MaxValue)]
+        public void AnImpossibleTimeOnDisk_IsForgotten(long changedAt)
+        {
+            _store.Put(ProfileService.SaveKey, new ProfileData { displayName = "Suman", nameChosen = true, nameChangedAt = changedAt });
+            var profile = new ProfileService(_store, new NameFilter(), () => _now);
+
+            Assert.AreEqual(TimeSpan.Zero, profile.NameChangeWait);
         }
 
         [Test]

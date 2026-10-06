@@ -52,11 +52,12 @@ namespace Callbreak.Presentation.Screens
         /// <summary>One seat circle: a player (the avatar disc) or the dashed circle of a seat still searching.</summary>
         public readonly struct Seat
         {
-            public Seat(bool filled, string name, string status)
+            public Seat(bool filled, string name, string status, int avatarId = 0)
             {
                 Filled = filled;
                 Name = name;
                 Status = status;
+                AvatarId = avatarId;
             }
 
             public bool Filled { get; }
@@ -66,6 +67,9 @@ namespace Callbreak.Presentation.Screens
 
             /// <summary>"Ready" or "Searching".</summary>
             public string Status { get; }
+
+            /// <summary>A filled seat's avatar preset (ADR 041), the player's own in the first circle.</summary>
+            public int AvatarId { get; }
         }
     }
 }

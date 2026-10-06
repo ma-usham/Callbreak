@@ -9,5 +9,8 @@ namespace Callbreak.Application.Profile
         TooLong,
         InvalidCharacters,
         NotAllowed,
+
+        /// <summary>A valid new name, but the last one was saved less than 7 days ago (ADR 041).</summary>
+        TooSoon,
     }
 }

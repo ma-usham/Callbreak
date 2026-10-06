@@ -325,11 +325,13 @@ namespace Callbreak.Application.Online
             var profiles = new SeatProfile[Seats];
             var humans = new bool[Seats];
             var used = new HashSet<string>();
+            var faces = new HashSet<int>();
             for (int i = 0; i < Seats; i++)
             {
                 if (_members[i] != null)
                 {
                     used.Add(_members[i].Name);
+                    faces.Add(_members[i].AvatarId);
                 }
             }
 
@@ -355,9 +357,12 @@ namespace Callbreak.Application.Online
                     continue;
                 }
 
+                // A bot that fills an empty seat: a name and a portrait nobody at the table has (ADR 041).
                 string name = SeatRoster.DrawName(_rng, used);
                 used.Add(name);
-                profiles[i] = new SeatProfile(name, _rng.NextInt(SeatRoster.AvatarCount).ToString(), deck, true);
+                int avatar = SeatRoster.DrawAvatar(_rng, faces);
+                faces.Add(avatar);
+                profiles[i] = new SeatProfile(name, avatar.ToString(), deck, true);
             }
 
             // The match id goes to every player in every view, and no shuffle seed ever leaves the
@@ -432,11 +437,13 @@ namespace Callbreak.Application.Online
 
             int seat = -1;
             var used = new HashSet<string>();
+            var faces = new HashSet<int>();
             for (int i = 0; i < Seats; i++)
             {
                 if (_members[i] != null)
                 {
                     used.Add(_members[i].Name);
+                    faces.Add(_members[i].AvatarId);
                 }
                 else if (seat < 0)
                 {
@@ -450,7 +457,8 @@ namespace Callbreak.Application.Online
             }
 
             // In the host's deck: a bot chose none (each player draws it in its own anyway, ADR 031).
-            _members[seat] = Member.Bot(SeatRoster.DrawName(_rng, used), _rng.NextInt(SeatRoster.AvatarCount), _members[_hostSeat].DeckThemeId);
+            // Under a portrait nobody at the table has yet (ADR 041).
+            _members[seat] = Member.Bot(SeatRoster.DrawName(_rng, used), SeatRoster.DrawAvatar(_rng, faces), _members[_hostSeat].DeckThemeId);
             Broadcast();
             Pump();
             return true;

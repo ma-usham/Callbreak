@@ -7,8 +7,9 @@ namespace Callbreak.Application.Sessions
 {
     /// <summary>
     /// Who sits where for a match with computer players (GDD §9 "names come from a Nepali pool"):
-    /// the local player at South, bots on the other seats with distinct Nepali names and avatars.
-    /// Bots have no deck of their own: each player sees every card in its own deck (ADR 031).
+    /// the local player at South, bots on the other seats with distinct Nepali names and avatars,
+    /// each bot a portrait nobody else at the table has (ADR 041). Bots have no deck of their own:
+    /// each player sees every card in its own deck (ADR 031).
     /// </summary>
     public static class SeatRoster
     {
@@ -34,15 +35,36 @@ namespace Callbreak.Application.Sessions
             var seats = new SeatProfile[4];
             seats[(int)Seat.South] = new SeatProfile(playerName, playerAvatar.ToString(), playerDeck, false);
             var used = new HashSet<string> { playerName };
+            var faces = new HashSet<int> { playerAvatar };
             Seat[] botSeats = { Seat.East, Seat.North, Seat.West };
             for (int i = 0; i < botSeats.Length; i++)
             {
                 string name = firstMatch && !used.Contains(Mockup[i]) ? Mockup[i] : DrawName(rng, used);
                 used.Add(name);
-                seats[(int)botSeats[i]] = new SeatProfile(name, rng.NextInt(AvatarCount).ToString(), playerDeck, true);
+                int avatar = DrawAvatar(rng, faces);
+                faces.Add(avatar);
+                seats[(int)botSeats[i]] = new SeatProfile(name, avatar.ToString(), playerDeck, true);
             }
 
             return seats;
+        }
+
+        /// <summary>
+        /// A bot's avatar: one of the presets nobody in <paramref name="used"/> has, while there is
+        /// one, else any. One draw either way.
+        /// </summary>
+        public static int DrawAvatar(IRandom rng, ICollection<int> used)
+        {
+            var free = new List<int>(AvatarCount);
+            for (int avatar = 0; avatar < AvatarCount; avatar++)
+            {
+                if (!used.Contains(avatar))
+                {
+                    free.Add(avatar);
+                }
+            }
+
+            return free.Count > 0 ? free[rng.NextInt(free.Count)] : rng.NextInt(AvatarCount);
         }
 
         /// <summary>A fresh name for a bot that takes over a seat or fills an empty one.</summary>

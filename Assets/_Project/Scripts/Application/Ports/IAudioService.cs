@@ -8,6 +8,8 @@ namespace Callbreak.Application.Ports
         CardPlay,
         TrickCollect,
         CallConfirm,
+
+        /// <summary>Not played since ADR 041 (no sound when the player's turn comes); kept so the cues keep their numbers.</summary>
         YourTurn,
         TimerTick,
         CallMet,

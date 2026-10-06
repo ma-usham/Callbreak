@@ -91,6 +91,12 @@ namespace Callbreak.Presentation.Screens
             _seat[index].Show(filled, playerName, status);
         }
 
+        /// <summary>A filled seat's portrait (ADR 041); a null keeps the one it shows.</summary>
+        public void SetSeatAvatar(int index, Sprite avatar)
+        {
+            _seat[index].SetAvatar(avatar);
+        }
+
         /// <summary>With Reduce motion a seat that fills only fades its player in, and the pill's time just changes (GDD §14).</summary>
         public void SetReduceMotion(bool on)
         {

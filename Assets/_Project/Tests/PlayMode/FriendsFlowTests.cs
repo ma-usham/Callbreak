@@ -30,6 +30,9 @@ namespace Callbreak.Tests.PlayMode
         private Clipboard _clipboard;
         private ScreenKeyboard _keyboard;
 
+        // The profile's clock: a saved name stays 7 days (ADR 041), so a test that renames twice moves it on.
+        private System.DateTime _now;
+
         [SetUp]
         public void SetUp()
         {
@@ -37,6 +40,7 @@ namespace Callbreak.Tests.PlayMode
             _rooms = new Rooms();
             _clipboard = new Clipboard();
             _keyboard = new ScreenKeyboard();
+            _now = new System.DateTime(2026, 10, 6, 12, 0, 0, System.DateTimeKind.Utc);
         }
 
         [UnityTearDown]
@@ -63,10 +67,11 @@ namespace Callbreak.Tests.PlayMode
             yield return null;
             Assert.AreEqual("Bartholomew's Table", NameField(router).text);
 
-            // A name the player typed stays theirs.
+            // A name the player typed stays theirs, through a rename a week later (ADR 041: not sooner).
             field = NameField(router);
             field.text = "Friday Cards";
             Assert.IsTrue(router.Back());
+            _now += ProfileService.NameChangeInterval;
             Assert.AreEqual(NameCheck.Ok, profile.TrySetDisplayName("Asha"));
             GameFixture.Press(router, "CreateButton");
             yield return null;
@@ -270,13 +275,19 @@ namespace Callbreak.Tests.PlayMode
 
         private IEnumerator Boot()
         {
-            yield return _game.Boot(extra: builder =>
-            {
-                builder.RegisterInstance<INetworkStatus>(new FixedNetwork(online: true));
-                builder.RegisterInstance<IRoomService>(_rooms);
-                builder.RegisterInstance<IClipboard>(_clipboard);
-                builder.RegisterInstance<IOnScreenKeyboard>(_keyboard);
-            });
+            // The profile over the test's save folder, on the test's clock; an instance, since a
+            // second factory for the same contract is refused by the container.
+            ProfileService profile = null;
+            yield return _game.Boot(
+                seed: saves => profile = new ProfileService(saves, new NameFilter(), () => _now),
+                extra: builder =>
+                {
+                    builder.RegisterInstance<INetworkStatus>(new FixedNetwork(online: true));
+                    builder.RegisterInstance<IRoomService>(_rooms);
+                    builder.RegisterInstance<IClipboard>(_clipboard);
+                    builder.RegisterInstance<IOnScreenKeyboard>(_keyboard);
+                    builder.RegisterInstance<IProfileService>(profile);
+                });
         }
 
         private static IEnumerator OpenCreateRoom(ScreenRouter router)

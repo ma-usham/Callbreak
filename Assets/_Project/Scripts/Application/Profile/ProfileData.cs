@@ -17,5 +17,11 @@ namespace Callbreak.Application.Profile
 
         /// <summary>The player has answered the name question at the start (ADR 022), even with "Player".</summary>
         public bool nameChosen;
+
+        /// <summary>
+        /// When a name was last saved on the Profile screen, in Unix seconds (UTC); 0 = never. The
+        /// next change waits 7 days from it (ADR 041).
+        /// </summary>
+        public long nameChangedAt;
     }
 }

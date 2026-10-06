@@ -81,8 +81,8 @@ $circle.Dispose(); $s.Dispose()
 $ring = [ArtTools]::Disc((Even (104 * $at2x)), [System.Drawing.Color]::FromArgb(255, 252, 251, 249))
 Save-Export $ring 'UI\UI_AvatarRing.png' 'UI\Avatars\UI_AvatarRing.png' 'ui' '' 'rebuilt' 'white disc behind the avatar; the mockup ring is plain white, not the ivory button'; $ring.Dispose()
 
-$avatar = Make-Sprite 'Avatar_Default' $parts.Avatar.W $parts.Avatar.W
-Save-Export $avatar 'Decor\Avatar_Default.png' 'UI\Avatars\Avatar_Default.png' 'avatar' '' 'IC-2' ''; $avatar.Dispose()
+# Avatar_Default is the owner's first portrait since ADR 041 (Kit/Decor/portraits.ps1): the
+# mockup's silhouette is no longer exported, so a run of this script cannot bring it back.
 
 $spade = Make-Sprite 'Icon_Spade_Gold' $parts.Spade.W $parts.Spade.H
 Save-Export $spade 'Icons\Icon_Spade_Gold.png' 'UI\Icons\Icon_Spade_Gold.png' 'icon' '' 'UI-7' ''; $spade.Dispose()

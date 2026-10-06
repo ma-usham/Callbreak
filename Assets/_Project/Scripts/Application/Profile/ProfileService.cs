@@ -11,7 +11,8 @@ namespace Callbreak.Application.Profile
     /// Display names are normalised (trimmed, inner runs of whitespace made one space, Unicode NFC)
     /// and must then be 3-16 characters (counted as Unicode code points) of letters from any script,
     /// with their combining marks, digits and single spaces, and pass the <see cref="NameFilter"/>.
-    /// A file from a newer app version is ignored and never overwritten.
+    /// A name saved on the Profile screen can be changed again after 7 days (ADR 041). A file from
+    /// a newer app version is ignored and never overwritten.
     /// </summary>
     public sealed class ProfileService : IProfileService
     {
@@ -20,18 +21,27 @@ namespace Callbreak.Application.Profile
         public const int MinNameLength = 3;
         public const int MaxNameLength = 16;
 
-        /// <summary>The avatar presets of the picker; 0 is the default silhouette.</summary>
+        /// <summary>The avatar presets of the picker, the five portraits of ADR 041.</summary>
         public const int AvatarPresetCount = 5;
+
+        /// <summary>How long a name saved on the Profile screen stays before it can be changed (ADR 041).</summary>
+        public static readonly TimeSpan NameChangeInterval = TimeSpan.FromDays(7);
+
+        // 9999-12-31 23:59:59 UTC, the last second DateTimeOffset can hold.
+        private const long MaxUnixSeconds = 253402300799L;
 
         private readonly ISaveStore _store;
         private readonly NameFilter _filter;
+        private readonly Func<DateTime> _utcNow;
         private readonly ProfileData _data;
         private readonly bool _readOnly;
 
-        public ProfileService(ISaveStore store, NameFilter nameFilter)
+        /// <param name="utcNow">The clock the 7 days are counted on; the system clock when null.</param>
+        public ProfileService(ISaveStore store, NameFilter nameFilter, Func<DateTime> utcNow = null)
         {
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _filter = nameFilter ?? throw new ArgumentNullException(nameof(nameFilter));
+            _utcNow = utcNow ?? (() => DateTime.UtcNow);
             ProfileData loaded = VersionedSave.Load<ProfileData>(store, SaveKey, ProfileData.CurrentVersion, d => d.schemaVersion, out _readOnly);
             _data = loaded ?? new ProfileData();
             Repair(_data);
@@ -58,14 +68,37 @@ namespace Callbreak.Application.Profile
         public NameCheck TrySetDisplayName(string candidate)
         {
             NameCheck check = Validate(candidate, out string name);
-            if (check == NameCheck.Ok)
+            if (check != NameCheck.Ok)
             {
-                _data.displayName = name;
-                _data.nameChosen = true;
-                Commit();
+                return check;
             }
 
+            if (NameChangeWait > TimeSpan.Zero)
+            {
+                return NameCheck.TooSoon;
+            }
+
+            _data.displayName = name;
+            _data.nameChosen = true;
+            _data.nameChangedAt = NowUnixSeconds();
+            Commit();
             return check;
+        }
+
+        public TimeSpan NameChangeWait
+        {
+            get
+            {
+                long changed = _data.nameChangedAt;
+                if (changed <= 0)
+                {
+                    return TimeSpan.Zero;
+                }
+
+                // A clock put back since the change never makes the wait longer than the interval.
+                long left = changed + (long)NameChangeInterval.TotalSeconds - Math.Max(NowUnixSeconds(), changed);
+                return left > 0 ? TimeSpan.FromSeconds(left) : TimeSpan.Zero;
+            }
         }
 
         public NameCheck ChooseName(string candidate)
@@ -297,6 +330,19 @@ namespace Callbreak.Application.Profile
             {
                 data.avatarId = 0;
             }
+
+            if (data.nameChangedAt < 0 || data.nameChangedAt > MaxUnixSeconds)
+            {
+                data.nameChangedAt = 0;
+            }
+        }
+
+        /// <summary>The clock's time in Unix seconds; a local time is turned into UTC first.</summary>
+        private long NowUnixSeconds()
+        {
+            DateTime now = _utcNow();
+            now = now.Kind == DateTimeKind.Local ? now.ToUniversalTime() : DateTime.SpecifyKind(now, DateTimeKind.Utc);
+            return new DateTimeOffset(now).ToUnixTimeSeconds();
         }
     }
 }

@@ -53,14 +53,9 @@ namespace Callbreak.Editor.Screens
                 ctx.Bound[$"_seatHold{i}"] = avatar.gameObject.AddComponent<LongPressArea>();
             }
 
-            if (ctx.Nodes.TryGetValue("SeatPicture0", out RectTransform picture))
-            {
-                Image face = picture.Find("Face")?.GetComponent<Image>();
-                if (face != null)
-                {
-                    ctx.Bound["_defaultAvatar"] = face.sprite;
-                }
-            }
+            // An empty seat shows the dashed circle of the matchmaking screen's seats still searching
+            // (ADR 041: no silhouette anywhere).
+            ctx.Bound["_emptySeat"] = UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Controls/UI_Seat_Searching.png", 0f);
 
             UnifySeatLabels(ctx, "SeatName");
             UnifySeatLabels(ctx, "SeatStatus");

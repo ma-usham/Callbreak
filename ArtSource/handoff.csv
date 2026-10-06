@@ -10,7 +10,7 @@ UI/UI_Shadow_Secondary.png,ui,836x278,150;0;150;0,00,rebuilt,review,blurred silh
 UI/UI_ButtonCircle_Normal.png,ui,212x212,,00,UI-5,review,made exactly round
 UI/UI_Shadow_Circle.png,ui,254x254,,00,rebuilt,review,blurred silhouette; offset y 4 mockup px, opacity 0.2; ring: y 6, 0.15
 UI/UI_AvatarRing.png,ui,240x240,,00,rebuilt,review,white disc behind the avatar; the mockup ring is plain white, not the ivory button
-Decor/Avatar_Default.png,avatar,222x222,,00,IC-2,review,
+Decor/Avatar_Default.png,avatar,512x512,,00 and every avatar,owner portrait 01-dhaka-topi (Kit/Decor/portraits.ps1),review,Assets: UI/Avatars/Avatar_Default.png. ADR 041: preset 0 (the picture a screen shows before it knows the player's); cut just inside its own gold ring; 512 x 512; mipmapped
 Icons/Icon_Spade_Gold.png,icon,166x180,,00,UI-7,review,
 Icons/Icon_Settings.png,icon,108x106,,00,extracted as image,review,ink moved to the mockup near-black; SVG (IC-1) drifted from the shape
 Icons/Icon_Shop.png,icon,108x90,,00,extracted as image,review,ink moved to the mockup near-black; SVG (IC-1) drifted from the shape
@@ -183,10 +183,10 @@ Decor/Deco_ProfileDivider.png,decor,1768x38,,14,UI-7 divider sheet a1,review,Ass
 Decor/Deco_ProfileDividerVertical.png,decor,32x670,,14,UI-7 divider sheet a1,review,Assets: UI/Decor/Deco_ProfileDividerVertical.png. vertical line with diamond
 Decor/Logo_Callbreak_NoFlag.png,decor,768x190,,07 08 09 10 16,UI-6 a1,review,Assets: UI/Decor/Logo_Callbreak_NoFlag.png. small logo without the flag from 08: dark PLAY TOGETHER and grey rules
 Decor/Deco_MountainFooter.png,decor,1058x216,,01,UI-7 a1,review,Assets: UI/Decor/Deco_MountainFooter.png. faint mountains along the bottom of the option cards; transparent overlay matted from a flat ivory ground
-Decor/Avatar_01.png,avatar,222x222,,14 (picker) and seats,IC-2 avatar sheet a1,review,Assets: UI/Avatars/Avatar_01.png. warm-grey variant; exact circle; silhouette sized like Avatar_Default
-Decor/Avatar_02.png,avatar,222x222,,14 (picker) and seats,IC-2 avatar sheet a1,review,Assets: UI/Avatars/Avatar_02.png. bronze variant
-Decor/Avatar_03.png,avatar,222x222,,14 (picker) and seats,IC-2 avatar sheet a1,review,Assets: UI/Avatars/Avatar_03.png. crimson variant
-Decor/Avatar_04.png,avatar,222x222,,14 (picker) and seats,IC-2 avatar sheet a1,review,Assets: UI/Avatars/Avatar_04.png. ivory variant with a thin brown outline
+Decor/Avatar_01.png,avatar,512x512,,14 (picker) and seats,owner portrait 02-crimson-braid (Kit/Decor/portraits.ps1),review,Assets: UI/Avatars/Avatar_01.png. ADR 041: preset 1; cut just inside its own gold ring; 512 x 512; mipmapped
+Decor/Avatar_02.png,avatar,512x512,,14 (picker) and seats,owner portrait 03-himalayan-cap (Kit/Decor/portraits.ps1),review,Assets: UI/Avatars/Avatar_02.png. ADR 041: preset 2; cut just inside its own gold ring; 512 x 512; mipmapped
+Decor/Avatar_03.png,avatar,512x512,,14 (picker) and seats,owner portrait 04-teal-shawl (Kit/Decor/portraits.ps1),review,Assets: UI/Avatars/Avatar_03.png. ADR 041: preset 3; cut just inside its own gold ring; 512 x 512; mipmapped
+Decor/Avatar_04.png,avatar,512x512,,14 (picker) and seats,owner portrait 05-indigo-jacket (Kit/Decor/portraits.ps1),review,Assets: UI/Avatars/Avatar_04.png. ADR 041: preset 4; cut just inside its own gold ring; 512 x 512; mipmapped
 Screens/PlayWithFriends/Deco_HeaderDivider_Line.png,ui,4x142,,01,rebuilt,review,type=rect fill=#917864
 Icons/Icon_Back.png,icon,92x90,,01 02 03 04 05 06 09 11 12 14 15 16,Icons_Kit S1 a1 (contact sheet; 1 attempt),review,"Assets: UI/Icons/Icon_Back.png. fitted to 01: outlines 0.09 px apart on average (0.40 px at the 98th percentile), overlap 0.989"
 Icons/Icon_Home.png,icon,100x100,,07 08 10 13,Icons_Kit S1 a1 (contact sheet; 1 attempt),review,"Assets: UI/Icons/Icon_Home.png. fitted to 08: outlines 0.15 px apart on average (0.43 px at the 98th percentile), overlap 0.983"
@@ -243,7 +243,7 @@ UI/UI_Radio_Off.png,ui,98x98,,15,Controls_Kit C3 a1 (contact sheet; 1 attempt),r
 UI/UI_Pill_RoomCode.png,ui,160x178,68;68;68;68,04,Controls_Kit C5 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Pill_RoomCode.png. ivory pill with beige bevel outline; empty; fit 4.8
 UI/UI_ReadyDot.png,ui,74x74,,04,Controls_Kit C3 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_ReadyDot.png. green disc in a white ring; fit 7.9-9.3
 UI/UI_Seat_Filled.png,ui,274x274,,05,Controls_Kit C4 a1 (contact sheet; 1 attempt),review,"Assets: UI/Controls/UI_Seat_Filled.png. silhouette on the pale disc, white and tan rings; fit 10.0-10.9"
-UI/UI_Seat_Searching.png,ui,272x272,,05,Controls_Kit C4 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Seat_Searching.png. pale silhouette in a dashed circle (36 dashes); fit 7.2
+UI/UI_Seat_Searching.png,ui,272x272,,05,Controls_Kit C4 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Seat_Searching.png. pale silhouette in a dashed circle (36 dashes); fit 7.2. ADR 041: the installed sprite keeps only the dashes (Kit/Decor/portraits.ps1 clears the silhouette; this export keeps it)
 UI/UI_Pill_Highlight.png,ui,120x104,53;0;53;0,12,Controls_Kit C5 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Pill_Highlight.png. pale pill with gold outline; empty; fit 10.5
 UI/UI_Disc_Number.png,ui,142x142,,12,Controls_Kit C3 a1 (contact sheet; 1 attempt),review,Assets: UI/Controls/UI_Disc_Number.png. satin crimson disc with white keyline; empty; fit 7.5-11.2
 UI/UI_Button_Crimson.png,ui,336x220,160;0;160;0,01 04 06 07 09 10 11 12 14 15 16,Controls_Kit C7 a1 (contact sheet; 1 attempt),review,"Assets: UI/Controls/UI_Button_Crimson.png. plain crimson call-to-action pill (no gold rim) with a woven cluster at each end; sliced left and right, scaled to the node's height; fit 7.7 (06) to 24.7 (10), 28.1 on 07"
