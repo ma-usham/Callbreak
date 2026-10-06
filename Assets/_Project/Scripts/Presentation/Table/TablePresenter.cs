@@ -90,7 +90,12 @@ namespace Callbreak.Presentation.Table
         private readonly List<string> _emotePhrases = new List<string>(6);
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
+        // Which shuffle each deal shows, and how it varies (ADR 039). Only the look: the cards dealt
+        // come from the match, never from this.
+        private readonly System.Random _shuffleRandom = new System.Random();
+
         private CardFlight _optimistic;
+        private ShuffleStyle? _lastShuffle;
         private OpponentHandView[] _fans;
         private double _lastNow;
         private double _dealSoundAt = double.NaN;
@@ -628,8 +633,9 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>
         /// The shuffle in the middle of the table, then the deal from that deck (ADR 022): the
-        /// scene's 52 cards lie there face down, are riffled to the shuffle's sound, and leave the
-        /// top of the deck one at a time.
+        /// scene's 52 cards lie there face down, are shuffled to the shuffle's sound in one of four
+        /// ways, chosen at random and never the one before (ADR 039), and leave the top of the deck
+        /// one at a time.
         /// </summary>
         private IEventAnimation CreateDeal()
         {
@@ -648,8 +654,10 @@ namespace Callbreak.Presentation.Table
             var deck = new DeckPile(
                 _view.Cards, _view.Trick.Area, _skin.Back(_renderer.LocalDeck), _dealOrder.Count * TableView.SeatCount, _view.Trick.Slot(0).Scale);
             var deal = new DealAnimation(_view.Cards, _view.Hand, deck, targets, first, step, _dealOrder, FaceOf, OnCardDealt);
+            ShuffleStyle style = ShuffleStyles.Next(_lastShuffle, _shuffleRandom);
+            _lastShuffle = style;
             return new InOrder()
-                .Then(new ShuffleAnimation(deck, PlayShuffleSound))
+                .Then(ShuffleStyles.Create(style, deck, PlayShuffleSound, _shuffleRandom))
                 .Then(deal);
         }
 

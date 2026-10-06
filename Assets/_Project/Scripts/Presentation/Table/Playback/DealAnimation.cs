@@ -65,8 +65,8 @@ namespace Callbreak.Presentation.Table.Playback
     /// <summary>
     /// The deck in the middle of the table while a round is dealt (ADR 022): the cards of the deal,
     /// face down on the felt in the table's perspective, each a hair above the one below. The
-    /// shuffle riffles them; the deal takes them from the top, one at a time, so the deck gets
-    /// smaller as the hands fill.
+    /// shuffle (one of <see cref="ShuffleStyles"/>) puts them in a new order; the deal takes them
+    /// from the top, one at a time, so the deck gets smaller as the hands fill.
     /// </summary>
     public sealed class DeckPile
     {
