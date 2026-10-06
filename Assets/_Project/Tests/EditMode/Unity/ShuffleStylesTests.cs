@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Callbreak.Tests.EditMode.Unity
 {
     /// <summary>
-    /// The shuffles before a deal (the owner, 6 Oct 2026: "add some random shuffle"; ADR 039): four
+    /// The shuffles before a deal (the owner, 6 Oct 2026: "add some random shuffle", then "add other 2 kind"; ADR 039): six
     /// styles, picked at random and never twice in a row. Each lasts as long as the riffle did,
     /// sounds once, and leaves the 52 cards squared in the middle of the table in a new order, the
     /// top card drawn last, ready to be dealt; also when it is cut short. They use the table
@@ -19,7 +19,7 @@ namespace Callbreak.Tests.EditMode.Unity
         private const string TablePrefab = "Assets/_Project/Prefabs/UI/Screens/Table.prefab";
         private const float Frame = 1f / 60f;
 
-        private static readonly ShuffleStyle[] Styles = { ShuffleStyle.Riffle, ShuffleStyle.Overhand, ShuffleStyle.Cut, ShuffleStyle.Wash };
+        private static readonly ShuffleStyle[] Styles = { ShuffleStyle.Riffle, ShuffleStyle.Overhand, ShuffleStyle.Cut, ShuffleStyle.Wash, ShuffleStyle.Fan, ShuffleStyle.Pinwheel };
 
         private GameObject _table;
         private TableView _view;
@@ -41,7 +41,7 @@ namespace Callbreak.Tests.EditMode.Unity
         }
 
         [Test]
-        public void TheStyles_AreTheRiffleOverhandCutAndWash()
+        public void TheStyles_AreTheRiffleOverhandCutWashFanAndPinwheel()
         {
             CollectionAssert.AreEqual(Styles, ShuffleStyles.All);
             Assert.IsInstanceOf<ShuffleAnimation>(ShuffleStyles.Create(ShuffleStyle.Riffle, NewDeck(), null, null), "the riffle is the one the game had");

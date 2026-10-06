@@ -2696,8 +2696,9 @@ namespace Callbreak.Editor
                         {
                             Check(!_bidding.IsPanelShown, "the call panel is hidden on another seat's call turn");
                             TMP_Text calling = Field<TMP_Text>(_bidding, "_callingText");
-                            Check(calling.gameObject.activeSelf, "the centre says who is calling");
-                            Equal(_text.Format("ui.bidding.calling", _active.Seats[(int)turn.Seat].Name), calling.text, "\"{name} is calling…\"");
+                            Check(!calling.gameObject.activeSelf, "the middle of the table stays clear while another seat calls (ADR 040)");
+                            Check(_table.Prompt.IsShowing, "the prompt above the hand says who is calling");
+                            Equal(_text.Format("ui.bidding.calling", _active.Seats[(int)turn.Seat].Name), _table.Prompt.Text, "\"{name} is calling…\" in the prompt");
                             Equal(_text.Get("ui.seat.calling"), StatusOf(turn.Seat), "the caller's pill reads \"Calling…\"");
                         }
 

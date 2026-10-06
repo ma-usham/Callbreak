@@ -25,6 +25,12 @@ namespace Callbreak.Presentation.Table.Playback
 
         /// <summary>The cards spread over the felt, swirl round and gather into a deck.</summary>
         Wash = 3,
+
+        /// <summary>The deck spreads into an arc across the felt and sweeps closed from a cut.</summary>
+        Fan = 4,
+
+        /// <summary>The cards bloom into a wheel round the middle, turn, and fold back into a deck.</summary>
+        Pinwheel = 5,
     }
 
     /// <summary>Picks the shuffle for a deal and builds its animation.</summary>
@@ -33,7 +39,7 @@ namespace Callbreak.Presentation.Table.Playback
         /// <summary>Every style, in <see cref="ShuffleStyle"/> order.</summary>
         public static IReadOnlyList<ShuffleStyle> All { get; } = new ReadOnlyCollection<ShuffleStyle>(new[]
         {
-            ShuffleStyle.Riffle, ShuffleStyle.Overhand, ShuffleStyle.Cut, ShuffleStyle.Wash,
+            ShuffleStyle.Riffle, ShuffleStyle.Overhand, ShuffleStyle.Cut, ShuffleStyle.Wash, ShuffleStyle.Fan, ShuffleStyle.Pinwheel,
         });
 
         /// <summary>A style chosen at random: any for the first deal, else any but <paramref name="last"/>.</summary>
@@ -66,6 +72,10 @@ namespace Callbreak.Presentation.Table.Playback
                     return new CutShuffle(pile, onShuffle, random);
                 case ShuffleStyle.Wash:
                     return new WashShuffle(pile, onShuffle, random);
+                case ShuffleStyle.Fan:
+                    return new FanShuffle(pile, onShuffle, random);
+                case ShuffleStyle.Pinwheel:
+                    return new PinwheelShuffle(pile, onShuffle, random);
                 default:
                     return new ShuffleAnimation(pile, onShuffle);
             }
@@ -623,6 +633,274 @@ namespace Callbreak.Presentation.Table.Playback
                 {
                     card.Placement = CardPlacement.Lerp(OnFelt(i, 1f), _pile.Resting(_newIndex[i]), ShuffleMotion.Phase(time, SwirlEnd, ShuffleAnimation.Seconds, Ease.OutCubic));
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The fan: the deck spreads from left to right into an arc across the felt, each card splayed
+    /// a little more towards the ends, and holds a beat; then it sweeps closed from a cut, the cards
+    /// from the cut to the right end first and those from the left end to the cut on top of them.
+    /// </summary>
+    public sealed class FanShuffle : IEventAnimation
+    {
+        private const float SpreadStagger = 0.12f;
+        private const float SpreadSeconds = 0.26f;
+        private const float CloseStart = 0.68f;
+        private const float CloseStagger = 0.28f;
+        private const float CloseSeconds = 0.14f;
+        private const float HalfWidth = 150f;
+        private const float Arch = 22f;
+        private const float Splay = 20f;
+
+        private readonly DeckPile _pile;
+        private readonly Action _onShuffle;
+        private readonly System.Random _random;
+        private readonly List<CardView> _order = new List<CardView>(52);
+        private int[] _newIndex = Array.Empty<int>();
+        private int _raised;
+        private bool _sounded;
+        private bool _finished;
+        private float _elapsed;
+
+        public FanShuffle(DeckPile pile, Action onShuffle, System.Random random)
+        {
+            _pile = pile;
+            _onShuffle = onShuffle;
+            _random = random;
+        }
+
+        public float Duration => ShuffleAnimation.Seconds;
+
+        public void Begin()
+        {
+            int count = _pile.Count;
+            int cut = count < 4 ? count / 2 : (_random != null ? _random.Next(count / 4, (3 * count / 4) + 1) : count / 2);
+            _newIndex = new int[count];
+            _order.Clear();
+            for (int k = 0; k < count; k++)
+            {
+                int index = (cut + k) % count;
+                _newIndex[index] = k;
+                _order.Add(_pile[index]);
+            }
+
+            Apply(0f);
+        }
+
+        public bool Tick(float deltaTime)
+        {
+            _elapsed += deltaTime;
+            Apply(_elapsed);
+            if (_elapsed < ShuffleAnimation.Seconds)
+            {
+                return false;
+            }
+
+            Finish();
+            return true;
+        }
+
+        public void Finish()
+        {
+            if (_finished)
+            {
+                return;
+            }
+
+            _finished = true;
+            if (_order.Count != _pile.Count)
+            {
+                Begin();
+            }
+
+            ShuffleMotion.Square(_pile, _order);
+        }
+
+        private float Along(int index) => _pile.Count > 1 ? index / (_pile.Count - 1f) : 0.5f;
+
+        /// <summary>A card's place in the open fan: along the arc, its middle a little higher than its ends.</summary>
+        private CardPlacement Fanned(int index)
+        {
+            float u = (2f * Along(index)) - 1f;
+            CardPlacement rest = _pile.Resting(index);
+            return new CardPlacement(new Vector2(u * HalfWidth, Arch * (0.5f - (u * u))), rest.Rotation - (Splay * u), rest.Scale, rest.Flat);
+        }
+
+        private float CloseAt(int newIndex) => CloseStart + (CloseStagger * (_pile.Count > 1 ? newIndex / (_pile.Count - 1f) : 0f));
+
+        private void Apply(float time)
+        {
+            if (time < ShuffleMotion.AppearEnd)
+            {
+                ShuffleMotion.Appear(_pile, time);
+                return;
+            }
+
+            if (!_sounded)
+            {
+                _sounded = true;
+                _onShuffle?.Invoke();
+            }
+
+            // Each card that leaves the fan lands on the ones before it.
+            while (_raised < _order.Count && time >= CloseAt(_raised))
+            {
+                _order[_raised].Rect.SetAsLastSibling();
+                _raised++;
+            }
+
+            for (int i = 0; i < _pile.Count; i++)
+            {
+                CardView card = _pile[i];
+                card.SetAlpha(1f);
+                CardPlacement fanned = Fanned(i);
+                float close = CloseAt(_newIndex[i]);
+                if (time < close)
+                {
+                    float spread = ShuffleMotion.AppearEnd + (SpreadStagger * Along(i));
+                    card.Placement = CardPlacement.Lerp(_pile.Resting(i), fanned, ShuffleMotion.Phase(time, spread, spread + SpreadSeconds, Ease.OutCubic));
+                }
+                else
+                {
+                    card.Placement = CardPlacement.Lerp(fanned, _pile.Resting(_newIndex[i]), ShuffleMotion.Phase(time, close, close + CloseSeconds, Ease.OutQuad));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The pinwheel: the cards bloom into a wheel round the middle, each turned a step further than
+    /// the one below, the wheel turns a little, and the cards fold back into a deck one after
+    /// another, the top card first, so the deck ends upside down.
+    /// </summary>
+    public sealed class PinwheelShuffle : IEventAnimation
+    {
+        private const float BloomEnd = 0.55f;
+        private const float SpinEnd = 0.78f;
+        private const float FoldStagger = 0.18f;
+        private const float FoldSeconds = 0.14f;
+        private const float Spin = 60f;
+        private const float Bloom = 14f;
+
+        private readonly DeckPile _pile;
+        private readonly Action _onShuffle;
+        private readonly System.Random _random;
+        private readonly List<CardView> _order = new List<CardView>(52);
+        private float _turnSign = 1f;
+        private int _raised;
+        private bool _sounded;
+        private bool _finished;
+        private float _elapsed;
+
+        public PinwheelShuffle(DeckPile pile, Action onShuffle, System.Random random)
+        {
+            _pile = pile;
+            _onShuffle = onShuffle;
+            _random = random;
+        }
+
+        public float Duration => ShuffleAnimation.Seconds;
+
+        public void Begin()
+        {
+            int count = _pile.Count;
+            _turnSign = _random != null && _random.Next(2) == 0 ? -1f : 1f;
+            _order.Clear();
+            for (int i = count - 1; i >= 0; i--)
+            {
+                _order.Add(_pile[i]);
+            }
+
+            Apply(0f);
+        }
+
+        public bool Tick(float deltaTime)
+        {
+            _elapsed += deltaTime;
+            Apply(_elapsed);
+            if (_elapsed < ShuffleAnimation.Seconds)
+            {
+                return false;
+            }
+
+            Finish();
+            return true;
+        }
+
+        public void Finish()
+        {
+            if (_finished)
+            {
+                return;
+            }
+
+            _finished = true;
+            if (_order.Count != _pile.Count)
+            {
+                Begin();
+            }
+
+            ShuffleMotion.Square(_pile, _order);
+        }
+
+        /// <summary>A card on the open wheel: turned to its spoke (and <paramref name="spin"/> degrees more), slid out along it.</summary>
+        private CardPlacement Open(int index, float spin)
+        {
+            CardPlacement rest = _pile.Resting(index);
+            float angle = (_turnSign * index * 360f / Math.Max(1, _pile.Count)) + (_turnSign * spin);
+            float radians = angle * Mathf.Deg2Rad;
+            var outward = new Vector2(-Mathf.Sin(radians), Mathf.Cos(radians)) * Bloom;
+            return new CardPlacement(rest.Position + outward, rest.Rotation + angle, rest.Scale, rest.Flat);
+        }
+
+        private float FoldAt(int newIndex) => SpinEnd + (FoldStagger * (_pile.Count > 1 ? newIndex / (_pile.Count - 1f) : 0f));
+
+        private void Apply(float time)
+        {
+            if (time < ShuffleMotion.AppearEnd)
+            {
+                ShuffleMotion.Appear(_pile, time);
+                return;
+            }
+
+            if (!_sounded)
+            {
+                _sounded = true;
+                _onShuffle?.Invoke();
+            }
+
+            while (_raised < _order.Count && time >= FoldAt(_raised))
+            {
+                _order[_raised].Rect.SetAsLastSibling();
+                _raised++;
+            }
+
+            int count = _pile.Count;
+            for (int i = 0; i < count; i++)
+            {
+                CardView card = _pile[i];
+                card.SetAlpha(1f);
+                if (time < BloomEnd)
+                {
+                    card.Placement = CardPlacement.Lerp(_pile.Resting(i), Open(i, 0f), ShuffleMotion.Phase(time, ShuffleMotion.AppearEnd, BloomEnd, Ease.OutCubic));
+                    continue;
+                }
+
+                int newIndex = count - 1 - i;
+                float fold = FoldAt(newIndex);
+                if (time < fold)
+                {
+                    card.Placement = Open(i, Spin * ShuffleMotion.Phase(time, BloomEnd, SpinEnd, Ease.InOutSine));
+                    continue;
+                }
+
+                // Back the short way round to the deck's own slight angle.
+                CardPlacement open = Open(i, Spin);
+                CardPlacement squared = _pile.Resting(newIndex);
+                float turn = squared.Rotation + (360f * Mathf.Round((open.Rotation - squared.Rotation) / 360f));
+                var target = new CardPlacement(squared.Position, turn, squared.Scale, squared.Flat);
+                card.Placement = CardPlacement.Lerp(open, target, ShuffleMotion.Phase(time, fold, fold + FoldSeconds, Ease.OutQuad));
             }
         }
     }

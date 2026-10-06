@@ -12,8 +12,8 @@ namespace Callbreak.Presentation.Table
     /// on the local seat's call turn: chips from the rule set's lowest to highest call with nothing
     /// chosen, and a Confirm button that stays disabled until a chip is chosen. As the turn begins
     /// the panel rises into place (ADR 023); once the call is placed it slides away, the same way
-    /// back. Before that turn the centre of the table reads "Asha is
-    /// calling…". A call that is refused puts its reason where the subtitle is. With the beginner
+    /// back. Before that turn the prompt above the hand reads "Asha is
+    /// calling…" (ADR 040). A call that is refused puts its reason where the subtitle is. With the beginner
     /// assist on, a faint dot marks the suggested call. The table itself (HUD, seats, hand) is the
     /// <see cref="TableView"/> underneath.
     /// </summary>
@@ -232,7 +232,10 @@ namespace Callbreak.Presentation.Table
             }
         }
 
-        /// <summary>"Asha is calling…" in the middle of the table; null or empty hides it.</summary>
+        /// <summary>
+        /// "Asha is calling…" in the middle of the table; null or empty hides it. Since 6 Oct 2026 the
+        /// prompt above the hand says it instead and this line stays hidden (ADR 040).
+        /// </summary>
         public void SetCalling(string text)
         {
             bool show = !string.IsNullOrEmpty(text);

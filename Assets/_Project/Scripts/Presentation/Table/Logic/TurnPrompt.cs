@@ -65,7 +65,7 @@ namespace Callbreak.Presentation.Table
             return localization.Get(YouLeadKey);
         }
 
-        /// <summary>The centre of the table while another seat is calling: "Asha is calling…".</summary>
+        /// <summary>The prompt above the hand while another seat is calling: "Asha is calling…" (ADR 040).</summary>
         public static string Calling(string seatName, ILocalization localization)
         {
             Require(localization);

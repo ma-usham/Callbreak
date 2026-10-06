@@ -633,7 +633,7 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>
         /// The shuffle in the middle of the table, then the deal from that deck (ADR 022): the
-        /// scene's 52 cards lie there face down, are shuffled to the shuffle's sound in one of four
+        /// scene's 52 cards lie there face down, are shuffled to the shuffle's sound in one of six
         /// ways, chosen at random and never the one before (ADR 039), and leave the top of the deck
         /// one at a time.
         /// </summary>
@@ -733,12 +733,28 @@ namespace Callbreak.Presentation.Table
         }
 
         /// <summary>
-        /// The prompt above the hand during play (GDD screen 08 "TURN PROMPT COPY"). While calling,
-        /// the call panel and "Asha is calling…" speak instead.
+        /// The prompt above the hand (GDD screen 08 "TURN PROMPT COPY"). During play it names or
+        /// explains the turn. While another seat calls it says "Asha is calling…", where the tips
+        /// show (the owner, 6 Oct 2026, ADR 040: it stood in the middle of the table); on the local
+        /// call turn the call panel speaks instead.
         /// </summary>
         private void RenderPrompt()
         {
             TableState state = State;
+            if (state.Phase == TablePhase.Calling)
+            {
+                if (state.HasTurn && !state.IsLocalCallTurn)
+                {
+                    ShowPrompt(TurnPrompt.Calling(_renderer.NameOf(state.TurnSeat), _localization));
+                }
+                else
+                {
+                    _view.Prompt.Hide();
+                }
+
+                return;
+            }
+
             if (state.Phase != TablePhase.Playing)
             {
                 _view.Prompt.Hide();
