@@ -7,6 +7,7 @@ using Callbreak.Application.Matchmaking;
 using Callbreak.Application.Online;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
+using Callbreak.Application.Recording;
 using Callbreak.Application.Rooms;
 using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
@@ -17,6 +18,7 @@ using Callbreak.Infrastructure.Audio;
 using Callbreak.Infrastructure.Localization;
 using Callbreak.Infrastructure.Persistence;
 using Callbreak.Infrastructure.Platform;
+using Callbreak.Infrastructure.Recording;
 using Callbreak.Infrastructure.Services;
 using Callbreak.Networking.Eos;
 using Callbreak.Presentation.Feedback;
@@ -74,6 +76,9 @@ namespace Callbreak.Bootstrap
 
             // No Ads (the owner, 5 Oct 2026): the one-time purchase that removes the ads between matches.
             RegisterPurchases(builder);
+
+            // Session recording (the owner, 7 Oct 2026): Smartlook, once the player's privacy choice allows it.
+            RegisterSessionRecording(builder);
 
             // Stake Match (the owner, 5 Oct 2026): the online match the player chose on Play Online
             // (Quick Match until a stake is picked), and the stakes taken and prizes paid, by match.
@@ -150,7 +155,9 @@ namespace Callbreak.Bootstrap
 #if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
             string adUnit = AdMobIds.RewardedAdUnit(UnityEngine.Application.platform == RuntimePlatform.IPhonePlayer, Debug.isDebugBuild);
             var privacy = new AdMobAdPrivacy();
-            builder.RegisterInstance<IAdPrivacy>(privacy);
+
+            // Also as itself: the session recording hears its refreshes (RegisterSessionRecording).
+            builder.RegisterInstance(privacy).As<IAdPrivacy>().AsSelf();
             var rewarded = new AdMobRewardedAdNetwork(adUnit, privacy);
             builder.Register<IRewardedAds>(
                 _ => new PreloadedRewardedAds(rewarded, () => System.DateTime.UtcNow, Debug.Log),
@@ -193,6 +200,36 @@ namespace Callbreak.Bootstrap
 #else
             builder.Register<StandInNoAds>(Lifetime.Singleton).As<INoAds>();
 #endif
+        }
+
+        /// <summary>
+        /// Session recording (the owner, 7 Oct 2026; ADR 044). On Android phones with a Smartlook
+        /// project key (<see cref="SmartlookProject"/>), Smartlook records the session once the
+        /// player's privacy choice in Google's consent form allows it, and stops when it no longer
+        /// does: the choice is read from UMP after each refresh of the ads' privacy options. It is
+        /// built with the scope, so a choice from an earlier session starts it at launch. Release and
+        /// development builds alike. In the Editor, in the tests, on desktop, on iOS and without a key,
+        /// a stand-in that records nothing; the log says which, never with the key.
+        /// </summary>
+        private static void RegisterSessionRecording(IContainerBuilder builder)
+        {
+#if !UNITY_EDITOR && UNITY_ANDROID
+            if (!string.IsNullOrEmpty(SmartlookProject.ProjectKey))
+            {
+                // Registrations of their own, so the container disposes the adapters.
+                builder.Register<ISessionRecorder>(_ => new SmartlookSessionRecorder(SmartlookProject.ProjectKey), Lifetime.Singleton);
+                builder.Register<IRecordingConsent>(resolver => new UmpRecordingConsent(resolver.Resolve<AdMobAdPrivacy>()), Lifetime.Singleton);
+                builder.Register<ISessionRecording>(
+                    resolver => new SessionRecording(resolver.Resolve<ISessionRecorder>(), resolver.Resolve<IRecordingConsent>(), Debug.Log),
+                    Lifetime.Singleton);
+                builder.RegisterBuildCallback(resolver => resolver.Resolve<ISessionRecording>());
+                Debug.Log("Session recording: Smartlook, once the player's privacy choice allows it.");
+                return;
+            }
+
+            Debug.Log("Session recording: off (no Smartlook project key in SmartlookProject).");
+#endif
+            builder.Register<StandInSessionRecording>(Lifetime.Singleton).As<ISessionRecording>();
         }
 
         /// <summary>

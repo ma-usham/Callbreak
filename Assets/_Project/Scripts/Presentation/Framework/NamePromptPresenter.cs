@@ -2,6 +2,7 @@ using System;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
+using Callbreak.Application.Recording;
 using Callbreak.Application.Settings;
 using Callbreak.Presentation.Feedback;
 using VContainer.Unity;
@@ -16,7 +17,8 @@ namespace Callbreak.Presentation.Framework
     /// Save Changes gives the answer (ADR 043). The player picks a portrait in the grid (ADR 041),
     /// saved at the tap; the big portrait shows it, and the name under it follows what is typed
     /// ("Player" while the field is empty). Android back does nothing while it is up. Once answered,
-    /// the main menu shows the name.
+    /// the main menu shows the name. While it is up the session recording keeps no picture of the
+    /// screen, as the field holds the player's name (ADR 044).
     /// </summary>
     public sealed class NamePromptPresenter : IStartable, IDisposable, IBackHandler
     {
@@ -29,9 +31,11 @@ namespace Callbreak.Presentation.Framework
         private readonly IAudioService _audio;
         private readonly IOnScreenKeyboard _keyboard;
         private readonly AvatarLibrary _avatars;
+        private readonly ISessionRecording _recording;
 
         private string _draft = string.Empty;
         private bool _started;
+        private IDisposable _hiddenFromRecording;
 
         public NamePromptPresenter(
             NamePromptView view,
@@ -40,7 +44,8 @@ namespace Callbreak.Presentation.Framework
             ILocalization localization,
             IAudioService audio,
             IOnScreenKeyboard keyboard,
-            AvatarLibrary avatars)
+            AvatarLibrary avatars,
+            ISessionRecording recording)
         {
             _view = view;
             _profile = profile;
@@ -49,6 +54,7 @@ namespace Callbreak.Presentation.Framework
             _audio = audio;
             _keyboard = keyboard;
             _avatars = avatars;
+            _recording = recording;
         }
 
         public bool IsOpen => _started && _view.IsShowing;
@@ -66,6 +72,7 @@ namespace Callbreak.Presentation.Framework
             _view.KeyboardHeight = keyboard != null ? () => keyboard.Height : (Func<float>)null;
             if (FirstRun.AsksName(_profile))
             {
+                _hiddenFromRecording = _recording?.HideScreen();
                 _draft = string.Empty;
                 _view.ReduceMotion = _settings.ReduceMotion;
                 RenderAvatar();
@@ -87,6 +94,7 @@ namespace Callbreak.Presentation.Framework
             _view.Submitted -= OnSubmitted;
             _view.AvatarPicked -= OnAvatarPicked;
             _localization.LanguageChanged -= Render;
+            ShowToRecording();
         }
 
         /// <summary>The name has to be answered: back is kept from the menu underneath.</summary>
@@ -146,6 +154,14 @@ namespace Callbreak.Presentation.Framework
 
             _audio.Play(SoundCue.UiTap);
             _view.Hide();
+            ShowToRecording();
+        }
+
+        /// <summary>The name is no longer on screen: the session recording may see the screen again.</summary>
+        private void ShowToRecording()
+        {
+            _hiddenFromRecording?.Dispose();
+            _hiddenFromRecording = null;
         }
 
         /// <summary>Save Changes is offered once the name can be used; an empty field shows the note, not an error.</summary>

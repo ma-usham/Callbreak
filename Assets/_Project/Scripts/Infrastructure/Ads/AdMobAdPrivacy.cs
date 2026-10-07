@@ -33,11 +33,30 @@ namespace Callbreak.Infrastructure.Ads
         public event Action Changed;
 
         /// <summary>
+        /// Raised after every <see cref="Refresh"/>, whether or not the entry point changed: the
+        /// player's consent itself may have (the session recording reads it again, ADR 044).
+        /// </summary>
+        public event Action Refreshed;
+
+        /// <summary>
         /// Reads what UMP now says about the entry point, on the main thread once the consent
         /// information was updated or a form closed, and raises <see cref="Changed"/> when that
-        /// became known or changed.
+        /// became known or changed; then raises <see cref="Refreshed"/>.
         /// </summary>
         public void Refresh()
+        {
+            RefreshEntryPoint();
+            try
+            {
+                Refreshed?.Invoke();
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
+
+        private void RefreshEntryPoint()
         {
             PrivacyOptionsRequirementStatus status;
             try

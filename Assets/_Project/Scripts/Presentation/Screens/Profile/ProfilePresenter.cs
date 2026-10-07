@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
+using Callbreak.Application.Recording;
 using Callbreak.Application.Settings;
 using Callbreak.Core.Scoring;
 using Callbreak.Presentation.Feedback;
@@ -17,7 +18,8 @@ namespace Callbreak.Presentation.Screens
     /// says that it then stays 7 days (ADR 041); while it stays, the field takes no typing, its line
     /// says how long, and a tap on the field nudges that line. The pencil (or the avatar) opens the avatar picker: a tap on a portrait
     /// saves it at once, Done, a tap beside the panel or Android back closes it. The screen rises
-    /// above the device's keyboard while the name field has it.
+    /// above the device's keyboard while the name field has it. While it is on top the session
+    /// recording keeps no picture of the screen, as the field holds the player's name (ADR 044).
     /// </summary>
     public sealed class ProfilePresenter : IStartable, IDisposable
     {
@@ -30,8 +32,10 @@ namespace Callbreak.Presentation.Screens
         private readonly AvatarLibrary _avatars;
         private readonly ISettingsService _settings;
         private readonly IOnScreenKeyboard _keyboard;
+        private readonly ISessionRecording _recording;
 
         private string _draft = string.Empty;
+        private IDisposable _hiddenFromRecording;
 
         public ProfilePresenter(
             ProfileView view,
@@ -42,7 +46,8 @@ namespace Callbreak.Presentation.Screens
             IToast toast,
             AvatarLibrary avatars,
             ISettingsService settings,
-            IOnScreenKeyboard keyboard)
+            IOnScreenKeyboard keyboard,
+            ISessionRecording recording)
         {
             _view = view;
             _router = router;
@@ -53,6 +58,7 @@ namespace Callbreak.Presentation.Screens
             _avatars = avatars;
             _settings = settings;
             _keyboard = keyboard;
+            _recording = recording;
         }
 
         public void Start()
@@ -93,16 +99,31 @@ namespace Callbreak.Presentation.Screens
             _stats.Changed -= RenderStats;
             _localization.LanguageChanged -= RenderAll;
             _settings.Changed -= RenderMotion;
+            HideFromRecording(false);
         }
 
         private void RenderMotion() => _view.ReduceMotion = _settings.ReduceMotion;
 
         private void OnScreenChanged(ScreenId id)
         {
+            HideFromRecording(id == ScreenId.Profile);
             if (id == ScreenId.Profile)
             {
                 RenderAll();
             }
+        }
+
+        /// <summary>Keeps the screen out of the session recording while the Profile screen, with the player's name, is on top.</summary>
+        private void HideFromRecording(bool hide)
+        {
+            if (hide)
+            {
+                _hiddenFromRecording = _hiddenFromRecording ?? _recording?.HideScreen();
+                return;
+            }
+
+            _hiddenFromRecording?.Dispose();
+            _hiddenFromRecording = null;
         }
 
         private void RenderAll()
