@@ -26,6 +26,8 @@
     <!-- Quick Match: what the search screen shows for a report, the seat order and the pill's time (the view and presenter are left out). -->
     <Compile Include="$(UnityScripts)\Presentation\Screens\Matchmaking\MatchmakingDisplay.cs" />
     <Compile Include="$(UnityScripts)\Presentation\Screens\Matchmaking\MatchmakingScreenState.cs" />
+    <!-- The Profile screen's words for the week a saved name stays (ADR 041). -->
+    <Compile Include="$(UnityScripts)\Presentation\Screens\Profile\NameWait.cs" />
     <ProjectReference Include="..\Callbreak.Core\Callbreak.Core.csproj" />
     <ProjectReference Include="..\Callbreak.Bots\Callbreak.Bots.csproj" />
     <ProjectReference Include="..\Callbreak.Application\Callbreak.Application.csproj" />
