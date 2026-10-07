@@ -260,9 +260,10 @@ namespace Callbreak.Editor
 
         /// <summary>
         /// The avatar presets: <c>Avatar_Default</c> is preset 0, then <c>Avatar_01</c>, <c>Avatar_02</c>...
-        /// as far as they exist in the avatar folder.
+        /// as far as they exist in the avatar folder; and each one framed in its gold ring,
+        /// <c>Avatar_Framed_00</c>, <c>Avatar_Framed_01</c>... (ADR 043).
         /// </summary>
-        private static AvatarLibrary EnsureAvatarLibrary()
+        public static AvatarLibrary EnsureAvatarLibrary()
         {
             const string path = "Assets/_Project/Config/UI/AvatarLibrary.asset";
             var library = AssetDatabase.LoadAssetAtPath<AvatarLibrary>(path);
@@ -297,6 +298,14 @@ namespace Callbreak.Editor
             for (int i = 0; i < sprites.Count; i++)
             {
                 list.GetArrayElementAtIndex(i).objectReferenceValue = sprites[i];
+            }
+
+            SerializedProperty framed = so.FindProperty("_framed");
+            framed.arraySize = sprites.Count;
+            for (int i = 0; i < sprites.Count; i++)
+            {
+                framed.GetArrayElementAtIndex(i).objectReferenceValue =
+                    AssetDatabase.LoadAssetAtPath<Sprite>($"{UiBuildKit.ArtRoot}/UI/Avatars/Avatar_Framed_{i:00}.png");
             }
 
             so.ApplyModifiedPropertiesWithoutUndo();

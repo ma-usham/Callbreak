@@ -10,11 +10,13 @@ namespace Callbreak.Presentation.Framework
 {
     /// <summary>
     /// Asks the player's name when the game starts (ADR 022), before anything else the menu does by
-    /// itself, until a name is chosen. The panel sits above the menu and its dialogs, so whatever
+    /// itself, until a name is chosen. The screen sits above the menu and its dialogs, so whatever
     /// else came up (the rules primer, an invite link, an offer to resume) waits underneath. The
-    /// name follows the Profile screen's rules and messages; keeping "Player" is an answer too.
-    /// Above the field the player picks an avatar (ADR 041), saved at the tap. Android back does
-    /// nothing while it is up. Once answered, the main menu shows the name.
+    /// name follows the Profile screen's rules and messages; keeping "Player" is an answer too, and
+    /// Save Changes gives the answer (ADR 043). The player picks a portrait in the grid (ADR 041),
+    /// saved at the tap; the big portrait shows it, and the name under it follows what is typed
+    /// ("Player" while the field is empty). Android back does nothing while it is up. Once answered,
+    /// the main menu shows the name.
     /// </summary>
     public sealed class NamePromptPresenter : IStartable, IDisposable, IBackHandler
     {
@@ -59,14 +61,15 @@ namespace Callbreak.Presentation.Framework
             _view.AvatarPicked += OnAvatarPicked;
             _localization.LanguageChanged += Render;
 
-            // The panel rises above the device's keyboard, so the field is never under it.
+            // The content rises above the device's keyboard, should it ever reach the field.
             IOnScreenKeyboard keyboard = _keyboard;
             _view.KeyboardHeight = keyboard != null ? () => keyboard.Height : (Func<float>)null;
             if (FirstRun.AsksName(_profile))
             {
                 _draft = string.Empty;
                 _view.ReduceMotion = _settings.ReduceMotion;
-                _view.SetAvatars(PictureOf, _profile.AvatarId);
+                RenderAvatar();
+                _view.SetPlayerName(NameShown());
                 _view.Show(_draft);
                 Render();
             }
@@ -92,7 +95,15 @@ namespace Callbreak.Presentation.Framework
         private void OnNameChanged(string text)
         {
             _draft = text ?? string.Empty;
+            _view.SetPlayerName(NameShown());
             Render();
+        }
+
+        /// <summary>The name under the portrait: what is typed, as it would be saved, or the current name while the field is empty.</summary>
+        private string NameShown()
+        {
+            string typed = ProfileService.NormalizeName(_draft);
+            return typed.Length > 0 ? typed : _profile.DisplayName;
         }
 
         /// <summary>The avatar is saved at the tap, whatever the name field holds.</summary>
@@ -105,10 +116,18 @@ namespace Callbreak.Presentation.Framework
 
             _audio.Play(SoundCue.UiTap);
             _profile.SetAvatar(index);
-            _view.SetAvatars(PictureOf, _profile.AvatarId);
+            RenderAvatar();
         }
 
-        private UnityEngine.Sprite PictureOf(int index) => _avatars != null ? _avatars.Get(index) : null;
+        /// <summary>The grid rings the player's portrait, and the big portrait shows it.</summary>
+        private void RenderAvatar()
+        {
+            _view.SetAvatars(PictureOf, _profile.AvatarId);
+            _view.SetAvatar(PictureOf(_profile.AvatarId));
+        }
+
+        /// <summary>A portrait in its gold ring, as the name screen shows them (ADR 043).</summary>
+        private UnityEngine.Sprite PictureOf(int index) => _avatars != null ? _avatars.Framed(index) : null;
 
         private void OnSubmitted()
         {
@@ -129,7 +148,7 @@ namespace Callbreak.Presentation.Framework
             _view.Hide();
         }
 
-        /// <summary>Continue is offered once the name can be used; an empty field shows the note, not an error.</summary>
+        /// <summary>Save Changes is offered once the name can be used; an empty field shows the note, not an error.</summary>
         private void Render()
         {
             if (!IsOpen)
@@ -142,7 +161,7 @@ namespace Callbreak.Presentation.Framework
 
         private void RenderCheck(NameCheck check, bool explain)
         {
-            _view.SetContinueInteractable(Accepts(check));
+            _view.SetSaveInteractable(Accepts(check));
             string error = explain ? ErrorKey(check) : null;
             _view.SetMessage(_localization.Get(error ?? NoteKey), error != null);
         }

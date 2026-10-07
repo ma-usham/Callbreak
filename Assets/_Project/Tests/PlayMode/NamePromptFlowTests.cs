@@ -7,6 +7,7 @@ using Callbreak.Presentation.Screens;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using VContainer;
@@ -15,7 +16,10 @@ namespace Callbreak.Tests.PlayMode
 {
     /// <summary>
     /// ADR 022: the game asks the player's name when it starts, until one is chosen, and the main
-    /// menu then shows it. The real Boot and Menu scenes, with saves in a temporary folder.
+    /// menu then shows it. ADR 043: on the screen of the owner's mockup 22, with the name field at
+    /// the top, where a phone's keyboard leaves it in sight; the keyboard waits for a tap on the
+    /// field, its Done only puts it away, and Save Changes answers. The real Boot and Menu scenes,
+    /// with saves in a temporary folder.
     /// </summary>
     public sealed class NamePromptFlowTests
     {
@@ -42,8 +46,8 @@ namespace Callbreak.Tests.PlayMode
             ScreenRouter router = _game.MenuRouter;
             HowToPlayView rules = router.Get<HowToPlayView>(ScreenId.HowToPlay);
 
-            Button next = Continue(prompt);
-            Assert.IsFalse(next.interactable, "Continue waits for a name");
+            Button next = Save(prompt);
+            Assert.IsFalse(next.interactable, "Save Changes waits for a name");
             yield return null;
             Assert.AreEqual(ScreenId.HowToPlay, router.Current, "the app opens on How to Play's background and logo, not the main menu");
             Assert.IsFalse(rules.RulesVisible, "the rules do not show behind the name question");
@@ -102,22 +106,57 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator TheKeyboard_LiftsTheQuestion_SoTheFieldStaysAboveIt()
+        public IEnumerator TheField_SitsAboveASidewaysKeyboard_AndOnlyATallerOneLiftsTheScreen()
         {
-            // A phone held sideways: the keyboard covers 60% of the screen, over the middle where the field is.
+            // A phone held sideways: the keyboard covers 60% of the screen. The field is at the top
+            // of the panel (the owner, 7 Oct 2026), so it stays in sight and nothing moves.
             yield return _game.Boot(freshInstall: true);
             NamePromptView prompt = Prompt();
             yield return GameFixture.Until(() => prompt.IsShowing, "the name question to open");
             var field = (RectTransform)prompt.GetComponentInChildren<TMP_InputField>(true).transform;
             float keyboard = Screen.height * 0.6f;
-            Assert.Less(Edge(field, 0), keyboard, "at rest the keyboard would cover the field");
+            Assert.Greater(Edge(field, 0), keyboard, "at rest the field is above the keyboard");
 
             prompt.KeyboardHeight = () => keyboard;
-            yield return GameFixture.Until(() => prompt.Lift > 0f && Edge(field, 0) > keyboard, "the question to rise until the field is above the keyboard");
+            yield return null;
+            yield return null;
+            Assert.AreEqual(0f, prompt.Lift, "so the screen stays where it is");
+
+            // A taller keyboard still never hides the field: the screen rises until it is above it.
+            float tall = Screen.height * 0.8f;
+            prompt.KeyboardHeight = () => tall;
+            yield return GameFixture.Until(() => prompt.Lift > 0f && Edge(field, 0) > tall, "the screen to rise until the field is above the keyboard");
             Assert.Less(Edge(field, 1), Screen.height, "the field stays on the screen");
 
             prompt.KeyboardHeight = () => 0f;
-            yield return GameFixture.Until(() => prompt.Lift == 0f, "the question to settle back once the keyboard has gone");
+            yield return GameFixture.Until(() => prompt.Lift == 0f, "the screen to settle back once the keyboard has gone");
+        }
+
+        [UnityTest]
+        public IEnumerator TheKeyboard_WaitsForATapOnTheField_ItsDoneOnlyPutsItAway_AndSaveAnswers()
+        {
+            yield return _game.Boot(freshInstall: true);
+            NamePromptView prompt = Prompt();
+            yield return GameFixture.Until(() => prompt.IsShowing, "the name question to open");
+            TMP_InputField field = prompt.GetComponentInChildren<TMP_InputField>(true);
+            yield return null;
+            yield return null;
+            Assert.IsFalse(field.isFocused, "the keyboard waits for a tap on the field (the owner, 7 Oct 2026)");
+
+            ExecuteEvents.Execute(field.gameObject, new PointerEventData(EventSystem.current), ExecuteEvents.pointerClickHandler);
+            yield return GameFixture.Until(() => field.isFocused, "the field to take the keyboard at the tap");
+
+            field.text = "Asha";
+            field.onSubmit.Invoke(field.text);
+            yield return null;
+            IProfileService profile = _game.Services.Resolve<IProfileService>();
+            Assert.IsFalse(field.isFocused, "the keyboard's Done puts the keyboard away");
+            Assert.IsTrue(prompt.IsShowing, "and the question stays");
+            Assert.IsFalse(profile.HasChosenName, "nothing is saved yet");
+
+            Save(prompt).onClick.Invoke();
+            yield return GameFixture.Until(() => !prompt.IsShowing, "Save Changes to answer the question");
+            Assert.AreEqual("Asha", profile.DisplayName);
         }
 
         [UnityTest]
@@ -136,7 +175,8 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(1f, field.caretColor.a, 1e-3f, "the caret is opaque");
             Assert.GreaterOrEqual(field.caretWidth, 2, "the caret is at least 2 wide");
 
-            yield return GameFixture.Until(() => field.isFocused, "the field to take the keyboard as the question opens");
+            field.ActivateInputField();   // the player taps the field
+            yield return GameFixture.Until(() => field.isFocused, "the field to take the keyboard at the tap");
             TMP_SelectionCaret caret = field.textViewport.GetComponentInChildren<TMP_SelectionCaret>(true);
             Assert.IsNotNull(caret, "TMP's caret is under the text area");
             Assert.IsTrue(caret.gameObject.activeInHierarchy, "the caret is shown while the field has focus");
@@ -177,17 +217,17 @@ namespace Callbreak.Tests.PlayMode
             return prompt;
         }
 
-        private static Button Continue(NamePromptView prompt)
+        private static Button Save(NamePromptView prompt)
         {
             foreach (Button button in prompt.GetComponentsInChildren<Button>(true))
             {
-                if (button.name == "ContinueButton")
+                if (button.name == "SaveButton")
                 {
                     return button;
                 }
             }
 
-            Assert.Fail("the question has a Continue button");
+            Assert.Fail("the question has a Save Changes button");
             return null;
         }
 
@@ -195,7 +235,7 @@ namespace Callbreak.Tests.PlayMode
         {
             foreach (TMP_Text text in prompt.GetComponentsInChildren<TMP_Text>(true))
             {
-                if (text.name == "Message")
+                if (text.name == "NameMessage")
                 {
                     return text.text;
                 }

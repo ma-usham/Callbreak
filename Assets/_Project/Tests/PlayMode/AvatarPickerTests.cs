@@ -54,14 +54,34 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(profile.AvatarId, picker.Chosen, "the player's portrait is ringed");
             for (int i = 0; i < picker.Count; i++)
             {
-                Assert.AreSame(library.Get(i), Picture(picker, i), "choice " + i + " shows portrait " + i);
+                Assert.IsNotNull(library.Framed(i), "preset " + i + " has a framed portrait");
+                Assert.AreSame(library.Framed(i), Picture(picker, i), "choice " + i + " shows portrait " + i + " in its gold ring (ADR 043)");
             }
+
+            Assert.AreSame(library.Framed(profile.AvatarId), BigPortrait(prompt), "the big portrait is the player's");
 
             picker.ChoiceAt(3).onClick.Invoke();
 
             Assert.AreEqual(3, profile.AvatarId, "the tap saves it");
             Assert.AreEqual(3, picker.Chosen, "and rings it");
+            Assert.AreSame(library.Framed(3), BigPortrait(prompt), "the big portrait follows");
             Assert.IsTrue(prompt.IsShowing, "the question stays until the name is answered");
+        }
+
+        [UnityTest]
+        public IEnumerator TheNameQuestion_TheNameUnderThePortrait_FollowsWhatIsTyped()
+        {
+            yield return _game.Boot(freshInstall: true);
+            NamePromptView prompt = Object.FindFirstObjectByType<NamePromptView>(FindObjectsInactive.Include);
+            yield return GameFixture.Until(() => prompt.IsShowing, "the name question to open");
+            TMP_InputField field = prompt.GetComponentInChildren<TMP_InputField>(true);
+            Assert.AreEqual("Player", PlayerName(prompt), "the current name while the field is empty");
+
+            field.text = "  Asha ";
+            Assert.AreEqual("Asha", PlayerName(prompt), "the name as it would be saved");
+
+            field.text = string.Empty;
+            Assert.AreEqual("Player", PlayerName(prompt));
         }
 
         [UnityTest]
@@ -136,6 +156,18 @@ namespace Callbreak.Tests.PlayMode
             Transform picture = picker.transform.Find("Avatar" + index + "/Picture");
             Assert.IsNotNull(picture, "choice " + index + " has a picture");
             return picture.GetComponent<Image>().sprite;
+        }
+
+        private static Sprite BigPortrait(NamePromptView prompt)
+        {
+            FieldInfo field = typeof(NamePromptView).GetField("_avatar", BindingFlags.NonPublic | BindingFlags.Instance);
+            return ((Image)field.GetValue(prompt)).sprite;
+        }
+
+        private static string PlayerName(NamePromptView prompt)
+        {
+            FieldInfo field = typeof(NamePromptView).GetField("_playerName", BindingFlags.NonPublic | BindingFlags.Instance);
+            return ((TMP_Text)field.GetValue(prompt)).text;
         }
 
         private static Sprite BigAvatar(ProfileView view)

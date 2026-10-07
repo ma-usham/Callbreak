@@ -8,11 +8,15 @@
 # seats far smaller (the textures are mipmapped).
 # Presets keep their files (26 screen layouts and the kit records name them): 01 -> Avatar_Default
 # (preset 0, what a screen shows before it knows the player's), 02..05 -> Avatar_01..04.
+# The same five also come framed (ADR 043): the whole portrait with its own gold ring, cut at the
+# ring's outer edge, for the name screen at the start, which shows them as the owner's mockup draws
+# them: Avatar_Framed_00..04, $FramedSize x $FramedSize.
 # No grey silhouette shows anywhere any more (ADR 041), so the Quick Match screen's searching seat,
 # UI_Seat_Searching, keeps only its dashed circle: everything inside the dashes is cleared.
-#   portraits.ps1 [-Size 512] [-Inset 3] [-Install]
+#   portraits.ps1 [-Size 512] [-FramedSize 384] [-Inset 3] [-Install]
 param(
     [int] $Size = 512,
+    [int] $FramedSize = 384,
     [double] $Inset = 3,
     [switch] $Install
 )
@@ -71,6 +75,20 @@ public static class PortraitTools
     public static void Opaque(byte[] px)
     {
         for (int i = 3; i < px.Length; i += 4) px[i] = 255;
+    }
+
+    // Fully opaque within r of (cx, cy) only: the portrait and its ring; the ring's own soft outer
+    // edge and the transparent corners stay as drawn.
+    public static void OpaqueWithin(byte[] px, int w, int h, double cx, double cy, double r)
+    {
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                double dx = x + 0.5 - cx, dy = y + 0.5 - cy;
+                if (dx * dx + dy * dy < r * r) px[(y * w + x) * 4 + 3] = 255;
+            }
+        }
     }
 
     // Clears every pixel closer than r to the centre (what lies inside a ring); returns how far out
@@ -141,12 +159,24 @@ $fitDir = "$DecorWork\fit"; New-Item -ItemType Directory -Force $fitDir | Out-Nu
 $sources = @('01-dhaka-topi', '02-crimson-braid', '03-himalayan-cap', '04-teal-shawl', '05-indigo-jacket')
 $names = @('Avatar_Default', 'Avatar_01', 'Avatar_02', 'Avatar_03', 'Avatar_04')
 $made = @()
+$framed = @()
 for ($n = 0; $n -lt 5; $n++) {
     $raw = [DecorTools]::Load("$src\$($sources[$n]).png")
     $px = [DecorTools]::Read($raw)
     $ring = [PortraitTools]::Ring($px, $raw.Width, $raw.Height, 360)
     $cx = $ring[0]; $cy = $ring[1]; $outer = $ring[2]; $width = $ring[3]
     $cut = $outer - $width - $Inset
+
+    # Framed: the ring kept, cut round at its outer edge (a hat that breaks out of it is cut too).
+    $fpx = [DecorTools]::Read($raw)
+    [PortraitTools]::OpaqueWithin($fpx, $raw.Width, $raw.Height, $cx, $cy, $outer - 1)
+    $fsrc = [DecorTools]::Write($fpx, $raw.Width, $raw.Height)
+    $fr = $outer + 2
+    $fsq = [DecorTools]::Resample($fsrc, $cx - $fr, $cy - $fr, 2 * $fr, 2 * $fr, $FramedSize, $FramedSize); $fsrc.Dispose()
+    $fmask = [DecorTools]::CircleMask($fsq, $FramedSize / 2.0, $FramedSize / 2.0, ($FramedSize / 2.0) * ($outer + 0.5) / $fr, 0, [System.Drawing.Color]::Black); $fsq.Dispose()
+    $fpath = (Join-Path $fitDir ('Avatar_Framed_{0:00}.png' -f $n)); [DecorTools]::Save($fmask, $fpath); $fmask.Dispose()
+    $framed += $fpath
+
     [PortraitTools]::Opaque($px)
     $opaque = [DecorTools]::Write($px, $raw.Width, $raw.Height); $raw.Dispose()
     $sq = [DecorTools]::Resample($opaque, $cx - $cut, $cy - $cut, 2 * $cut, 2 * $cut, $Size, $Size); $opaque.Dispose()
@@ -192,8 +222,8 @@ $clean.Dispose(); $searching.Dispose()
 
 if ($Install) {
     $dst = "$DecorArt\UI\Avatars"; $exp = "$DecorRepo\ArtSource\Exports\Decor"; New-Item -ItemType Directory -Force $exp | Out-Null
-    foreach ($p in $made) { Copy-Item $p (Join-Path $dst (Split-Path $p -Leaf)) -Force; Copy-Item $p (Join-Path $exp (Split-Path $p -Leaf)) -Force }
-    "installed UI/Avatars/Avatar_Default.png and Avatar_01..04.png  (+ ArtSource/Exports/Decor)"
+    foreach ($p in $made + $framed) { Copy-Item $p (Join-Path $dst (Split-Path $p -Leaf)) -Force; Copy-Item $p (Join-Path $exp (Split-Path $p -Leaf)) -Force }
+    "installed UI/Avatars/Avatar_Default.png, Avatar_01..04.png and Avatar_Framed_00..04.png  (+ ArtSource/Exports/Decor)"
     Copy-Item $seatPath "$DecorArt\UI\Controls\UI_Seat_Searching.png" -Force
     "installed UI/Controls/UI_Seat_Searching.png (the kit's export keeps the original)"
 }

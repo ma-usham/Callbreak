@@ -226,7 +226,7 @@ namespace Callbreak.Tests.PlayMode
             bool rulesShowing = router.Current == ScreenId.HowToPlay && router.Get<HowToPlayView>(ScreenId.HowToPlay).RulesVisible;
             Assert.IsFalse(rulesShowing, "the rules do not show behind the name question");
             prompt.GetComponentInChildren<TMPro.TMP_InputField>(true).text = name;
-            GameFixture.PressIn(prompt, "ContinueButton");
+            GameFixture.PressIn(prompt, "SaveButton");
             yield return null;
         }
 
