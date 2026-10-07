@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Callbreak.Application.Economy;
@@ -12,8 +13,10 @@ namespace Callbreak.Presentation.Screens
     /// (<see cref="INoAds.CanBuy"/>) and goes once it is owned, following <see cref="INoAds.Changed"/>;
     /// it also stays while its own purchase is under way, so it doesn't vanish under the finger. A tap
     /// opens the store's purchase sheet, which is the confirmation, and a second tap meanwhile does
-    /// nothing. A toast then says what became of it: thanks once it's bought, that a pending payment
-    /// brings No Ads once it's paid, or that the store isn't available; a closed sheet says nothing.
+    /// nothing. While the sheet is up the game is covered in black with the loading emblem (ADR 042):
+    /// the sheet can turn the game to portrait behind it. A toast then says what became of it, once
+    /// the cover has gone: thanks once it's bought, that a pending payment brings No Ads once it's
+    /// paid, or that the store isn't available; a closed sheet says nothing.
     /// The presenter shows <see cref="Visible"/> and passes the taps on. No UnityEngine, so its rules
     /// are tested without the Editor.
     /// </summary>
@@ -27,15 +30,17 @@ namespace Callbreak.Presentation.Screens
         private readonly INoAds _noAds;
         private readonly IToast _toast;
         private readonly ILocalization _localization;
+        private readonly ILoadingCurtain _curtain;
 
         private bool _following;
         private bool _buying;
 
-        public NoAdsOffer(INoAds noAds, IToast toast, ILocalization localization)
+        public NoAdsOffer(INoAds noAds, IToast toast, ILocalization localization, ILoadingCurtain curtain)
         {
             _noAds = noAds;
             _toast = toast;
             _localization = localization;
+            _curtain = curtain;
         }
 
         /// <summary><see cref="Visible"/> may have changed.</summary>
@@ -67,11 +72,12 @@ namespace Callbreak.Presentation.Screens
         }
 
         /// <summary>
-        /// A tap: buys No Ads through the store's sheet, then says in a toast what became of it. Does
-        /// nothing while a purchase is under way or while No Ads can't be bought. Completes once the
-        /// store has answered. A cancelled token ends it with the store's
-        /// <see cref="OperationCanceledException"/> and no toast. Should the store throw against its
-        /// contract, the toast says the store isn't available and the exception is passed on.
+        /// A tap: covers the game in black, buys No Ads through the store's sheet, takes the cover
+        /// away and says in a toast what became of it. Does nothing while a purchase is under way or
+        /// while No Ads can't be bought. Completes once the store has answered and the cover has gone.
+        /// A cancelled token ends it with the store's <see cref="OperationCanceledException"/> and no
+        /// toast. Should the store throw against its contract, the toast says the store isn't
+        /// available and the exception is passed on. The cover goes in every case.
         /// </summary>
         public async Task TapAsync(CancellationToken ct)
         {
@@ -81,24 +87,33 @@ namespace Callbreak.Presentation.Screens
             }
 
             _buying = true;
-            NoAdsPurchase purchase;
+            NoAdsPurchase purchase = NoAdsPurchase.Unavailable;
+            ExceptionDispatchInfo broken = null;
             try
             {
+                // Black before the sheet opens: the sheet can turn the game to portrait behind it.
+                await _curtain.CoverDarkAsync(ct);
                 purchase = await _noAds.BuyAsync(ct);
             }
             catch (OperationCanceledException)
             {
                 throw;
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                Show(UnavailableKey);
-                throw;
+                broken = ExceptionDispatchInfo.Capture(e);
             }
             finally
             {
+                await _curtain.UncoverDarkAsync(CancellationToken.None);
                 _buying = false;
                 Changed?.Invoke();
+            }
+
+            if (broken != null)
+            {
+                Show(UnavailableKey);
+                broken.Throw();
             }
 
             string key = ToastKey(purchase);

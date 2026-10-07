@@ -14,12 +14,15 @@ namespace Callbreak.Tests.EditMode.Presentation
     /// and goes once it is owned, following the store, and it stays while its own purchase is under
     /// way. A tap opens the store's sheet once however often it is tapped meanwhile; a toast then says
     /// what became of the purchase (thanks, pending, the store isn't available), or nothing when the
-    /// sheet was closed. The copy is the shipped string table's.
+    /// sheet was closed. While the sheet is up the game is covered in black with the loading emblem
+    /// (ADR 042): the cover comes before the sheet and goes before the toast, whatever became of the
+    /// purchase. The copy is the shipped string table's.
     /// </summary>
     public sealed class NoAdsOfferTests
     {
         private FakeNoAds _store;
         private RecordingToast _toast;
+        private RecordingCurtain _curtain;
         private TableStrings _strings;
         private NoAdsOffer _offer;
         private SynchronizationContext _context;
@@ -33,8 +36,9 @@ namespace Callbreak.Tests.EditMode.Presentation
             SynchronizationContext.SetSynchronizationContext(null);
             _store = new FakeNoAds();
             _toast = new RecordingToast();
+            _curtain = new RecordingCurtain(_store, _toast);
             _strings = new TableStrings();
-            _offer = new NoAdsOffer(_store, _toast, _strings);
+            _offer = new NoAdsOffer(_store, _toast, _strings, _curtain);
             _offer.Start();
         }
 
@@ -200,6 +204,63 @@ namespace Callbreak.Tests.EditMode.Presentation
         }
 
         [Test]
+        public void ATap_CoversTheGameInBlackBeforeTheSheetOpens_AndTheCoverGoesBeforeTheToast()
+        {
+            Task tap = _offer.TapAsync(CancellationToken.None);
+
+            Assert.AreEqual(1, _curtain.Covers, "black over the game");
+            Assert.AreEqual(0, _curtain.SheetsOpenAtCover, "before the sheet opens: it can turn the game to portrait behind it");
+            Assert.IsTrue(_curtain.Dark, "and it stays while the sheet is up");
+            Assert.AreEqual(1, _store.Purchases);
+
+            _store.Answer(NoAdsPurchase.Bought);
+
+            Assert.IsTrue(tap.IsCompleted);
+            Assert.IsFalse(_curtain.Dark, "the sheet closed: the cover goes");
+            Assert.AreEqual(0, _curtain.ToastsAtUncover, "before the toast, so the toast is seen");
+            AssertToasts("ui.main_menu.no_ads.bought");
+        }
+
+        [Test]
+        public void TheCover_Goes_WhenTheSheetIsClosed_WhenTheStoreThrows_AndWhenTheMenuStopsWaiting()
+        {
+            _offer.TapAsync(CancellationToken.None);
+            _store.Answer(NoAdsPurchase.Cancelled);
+            Assert.IsFalse(_curtain.Dark, "a closed sheet");
+
+            _store.Throw = new InvalidOperationException("a broken store adapter");
+            Task broken = _offer.TapAsync(CancellationToken.None);
+            Assert.IsTrue(broken.IsFaulted);
+            Assert.IsFalse(_curtain.Dark, "a store that throws");
+            AssertToasts("ui.main_menu.no_ads.unavailable");
+            Assert.AreEqual(0, _curtain.ToastsAtUncover, "the cover went before the toast");
+
+            _store.Throw = null;
+            using (var leaving = new CancellationTokenSource())
+            {
+                Task left = _offer.TapAsync(leaving.Token);
+                Assert.IsTrue(_curtain.Dark);
+                leaving.Cancel();
+
+                Assert.IsTrue(left.IsCanceled);
+                Assert.IsFalse(_curtain.Dark, "the menu stopped waiting");
+            }
+
+            Assert.AreEqual(3, _curtain.Covers);
+            Assert.AreEqual(3, _curtain.Uncovers);
+        }
+
+        [Test]
+        public void ATap_ThatOpensNoSheet_CoversNothing()
+        {
+            _store.Set(canBuy: false, owned: false);
+
+            _offer.TapAsync(CancellationToken.None);
+
+            Assert.AreEqual(0, _curtain.Covers);
+        }
+
+        [Test]
         public void Dispose_StopsFollowingTheStore()
         {
             Assert.AreEqual(1, _store.Listeners);
@@ -271,6 +332,57 @@ namespace Callbreak.Tests.EditMode.Presentation
             public List<string> Shown { get; } = new List<string>();
 
             public void Show(string text) => Shown.Add(text);
+        }
+
+        /// <summary>A curtain whose black cover comes and goes at once; it notes what was open and shown when it did.</summary>
+        private sealed class RecordingCurtain : ILoadingCurtain
+        {
+            private readonly FakeNoAds _store;
+            private readonly RecordingToast _toast;
+
+            public RecordingCurtain(FakeNoAds store, RecordingToast toast)
+            {
+                _store = store;
+                _toast = toast;
+            }
+
+            public bool IsCovering => Dark;
+
+            public bool Dark { get; private set; }
+
+            public int Covers { get; private set; }
+
+            public int Uncovers { get; private set; }
+
+            /// <summary>How many store sheets had been opened when the cover last came.</summary>
+            public int SheetsOpenAtCover { get; private set; } = -1;
+
+            /// <summary>How many toasts had been shown when the cover last went.</summary>
+            public int ToastsAtUncover { get; private set; } = -1;
+
+            public Task CoverAsync(CancellationToken ct) => throw new NotSupportedException("the menu changes no scene here");
+
+            public Task UncoverAsync(CancellationToken ct) => throw new NotSupportedException("the menu changes no scene here");
+
+            public Task CoverDarkAsync(CancellationToken ct)
+            {
+                Covers++;
+                SheetsOpenAtCover = _store.Purchases;
+                Dark = true;
+                return Task.CompletedTask;
+            }
+
+            public Task UncoverDarkAsync(CancellationToken ct)
+            {
+                if (Dark)
+                {
+                    Uncovers++;
+                    ToastsAtUncover = _toast.Shown.Count;
+                    Dark = false;
+                }
+
+                return Task.CompletedTask;
+            }
         }
     }
 }

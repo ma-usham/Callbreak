@@ -16,9 +16,10 @@ namespace Callbreak.Tests.PlayMode
     /// <summary>
     /// The No Ads button on the main menu (the owner, 5 Oct 2026) in the real Boot and Menu scenes:
     /// it shows while the store can sell No Ads and goes once it can't or it is owned; a tap opens the
-    /// store's sheet once, and a purchase thanks the player in a toast and takes the button away. One
-    /// test runs with the game's own stand-in store, the others with a store the test answers.
-    /// Saves go to a temporary folder.
+    /// store's sheet once, and a purchase thanks the player in a toast and takes the button away.
+    /// While the sheet is up the game lies under the curtain's black cover (ADR 042), which goes
+    /// before the toast. One test runs with the game's own stand-in store, the others with a store
+    /// the test answers. Saves go to a temporary folder.
     /// </summary>
     public sealed class NoAdsButtonFlowTests
     {
@@ -69,15 +70,19 @@ namespace Callbreak.Tests.PlayMode
 
             GameFixture.PressIn(menu, NoAdsButton);
             yield return null;
+            Assert.IsTrue(Curtain().IsDark, "the game goes black first: the sheet can turn it to portrait");
+            yield return GameFixture.Until(() => store.Purchases == 1, "the store's sheet to open over the black cover");
             Assert.IsTrue(Shown(menu), "the button stays while its purchase is under way");
             GameFixture.PressIn(menu, NoAdsButton);
             yield return null;
             Assert.AreEqual(1, store.Purchases, "a second tap while the sheet is open does nothing");
             Assert.IsFalse(Toast().IsShowing);
+            Assert.IsTrue(Curtain().IsDark, "black while the sheet is up");
 
             store.Grant();
             yield return GameFixture.Until(() => Toast().IsShowing, "the purchase's toast");
 
+            Assert.IsFalse(Curtain().IsCovering, "the cover went before the toast");
             Assert.AreEqual(Get("ui.main_menu.no_ads.bought"), Toast().Text);
             Assert.IsFalse(Shown(menu), "bought: the button goes");
             Assert.AreEqual(ScreenId.MainMenu, _game.MenuRouter.Current, "the menu stays where it was");
@@ -91,10 +96,9 @@ namespace Callbreak.Tests.PlayMode
             UIScreen menu = Menu();
 
             GameFixture.PressIn(menu, NoAdsButton);
-            yield return null;
+            yield return GameFixture.Until(() => store.Purchases == 1, "the store's sheet to open over the black cover");
             store.Answer(NoAdsPurchase.Cancelled);
-            yield return null;
-            yield return null;
+            yield return GameFixture.Until(() => !Curtain().IsCovering, "the black cover to go");
 
             Assert.IsFalse(Toast().IsShowing, "the player closed the sheet: nothing to say");
             Assert.IsTrue(Shown(menu));
@@ -113,6 +117,7 @@ namespace Callbreak.Tests.PlayMode
             GameFixture.PressIn(menu, NoAdsButton);
             yield return GameFixture.Until(() => Toast().IsShowing, "the purchase's toast");
 
+            Assert.IsFalse(Curtain().IsCovering, "the black cover came and went");
             Assert.IsTrue(noAds.Owned);
             Assert.AreEqual(Get("ui.main_menu.no_ads.bought"), Toast().Text);
             Assert.IsFalse(Shown(menu));
@@ -121,6 +126,8 @@ namespace Callbreak.Tests.PlayMode
         private UIScreen Menu() => _game.MenuRouter.Get<UIScreen>(ScreenId.MainMenu);
 
         private ToastView Toast() => _game.Project.GetComponentInChildren<ToastView>(true);
+
+        private LoadingCurtain Curtain() => (LoadingCurtain)_game.Curtain;
 
         private string Get(string key) => _game.Services.Resolve<ILocalization>().Get(key);
 

@@ -23,7 +23,8 @@ namespace Callbreak.Presentation.Screens
     /// opens and whenever Play Offline is tapped. Android back asks "Exit Callbreak?". The coin
     /// wallet (mockup 23) shows the balance as it changes; its "+" opens Earn Coins. The No Ads
     /// button left of it sells the one-time purchase that removes the ads between matches
-    /// (<see cref="NoAdsOffer"/>).
+    /// (<see cref="NoAdsOffer"/>), with the game under the curtain's black cover while the store's
+    /// sheet is up (ADR 042).
     /// </summary>
     public sealed class MainMenuPresenter : IStartable, IDisposable
     {
@@ -66,7 +67,8 @@ namespace Callbreak.Presentation.Screens
             ICosmeticsService cosmetics,
             CardSpriteProvider cards,
             IWallet wallet,
-            INoAds noAds)
+            INoAds noAds,
+            ILoadingCurtain curtain)
         {
             _view = view;
             _router = router;
@@ -84,7 +86,7 @@ namespace Callbreak.Presentation.Screens
             _cosmetics = cosmetics;
             _cards = cards;
             _wallet = wallet;
-            _noAds = new NoAdsOffer(noAds, toast, localization);
+            _noAds = new NoAdsOffer(noAds, toast, localization, curtain);
         }
 
         public void Start()
