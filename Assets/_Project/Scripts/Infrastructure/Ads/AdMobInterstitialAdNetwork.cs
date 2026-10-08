@@ -18,8 +18,9 @@ namespace Callbreak.Infrastructure.Ads
     /// shows twice. An ad is requested only while <see cref="ConsentInformation.CanRequestAds"/>.
     /// </para>
     /// <para>
-    /// No game sound plays over an ad: on Android Unity pauses while a full-screen ad shows, and on
-    /// iOS <see cref="MobileAds.SetiOSAppPauseOnBackground"/> makes it pause too.
+    /// No game sound plays over an ad. On Android the game keeps running under a full-screen ad (the
+    /// owner heard it, 8 Oct 2026), so <see cref="QuietInterstitialAds"/> silences the game around
+    /// each show; on iOS <see cref="MobileAds.SetiOSAppPauseOnBackground"/> pauses it as well.
     /// </para>
     /// The plugin calls back on other threads, so every callback is handed to the main thread through
     /// the plugin's executor, as the rewarded ads' are. Nothing here throws into the game: an SDK error
@@ -53,7 +54,7 @@ namespace Callbreak.Infrastructure.Ads
                     return false;
                 }
 
-                // As on Android, the game pauses on iOS while a full-screen ad shows: no sound over it.
+                // The game pauses on iOS while a full-screen ad shows (Android: QuietInterstitialAds).
                 MobileAds.SetiOSAppPauseOnBackground(true);
                 return true;
             }

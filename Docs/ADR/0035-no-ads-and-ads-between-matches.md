@@ -175,3 +175,31 @@ host lost) still shows none, as the player didn't leave it.
   menu; the very first match left early shows none).
 - **Not verified:** on a device, whether one second is enough for the leave to go out over a slow
   connection.
+
+## Addendum, 8 Oct 2026: no game sound under an ad
+
+The owner heard the game's music and sounds under an ad. "Consent and sound" above was wrong for
+Android: Unity keeps running under AdMob's full-screen ads there. Google's plugin says the same: iOS
+pauses the app, Android doesn't.
+
+- **The fix:** the game is silent while any full-screen ad is up, Earn Coins and between matches
+  alike.
+  - On phones, `QuietRewardedAds` and `QuietInterstitialAds` (Application/Economy) wrap the AdMob
+    ads. They hold the game silent while a show is under way and let go in a `finally`: watched,
+    skipped, closed, failed, thrown or cancelled.
+  - A show that is over at once (no ad loaded, No Ads owned, an ad that throws when shown) silences
+    nothing.
+  - The new port `IAudioSilencer.Silence()` hands out a hold. `AudioService` implements it with
+    `AudioListener.pause`, which pauses every source, and drops any sound effect asked for meanwhile,
+    so nothing bursts out after the ad.
+  - The last hold puts the listener back as it was, paused if it was paused. Two ads at once can't
+    end each other's silence. The Sound and Music settings are never touched. Disposing the service
+    lets every hold go.
+- **Unchanged:** the Editor, the tests and desktop keep their stand-ins, which show no ad and silence
+  nothing. iOS still pauses through `SetiOSAppPauseOnBackground(true)`.
+- **A short wait:** a rewarded ad closed early keeps the game silent up to 1 s longer, the wait for a
+  late reward (`LateRewardGrace`).
+- **Tests:** 20 EditMode (`QuietAdsTests`) and 6 EditMode (`AudioServiceSilenceTests`).
+- **Not verified:** on a phone. To check, with Music and Sound on: an Earn Coins ad and an ad between
+  matches play with no game sound under them; the music comes back when each closes; Music or Sound
+  turned off stays off.

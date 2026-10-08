@@ -108,7 +108,8 @@ namespace Callbreak.Bootstrap
             builder.Register<LogAnalytics>(Lifetime.Singleton).As<IAnalytics>();
             builder.Register<AppExit>(Lifetime.Singleton).As<IAppExit>();
             builder.Register<DeepLinkService>(Lifetime.Singleton).As<IDeepLinks>();
-            builder.Register<AudioService>(Lifetime.Singleton).As<IAudioService>()
+            // Also the silence under a full-screen ad (RegisterAds).
+            builder.Register<AudioService>(Lifetime.Singleton).As<IAudioService>().As<IAudioSilencer>()
                 .WithParameter(_audioHost)
                 .WithParameter(_audioLibrary);
 
@@ -153,7 +154,9 @@ namespace Callbreak.Bootstrap
         /// says they are required, learn that from the same consent flow. In the Editor, in the tests
         /// and on desktop, a stand-in completes every ad and never requires privacy options. Also the
         /// full-screen ads between matches: AdMob interstitials on phones, one kept loaded (Google's
-        /// test ads in development builds); elsewhere a stand-in that never has one.
+        /// test ads in development builds); elsewhere a stand-in that never has one. On phones the
+        /// game is silent while either kind of ad is up (the owner, 8 Oct 2026): Android keeps the
+        /// game running under an ad.
         /// </summary>
         private static void RegisterAds(IContainerBuilder builder)
         {
@@ -165,14 +168,20 @@ namespace Callbreak.Bootstrap
             builder.RegisterInstance(privacy).As<IAdPrivacy>().AsSelf();
             var rewarded = new AdMobRewardedAdNetwork(adUnit, privacy);
             builder.Register<IRewardedAds>(
-                _ => new PreloadedRewardedAds(rewarded, () => System.DateTime.UtcNow, Debug.Log),
+                resolver => new QuietRewardedAds(
+                    new PreloadedRewardedAds(rewarded, () => System.DateTime.UtcNow, Debug.Log),
+                    resolver.Resolve<IAudioSilencer>(),
+                    Debug.Log),
                 Lifetime.Singleton);
 
             // The ads between matches start AdMob through the rewarded ads: one consent form, one SDK start.
             // A player who owns No Ads gets none of them requested.
             string interstitialUnit = AdMobIds.InterstitialAdUnit(UnityEngine.Application.platform == RuntimePlatform.IPhonePlayer, Debug.isDebugBuild);
             builder.Register<IInterstitialAds>(
-                resolver => new PreloadedInterstitialAds(new AdMobInterstitialAdNetwork(interstitialUnit, rewarded.StartAsync), resolver.Resolve<INoAds>(), () => System.DateTime.UtcNow, Debug.Log),
+                resolver => new QuietInterstitialAds(
+                    new PreloadedInterstitialAds(new AdMobInterstitialAdNetwork(interstitialUnit, rewarded.StartAsync), resolver.Resolve<INoAds>(), () => System.DateTime.UtcNow, Debug.Log),
+                    resolver.Resolve<IAudioSilencer>(),
+                    Debug.Log),
                 Lifetime.Singleton);
 #else
             builder.Register<StandInRewardedAds>(Lifetime.Singleton).As<IRewardedAds>();

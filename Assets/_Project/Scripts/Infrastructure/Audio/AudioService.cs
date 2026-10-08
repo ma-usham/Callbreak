@@ -19,8 +19,16 @@ namespace Callbreak.Infrastructure.Audio
     /// missing library, cue or clip is silent. Nothing here throws.
     /// The caller provides the GameObject that holds the sources (the bootstrap's persistent
     /// object), so no scene lookup is needed; the service adds its sources and a runner to it.
+    /// <para>
+    /// While a full-screen ad is up (<see cref="IAudioSilencer"/>; the owner, 8 Oct 2026) the game
+    /// is silent: <see cref="AudioListener.pause"/> pauses every source, music included, and a sound
+    /// effect asked for meanwhile is dropped, so none plays over the ad or bursts out after it. Once
+    /// the last hold goes, the listener is as it was before the first (still paused if it was), and
+    /// what was playing goes on; the settings are never touched. Disposing the service lets every
+    /// hold go.
+    /// </para>
     /// </summary>
-    public sealed class AudioService : IAudioService, IDisposable
+    public sealed class AudioService : IAudioService, IAudioSilencer, IDisposable
     {
         public const int SfxVoices = 8;
         public const float CrossfadeSeconds = 1.5f;
@@ -51,6 +59,8 @@ namespace Callbreak.Infrastructure.Audio
         private float _duck = 1f;
         private float _duckTarget = 1f;
         private bool _musicMuted;
+        private int _silences;
+        private bool _listenerWasPaused;
         private bool _warned;
         private bool _disposed;
 
@@ -97,9 +107,12 @@ namespace Callbreak.Infrastructure.Audio
         /// <summary>The cue last given to a voice.</summary>
         public SoundCue LastCue { get; private set; }
 
+        /// <summary>The game is silent: a hold from <see cref="Silence"/> is still held.</summary>
+        public bool Silenced => _silences > 0;
+
         public void Play(SoundCue cue)
         {
-            if (_disposed || _library == null || !_settings.SoundEffects)
+            if (_disposed || _library == null || !_settings.SoundEffects || _silences > 0)
             {
                 return;
             }
@@ -175,11 +188,43 @@ namespace Callbreak.Infrastructure.Audio
             _duckTarget = ducked ? DecibelsToGain(DuckDecibels) : 1f;
         }
 
+        public IDisposable Silence()
+        {
+            var hold = new SilenceHold(this);
+            if (_disposed)
+            {
+                hold.Dispose();
+                return hold;
+            }
+
+            if (_silences++ == 0)
+            {
+                try
+                {
+                    _listenerWasPaused = AudioListener.pause;
+                    AudioListener.pause = true;
+                }
+                catch (Exception e)
+                {
+                    Warn(e);
+                }
+            }
+
+            return hold;
+        }
+
         public void Dispose()
         {
             if (_disposed)
             {
                 return;
+            }
+
+            // Never leaves the game silent, even with an ad's hold still out.
+            if (_silences > 0)
+            {
+                _silences = 0;
+                RestoreListener();
             }
 
             _disposed = true;
@@ -195,6 +240,32 @@ namespace Callbreak.Infrastructure.Audio
         }
 
         public static float DecibelsToGain(float decibels) => Mathf.Pow(10f, decibels / 20f);
+
+        /// <summary>One hold let go: the last one brings the listener back as it was.</summary>
+        private void Unsilence()
+        {
+            if (_disposed || _silences == 0)
+            {
+                return;
+            }
+
+            if (--_silences == 0)
+            {
+                RestoreListener();
+            }
+        }
+
+        private void RestoreListener()
+        {
+            try
+            {
+                AudioListener.pause = _listenerWasPaused;
+            }
+            catch (Exception e)
+            {
+                Warn(e);
+            }
+        }
 
         private void StartTrack()
         {
@@ -461,6 +532,24 @@ namespace Callbreak.Infrastructure.Audio
 
             _warned = true;
             Debug.LogWarning($"[AudioService] {e.GetType().Name}: {e.Message}");
+        }
+
+        /// <summary>One hold on the silence; let go once, however often it is disposed.</summary>
+        private sealed class SilenceHold : IDisposable
+        {
+            private AudioService _owner;
+
+            public SilenceHold(AudioService owner)
+            {
+                _owner = owner;
+            }
+
+            public void Dispose()
+            {
+                AudioService owner = _owner;
+                _owner = null;
+                owner?.Unsilence();
+            }
         }
     }
 }

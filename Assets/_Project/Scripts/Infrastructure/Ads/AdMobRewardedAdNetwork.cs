@@ -181,7 +181,8 @@ namespace Callbreak.Infrastructure.Ads
             _initialized = done.Task;
             try
             {
-                // As on Android, the game pauses on iOS while a full-screen ad shows.
+                // The game pauses on iOS while a full-screen ad shows. Android keeps it running, so
+                // QuietRewardedAds and QuietInterstitialAds silence it there.
                 MobileAds.SetiOSAppPauseOnBackground(true);
                 MobileAds.Initialize(status => OnMainThread(
                     () =>

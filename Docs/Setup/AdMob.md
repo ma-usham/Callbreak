@@ -63,8 +63,10 @@ messages go out before the ad pauses the game. Then the ad, then the main menu.
 - **Consent.** The ads between matches start AdMob through the Earn Coins ads' start (consent,
   then the SDK), so the consent form never shows twice and the SDK starts once. An ad is requested
   only while UMP says ads may be requested.
-- **Sound.** No game sound plays over an ad: Unity pauses on Android while a full-screen ad shows,
-  and on iOS `MobileAds.SetiOSAppPauseOnBackground(true)` does the same.
+- **Sound.** No game sound plays over an ad, of either kind. Android keeps the game running under a
+  full-screen ad, so on phones `QuietRewardedAds` and `QuietInterstitialAds` silence it while the ad
+  is up and bring the sound back once it has gone (ADR 035, 8 Oct 2026). On iOS
+  `MobileAds.SetiOSAppPauseOnBackground(true)` also pauses the game.
 - **The pieces:** the ports `Application/Economy/IInterstitialAdNetwork.cs` and
   `IBetweenMatchAds.cs`; the rule `BetweenMatchAds.cs`; the loading `PreloadedInterstitialAds.cs`;
   the stand-in `StandInInterstitialAds.cs`; the AdMob side `Infrastructure/Ads/AdMobInterstitialAdNetwork.cs`;
