@@ -468,6 +468,9 @@ namespace Callbreak.Editor
             // One match.
             private SessionProxy _session;
             private IMatchSession _active;
+
+            // The offline match inside the session proxy, while one is played.
+            private OfflineMatchSession _offline;
             private PlayedTable _played;
             private ScreenRouter _router;
             private TablePresenter _tablePresenter;
@@ -932,6 +935,7 @@ namespace Callbreak.Editor
                 _flow.CurrentLaunch = request;
                 var offline = new OfflineMatchSession(request, _matchStore, new BotFactory(), _profile, _cosmetics, _settings, _stats);
                 Equal(resume, offline.IsResumed, resume ? "the saved match is resumed" : "a new match is dealt");
+                _offline = offline;
                 _session = new SessionProxy(offline);
                 StartOn(_session);
 
@@ -1799,15 +1803,23 @@ namespace Callbreak.Editor
                 }
 
                 // Offline the first button restarts (the owner, 8 Oct 2026): a new match at the same
-                // difficulty, asked of the app's flow; the real flow then deals it on a fresh table, so
-                // here the menu stays up and its × goes back to this match.
+                // difficulty, asked of the app's flow. The real flow then deals it on a fresh table, and
+                // this menu is gone; here the table plays on and the menu stays leaving, so the restart
+                // is tried once in the run, on the first match, which is never left midway.
                 Equal(_text.Get("ui.match_menu.restart"), Field<TMP_Text>(_menu, "_resumeLabel").text, "offline, the first button reads \"Restart Game\"");
-                int launches = _flow.Started.Count;
-                Click(Field<Button>(_menu, "_resumeButton"));
-                Equal(launches + 1, _flow.Started.Count, "Restart Game asks for a new match");
-                MatchLaunchRequest restart = _flow.Started[_flow.Started.Count - 1];
-                Check(restart.Mode == MatchMode.Offline && !restart.ResumeSaved, "a new offline match, not the saved one", restart.Mode + (restart.ResumeSaved ? " resumed" : string.Empty));
-                Equal(((OfflineMatchSession)_active).Difficulty, restart.Difficulty, "at the difficulty of the match in play");
+                if (!_leaveMidway && _done.Add("restart"))
+                {
+                    int launches = _flow.Started.Count;
+                    Click(Field<Button>(_menu, "_resumeButton"));
+                    Equal(launches + 1, _flow.Started.Count, "Restart Game asks for a new match");
+                    MatchLaunchRequest restart = _flow.Started[_flow.Started.Count - 1];
+                    Check(restart.Mode == MatchMode.Offline && !restart.ResumeSaved, "a new offline match, not the saved one", restart.Mode + (restart.ResumeSaved ? " resumed" : string.Empty));
+                    Equal(_offline.Difficulty, restart.Difficulty, "at the difficulty of the match in play");
+
+                    // Taken back, so later checks count only their own requests.
+                    _flow.Started.RemoveAt(_flow.Started.Count - 1);
+                }
+
                 Click(Field<Button>(_menu, "_closeButton"));
                 Equal(ScreenId.Gameplay, _router.Current, "the close button returns to the table");
                 Check(!_active.IsPaused, "the match runs again after closing the menu");
@@ -2252,7 +2264,8 @@ namespace Callbreak.Editor
                 Equal(ScreenId.MatchMenu, _router.Current, "going to the background opens the match menu");
                 Check(_active.IsPaused, "going to the background pauses an offline match");
                 Check(_matchStore.HasSave, "pausing saves the offline match");
-                Click(Field<Button>(_menu, "_resumeButton"));
+                // Offline the first button restarts (ADR 045); the close button resumes.
+                Click(Field<Button>(_menu, "_closeButton"));
                 Check(!_active.IsPaused, "the match runs again after coming back");
             }
 
@@ -2393,7 +2406,7 @@ namespace Callbreak.Editor
                 {
                     Click(Field<Button>(_roundResults, "_backButton"));
                     Equal(ScreenId.MatchMenu, _router.Current, "Back on the round results opens the match menu");
-                    Click(Field<Button>(_menu, "_resumeButton"));
+                    Click(Field<Button>(_menu, "_closeButton"));
                     Equal(ScreenId.RoundResults, _router.Current, "the menu closes back to the round results");
                 }
 
