@@ -8,16 +8,22 @@ namespace Callbreak.Tests.EditMode.Application
     /// <summary>
     /// The session recording on phones (ADR 044): the recorder starts only once the player's privacy
     /// choice allows it (a choice from an earlier session at once), and stops when the choice no
-    /// longer does; a screen that hides itself (the name question, Profile) is never recorded, even
+    /// longer does; where the GDPR applies it never starts, even with the player's consent (the owner,
+    /// 8 Oct 2026); a screen that hides itself (the name question, Profile) is never recorded, even
     /// when the recording starts while it is up or the recorder can't hide it. The log says when the
     /// state changes, once. Nothing the recorder or the choice does makes it throw.
     /// </summary>
     public sealed class SessionRecordingTests
     {
         private static readonly ConsentSignals Allowed = new ConsentSignals(ConsentState.NotRequired, null, string.Empty);
+
+        // A non-GDPR message answered (the US states' one): allowed too.
+        private static readonly ConsentSignals AnsweredElsewhere = new ConsentSignals(ConsentState.Obtained, false, string.Empty);
+
+        // Where the GDPR applies: the form up, then answered either way. Never allowed.
         private static readonly ConsentSignals Waiting = new ConsentSignals(ConsentState.Required, true, string.Empty);
         private static readonly ConsentSignals Refused = new ConsentSignals(ConsentState.Obtained, true, "00000000000");
-        private static readonly ConsentSignals Consented = new ConsentSignals(ConsentState.Obtained, true, "11111111111");
+        private static readonly ConsentSignals ConsentedInEurope = new ConsentSignals(ConsentState.Obtained, true, "11111111111");
 
         private ScriptedRecorder _recorder;
         private ScriptedConsent _consent;
@@ -50,12 +56,23 @@ namespace Callbreak.Tests.EditMode.Application
             Assert.IsFalse(recording.IsRecording);
             CollectionAssert.IsEmpty(_recorder.Calls, "the SDK is not even set up");
 
+            _consent.Change(Allowed);
+            Assert.IsTrue(recording.IsRecording);
+            CollectionAssert.AreEqual(new[] { "start" }, _recorder.Calls);
+        }
+
+        [Test]
+        public void WhereTheGdprApplies_ItNeverRecords_EvenOnceThePlayerConsents()
+        {
+            SessionRecording recording = NewRecording();
+
             _consent.Change(Waiting);
             Assert.IsFalse(recording.IsRecording, "the consent form is up");
 
-            _consent.Change(Consented);
-            Assert.IsTrue(recording.IsRecording);
-            CollectionAssert.AreEqual(new[] { "start" }, _recorder.Calls);
+            _consent.Change(ConsentedInEurope);
+            Assert.IsFalse(recording.IsRecording, "the owner: not in Europe, even with consent");
+            CollectionAssert.IsEmpty(_recorder.Calls, "the SDK is not even set up");
+            StringAssert.Contains("GDPR applies", _log[_log.Count - 1]);
         }
 
         [Test]
@@ -70,15 +87,16 @@ namespace Callbreak.Tests.EditMode.Application
         }
 
         [Test]
-        public void AWithdrawnConsent_StopsTheRecording_AndANewOneStartsItAgain()
+        public void AChoiceThatNoLongerAllowsIt_StopsTheRecording_AndOneThatDoesStartsItAgain()
         {
-            _consent.Current = Consented;
+            _consent.Current = Allowed;
             SessionRecording recording = NewRecording();
 
+            // Google's consent information now places the player where the GDPR applies.
             _consent.Change(Refused);
-            Assert.IsFalse(recording.IsRecording, "withdrawn in Settings' Privacy options");
+            Assert.IsFalse(recording.IsRecording);
 
-            _consent.Change(Consented);
+            _consent.Change(AnsweredElsewhere);
             Assert.IsTrue(recording.IsRecording);
             CollectionAssert.AreEqual(new[] { "start", "stop", "start" }, _recorder.Calls);
         }
@@ -109,7 +127,7 @@ namespace Callbreak.Tests.EditMode.Application
             Assert.AreEqual(3, _log.Count, string.Join(" | ", _log));
             StringAssert.Contains("not known yet", _log[0]);
             StringAssert.Contains("recording: on", _log[1]);
-            StringAssert.Contains("does not allow it", _log[2]);
+            StringAssert.Contains("GDPR applies", _log[2]);
         }
 
         [Test]
@@ -178,7 +196,7 @@ namespace Callbreak.Tests.EditMode.Application
             Assert.IsFalse(recording.IsRecording, "better no recording than a recorded name field");
             CollectionAssert.AreEqual(new[] { "start", "hide failed", "stop" }, _recorder.Calls);
 
-            _consent.Change(Consented);
+            _consent.Change(AnsweredElsewhere);
             Assert.IsFalse(recording.IsRecording, "a start while hidden can't hide either");
 
             handle.Dispose();
@@ -195,7 +213,7 @@ namespace Callbreak.Tests.EditMode.Application
             Assert.IsFalse(recording.IsRecording);
 
             _recorder.StartFails = false;
-            _consent.Change(Consented);
+            _consent.Change(AnsweredElsewhere);
 
             Assert.IsTrue(recording.IsRecording);
         }

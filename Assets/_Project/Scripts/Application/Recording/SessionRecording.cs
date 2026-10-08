@@ -157,10 +157,8 @@ namespace Callbreak.Application.Recording
             {
                 case ConsentState.Unknown:
                     return "the player's privacy choice is not known yet";
-                case ConsentState.Required:
-                    return "the consent form is not answered yet";
                 default:
-                    return "the player's privacy choice does not allow it";
+                    return "the GDPR applies where the player is (the EEA, the UK or Switzerland), where sessions are never recorded";
             }
         }
 

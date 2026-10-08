@@ -68,22 +68,22 @@ the package's own paths and GUIDs, so a later import of an official package land
   desktop or on iOS. To leave development builds out, register the stand-in when
   `Debug.isDebugBuild`.
 - Only with a project key in `SmartlookProject.ProjectKey`. Empty means no recording.
-- Only while the player's privacy choice allows it. The game asks no question of its own: it reuses
-  the answer to Google's consent form for the ads (UMP, ADR 034).
+- Only outside the GDPR regions (the owner, 8 Oct 2026: "dont record in europe that requires some
+  conditions, record in else regions"). The game asks no question of its own: it reads where the
+  player is from Google's consent information for the ads (UMP, ADR 034). Until 8 Oct, a player
+  there who consented to TCF purposes 1, 8 and 10 was recorded; now no one there is.
 
 | UMP state | TCF signals | Recording |
 |---|---|---|
 | Unknown (first launch before the update, offline) | any | no |
-| Required (the form is not answered yet) | any | no |
+| Required (the EEA, the UK and Switzerland; the form not answered yet) | any | no |
 | NotRequired (outside the EEA, the UK and Switzerland, as Google decides) | none | yes |
-| Obtained, GDPR applies | purposes 1, 8 and 10 all consented | yes |
-| Obtained, GDPR applies | any of them refused ("Do not consent" refuses all) | no |
+| Obtained, GDPR applies | any answer, "Consent" included | no |
 | Obtained, not GDPR (e.g. the US states' message) | none | yes |
 
-- **Purposes:** 1 "Store and/or access information on a device", 8 "Measure content performance",
-  10 "Develop and improve services". They are listed in one place: `RecordingConsentPolicy.Purposes`.
-- **GDPR applies** when the form wrote `IABTCF_gdprApplies = 1`. When it never wrote that flag but
-  wrote purpose consents, the GDPR is taken to apply.
+- **GDPR applies** while Google says consent is required, when the form wrote
+  `IABTCF_gdprApplies = 1`, or, when it never wrote that flag, when it wrote purpose consents (it
+  writes them only where the GDPR applies). The rule is in one place: `RecordingConsentPolicy`.
 - **When it is read:**
   - the stored choice at launch, so a returning player is recorded from the first screen;
   - again after every refresh of the ads' consent: the update when the menu opens, the consent form,
@@ -203,7 +203,7 @@ so only this ADR changed.
 - A returning player whose choice allows it: from the Boot scene, as the app's scope is built.
 - A first launch: UMP's state is unknown, so nothing yet. The menu builds Earn Coins, which starts
   the rewarded ads. Their consent update refreshes the privacy options, and the recording starts
-  then: a few seconds after the menu opens outside the GDPR regions, after "Consent" inside them.
+  then: a few seconds after the menu opens outside the GDPR regions (since 8 Oct 2026, never inside them).
 - Offline at first launch: the ads try again (5 s, 10 s and so on, up to 2 minutes). The recording
   starts after the first update that works.
 - No path waits for an event that never fires. No Editor or debug-build guard stops a phone build.

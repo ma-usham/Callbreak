@@ -4,11 +4,12 @@ using NUnit.Framework;
 namespace Callbreak.Tests.EditMode.Application
 {
     /// <summary>
-    /// When the player's privacy choice allows the session to be recorded (ADR 044): never before the
-    /// choice is known or while Google's consent form is unanswered; where the GDPR applies, only with
-    /// consent to TCF purposes 1, 8 and 10 (the form's "Consent" grants every purpose, "Do not
-    /// consent" none); elsewhere, once Google says no consent is needed or the player answered a
-    /// non-GDPR message. Signals that disagree or are cut short never allow it.
+    /// Where the session may be recorded (ADR 044; the owner, 8 Oct 2026: "dont record in europe that
+    /// requires some conditions, record in else regions"): never before Google's consent information
+    /// is known; never where the GDPR applies (the EEA, the UK and Switzerland, where Google's consent
+    /// form is required), whatever the player answers there; elsewhere, once Google says no consent is
+    /// needed or the player answered a non-GDPR message. Signals that say the GDPR applies, even
+    /// alongside others that don't, never allow it.
     /// </summary>
     public sealed class RecordingConsentPolicyTests
     {
@@ -16,14 +17,8 @@ namespace Callbreak.Tests.EditMode.Application
         private const string AllEleven = "11111111111";
         private const string NoneOfEleven = "00000000000";
 
-        // Purposes 1, 8 and 10 only.
-        private const string JustTheNeededOnes = "10000001010";
-
-        [Test]
-        public void ThePurposes_AreStorage_ContentMeasurement_AndImprovingTheService()
-        {
-            CollectionAssert.AreEqual(new[] { 1, 8, 10 }, RecordingConsentPolicy.Purposes);
-        }
+        // Purposes 1, 8 and 10 only: what recording would have needed under the earlier rule.
+        private const string JustStorageMeasurementAndImprovement = "10000001010";
 
         [Test]
         public void NothingKnown_RecordsNothing()
@@ -34,10 +29,11 @@ namespace Callbreak.Tests.EditMode.Application
         }
 
         [Test]
-        public void AnUnansweredConsentForm_RecordsNothing_EvenWithOldConsentsStored()
+        public void WhereConsentIsRequired_ItRecordsNothing_BeforeTheFormIsAnswered()
         {
             Assert.IsFalse(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.Required, true, AllEleven)));
             Assert.IsFalse(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.Required, null, string.Empty)));
+            Assert.IsFalse(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.Required, false, string.Empty)));
         }
 
         [Test]
@@ -47,48 +43,24 @@ namespace Callbreak.Tests.EditMode.Application
             Assert.IsTrue(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.NotRequired, false, string.Empty)));
         }
 
-        [Test]
-        public void UnderTheGdpr_ConsentToEverything_Records()
+        [TestCase(AllEleven)]
+        [TestCase(JustStorageMeasurementAndImprovement)]
+        [TestCase(NoneOfEleven)]
+        [TestCase("")]
+        [TestCase(null)]
+        public void UnderTheGdpr_ItRecordsNothing_WhateverThePlayerAnswered(string purposeConsents)
         {
-            Assert.IsTrue(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.Obtained, true, AllEleven)));
-        }
-
-        [Test]
-        public void UnderTheGdpr_DoNotConsent_RecordsNothing()
-        {
-            Assert.IsFalse(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.Obtained, true, NoneOfEleven)));
-        }
-
-        [Test]
-        public void UnderTheGdpr_JustTheNeededPurposes_Record()
-        {
-            Assert.IsTrue(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.Obtained, true, JustTheNeededOnes)));
-        }
-
-        [TestCase(1)]
-        [TestCase(8)]
-        [TestCase(10)]
-        public void UnderTheGdpr_AnyNeededPurposeRefused_RecordsNothing(int refused)
-        {
-            char[] purposes = AllEleven.ToCharArray();
-            purposes[refused - 1] = '0';
-
-            Assert.IsFalse(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.Obtained, true, new string(purposes))));
-        }
-
-        [Test]
-        public void UnderTheGdpr_PurposesCutShort_OrMissing_RecordNothing()
-        {
-            Assert.IsFalse(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.Obtained, true, "111111111")), "no character for purpose 10");
-            Assert.IsFalse(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.Obtained, true, string.Empty)));
-            Assert.IsFalse(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.Obtained, true, null)));
+            // The owner: not in Europe, where it comes with conditions, even when the player consents.
+            Assert.IsFalse(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.Obtained, true, purposeConsents)));
         }
 
         [Test]
         public void GdprFlagMissing_ButPurposesStored_IsJudgedAsGdpr()
         {
+            // Google's form writes TCF purposes only where the GDPR applies.
             Assert.IsFalse(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.Obtained, null, NoneOfEleven)));
-            Assert.IsTrue(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.Obtained, null, AllEleven)));
+            Assert.IsFalse(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.Obtained, null, AllEleven)));
+            Assert.IsFalse(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.NotRequired, null, AllEleven)));
         }
 
         [Test]
@@ -100,30 +72,16 @@ namespace Callbreak.Tests.EditMode.Application
         }
 
         [Test]
-        public void NoConsentNeeded_YetTheGdprSaidToApply_FollowsThePurposes()
+        public void NoConsentNeeded_YetTheGdprSaidToApply_RecordsNothing()
         {
             Assert.IsFalse(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.NotRequired, true, string.Empty)));
-            Assert.IsTrue(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.NotRequired, true, AllEleven)));
-        }
-
-        [TestCase("1", 1, true)]
-        [TestCase("0", 1, false)]
-        [TestCase("1", 2, false)]
-        [TestCase("1", 0, false)]
-        [TestCase("1", -3, false)]
-        [TestCase("", 1, false)]
-        [TestCase("0000000100", 8, true)]
-        [TestCase("1111111x11", 8, false)]
-        [TestCase("1111111x11", 9, true)]
-        public void Granted_ReadsOneCharacterPerPurpose(string purposeConsents, int purpose, bool granted)
-        {
-            Assert.AreEqual(granted, RecordingConsentPolicy.Granted(purposeConsents, purpose));
+            Assert.IsFalse(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.NotRequired, true, AllEleven)));
         }
 
         [Test]
-        public void Granted_WithNoString_IsFalse()
+        public void TheGdprSaidNotToApply_OutweighsStoredPurposes()
         {
-            Assert.IsFalse(RecordingConsentPolicy.Granted(null, 1));
+            Assert.IsTrue(RecordingConsentPolicy.Allows(new ConsentSignals(ConsentState.NotRequired, false, AllEleven)));
         }
 
         [Test]
