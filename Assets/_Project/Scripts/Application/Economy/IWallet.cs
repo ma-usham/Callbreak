@@ -22,6 +22,6 @@ namespace Callbreak.Application.Economy
     public static class WalletRules
     {
         /// <summary>What a new player starts with (the owner, 4 Oct 2026; a placeholder to tune).</summary>
-        public const int StartingCoins = 5000;
+        public const int StartingCoins = 500;
     }
 }
