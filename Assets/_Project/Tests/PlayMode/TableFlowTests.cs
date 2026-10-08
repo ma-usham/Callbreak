@@ -83,7 +83,7 @@ namespace Callbreak.Tests.PlayMode
             GameFixture.PressIn(table, "HomeButton");
             Assert.AreEqual(ScreenId.MatchMenu, router.Current);
             Assert.IsTrue(session.IsPaused, "GDD 11 screen 13: an offline match pauses under the menu");
-            GameFixture.Press(router, "ResumeButton");
+            GameFixture.Press(router, "CloseButton");
             Assert.AreEqual(ScreenId.Gameplay, router.Current);
             Assert.IsFalse(session.IsPaused);
 

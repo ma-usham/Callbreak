@@ -185,14 +185,15 @@ namespace Callbreak.Tests.EditMode.Presentation
             StringAssert.DoesNotContain("bot will take", host, "no bot takes over a room that is gone");
         }
 
-        [TestCase(MatchMode.Offline, "Offline match · Paused", "Resume Game")]
+        [TestCase(MatchMode.Offline, "Offline match · Paused", "Restart Game")]
         [TestCase(MatchMode.PrivateRoom, "Online game", "Back to Game")]
         [TestCase(MatchMode.QuickMatch, "Online game", "Back to Game")]
-        public void MatchMenu_AnOnlineGameIsNotPaused_SoItGoesBackToTheGame(MatchMode mode, string tag, string firstButton)
+        public void MatchMenu_OfflineItsFirstButtonRestarts_OnlineItGoesBackToTheGame(MatchMode mode, string tag, string firstButton)
         {
-            // GDD 11 screen 13: an offline match pauses under the menu; an online one cannot.
+            // GDD 11 screen 13: an offline match pauses under the menu; an online one cannot. The
+            // owner (8 Oct 2026): offline, the first button restarts the match (the × resumes it).
             Assert.AreEqual(tag, Strings.Get(MatchMenuText.ModeKeyFor(mode)));
-            Assert.AreEqual(firstButton, Strings.Get(MatchMenuText.ResumeKeyFor(mode)));
+            Assert.AreEqual(firstButton, Strings.Get(MatchMenuText.FirstButtonKeyFor(mode)));
         }
 
         [Test]

@@ -15,8 +15,11 @@ using VContainer.Unity;
 namespace Callbreak.Presentation.Overlays
 {
     /// <summary>
-    /// GDD §11 screen 13, the match menu, opened by Home and by Android back on the table. Resume
-    /// and the close × go back to the table; Scorecard opens screen 16 over the menu; the Sound
+    /// GDD §11 screen 13, the match menu, opened by Home and by Android back on the table. The close
+    /// × goes back to the table, and so does the first button online ("Back to Game"); offline the
+    /// first button is "Restart Game" (the owner, 8 Oct 2026): a new match at the same difficulty is
+    /// dealt at once, at the table, the one in play dropped rather than kept for Resume, after a
+    /// full-screen ad when one is due, as for Play Again. Scorecard opens screen 16 over the menu; the Sound
     /// switch mutes music and effects together; Leave Match asks first (the shared dialog), then
     /// leaves the session and returns to the main menu. Offline the match is paused while the menu
     /// is open (the table presenter pauses it for every screen that covers the table) and leaving
@@ -47,12 +50,14 @@ namespace Callbreak.Presentation.Overlays
         private readonly IAudioService _audio;
         private readonly IRoomService _rooms;
         private readonly IBetweenMatchAds _ads;
+        private readonly IOfflineMatchStore _offlineStore;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private bool _started;
         private bool _leaving;
 
-        /// <param name="ads">The full-screen ad after a match left early; none when null.</param>
+        /// <param name="ads">The full-screen ad after a match left early or restarted; none when null.</param>
+        /// <param name="offlineStore">Where an offline match is kept for Resume, emptied by a restart; untouched when null.</param>
         public MatchMenuPresenter(
             MatchMenuView view,
             ScreenRouter router,
@@ -63,7 +68,8 @@ namespace Callbreak.Presentation.Overlays
             IAppFlow flow,
             IAudioService audio,
             IRoomService rooms,
-            IBetweenMatchAds ads = null)
+            IBetweenMatchAds ads = null,
+            IOfflineMatchStore offlineStore = null)
         {
             _view = view;
             _router = router;
@@ -75,6 +81,7 @@ namespace Callbreak.Presentation.Overlays
             _audio = audio;
             _rooms = rooms;
             _ads = ads;
+            _offlineStore = offlineStore;
         }
 
         private bool IsOffline => _session.Mode == MatchMode.Offline;
@@ -96,7 +103,7 @@ namespace Callbreak.Presentation.Overlays
         {
             _started = true;
             _view.CloseClicked += OnResume;
-            _view.ResumeClicked += OnResume;
+            _view.ResumeClicked += OnFirstButton;
             _view.ScorecardClicked += OnScorecard;
             _view.LeaveClicked += OnLeave;
             _view.SoundChanged += OnSoundChanged;
@@ -117,7 +124,7 @@ namespace Callbreak.Presentation.Overlays
             try
             {
                 _view.CloseClicked -= OnResume;
-                _view.ResumeClicked -= OnResume;
+                _view.ResumeClicked -= OnFirstButton;
                 _view.ScorecardClicked -= OnScorecard;
                 _view.LeaveClicked -= OnLeave;
                 _view.SoundChanged -= OnSoundChanged;
@@ -134,12 +141,64 @@ namespace Callbreak.Presentation.Overlays
 
         private void Render()
         {
-            // An online game cannot pause: its tag just says it is online, and its first button goes back to the game.
+            // An online game cannot pause: its tag just says it is online, and its first button goes
+            // back to the game. Offline the first button restarts the match.
             _view.SetMode(_localization.Get(MatchMenuText.ModeKeyFor(_session.Mode)));
-            _view.SetResumeLabel(_localization.Get(MatchMenuText.ResumeKeyFor(_session.Mode)));
+            _view.SetResumeLabel(_localization.Get(MatchMenuText.FirstButtonKeyFor(_session.Mode)));
             _view.SetPausedNoteVisible(IsOffline);
             _view.SetSound(_settings.Music || _settings.SoundEffects);
             _view.ReduceMotion = _settings.ReduceMotion;
+        }
+
+        /// <summary>"Restart Game" offline, "Back to Game" online.</summary>
+        private void OnFirstButton()
+        {
+            if (IsOffline)
+            {
+                OnRestart();
+            }
+            else
+            {
+                OnResume();
+            }
+        }
+
+        private void OnRestart()
+        {
+            if (_leaving)
+            {
+                return;
+            }
+
+            _leaving = true;
+            _audio.Play(SoundCue.UiTap);
+            _ = RestartAsync();
+        }
+
+        /// <summary>
+        /// A new offline match at the difficulty of the one in play (a practice or a resumed match did
+        /// not take it from the offline setup's remembered choice), dealt on a fresh table. The match in
+        /// play is dropped: no save of it is left for Resume. It stays paused under the menu until the
+        /// new table is up.
+        /// </summary>
+        private async Task RestartAsync()
+        {
+            try
+            {
+                BotDifficulty difficulty = _session is OfflineMatchSession playing ? playing.Difficulty : _settings.Difficulty;
+                _offlineStore?.Clear();
+                if (_ads != null)
+                {
+                    await _ads.ShowIfDueAsync(AfterMatch.NewMatch, CancellationToken.None);
+                }
+
+                await _flow.StartMatchAsync(new MatchLaunchRequest(MatchMode.Offline, difficulty), CancellationToken.None);
+            }
+            catch (Exception e)
+            {
+                _leaving = false;
+                Debug.LogException(e);
+            }
         }
 
         private void OnResume()

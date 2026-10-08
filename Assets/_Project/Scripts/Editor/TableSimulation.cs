@@ -1798,9 +1798,19 @@ namespace Callbreak.Editor
                     Equal(ScreenId.MatchMenu, _router.Current, "the scorecard closes back to the menu");
                 }
 
+                // Offline the first button restarts (the owner, 8 Oct 2026): a new match at the same
+                // difficulty, asked of the app's flow; the real flow then deals it on a fresh table, so
+                // here the menu stays up and its × goes back to this match.
+                Equal(_text.Get("ui.match_menu.restart"), Field<TMP_Text>(_menu, "_resumeLabel").text, "offline, the first button reads \"Restart Game\"");
+                int launches = _flow.Started.Count;
                 Click(Field<Button>(_menu, "_resumeButton"));
-                Equal(ScreenId.Gameplay, _router.Current, "Resume Game returns to the table");
-                Check(!_active.IsPaused, "the match runs again after Resume");
+                Equal(launches + 1, _flow.Started.Count, "Restart Game asks for a new match");
+                MatchLaunchRequest restart = _flow.Started[_flow.Started.Count - 1];
+                Check(restart.Mode == MatchMode.Offline && !restart.ResumeSaved, "a new offline match, not the saved one", restart.Mode + (restart.ResumeSaved ? " resumed" : string.Empty));
+                Equal(((OfflineMatchSession)_active).Difficulty, restart.Difficulty, "at the difficulty of the match in play");
+                Click(Field<Button>(_menu, "_closeButton"));
+                Equal(ScreenId.Gameplay, _router.Current, "the close button returns to the table");
+                Check(!_active.IsPaused, "the match runs again after closing the menu");
 
                 // Android back: on the bare table it opens the menu; on the menu it closes it.
                 _router.Back();

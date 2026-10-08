@@ -22,7 +22,8 @@ namespace Callbreak.Application.Economy
     /// <item>within <see cref="MinInterval"/> of the last ad coming up, on the wall clock;</item>
     /// <item>when no ad is loaded at that moment: the game goes on without waiting for one.</item>
     /// </list>
-    /// Only the match results and the match menu's Leave Match ask, so no ad shows during play, on a
+    /// Only the match results and the match menu's Leave Match and Restart Game (offline, as a new
+    /// match is dealt) ask, so no ad shows during play, on a
     /// round's results, in matchmaking or in the lobby, nor after a match called off (the host lost),
     /// which the player didn't leave. The time of the last ad lives in memory, so each launch starts
     /// afresh; a clock found set back to before it starts the three minutes again from then.

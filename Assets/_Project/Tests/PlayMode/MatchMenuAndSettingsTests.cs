@@ -1,7 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
+using Callbreak.Application.Flow;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Sessions;
+using Callbreak.Bootstrap;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Table;
 using NUnit.Framework;
@@ -17,8 +19,9 @@ namespace Callbreak.Tests.PlayMode
     /// <summary>
     /// The pages that open over a game (GDD §11 screens 11 and 13), in the real scenes. The match
     /// menu of an online game says "Online game", inside its pill, and its first button reads "Back
-    /// to Game": an online game cannot pause. Offline it says the match is paused and offers "Resume
-    /// Game". Either way the tag's pill hugs its words. Settings covers the screen it opens from, the gear that opened it included, and has no
+    /// to Game": an online game cannot pause. Offline it says the match is paused and offers "Restart
+    /// Game", which deals a new match at the table without going back to the main menu (the owner,
+    /// 8 Oct 2026; the × resumes). Either way the tag's pill hugs its words. Settings covers the screen it opens from, the gear that opened it included, and has no
     /// gear of its own, wherever it opens from. Saves go to a temporary folder.
     /// </summary>
     public sealed class MatchMenuAndSettingsTests
@@ -66,7 +69,7 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator MatchMenu_Offline_SaysPaused_AndOffersResumeGame()
+        public IEnumerator MatchMenu_Offline_SaysPaused_AndOffersRestartGame()
         {
             yield return StartOfflineMatch();
             ScreenRouter router = _game.TableRouter;
@@ -80,11 +83,46 @@ namespace Callbreak.Tests.PlayMode
             TMP_Text mode = Label(menu, "ModeLabel");
             TMP_Text first = Label(menu, "ResumeLabel");
             Assert.AreEqual(Text(MatchMenuText.ModeOfflineKey), mode.text);
-            Assert.AreEqual(Text(MatchMenuText.ResumeKey), first.text);
+            Assert.AreEqual(Text(MatchMenuText.RestartKey), first.text);
             Assert.IsTrue(Named(menu, "PausedNote").gameObject.activeInHierarchy, "\"Your match is paused.\"");
             AssertInkInside(mode, Named(menu, "ModePill"), "the mode tag");
             AssertHugs(mode, Named(menu, "ModePill"), Named(menu, "Panel"), "the mode tag");
-            AssertInkInside(first, Named(menu, "ResumeButton"), "\"Resume Game\"");
+            AssertInkInside(first, Named(menu, "ResumeButton"), "\"Restart Game\"");
+        }
+
+        [UnityTest]
+        public IEnumerator MatchMenu_Offline_RestartGame_DealsANewMatchAtTheTable_AndTheOldOneIsGone()
+        {
+            yield return StartOfflineMatch();
+            IMatchSession before = CurrentSession();
+            ScreenRouter router = _game.TableRouter;
+            TableView table = Object.FindFirstObjectByType<TableView>();
+
+            GameFixture.PressIn(table, "HomeButton");
+            GameFixture.Press(router, "ResumeButton");
+            yield return GameFixture.Until(() => CurrentSession() != null && CurrentSession() != before && !_game.Curtain.IsCovering, "a new table");
+            IMatchSession after = CurrentSession();
+            yield return GameFixture.Until(() => after.Status == SessionStatus.Running && after.View.Hand.Count == 13, "the new match's first hand");
+
+            Assert.AreEqual(MatchMode.Offline, after.Mode);
+            Assert.IsFalse(((OfflineMatchSession)after).IsResumed, "a new match is dealt, not the old one resumed");
+            Assert.AreEqual(((OfflineMatchSession)before).Difficulty, ((OfflineMatchSession)after).Difficulty, "at the same difficulty");
+            Assert.AreEqual(AppState.InMatch, _game.Flow.State, "without going back to the main menu");
+            Assert.IsFalse(_game.Services.Resolve<IOfflineMatchStore>().HasSave, "the match left behind is not kept for Resume");
+        }
+
+        /// <summary>The table's session, or null while the table is not up (a new one loading).</summary>
+        private IMatchSession CurrentSession()
+        {
+            try
+            {
+                TableLifetimeScope scope = _game.Table;
+                return scope != null && scope.Container != null ? scope.Container.Resolve<IMatchSession>() : null;
+            }
+            catch (System.ObjectDisposedException)
+            {
+                return null;
+            }
         }
 
         [UnityTest]
