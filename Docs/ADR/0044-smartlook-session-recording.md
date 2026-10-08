@@ -152,8 +152,81 @@ the package's own paths and GUIDs, so a later import of an official package land
   - the stand-in.
 - **Verified in the Editor:** `compile-check.js` (the Editor's view and `--player`, an Android
   player build's view) compiles every assembly; the EditMode and PlayMode suites pass.
-- **Not verified on a phone:** EDM's resolve, the Gradle build, the manifest merge, the JNI calls,
-  the UMP and TCF reads, and an upload to Smartlook.
+- **Not verified on a phone:** the JNI calls, the UMP and TCF reads, and an upload to Smartlook.
+  EDM's resolve, the Gradle build and the manifest merge were checked on 8 Oct (see the audit).
+
+## Audit (8 Oct 2026)
+
+The owner asked whether Smartlook really works ("I think smart look hasnt yet been implemented
+correctly"). An agent checked everything it could without a phone. It found no defect in the code,
+so only this ADR changed.
+
+**The SDK is current, and Smartlook's servers accept it.**
+- Smartlook's Unity page (mobile.developer.smartlook.com, updated 13 May 2025) still installs
+  Android SDK 1.8.7 "unity-lite-support". SDK 2.x has no Unity bridge. Smartlook's release notes
+  (2022, with SDK 2.0) say 1.8 stays supported. No end of life is announced.
+- A script read the key from `SmartlookProject.cs` and printed nothing of it. It sent the request
+  SDK 1.8.7 sends at setup to `manager.smartlook.com/rec/check-recording/mobile`, as SDK version
+  `1.8.7-unity-lite`. The answer: recording allowed, uploads to `sdk-writer.eu.smartlook.cloud` (the
+  EU region). A made-up key gets "Project not found". The request uploads nothing.
+- The project's settings, as the server sent them: 2 fps, 480 px high, native rendering, the app
+  may switch the rendering mode, uploads on Wi-Fi only, recordings kept 30 days, no network capture,
+  a session ends after 5 minutes away or after 1 hour.
+
+**The calls are right.** Checked with `javap` against the AAR:
+- `com.smartlook.sdk.smartlook.Smartlook` has `setup(String)`, `startRecording()` and
+  `stopRecording()` (from `SmartlookBase`) and `setRenderingMode(String)` (from
+  `SmartlookBridgeBase`). All are static and return nothing. Android finds a superclass's static
+  methods, and Smartlook's own bridge relies on that.
+- Smartlook's bridge (UnityPackage 1.2, `Smartlook.Android.cs`) makes the same calls on the same
+  class, from Unity's thread, with no activity. Inside the SDK, `setupAndStartRecording` is `setup`
+  then `startRecording`.
+- A setup after launch is supported. The SDK takes the activity from `UnityPlayer.currentActivity`.
+  Unity 6 still has that field, and sets it for GameActivity, the game's entry point.
+- "native" and "no_rendering" are the SDK's own codes. A mode the app sets wins over the
+  dashboard's; only "wireframe" is restricted. The game sets the mode at every start, so the
+  dashboard's rendering mode setting does not change this game.
+- Region and relay: nothing to set. The server names the upload host.
+- Smartlook's session and visitor links contain the project key. The game never asks the SDK for
+  them, and must never log them. The SDK's own logging stays off for the same reason: its API log
+  line for `setup` prints the key ("setup() called with: smartlookAPIKey = ...").
+
+**The build is right.** The owner's release bundle of 8 Oct, 17:35 (in
+`Library/Bee/Android/Prj/IL2CPP/Gradle`) has:
+- the SDK's classes and the Kotlin library in its dex files;
+- Smartlook's upload job, its referrer receiver, `INTERNET` and `largeHeap` in the merged manifest;
+- the project key and the recording code in the IL2CPP metadata (counted, not printed).
+- EDM4U resolved `kotlin-stdlib-jdk8:1.6.10` (`ProjectSettings/AndroidResolverDependencies.xml`).
+  Minify is off. The AAR has no native libraries, so Android's 16 KB pages don't concern it.
+
+**When it records**, traced from launch:
+- A returning player whose choice allows it: from the Boot scene, as the app's scope is built.
+- A first launch: UMP's state is unknown, so nothing yet. The menu builds Earn Coins, which starts
+  the rewarded ads. Their consent update refreshes the privacy options, and the recording starts
+  then: a few seconds after the menu opens outside the GDPR regions, after "Consent" inside them.
+- Offline at first launch: the ads try again (5 s, 10 s and so on, up to 2 minutes). The recording
+  starts after the first update that works.
+- No path waits for an event that never fires. No Editor or debug-build guard stops a phone build.
+
+**Why the dashboard may still be empty:**
+- Uploads are Wi-Fi only. A phone on mobile data records, but uploads only once it reaches Wi-Fi.
+- Android's job scheduler uploads in the background, so a session shows up some minutes after it.
+- On a first launch, the recording starts only once the menu has updated the consent.
+
+**Not verified:** no phone is on this PC's adb. So the SDK on a phone (setup, the capture of Unity's
+surface, touches, the upload), the hiding, and the UMP and TCF reads are not verified. The dashboard
+was not read: Smartlook was signed out in the shared browser, and agents don't sign in.
+
+**Nothing else is needed.** The SDK takes only the project key. The project id in the dashboard's
+links is not used.
+
+**To check on a phone**, on Wi-Fi:
+1. Install, open, play a minute, press Home.
+2. `adb logcat -s Unity` shows "Session recording: Smartlook, once the player's privacy choice
+   allows it.", then "Session recording: on.". A first launch shows "Session recording: off (the
+   player's privacy choice is not known yet)." first. "[Smartlook] Recording did not start: ..."
+   means the SDK refused. Smartlook's own warnings have tags that start with `Smartlook_`.
+3. The session shows in the dashboard a few minutes later.
 
 ## Owner
 
@@ -162,9 +235,9 @@ the package's own paths and GUIDs, so a later import of an official package land
    a project keeps its key. Then copy the key and put it in `SmartlookProject.ProjectKey`. It is
    under Project settings, Recording, Project key, Show key.
    - Choose "Upload recordings": Wi-Fi only today. Players on mobile data upload only when they
-     reach Wi-Fi.
-2. **Unity.** Let EDM4U resolve (Assets > External Dependency Manager > Android Resolver > Force
-   Resolve), and commit the `mainTemplate.gradle` change. Then build and check logcat:
+     reach Wi-Fi. To test from a phone on mobile data, allow mobile data for a while.
+2. **Unity.** Done 8 Oct 2026: EDM4U resolved, and the release bundle of 8 Oct has the SDK and the
+   key. Install a build and check logcat (see the audit):
    - "Session recording: Smartlook, once the player's privacy choice allows it.", then
      "Session recording: on.";
    - the session in the dashboard after an upload on Wi-Fi.
