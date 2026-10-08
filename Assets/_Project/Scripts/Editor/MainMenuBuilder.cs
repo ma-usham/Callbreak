@@ -19,7 +19,8 @@ namespace Callbreak.Editor
     /// mockup by re-composing it from the exported sprites (ArtSource/Prompts/MainMenu_Batch.md).
     /// The coin wallet left of the settings disc is mockup 23's (23-coinsection.png, which is
     /// mockup 00 with the wallet added; everything else stands where it did). The No Ads button
-    /// left of the wallet is on no mockup (see <see cref="NoAdsIconPath"/>).
+    /// left of the wallet is on no mockup (see <see cref="NoAdsIconPath"/>), nor is the Daily Rewards
+    /// button below it (see <see cref="DailyRewardsIconPath"/>).
     /// Re-running overwrites the prefab, so layout changes belong here until the screen is signed
     /// off. Like the screens built from layouts, its buttons carry press feedback, its fixed
     /// labels carry string-table keys, and its corner groups follow the device's safe area.
@@ -77,6 +78,17 @@ namespace Callbreak.Editor
         // on the wallet's other side, with the No Ads glyph (ChatGPT's, ArtSource/Working/MainMenu/
         // chatgpt/NoAds_prompts.md) centred on it.
         private const string NoAdsIconPath = "Icons/Icon_NoAds.png";
+
+        // The Daily Rewards button (the owner, 8 Oct 2026: "a small button below no ads") is on no
+        // mockup either: the gear's disc and shadow at DailyRewardsScale of their size, centred under
+        // the No Ads button DailyRewardsGap below it, with ChatGPT's gift glyph (ArtSource/Working/
+        // DailyRewards) at the same scale and a red dot on its top right rim while today's reward is
+        // ready. It stays where it is when No Ads has been bought and its button is gone.
+        private const string DailyRewardsIconPath = "Icons/Icon_DailyReward.png";
+        private const string DailyRewardsDotPath = "Controls/UI_Dot_Alert.png";
+        private const float DailyRewardsScale = 0.72f;
+        private const float DailyRewardsGap = 10f;
+        private const float DailyRewardsDotSize = 20f;
 
         // The fan: the four aces of the player's deck (GDD §13), laid as mockup 00 draws its four
         // cards. For each, the middle of its top edge and its tilt (mockup pixels; degrees,
@@ -249,6 +261,8 @@ namespace Callbreak.Editor
             Place("Icon", shop.transform, new Vector2(1548.75f, 96f), shopCentre, Ui("Icons/Icon_Shop.png"));
 
             UnityEngine.UI.Button noAds = BuildNoAdsButton(headerRight, settingsCentre, circle, circleShadow);
+            UnityEngine.UI.Button dailyRewards = BuildDailyRewardsButton(
+                headerRight, NoAdsCentre(settingsCentre, circle), circle, circleShadow, out GameObject dailyRewardsDot);
 
             var view = rootObject.AddComponent<MainMenuView>();
             var serialized = new SerializedObject(view);
@@ -271,6 +285,8 @@ namespace Callbreak.Editor
             serialized.FindProperty("_coinsText").objectReferenceValue = coins;
             serialized.FindProperty("_earnCoinsButton").objectReferenceValue = earnCoins;
             serialized.FindProperty("_noAdsButton").objectReferenceValue = noAds;
+            serialized.FindProperty("_dailyRewardsButton").objectReferenceValue = dailyRewards;
+            serialized.FindProperty("_dailyRewardsDot").objectReferenceValue = dailyRewardsDot;
             serialized.FindProperty("_playOnlineButton").objectReferenceValue = playOnline;
             serialized.FindProperty("_playWithFriendsButton").objectReferenceValue = playWithFriends;
             serialized.FindProperty("_playOfflineButton").objectReferenceValue = playOffline;
@@ -408,14 +424,90 @@ namespace Callbreak.Editor
         /// </summary>
         private static UnityEngine.UI.Button BuildNoAdsButton(RectTransform headerRight, Vector2 settingsCentre, Sprite circle, Sprite circleShadow)
         {
-            float radius = UiBuildKit.NativeSize(circle).x / UiBuildKit.ScaleX / 2f;
-            float gap = (settingsCentre.x - radius) - WalletPill.xMax;
-            var centre = new Vector2(WalletPill.xMin - gap - radius, settingsCentre.y);
+            Vector2 centre = NoAdsCentre(settingsCentre, circle);
             UnityEngine.UI.Button button = CreateButton(
                 "NoAdsButton", headerRight, centre, UiBuildKit.NativeSize(circle), circle, circleShadow, 1f, 0f, 4f, 0.2f);
             Place("Icon", button.transform, centre, centre, Ui(NoAdsIconPath));
             button.gameObject.SetActive(false);
             return button;
+        }
+
+        /// <summary>The No Ads button's centre: left of the wallet by the gap the gear keeps on its other side.</summary>
+        private static Vector2 NoAdsCentre(Vector2 settingsCentre, Sprite circle)
+        {
+            float radius = UiBuildKit.NativeSize(circle).x / UiBuildKit.ScaleX / 2f;
+            float gap = (settingsCentre.x - radius) - WalletPill.xMax;
+            return new Vector2(WalletPill.xMin - gap - radius, settingsCentre.y);
+        }
+
+        /// <summary>
+        /// The small Daily Rewards button under the No Ads button (see <see cref="DailyRewardsIconPath"/>),
+        /// with its red dot, built hidden: the presenter shows the dot while today's reward is ready.
+        /// </summary>
+        private static UnityEngine.UI.Button BuildDailyRewardsButton(
+            RectTransform headerRight, Vector2 noAdsCentre, Sprite circle, Sprite circleShadow, out GameObject dot)
+        {
+            float radius = UiBuildKit.NativeSize(circle).y / UiBuildKit.ScaleY / 2f;
+            float small = radius * DailyRewardsScale;
+            var centre = new Vector2(noAdsCentre.x, noAdsCentre.y + radius + DailyRewardsGap + small);
+            UnityEngine.UI.Button button = CreateButton(
+                "DailyRewardsButton", headerRight, centre, UiBuildKit.NativeSize(circle) * DailyRewardsScale, circle, circleShadow,
+                DailyRewardsScale, 0f, 4f * DailyRewardsScale, 0.2f);
+            Sprite icon = Ui(DailyRewardsIconPath);
+            RectTransform iconRect = UiBuildKit.CreateAt("Icon", button.transform, centre, centre, UiBuildKit.NativeSize(icon) * DailyRewardsScale);
+            UiBuildKit.AddImage(iconRect, icon, false);
+
+            // On the rim, up and to the right, as a badge sits on an app icon.
+            float offset = small * 0.72f;
+            RectTransform dotRect = UiBuildKit.CreateAt(
+                "Dot", button.transform, centre + new Vector2(offset, -offset), centre, UiBuildKit.FromMock(DailyRewardsDotSize, DailyRewardsDotSize));
+            UiBuildKit.AddImage(dotRect, Ui(DailyRewardsDotPath), false);
+            dot = dotRect.gameObject;
+            dot.SetActive(false);
+            return button;
+        }
+
+        /// <summary>
+        /// Adds the Daily Rewards button (<see cref="BuildDailyRewardsButton"/>) to the saved main menu
+        /// prefab, under its No Ads button, and binds it to the view; everything else in the prefab
+        /// stays as it is (<see cref="Build"/> makes it anew and drops the changes saved into it since).
+        /// A prefab that already has the button is left alone.
+        /// </summary>
+        public static string AddDailyRewardsButton()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+            try
+            {
+                var view = root.GetComponent<MainMenuView>();
+                var serialized = new SerializedObject(view);
+                if (serialized.FindProperty("_dailyRewardsButton").objectReferenceValue != null)
+                {
+                    return "the main menu already has its Daily Rewards button";
+                }
+
+                var noAds = serialized.FindProperty("_noAdsButton").objectReferenceValue as UnityEngine.UI.Button;
+                if (noAds == null)
+                {
+                    return "FAILED: the main menu has no No Ads button to stand under";
+                }
+
+                // The header buttons are placed against the mockup's centre (CreateButton).
+                var noAdsRect = (RectTransform)noAds.transform;
+                Vector2 position = noAdsRect.anchoredPosition;
+                var noAdsCentre = new Vector2(Screen.x + (position.x / UiBuildKit.ScaleX), Screen.y - (position.y / UiBuildKit.ScaleY));
+                UnityEngine.UI.Button button = BuildDailyRewardsButton(
+                    (RectTransform)noAdsRect.parent, noAdsCentre, Ui("Buttons/UI_ButtonCircle_Normal.png"), Ui("Buttons/UI_Shadow_Circle.png"), out GameObject dot);
+                button.transform.SetSiblingIndex(noAdsRect.GetSiblingIndex() + 1);
+                serialized.FindProperty("_dailyRewardsButton").objectReferenceValue = button;
+                serialized.FindProperty("_dailyRewardsDot").objectReferenceValue = dot;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, PrefabPath, out bool saved);
+                return saved ? $"saved {PrefabPath} with the Daily Rewards button" : $"FAILED to save {PrefabPath}";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         /// <summary>

@@ -34,12 +34,12 @@ namespace Callbreak.Editor
         private const string ScreensFolder = "Assets/_Project/Prefabs/UI/Screens";
         private const string TablePrefabsFolder = "Assets/_Project/Prefabs/Table";
 
-        /// <summary>The Menu scene's screens (GDD §21: 00-06, 11, 12, 14 and 15; Earn Coins, mockup 22; Play Online, 23), bottom to top.</summary>
+        /// <summary>The Menu scene's screens (GDD §21: 00-06, 11, 12, 14 and 15; Earn Coins, mockup 22; Play Online, 23; Daily Rewards, 26), bottom to top.</summary>
         private static readonly string[] MenuScreens =
         {
             "MainMenu", "PlayWithFriends", "CreateRoom", "JoinRoom", "PrivateLobby", "Matchmaking",
             "OfflineSetup", "Settings", "HowToPlay", "Profile", "Shop",
-            "EarnCoins", "PlayOnline",
+            "EarnCoins", "PlayOnline", "DailyRewards",
         };
 
         /// <summary>
@@ -427,6 +427,96 @@ namespace Callbreak.Editor
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorSceneManager.MarkSceneDirty(scene);
             return EditorSceneManager.SaveScene(scene) ? $"saved {BootPath} with a new curtain" : $"FAILED to save {BootPath}";
+        }
+
+        /// <summary>
+        /// Puts the screen prefab <paramref name="name"/> into the saved Menu scene, on top of the
+        /// screens there, hidden like them, and adds it to the menu scope's screens; every other object
+        /// of the scene stays as it is (<see cref="BuildMenu"/> makes all of them anew and drops the
+        /// changes saved into the scene since). A screen already in the scene is left alone. Nothing
+        /// happens while an open scene has unsaved changes.
+        /// </summary>
+        public static string AddMenuScreen(string name)
+        {
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                Scene open = SceneManager.GetSceneAt(i);
+                if (open.isDirty)
+                {
+                    return $"skipped: {(string.IsNullOrEmpty(open.path) ? "an untitled scene" : open.path)} has unsaved changes";
+                }
+            }
+
+            // The saved scene, loaded afresh (see RebuildBootCurtain); the Editor gets back the saved scenes it had open.
+            UnityEditor.SceneManagement.SceneSetup[] before = EditorSceneManager.GetSceneManagerSetup();
+            Scene scene = EditorSceneManager.OpenScene(MenuPath, OpenSceneMode.Single);
+            try
+            {
+                return AddScreen(scene, name);
+            }
+            finally
+            {
+                UnityEditor.SceneManagement.SceneSetup[] saved = System.Array.FindAll(before, s => !string.IsNullOrEmpty(s.path));
+                if (saved.Length > 0 && System.Array.Exists(saved, s => s.isActive))
+                {
+                    EditorSceneManager.RestoreSceneManagerSetup(saved);
+                }
+            }
+        }
+
+        private static string AddScreen(Scene scene, string name)
+        {
+            MenuLifetimeScope scope = null;
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                if (root.TryGetComponent(out scope))
+                {
+                    break;
+                }
+            }
+
+            if (scope == null)
+            {
+                return $"FAILED: {MenuPath} has no MenuLifetimeScope";
+            }
+
+            var so = new SerializedObject(scope);
+            SerializedProperty list = so.FindProperty("_screens");
+            Transform canvas = null;
+            for (int i = 0; i < list.arraySize; i++)
+            {
+                var existing = list.GetArrayElementAtIndex(i).objectReferenceValue as UIScreen;
+                if (existing == null)
+                {
+                    continue;
+                }
+
+                if (existing.name == name)
+                {
+                    return $"{name} is already in {MenuPath}";
+                }
+
+                canvas = existing.transform.parent;
+            }
+
+            if (canvas == null)
+            {
+                return $"FAILED: {MenuPath} has no menu screens to stand beside";
+            }
+
+            UIScreen screen = InstantiateScreen(scene, $"{ScreensFolder}/{name}.prefab", canvas);
+            if (screen == null)
+            {
+                return $"FAILED: {ScreensFolder}/{name}.prefab is missing or has no screen";
+            }
+
+            screen.transform.SetAsLastSibling();
+            screen.gameObject.SetActive(false);
+            list.arraySize++;
+            list.GetArrayElementAtIndex(list.arraySize - 1).objectReferenceValue = screen;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorSceneManager.MarkSceneDirty(scene);
+            return EditorSceneManager.SaveScene(scene) ? $"saved {MenuPath} with {name}" : $"FAILED to save {MenuPath}";
         }
 
         private static UIScreen InstantiateScreen(Scene scene, string path, Transform parent)

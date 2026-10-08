@@ -56,6 +56,7 @@ namespace Callbreak.Bootstrap
             RegisterPresenter<ShopView, ShopPresenter>(builder);
             RegisterPresenter<EarnCoinsView, EarnCoinsPresenter>(builder);
             RegisterPresenter<PlayOnlineView, PlayOnlinePresenter>(builder);
+            RegisterPresenter<DailyRewardsView, DailyRewardsPresenter>(builder);
 
             // Last, so every presenter is already listening when the first screen opens.
             builder.RegisterEntryPoint<MenuEntryPoint>();
@@ -77,6 +78,9 @@ namespace Callbreak.Bootstrap
 
             // Last of all: the first-run guide only acts on a bare main menu.
             builder.RegisterEntryPoint<FirstRunGuide>();
+
+            // Daily Rewards opens by itself on the bare main menu once a day (ADR 046).
+            RegisterPresenter<DailyRewardsView, DailyRewardsMoment>(builder);
         }
 
         /// <summary>Registers a screen's presenter only when the scene has that screen.</summary>

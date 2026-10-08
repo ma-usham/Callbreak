@@ -1,0 +1,18 @@
+{
+  // Sheet D1: the three day-tile looks of 26-daily-rewards. 1 = a quiet day (Day 2), 2 = today's tile
+  // (Day 1: crimson keyline, warm light inside), 3 = the wide weekly-bonus tile (Day 7: gold border,
+  // warm gold fill). Rects are the tiles' outer edges (line centres +-1 px, measured with kc line).
+  "size": [1536, 1024],
+  "ground": "#F8EFE5",
+  "feather": 12,
+  "captionSize": 18,
+  "rows": [
+    { "items": [
+      { "name": "TileNormal", "screen": "26", "rect": [600.6, 253.6, 232.0, 208.2], "margin": 6, "scale": 1.95, "caption": "1  day tile (Day 2)" },
+      { "name": "TileToday", "screen": "26", "rect": [356.6, 253.6, 233.0, 208.2], "margin": 6, "scale": 1.95, "caption": "2  today's tile (Day 1)" }
+    ] },
+    { "items": [
+      { "name": "TileBonus", "screen": "26", "rect": [843.8, 473.3, 474.5, 228.0], "margin": 6, "scale": 1.95, "caption": "3  weekly bonus tile (Day 7)" }
+    ] }
+  ]
+}

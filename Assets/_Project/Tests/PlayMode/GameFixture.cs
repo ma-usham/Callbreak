@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.IO;
+using Callbreak.Application.Economy;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Online;
 using Callbreak.Application.Ports;
@@ -80,6 +81,9 @@ namespace Callbreak.Tests.PlayMode
                 new ProfileService(saves, new NameFilter()).ChooseName(ProfileService.DefaultDisplayName);
             }
 
+            // Daily Rewards opens by itself once a day (ADR 046): the game starts with today's opening
+            // already used, so the main menu is bare; a test of the page seeds a file of its own.
+            saves.Save(DailyRewards.SaveKey, new DailyRewardsData { autoOpenDay = DailyRewards.DayNumber(DateTime.Now) });
             seed?.Invoke(saves);
 
             // Built before the extra registrations are queued: they would go into this scope too.

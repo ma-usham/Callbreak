@@ -1,0 +1,127 @@
+{
+  // Screen 26 - Daily Rewards (the owner's mockup of 8 Oct 2026; the designer's 26-daily-rewards-prompt.md).
+  // Rects are mockup pixels on 26-daily-rewards.png. Nothing is cut from the mockup. Shared menu
+  // background and UI kit: the back disc and icon, the wallet capsule and coin (as on Earn Coins), the
+  // title divider (a diamond and one line sprite, mirrored on the left), the plain ivory card stretched
+  // to the big panel (26's panel has no textile corners), the crimson gold-rimmed button (the main menu's
+  // Play Online pill), the kit's soft coin light (Day 1's sun) and the kit's hairline for the footer.
+  // The DailyRewards batch (ChatGPT-generated, ArtSource/Working/DailyRewards/notes.md; import settings in
+  // ArtSource/Kit/DailyRewards.json): the day tile, the wide weekly-bonus tile, the today overlay (the
+  // crimson keyline and Day 1's warmer inside, laid over whichever tile is claimable), the coins of each
+  // day with their contact shadows, the laurel (mirrored on the right), the empty gold ribbon and the
+  // heading flourish (mirrored on the right).
+  // Every word is a label. Title, subtitle and "Weekly bonus" are fixed copy (keys below); the balance,
+  // "Day 1 of 7", the day names, the amounts, the button's "Claim 10 Coins" and the footer line are
+  // written by the presenter. Arrays are id + day index 0-6 (Day 1 = 0). The today look is built on
+  // Tile0 (visible TodayFrame0 and CoinGlow0, as on the mockup); the other days carry the same two
+  // nodes hidden, at the rect the overlay takes on that tile (the tile's rect grown by 2.105 left/right
+  // and 1.425 top/bottom). On the mockup DayLabel0 and DayLabel6 are crimson, the others dark brown;
+  // the builder takes each label's measured colour.
+  // capFit / xFit / dilate / lineGradient / mirror are applied by ScreenExtras.Apply (customizer).
+  "name": "DailyRewards",
+  "mockup": "26-daily-rewards.png",
+  "background": "shared",
+  "nodes": [
+    { "id": "BackButton", "kind": "button", "group": "HeaderLeft", "shape": "ellipse", "rect": [42.6, 34.4, 87.0, 87.0],
+      "use": "UI/Buttons/UI_ButtonCircle_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Circle.png", "shadowDrop": 3.5, "shadowOpacity": 0.2 },
+    { "id": "BackIcon", "parent": "BackButton", "rect": [66.17, 59.06, 39.39, 37.43], "use": "UI/Icons/Icon_Back.png" },
+
+    // The wallet without the main menu's "+": coin and balance in the ivory pill (as on Earn Coins).
+    { "id": "WalletPill", "group": "HeaderRight", "shape": "pill", "rect": [1436.6, 52.6, 190.2, 71.2],
+      "use": "UI/Buttons/UI_ButtonSecondary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Secondary.png", "shadowDrop": 2, "shadowOpacity": 0.4 },
+    { "id": "WalletCoin", "parent": "WalletPill", "rect": [1460.63, 58.63, 56.45, 56.45], "use": "UI/Icons/Icon_Coin.png" },
+    { "id": "Balance", "kind": "label", "parent": "WalletPill", "text": "250", "font": "SansBold", "align": "left", "rect": [1532, 70, 68, 36] },
+
+    // The title's "y" reaches down between the subtitle's letters: the two rects meet at y 121-122.5.
+    { "id": "Title", "kind": "label", "text": "Daily Rewards", "font": "SerifBold", "rect": [520, 27, 632, 94], "capFit": [36.2, 105.8], "dilate": 0.12, "lineGradient": ["#B80819", "#6D0610"], "key": "ui.daily_rewards.title" },
+    { "id": "Subtitle", "kind": "label", "text": "COME BACK EVERY DAY", "font": "SansSemiBold", "tracked": true, "rect": [584, 122.5, 500, 24], "key": "ui.daily_rewards.subtitle" },
+    { "id": "TitleLineLeft", "rect": [606.0, 160.4, 221.0, 3.4], "use": "UI/Decor/Deco_TitleDivider_Line.png", "mirror": true },
+    { "id": "TitleDiamond", "rect": [826.5, 151.8, 17.5, 20.6], "use": "UI/Decor/Deco_TitleDivider_Diamond.png" },
+    { "id": "TitleLineRight", "rect": [844.0, 160.4, 221.0, 3.4], "use": "UI/Decor/Deco_TitleDivider_Line.png" },
+
+    // The kit's plain ivory card, its corners (drawn for radius 22.3) scaled to 26's radius 36.5.
+    { "id": "Panel", "shape": "roundrect", "radius": 36.5, "rect": [331.2, 184.7, 1009.4, 694.3], "sliceScale": 0.57,
+      "use": "UI/Panels/UI_Panel_Card.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "DayHeading", "kind": "label", "parent": "Panel", "text": "Day 1 of 7", "font": "SerifBold", "rect": [750, 203, 172, 44] },
+    { "id": "HeadingLeft", "parent": "Panel", "rect": [591.65, 212.49, 135.90, 21.33], "use": "UI/Decor/Deco_HeadingFlourish.png" },
+    { "id": "HeadingRight", "parent": "Panel", "rect": [945.35, 212.49, 135.90, 21.33], "use": "UI/Decor/Deco_HeadingFlourish.png", "mirror": true },
+
+    // Day 1: today's look (the overlay and the light behind the coin shown).
+    { "id": "Tile0", "parent": "Panel", "shape": "roundrect", "radius": 17.7, "rect": [357.705, 254.325, 231.55, 207.95],
+      "use": "UI/Panels/UI_DayTile_Normal.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "TodayFrame0", "parent": "Tile0", "rect": [355.6, 252.9, 235.76, 210.80], "use": "UI/Panels/UI_DayTile_TodayFrame.png" },
+    { "id": "CoinGlow0", "parent": "Tile0", "rect": [383.0, 273.0, 180.0, 180.0], "use": "UI/Decor/Deco_CoinGlow.png" },
+    { "id": "CoinShadow0", "parent": "Tile0", "rect": [415.27, 305.82, 115.47, 117.38], "use": "UI/Decor/Deco_DayCoins_1_Shadow.png" },
+    { "id": "Coins0", "parent": "Tile0", "rect": [439.18, 329.73, 67.64, 69.55], "use": "UI/Decor/Deco_DayCoins_1.png" },
+    { "id": "DayLabel0", "kind": "label", "parent": "Tile0", "text": "Day 1", "font": "SerifBold", "rect": [432, 275, 82, 39] },
+    { "id": "Amount0", "kind": "label", "parent": "Tile0", "text": "+10 coins", "font": "SerifBold", "rect": [400, 408, 148, 37], "xFit": [421.0, 439.1], "dilate": 0.3, "lineGradient": ["#C40A15", "#72060D"] },
+
+    { "id": "Tile1", "parent": "Panel", "shape": "roundrect", "radius": 17.7, "rect": [601.20, 254.20, 231.55, 207.95],
+      "use": "UI/Panels/UI_DayTile_Normal.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "TodayFrame1", "parent": "Tile1", "hidden": true, "rect": [599.095, 252.775, 235.76, 210.80], "use": "UI/Panels/UI_DayTile_TodayFrame.png" },
+    { "id": "CoinGlow1", "parent": "Tile1", "hidden": true, "rect": [620.76, 277.0, 180.0, 180.0], "use": "UI/Decor/Deco_CoinGlow.png" },
+    { "id": "CoinShadow1", "parent": "Tile1", "rect": [639.92, 306.92, 141.68, 120.17], "use": "UI/Decor/Deco_DayCoins_2_Shadow.png" },
+    { "id": "Coins1", "parent": "Tile1", "rect": [663.83, 330.83, 93.85, 72.34], "use": "UI/Decor/Deco_DayCoins_2.png" },
+    { "id": "DayLabel1", "kind": "label", "parent": "Tile1", "text": "Day 2", "font": "SerifBold", "rect": [679, 273, 78, 36] },
+    { "id": "Amount1", "kind": "label", "parent": "Tile1", "text": "+15 coins", "font": "SerifBold", "rect": [644, 408, 148, 37], "xFit": [421.1, 439.1], "dilate": 0.3, "lineGradient": ["#C40A15", "#72060D"] },
+
+    { "id": "Tile2", "parent": "Panel", "shape": "roundrect", "radius": 17.7, "rect": [844.50, 254.30, 231.60, 207.85],
+      "use": "UI/Panels/UI_DayTile_Normal.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "TodayFrame2", "parent": "Tile2", "hidden": true, "rect": [842.395, 252.875, 235.81, 210.70], "use": "UI/Panels/UI_DayTile_TodayFrame.png" },
+    { "id": "CoinGlow2", "parent": "Tile2", "hidden": true, "rect": [863.86, 271.15, 180.0, 180.0], "use": "UI/Decor/Deco_CoinGlow.png" },
+    { "id": "CoinShadow2", "parent": "Tile2", "rect": [877.70, 298.26, 152.33, 125.80], "use": "UI/Decor/Deco_DayCoins_3_Shadow.png" },
+    { "id": "Coins2", "parent": "Tile2", "rect": [901.61, 322.17, 104.50, 77.97], "use": "UI/Decor/Deco_DayCoins_3.png" },
+    { "id": "DayLabel2", "kind": "label", "parent": "Tile2", "text": "Day 3", "font": "SerifBold", "rect": [922, 273, 78, 36] },
+    { "id": "Amount2", "kind": "label", "parent": "Tile2", "text": "+20 coins", "font": "SerifBold", "rect": [884, 408, 152, 37], "xFit": [421.5, 439.6], "dilate": 0.3, "lineGradient": ["#C40A15", "#72060D"] },
+
+    { "id": "Tile3", "parent": "Panel", "shape": "roundrect", "radius": 17.6, "rect": [1087.85, 254.20, 230.45, 207.95],
+      "use": "UI/Panels/UI_DayTile_Normal.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "TodayFrame3", "parent": "Tile3", "hidden": true, "rect": [1085.745, 252.775, 234.66, 210.80], "use": "UI/Panels/UI_DayTile_TodayFrame.png" },
+    { "id": "CoinGlow3", "parent": "Tile3", "hidden": true, "rect": [1111.0, 270.65, 180.0, 180.0], "use": "UI/Decor/Deco_CoinGlow.png" },
+    { "id": "CoinShadow3", "parent": "Tile3", "rect": [1117.42, 295.18, 167.18, 130.95], "use": "UI/Decor/Deco_DayCoins_4_Shadow.png" },
+    { "id": "Coins3", "parent": "Tile3", "rect": [1141.33, 319.09, 119.35, 83.12], "use": "UI/Decor/Deco_DayCoins_4.png" },
+    { "id": "DayLabel3", "kind": "label", "parent": "Tile3", "text": "Day 4", "font": "SerifBold", "rect": [1165, 273, 78, 36] },
+    { "id": "Amount3", "kind": "label", "parent": "Tile3", "text": "+25 coins", "font": "SerifBold", "rect": [1127, 408, 152, 37], "xFit": [421.8, 439.8], "dilate": 0.3, "lineGradient": ["#C40A15", "#72060D"] },
+
+    { "id": "Tile4", "parent": "Panel", "shape": "roundrect", "radius": 17.7, "rect": [357.00, 474.40, 232.50, 225.15],
+      "use": "UI/Panels/UI_DayTile_Normal.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "TodayFrame4", "parent": "Tile4", "hidden": true, "rect": [354.895, 472.975, 236.71, 228.00], "use": "UI/Panels/UI_DayTile_TodayFrame.png" },
+    { "id": "CoinGlow4", "parent": "Tile4", "hidden": true, "rect": [383.5, 498.2, 180.0, 180.0], "use": "UI/Decor/Deco_CoinGlow.png" },
+    { "id": "CoinShadow4", "parent": "Tile4", "rect": [380.89, 522.17, 185.23, 132.06], "use": "UI/Decor/Deco_DayCoins_5_Shadow.png" },
+    { "id": "Coins4", "parent": "Tile4", "rect": [404.80, 546.08, 137.40, 84.23], "use": "UI/Decor/Deco_DayCoins_5.png" },
+    { "id": "DayLabel4", "kind": "label", "parent": "Tile4", "text": "Day 5", "font": "SerifBold", "rect": [435, 493, 78, 37] },
+    { "id": "Amount4", "kind": "label", "parent": "Tile4", "text": "+30 coins", "font": "SerifBold", "rect": [400, 642, 148, 37], "xFit": [655.9, 673.2], "dilate": 0.3, "lineGradient": ["#C40A15", "#72060D"] },
+
+    { "id": "Tile5", "parent": "Panel", "shape": "roundrect", "radius": 18.0, "rect": [600.90, 474.40, 231.90, 224.90],
+      "use": "UI/Panels/UI_DayTile_Normal.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "TodayFrame5", "parent": "Tile5", "hidden": true, "rect": [598.795, 472.975, 236.11, 227.75], "use": "UI/Panels/UI_DayTile_TodayFrame.png" },
+    { "id": "CoinGlow5", "parent": "Tile5", "hidden": true, "rect": [631.1, 498.35, 180.0, 180.0], "use": "UI/Decor/Deco_CoinGlow.png" },
+    { "id": "CoinShadow5", "parent": "Tile5", "rect": [618.82, 517.37, 204.58, 141.98], "use": "UI/Decor/Deco_DayCoins_6_Shadow.png" },
+    { "id": "Coins5", "parent": "Tile5", "rect": [642.73, 541.28, 156.75, 94.15], "use": "UI/Decor/Deco_DayCoins_6.png" },
+    { "id": "DayLabel5", "kind": "label", "parent": "Tile5", "text": "Day 6", "font": "SerifBold", "rect": [678, 493, 78, 37] },
+    { "id": "Amount5", "kind": "label", "parent": "Tile5", "text": "+40 coins", "font": "SerifBold", "rect": [643, 642, 149, 37], "xFit": [656.1, 673.8], "dilate": 0.3, "lineGradient": ["#C40A15", "#72060D"] },
+
+    // Day 7: the wide weekly-bonus tile, the laurels behind the pile, the ribbon in front of it.
+    { "id": "Tile6", "parent": "Panel", "shape": "roundrect", "radius": 20.7, "rect": [843.85, 473.65, 474.30, 227.50],
+      "use": "UI/Panels/UI_DayTile_Bonus.png", "shadowUse": "UI/Common/UI_Panel_Card_Shadow.png", "shadowSpread": 12, "shadowDrop": 2 },
+    { "id": "TodayFrame6", "parent": "Tile6", "hidden": true, "rect": [841.745, 472.225, 478.51, 230.35], "use": "UI/Panels/UI_DayTile_TodayFrame.png" },
+    { "id": "CoinGlow6", "parent": "Tile6", "hidden": true, "rect": [961.5, 464.45, 236.0, 236.0], "use": "UI/Decor/Deco_CoinGlow.png" },
+    { "id": "LaurelLeft", "parent": "Tile6", "rect": [930.79, 525.98, 37.42, 96.85], "use": "UI/Decor/Deco_Laurel.png" },
+    { "id": "LaurelRight", "parent": "Tile6", "rect": [1191.8, 525.98, 37.42, 96.85], "use": "UI/Decor/Deco_Laurel.png", "mirror": true },
+    { "id": "CoinShadow6", "parent": "Tile6", "rect": [951.40, 505.95, 256.23, 153.02], "use": "UI/Decor/Deco_DayCoins_7_Shadow.png" },
+    { "id": "Coins6", "parent": "Tile6", "rect": [975.31, 529.86, 208.40, 105.19], "use": "UI/Decor/Deco_DayCoins_7.png" },
+    { "id": "Ribbon", "parent": "Tile6", "rect": [952.43, 615.89, 254.15, 45.72], "use": "UI/Decor/Deco_Ribbon_Gold.png" },
+    { "id": "RibbonLabel", "kind": "label", "parent": "Ribbon", "text": "Weekly bonus", "font": "SerifBold", "rect": [1009, 621.5, 141, 28], "key": "ui.daily_rewards.weekly_bonus" },
+    { "id": "DayLabel6", "kind": "label", "parent": "Tile6", "text": "Day 7", "font": "SerifBold", "rect": [1034, 487, 93, 43] },
+    { "id": "Amount6", "kind": "label", "parent": "Tile6", "text": "+75 coins", "font": "SerifBold", "rect": [1003, 654, 153, 38], "xFit": [667.4, 685.9], "dilate": 0.3, "lineGradient": ["#C40A15", "#72060D"] },
+
+    { "id": "ClaimButton", "kind": "button", "parent": "Panel", "shape": "pill", "rect": [519.8, 720.1, 634.2, 94.6],
+      "use": "UI/Buttons/UI_ButtonPrimary_Normal.png", "shadowUse": "UI/Buttons/UI_Shadow_Primary.png", "shadowDrop": 6, "shadowOpacity": 0.45 },
+    { "id": "ClaimLabel", "kind": "label", "parent": "ClaimButton", "text": "Claim 10 Coins", "font": "SerifBold", "ink": "light", "style": "buttonLabel", "rect": [655, 740, 358, 52] },
+
+    // The footer between two hairlines (the kit's tan hairline with its white edges).
+    { "id": "FooterLineLeft", "parent": "Panel", "rect": [558.5, 844.7, 91.0, 6.09], "use": "UI/Controls/UI_PrizeRowLine.png" },
+    { "id": "Footer", "kind": "label", "parent": "Panel", "text": "Come back tomorrow for Day 2", "font": "SerifSemiBold", "rect": [666, 832, 336, 34] },
+    { "id": "FooterLineRight", "parent": "Panel", "rect": [1022.5, 844.7, 91.0, 6.09], "use": "UI/Controls/UI_PrizeRowLine.png" }
+  ]
+}

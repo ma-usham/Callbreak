@@ -23,5 +23,6 @@ namespace Callbreak.Presentation.Framework
         Scorecard = 16,
         EarnCoins = 22,
         PlayOnline = 23,
+        DailyRewards = 26,
     }
 }

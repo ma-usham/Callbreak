@@ -32,6 +32,11 @@ namespace Callbreak.Presentation.Screens
         // The No Ads button left of the wallet (the owner, 5 Oct 2026). A prefab built before it has
         // none; the menu then simply offers none.
         [SerializeField] private UnityEngine.UI.Button _noAdsButton;
+
+        // The small Daily Rewards button below No Ads (the owner, 8 Oct 2026) and its red dot, shown
+        // while today's reward is ready. A prefab built before it has neither.
+        [SerializeField] private UnityEngine.UI.Button _dailyRewardsButton;
+        [SerializeField] private GameObject _dailyRewardsDot;
         [SerializeField] private UnityEngine.UI.Button _playOnlineButton;
         [SerializeField] private UnityEngine.UI.Button _playWithFriendsButton;
         [SerializeField] private UnityEngine.UI.Button _playOfflineButton;
@@ -60,6 +65,9 @@ namespace Callbreak.Presentation.Screens
 
         /// <summary>The No Ads button was tapped.</summary>
         public event Action NoAdsClicked;
+
+        /// <summary>The Daily Rewards button was tapped.</summary>
+        public event Action DailyRewardsClicked;
 
         public event Action PlayOnlineClicked;
         public event Action PlayWithFriendsClicked;
@@ -91,6 +99,15 @@ namespace Callbreak.Presentation.Screens
             if (_noAdsButton != null && _noAdsButton.gameObject.activeSelf != visible)
             {
                 _noAdsButton.gameObject.SetActive(visible);
+            }
+        }
+
+        /// <summary>The Daily Rewards button's red dot: shown while today's reward is ready to claim.</summary>
+        public void SetDailyRewardsReady(bool ready)
+        {
+            if (_dailyRewardsDot != null && _dailyRewardsDot.activeSelf != ready)
+            {
+                _dailyRewardsDot.SetActive(ready);
             }
         }
 
@@ -188,6 +205,11 @@ namespace Callbreak.Presentation.Screens
                 _noAdsButton.onClick.AddListener(OnNoAdsClicked);
             }
 
+            if (_dailyRewardsButton != null)
+            {
+                _dailyRewardsButton.onClick.AddListener(OnDailyRewardsClicked);
+            }
+
             _playOnlineButton.onClick.AddListener(OnPlayOnlineClicked);
             _playWithFriendsButton.onClick.AddListener(OnPlayWithFriendsClicked);
             _playOfflineButton.onClick.AddListener(OnPlayOfflineClicked);
@@ -207,6 +229,11 @@ namespace Callbreak.Presentation.Screens
             if (_noAdsButton != null)
             {
                 _noAdsButton.onClick.RemoveListener(OnNoAdsClicked);
+            }
+
+            if (_dailyRewardsButton != null)
+            {
+                _dailyRewardsButton.onClick.RemoveListener(OnDailyRewardsClicked);
             }
 
             _playOnlineButton.onClick.RemoveListener(OnPlayOnlineClicked);
@@ -230,6 +257,8 @@ namespace Callbreak.Presentation.Screens
         private void OnEarnCoinsClicked() => EarnCoinsClicked?.Invoke();
 
         private void OnNoAdsClicked() => NoAdsClicked?.Invoke();
+
+        private void OnDailyRewardsClicked() => DailyRewardsClicked?.Invoke();
 
         private void OnPlayOnlineClicked() => PlayOnlineClicked?.Invoke();
 

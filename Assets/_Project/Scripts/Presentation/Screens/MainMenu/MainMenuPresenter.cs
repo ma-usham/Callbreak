@@ -24,7 +24,8 @@ namespace Callbreak.Presentation.Screens
     /// wallet (mockup 23) shows the balance as it changes; its "+" opens Earn Coins. The No Ads
     /// button left of it sells the one-time purchase that removes the ads between matches
     /// (<see cref="NoAdsOffer"/>), with the game under the curtain's black cover while the store's
-    /// sheet is up (ADR 042).
+    /// sheet is up (ADR 042). The small button below No Ads opens Daily Rewards (the owner, 8 Oct
+    /// 2026; ADR 046), with a red dot while today's reward is ready.
     /// </summary>
     public sealed class MainMenuPresenter : IStartable, IDisposable
     {
@@ -45,6 +46,7 @@ namespace Callbreak.Presentation.Screens
         private readonly CardSpriteProvider _cards;
         private readonly IWallet _wallet;
         private readonly NoAdsOffer _noAds;
+        private readonly IDailyRewards _dailyRewards;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private bool _asking;
@@ -68,7 +70,8 @@ namespace Callbreak.Presentation.Screens
             CardSpriteProvider cards,
             IWallet wallet,
             INoAds noAds,
-            ILoadingCurtain curtain)
+            ILoadingCurtain curtain,
+            IDailyRewards dailyRewards)
         {
             _view = view;
             _router = router;
@@ -87,6 +90,7 @@ namespace Callbreak.Presentation.Screens
             _cards = cards;
             _wallet = wallet;
             _noAds = new NoAdsOffer(noAds, toast, localization, curtain);
+            _dailyRewards = dailyRewards;
         }
 
         public void Start()
@@ -96,6 +100,7 @@ namespace Callbreak.Presentation.Screens
             _view.ShopClicked += OnShop;
             _view.EarnCoinsClicked += OnEarnCoins;
             _view.NoAdsClicked += OnNoAds;
+            _view.DailyRewardsClicked += OnDailyRewards;
             _view.PlayOnlineClicked += OnPlayOnline;
             _view.PlayWithFriendsClicked += OnPlayWithFriends;
             _view.PlayOfflineClicked += OnPlayOffline;
@@ -107,12 +112,14 @@ namespace Callbreak.Presentation.Screens
             _wallet.Changed += RenderCoins;
             _noAds.Changed += RenderNoAds;
             _noAds.Start();
+            _dailyRewards.Changed += RenderDailyRewards;
             _network.Changed += OnNetworkChanged;
             _router.Changed += OnScreenChanged;
             Render();
             RenderFan();
             RenderCoins();
             RenderNoAds();
+            RenderDailyRewards();
             RenderMotion();
             RenderResume();
             OnNetworkChanged(_network.IsOnline);
@@ -131,6 +138,7 @@ namespace Callbreak.Presentation.Screens
             _view.ShopClicked -= OnShop;
             _view.EarnCoinsClicked -= OnEarnCoins;
             _view.NoAdsClicked -= OnNoAds;
+            _view.DailyRewardsClicked -= OnDailyRewards;
             _view.PlayOnlineClicked -= OnPlayOnline;
             _view.PlayWithFriendsClicked -= OnPlayWithFriends;
             _view.PlayOfflineClicked -= OnPlayOffline;
@@ -142,6 +150,7 @@ namespace Callbreak.Presentation.Screens
             _wallet.Changed -= RenderCoins;
             _noAds.Changed -= RenderNoAds;
             _noAds.Dispose();
+            _dailyRewards.Changed -= RenderDailyRewards;
             _network.Changed -= OnNetworkChanged;
             _router.Changed -= OnScreenChanged;
 
@@ -176,11 +185,15 @@ namespace Callbreak.Presentation.Screens
 
         private void RenderResume() => _view.SetResumeAvailable(_offlineStore.HasSave);
 
+        /// <summary>The red dot on the Daily Rewards button. A new day comes without an event: the menu reads it again whenever it is on top.</summary>
+        private void RenderDailyRewards() => _view.SetDailyRewardsReady(_dailyRewards.CanClaim);
+
         private void OnScreenChanged(ScreenId id)
         {
             if (id == ScreenId.MainMenu)
             {
                 RenderResume();
+                RenderDailyRewards();
             }
         }
 
@@ -214,6 +227,14 @@ namespace Callbreak.Presentation.Screens
         private void OnShop() => _router.Push(ScreenId.Shop);
 
         private void OnEarnCoins() => _router.Push(ScreenId.EarnCoins);
+
+        private void OnDailyRewards()
+        {
+            if (_router.Has(ScreenId.DailyRewards))
+            {
+                _router.Push(ScreenId.DailyRewards);
+            }
+        }
 
         private void OnNoAds() => _ = BuyNoAdsAsync();
 

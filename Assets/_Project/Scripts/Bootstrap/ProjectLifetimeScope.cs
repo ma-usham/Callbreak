@@ -74,6 +74,11 @@ namespace Callbreak.Bootstrap
                 resolver => new AdRewards(resolver.Resolve<IRewardedAds>(), resolver.Resolve<IWallet>(), resolver.Resolve<ISaveStore>(), () => System.DateTime.UtcNow),
                 Lifetime.Singleton);
 
+            // The weekly login rewards (the owner, 8 Oct 2026; ADR 046): days turn at local midnight.
+            builder.Register<IDailyRewards>(
+                resolver => new DailyRewards(resolver.Resolve<IWallet>(), resolver.Resolve<ISaveStore>(), () => System.DateTime.Now),
+                Lifetime.Singleton);
+
             // No Ads (the owner, 5 Oct 2026): the one-time purchase that removes the ads between matches.
             RegisterPurchases(builder);
 
