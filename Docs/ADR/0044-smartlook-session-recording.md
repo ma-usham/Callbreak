@@ -7,7 +7,7 @@ well"). The privacy choices below are the agent's, for the owner to confirm or c
 - **The dashboard.** The owner's Smartlook organisation (DayZero Games) has one project, "Plummet":
   mobile, Europe region, free plan (3,000 sessions a month), no sessions yet. Its recording settings
   are recording on, uploads on Wi-Fi only, low quality, native rendering, 2 fps. There is no project
-  named Callbreak, so no project key is in the code yet (see "Owner" below).
+  named Callbreak. On 8 Oct 2026 the owner gave a project key, now in `SmartlookProject.ProjectKey`.
 - **The SDK.** Smartlook publishes no UPM package for Unity. Its Unity docs
   (mobile.developer.smartlook.com, v1.0 Unity reference, linked from the dashboard) say to import
   its Unity package. The newest is release 1.2 (github.com/smartlook/UnityPackage, 30 Jun 2023). It
@@ -137,7 +137,7 @@ the package's own paths and GUIDs, so a later import of an official package land
   was not changed.
 - **Gradle.**
   - EDM4U adds `kotlin-stdlib-jdk8:1.6.10` to `Assets/Plugins/Android/mainTemplate.gradle` on its
-    next resolve. That template is not edited here.
+    next resolve. The line is committed in the template.
   - Should Gradle then report duplicate Kotlin classes against a newer stdlib from AdMob's libraries,
     raise that line's version to the newer stdlib's, or drop it.
 - **R8.** The AAR carries its own keep rule (`-keep class com.smartlook.** { *; }`), applied when
@@ -150,19 +150,15 @@ the package's own paths and GUIDs, so a later import of an official package land
   - start, stop and retry;
   - hiding, overlapping handles, and a hide that fails;
   - the stand-in.
-- **Not verified:**
-  - **Compile.** The Application code and the tests compile with the dotnet harness's settings
-    (netstandard2.1, C# 9). The JNI adapter, the UMP adapter, Bootstrap and the presenters were not
-    compiled: the shared Editor was not used, and `compile-check.js` needs a `Library/` the worktree
-    lacks.
-  - **Test runs.** The tests were not run: Windows Smart App Control blocks loading the dotnet test
-    DLL (0x800711C7), and the Unity Editor was not used.
-  - **On a phone, nothing:** EDM's resolve, the Gradle build, the manifest merge, the JNI calls, the
-    UMP and TCF reads, and an upload to Smartlook.
+- **Verified in the Editor:** `compile-check.js` (the Editor's view and `--player`, an Android
+  player build's view) compiles every assembly; the EditMode and PlayMode suites pass.
+- **Not verified on a phone:** EDM's resolve, the Gradle build, the manifest merge, the JNI calls,
+  the UMP and TCF reads, and an upload to Smartlook.
 
 ## Owner
 
-1. **Smartlook.** Create a project for Callbreak, or confirm that "Plummet" is meant for it. Renaming
+1. **Smartlook.** Done 8 Oct 2026: the owner gave the key. Before that: create a project for
+   Callbreak, or confirm that "Plummet" is meant for it. Renaming
    a project keeps its key. Then copy the key and put it in `SmartlookProject.ProjectKey`. It is
    under Project settings, Recording, Project key, Show key.
    - Choose "Upload recordings": Wi-Fi only today. Players on mobile data upload only when they

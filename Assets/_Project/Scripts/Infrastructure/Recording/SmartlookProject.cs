@@ -12,7 +12,7 @@ namespace Callbreak.Infrastructure.Recording
     /// </summary>
     public static class SmartlookProject
     {
-        /// <summary>The Smartlook project key (40 characters); empty until the owner puts the Callbreak project's key here.</summary>
-        public const string ProjectKey = "";
+        /// <summary>The Smartlook project key (40 characters), given by the owner on 8 Oct 2026.</summary>
+        public const string ProjectKey = "b98457688ec2d1dc93c1d65f70c19f501838ecbd";
     }
 }
