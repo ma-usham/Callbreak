@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Callbreak.Application.Economy;
 using Callbreak.Application.Ports;
+using Callbreak.Application.Settings;
 using Callbreak.Presentation.Framework;
 using UnityEngine;
 using VContainer.Unity;
@@ -20,7 +21,9 @@ namespace Callbreak.Presentation.Screens
     /// available, or not finished) says so in a toast. Once every ad of the set is watched the
     /// button is off until the set resets, and the line under it counts down to the reset (from the
     /// set's first ad on, as in the designer's prototype); the set resets on the wall clock, without
-    /// an event, so the countdown reads the rewards again when it runs out.
+    /// an event, so the countdown reads the rewards again when it runs out. An ad's coins fly from its
+    /// block into the wallet, which counts up from the old balance as they land, with the coin sound at
+    /// the first landing (the owner, 8 Oct 2026); with Reduce motion only the sound is left.
     /// </summary>
     public sealed class EarnCoinsPresenter : IStartable, ITickable, IDisposable
     {
@@ -30,9 +33,14 @@ namespace Callbreak.Presentation.Screens
         private readonly IAdRewards _rewards;
         private readonly ILocalization _localization;
         private readonly IToast _toast;
+        private readonly IAudioService _audio;
+        private readonly ISettingsService _settings;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private bool _watching;
+
+        // From a watch until its coins have landed, the wallet shows their count-up, not the balance.
+        private bool _collecting;
         private bool _disposed;
 
         // What the page shows: the deadline it counts down to (null: none) and the second shown.
@@ -45,7 +53,9 @@ namespace Callbreak.Presentation.Screens
             IWallet wallet,
             IAdRewards rewards,
             ILocalization localization,
-            IToast toast)
+            IToast toast,
+            IAudioService audio,
+            ISettingsService settings)
         {
             _view = view;
             _router = router;
@@ -53,6 +63,8 @@ namespace Callbreak.Presentation.Screens
             _rewards = rewards;
             _localization = localization;
             _toast = toast;
+            _audio = audio;
+            _settings = settings;
         }
 
         public void Start()
@@ -60,6 +72,8 @@ namespace Callbreak.Presentation.Screens
             _view.BackClicked += OnBack;
             _view.BackRequested += OnBack;
             _view.WatchClicked += OnWatch;
+            _view.CoinsLanding += OnCoinsLanding;
+            _view.CoinsCollected += OnCoinsCollected;
             _wallet.Changed += RenderBalance;
             _rewards.Changed += Render;
             _localization.LanguageChanged += Render;
@@ -72,6 +86,8 @@ namespace Callbreak.Presentation.Screens
             _view.BackClicked -= OnBack;
             _view.BackRequested -= OnBack;
             _view.WatchClicked -= OnWatch;
+            _view.CoinsLanding -= OnCoinsLanding;
+            _view.CoinsCollected -= OnCoinsCollected;
             _wallet.Changed -= RenderBalance;
             _rewards.Changed -= Render;
             _localization.LanguageChanged -= Render;
@@ -136,7 +152,13 @@ namespace Callbreak.Presentation.Screens
             RenderReset();
         }
 
-        private void RenderBalance() => _view.SetBalance(CoinsFormat.Coins(_wallet.Coins));
+        private void RenderBalance()
+        {
+            if (!_collecting)
+            {
+                _view.SetBalance(CoinsFormat.Coins(_wallet.Coins));
+            }
+        }
 
         /// <summary>"Rewards reset every 5 hours" until the set's first ad; then the time left.</summary>
         private void RenderReset()
@@ -173,7 +195,11 @@ namespace Callbreak.Presentation.Screens
 
         private async Task WatchAsync()
         {
+            // The coins land where the ad's block is, onto the balance from before the ad.
+            int before = _wallet.Coins;
+            int block = _rewards.Watched;
             _watching = true;
+            _collecting = true;
             Render();
             int credited = 0;
             bool cancelled = false;
@@ -205,6 +231,23 @@ namespace Callbreak.Presentation.Screens
             }
 
             Render();
+            if (credited > 0)
+            {
+                _view.CollectCoins(block, before, before + credited, _settings.ReduceMotion);
+            }
+            else
+            {
+                _collecting = false;
+                RenderBalance();
+            }
+        }
+
+        private void OnCoinsLanding() => _audio.Play(SoundCue.CoinCollect);
+
+        private void OnCoinsCollected()
+        {
+            _collecting = false;
+            RenderBalance();
         }
     }
 }

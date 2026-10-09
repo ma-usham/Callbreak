@@ -41,6 +41,9 @@ namespace Callbreak.Editor.Screens
             ScreenExtras.LimitWidth(ctx, "ClaimLabel", ctx.Node("ClaimButton").rect[2] * 0.62f);
             ScreenExtras.LimitWidth(ctx, "DayHeading", ctx.Node("DayHeading").rect[2] + 12f);
             ScreenExtras.LimitWidth(ctx, "Footer", ctx.Node("Footer").rect[2] + 12f);
+
+            // A claim's coins fly from today's pile into the wallet (CoinFlight).
+            CoinFlightBuild.Add(ctx);
         }
 
         /// <summary>The claimed check, in the tile's top right corner, on top of everything in the tile.</summary>

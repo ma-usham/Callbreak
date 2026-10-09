@@ -1,5 +1,6 @@
 using System;
 using Callbreak.Presentation.Framework;
+using Callbreak.Presentation.Widgets;
 using TMPro;
 using UnityEngine;
 
@@ -12,7 +13,8 @@ namespace Callbreak.Presentation.Screens
     /// coins and its name in crimson (the others' names are brown; Day 7's, the weekly bonus, is
     /// always crimson, as the mockup draws them); a claimed day carries the gold check. Renders what
     /// its presenter gives it and reports Back and Claim. A Claim button that is not interactable
-    /// shows its disabled look with its label dimmed.
+    /// shows its disabled look with its label dimmed. A claim's coins fly from today's pile into the
+    /// wallet, which counts up as they land (<see cref="CollectCoins"/>).
     /// </summary>
     public sealed class DailyRewardsView : UIScreen
     {
@@ -33,6 +35,17 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private TMP_Text _claimLabel;
         [SerializeField] private TMP_Text _footer;
 
+        // Coins collected (the owner, 8 Oct 2026): the flight over the screen, the wallet's coin it
+        // lands in, and each day's coin pile, where the coins come from.
+        [SerializeField] private CoinFlight _coinFlight;
+        [SerializeField] private RectTransform _walletCoin;
+        [SerializeField] private RectTransform[] _coins;
+
+        // The wallet's count-up while the coins land.
+        private int _countFrom;
+        private int _countTo;
+        private bool _firstLanded;
+
         // As built (read before the first change): today's crimson day name (Day 1's) and the brown of the others (Day 2's).
         private bool _designRead;
         private Color _todayName;
@@ -40,6 +53,12 @@ namespace Callbreak.Presentation.Screens
 
         public event Action BackClicked;
         public event Action ClaimClicked;
+
+        /// <summary>The first collected coin reached the wallet: the coin sound.</summary>
+        public event Action CoinsLanding;
+
+        /// <summary>Every collected coin has landed and the wallet shows the new balance.</summary>
+        public event Action CoinsCollected;
 
         public int DayCount => _dayLabel.Length;
 
@@ -85,6 +104,44 @@ namespace Callbreak.Presentation.Screens
 
         /// <summary>The line under the button ("Come back tomorrow for Day 2").</summary>
         public void SetFooter(string text) => SetText(_footer, text);
+
+        /// <summary>
+        /// Flies coins from day <paramref name="index"/> into the wallet's coin, the wallet's
+        /// number counting up from <paramref name="fromBalance"/> to <paramref name="toBalance"/> as they
+        /// land (<see cref="CoinFlight"/>). <see cref="CoinsLanding"/> comes with the first landing,
+        /// <see cref="CoinsCollected"/> with the last, when the wallet shows <paramref name="toBalance"/>.
+        /// With <paramref name="reduceMotion"/> both come at once.
+        /// </summary>
+        public void CollectCoins(int index, int fromBalance, int toBalance, bool reduceMotion)
+        {
+            _countFrom = fromBalance;
+            _countTo = toBalance;
+            _firstLanded = false;
+            if (_coinFlight == null)
+            {
+                OnCoinLanded(1, 1);
+                return;
+            }
+
+            RectTransform pile = _coins != null && index >= 0 && index < _coins.Length ? _coins[index] : null;
+            _coinFlight.Play(pile, _walletCoin, CoinFlight.CountFor(toBalance - fromBalance), reduceMotion, OnCoinLanded);
+        }
+
+        private void OnCoinLanded(int landed, int count)
+        {
+            if (!_firstLanded)
+            {
+                _firstLanded = true;
+                CoinsLanding?.Invoke();
+            }
+
+            float part = count > 0 ? Mathf.Clamp01(landed / (float)count) : 1f;
+            SetBalance(CoinsFormat.Coins(_countFrom + Mathf.RoundToInt((_countTo - _countFrom) * part)));
+            if (landed >= count)
+            {
+                CoinsCollected?.Invoke();
+            }
+        }
 
         /// <summary>Reads the colours the screen was built with, once, before anything has changed.</summary>
         private void ReadDesign()

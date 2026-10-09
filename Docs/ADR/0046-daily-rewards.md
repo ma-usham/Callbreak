@@ -71,3 +71,23 @@ to open the page. The designer's other idea, a pill under the greeting, was not 
   - The Claim button reuses the kit's crimson pill. Mockup 26 draws it a little brighter, with
     larger woven ends, as mockup 22 did.
 - **Not verified on a phone.**
+
+## Addendum, 9 Oct 2026: coins fly into the wallet
+
+The owner asked to see the coins collected: flying up to the wallet and added there, with a sound.
+It applies to both pages that pay coins and show the wallet, Daily Rewards and Earn Coins.
+
+- **The flight** (`CoinFlight`, a layer over the whole screen, built last by `CoinFlightBuild`):
+  - 6 to 12 of the wallet's own gold coins (`Icon_Coin`), more for a bigger reward: a fifth of the
+    amount, at least 6 and at most 12.
+  - Each coin pops out of the reward's pile (today's tile, or the ad's block), then arcs up into
+    the wallet's coin, which gives a small bump at every landing. They leave the pile 0.06 s apart
+    and take 0.75 s each, so 6 coins land within about a second and 12 within about 1.4 s.
+- **The wallet counts up** from the old balance to the new one as the coins land. The coins are
+  in the wallet (and saved) the moment the reward is paid; only the page's number waits for them.
+- **The sound** (`SoundCue.CoinCollect`, made with ElevenLabs as the other effects) plays once,
+  as the first coin lands.
+- **Reduce motion:** nothing flies; the number changes at once and the sound still plays.
+- Leaving the page mid-flight lands every coin at once, so the number is never left behind.
+- **Tests:** `DailyRewardsFlowTests` (the flight, the count-up, one sound; Reduce motion at once);
+  `EarnCoinsFlowTests` waits for the coins to land before it checks the page's wallet.

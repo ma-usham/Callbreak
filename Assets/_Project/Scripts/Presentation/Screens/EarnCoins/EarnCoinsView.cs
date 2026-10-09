@@ -1,5 +1,6 @@
 using System;
 using Callbreak.Presentation.Framework;
+using Callbreak.Presentation.Widgets;
 using TMPro;
 using UnityEngine;
 
@@ -13,7 +14,8 @@ namespace Callbreak.Presentation.Screens
     /// and Watch ad. A button that is not interactable shows its disabled look with its label and
     /// play triangle dimmed. Without the play triangle (every ad watched) the label is centred on
     /// the button. The clock and the reset line are one group centred in the panel, the clock close
-    /// before the first letter whatever the text (<see cref="CentreClockLine"/>).
+    /// before the first letter whatever the text (<see cref="CentreClockLine"/>). An ad's coins fly from
+    /// its block's pile into the wallet, which counts up as they land (<see cref="CollectCoins"/>).
     /// </summary>
     public sealed class EarnCoinsView : UIScreen
     {
@@ -42,12 +44,29 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private TMP_Text _resetLabel;
         [SerializeField] private RectTransform _clockIcon;
 
+        // Coins collected (the owner, 8 Oct 2026): the flight over the screen, the wallet's coin it
+        // lands in, and each block's coin pile, where the coins come from.
+        [SerializeField] private CoinFlight _coinFlight;
+        [SerializeField] private RectTransform _walletCoin;
+        [SerializeField] private RectTransform[] _coinStack;
+
+        // The wallet's count-up while the coins land.
+        private int _countFrom;
+        private int _countTo;
+        private bool _firstLanded;
+
         // As built (read before the first change): the watch label's place beside the play triangle.
         private bool _designRead;
         private Vector2 _watchLabelPosition;
 
         public event Action BackClicked;
         public event Action WatchClicked;
+
+        /// <summary>The first collected coin reached the wallet: the coin sound.</summary>
+        public event Action CoinsLanding;
+
+        /// <summary>Every collected coin has landed and the wallet shows the new balance.</summary>
+        public event Action CoinsCollected;
 
         public int BlockCount => _adTitle.Length;
 
@@ -89,6 +108,44 @@ namespace Callbreak.Presentation.Screens
             float alpha = interactable ? 1f : DimmedAlpha;
             SetAlpha(_watchLabel, alpha);
             SetAlpha(_playIcon, alpha);
+        }
+
+/// <summary>
+        /// Flies coins from block <paramref name="index"/> into the wallet's coin, the wallet's
+        /// number counting up from <paramref name="fromBalance"/> to <paramref name="toBalance"/> as they
+        /// land (<see cref="CoinFlight"/>). <see cref="CoinsLanding"/> comes with the first landing,
+        /// <see cref="CoinsCollected"/> with the last, when the wallet shows <paramref name="toBalance"/>.
+        /// With <paramref name="reduceMotion"/> both come at once.
+        /// </summary>
+        public void CollectCoins(int index, int fromBalance, int toBalance, bool reduceMotion)
+        {
+            _countFrom = fromBalance;
+            _countTo = toBalance;
+            _firstLanded = false;
+            if (_coinFlight == null)
+            {
+                OnCoinLanded(1, 1);
+                return;
+            }
+
+            RectTransform pile = _coinStack != null && index >= 0 && index < _coinStack.Length ? _coinStack[index] : null;
+            _coinFlight.Play(pile, _walletCoin, CoinFlight.CountFor(toBalance - fromBalance), reduceMotion, OnCoinLanded);
+        }
+
+        private void OnCoinLanded(int landed, int count)
+        {
+            if (!_firstLanded)
+            {
+                _firstLanded = true;
+                CoinsLanding?.Invoke();
+            }
+
+            float part = count > 0 ? Mathf.Clamp01(landed / (float)count) : 1f;
+            SetBalance(CoinsFormat.Coins(_countFrom + Mathf.RoundToInt((_countTo - _countFrom) * part)));
+            if (landed >= count)
+            {
+                CoinsCollected?.Invoke();
+            }
         }
 
         /// <summary>The line under the button ("Rewards reset every 5 hours", or the time left), with its clock.</summary>

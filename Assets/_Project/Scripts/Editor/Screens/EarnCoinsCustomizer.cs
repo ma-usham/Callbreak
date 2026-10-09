@@ -55,6 +55,9 @@ namespace Callbreak.Editor.Screens
             // The clock close before its line, the two centred in the panel (the owner, 5 Oct 2026),
             // as the view lays them out whenever the line changes.
             EarnCoinsView.CentreClockLine(ctx.Nodes["ResetLabel"].GetComponent<TMPro.TMP_Text>(), ctx.Nodes["ClockIcon"]);
+
+            // An ad's coins fly from its block's pile into the wallet (CoinFlight).
+            CoinFlightBuild.Add(ctx);
         }
 
         private static Image Face(ScreenBuildContext ctx, string id) => ctx.Nodes[id].Find("Face").GetComponent<Image>();

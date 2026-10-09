@@ -113,6 +113,10 @@ namespace Callbreak.Tests.PlayMode
 
                 Assert.AreEqual(ad + 1, rewards.Watched);
                 Assert.AreEqual(Format("ui.earn_coins.progress", ad + 1, 3), Label(page, "Progress").text);
+
+                // The ad's coins fly into the page's wallet, which counts up as they land (the owner, 8 Oct 2026).
+                string paid = CoinsFormat.Coins(coins);
+                yield return GameFixture.Until(() => Label(page, "Balance").text == paid, "the coins to land in the page's wallet", 5f);
                 Assert.AreEqual(CoinsFormat.Coins(coins), Label(page, "Balance").text, "the page's wallet follows the coins credited");
                 for (int block = 0; block < 3; block++)
                 {

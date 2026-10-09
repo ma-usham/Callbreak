@@ -1,9 +1,11 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using Callbreak.Application.Economy;
 using Callbreak.Application.Ports;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Screens;
+using Callbreak.Presentation.Widgets;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
@@ -15,8 +17,9 @@ namespace Callbreak.Tests.PlayMode
     /// <summary>
     /// The weekly login rewards (the owner, 8 Oct 2026; mockup 26; ADR 046) in the real Boot and Menu
     /// scenes: the small button below No Ads opens Daily Rewards and wears a red dot while today's
-    /// reward is ready; Claim pays Day 1's 10 coins once; the page opens by itself once a day on the
-    /// bare main menu, never over the name question. Saves go to a temporary folder; the fixture starts
+    /// reward is ready; Claim pays Day 1's 10 coins once, its coins flying into the page's wallet,
+    /// which counts up with the coin sound (Reduce motion: at once); the page opens by itself once a
+    /// day on the bare main menu, never over the name question. Saves go to a temporary folder; the fixture starts
     /// every game with today's opening used, so these tests seed their own file.
     /// </summary>
     public sealed class DailyRewardsFlowTests
@@ -72,6 +75,49 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Claim_FliesTheCoinsIntoTheWallet_WhichCountsUp_WithTheCoinSound()
+        {
+            var audio = new HeardSounds();
+            yield return _game.Boot(seed: saves => saves.Save(DailyRewards.SaveKey, OpenedToday()), extra: builder => builder.RegisterInstance<IAudioService>(audio));
+            ScreenRouter router = _game.MenuRouter;
+            GameFixture.Press(router, "DailyRewardsButton");
+            yield return null;
+            UIScreen page = Screen(ScreenId.DailyRewards);
+            CoinFlight flight = page.GetComponentInChildren<CoinFlight>(true);
+            Assert.IsNotNull(flight, "the page has its coin flight");
+
+            GameFixture.Press(router, "ClaimButton");
+            yield return null;
+            Assert.AreEqual(WalletRules.StartingCoins + 10, _game.Services.Resolve<IWallet>().Coins, "the coins are in the wallet at once");
+            Assert.IsTrue(flight.IsPlaying, "the coins fly from Day 1's pile");
+            Assert.AreEqual("500", Label(page, "Balance").text, "the page's wallet waits for the coins");
+            Assert.AreEqual(0, audio.Count(SoundCue.CoinCollect), "no coin sound before a coin lands");
+
+            yield return GameFixture.Until(() => Label(page, "Balance").text == "510", "the coins to land in the page's wallet", 5f);
+            Assert.IsFalse(flight.IsPlaying);
+            Assert.AreEqual(1, audio.Count(SoundCue.CoinCollect), "one coin sound as they land");
+        }
+
+        [UnityTest]
+        public IEnumerator Claim_WithReduceMotion_AddsTheCoinsAtOnce_WithTheCoinSound()
+        {
+            var audio = new HeardSounds();
+            yield return _game.Boot(seed: saves => saves.Save(DailyRewards.SaveKey, OpenedToday()), extra: builder => builder.RegisterInstance<IAudioService>(audio));
+            _game.Settings.SetReduceMotion(true);
+            ScreenRouter router = _game.MenuRouter;
+            GameFixture.Press(router, "DailyRewardsButton");
+            yield return null;
+            UIScreen page = Screen(ScreenId.DailyRewards);
+
+            GameFixture.Press(router, "ClaimButton");
+            yield return null;
+
+            Assert.IsFalse(page.GetComponentInChildren<CoinFlight>(true).IsPlaying, "nothing flies");
+            Assert.AreEqual("510", Label(page, "Balance").text);
+            Assert.AreEqual(1, audio.Count(SoundCue.CoinCollect));
+        }
+
+        [UnityTest]
         public IEnumerator ThePage_OpensByItself_OnceADay_WhileARewardIsReady()
         {
             yield return _game.Boot(seed: saves => saves.Save(DailyRewards.SaveKey, new DailyRewardsData()));
@@ -96,6 +142,24 @@ namespace Callbreak.Tests.PlayMode
             yield return new WaitForSecondsRealtime(1.5f);
             Assert.AreNotEqual(ScreenId.DailyRewards, router.Current, "the name question comes first");
             Assert.IsTrue(_game.Services.Resolve<IDailyRewards>().TakeAutoOpen(), "today's opening is still to come");
+        }
+
+        /// <summary>The game's sounds, heard instead of played.</summary>
+        private sealed class HeardSounds : IAudioService
+        {
+            private readonly List<SoundCue> _heard = new List<SoundCue>();
+
+            public int Count(SoundCue cue) => _heard.FindAll(c => c == cue).Count;
+
+            public void Play(SoundCue cue) => _heard.Add(cue);
+
+            public void PlayMusic(MusicTrack track)
+            {
+            }
+
+            public void Duck(bool ducked)
+            {
+            }
         }
 
         /// <summary>A file of a player whose page already opened by itself today, Day 1 still to claim.</summary>
