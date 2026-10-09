@@ -54,7 +54,8 @@ namespace Callbreak.Editor
         // cards sit near -18 LUFS, stings near -17, the victory near -13, interface sounds near -21 and the
         // timer tick near -24, over music at about -17 (menu) and -23 (table).
         // Recomputed for the generated sources (ElevenLabs, 1 Oct 2026; ArtSource/Audio/Sources) so each cue
-        // keeps the loudness it had in the game before.
+        // keeps the loudness it had in the game before. The coin collect (ElevenLabs, 9 Oct 2026) sits with the
+        // interface sounds: they land at -20.0 to -20.9, it at -20.5.
         private static readonly Dictionary<SoundCue, float> DefaultVolume = new Dictionary<SoundCue, float>
         {
             { SoundCue.CardShuffle, 1f },
@@ -71,6 +72,7 @@ namespace Callbreak.Editor
             { SoundCue.UiTap, 0.74f },
             { SoundCue.UiBack, 0.82f },
             { SoundCue.Toggle, 0.87f },
+            { SoundCue.CoinCollect, 0.52f },
         };
 
         [MenuItem("Callbreak/Build/Audio Library")]

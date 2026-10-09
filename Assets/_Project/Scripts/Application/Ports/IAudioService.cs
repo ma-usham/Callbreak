@@ -19,6 +19,9 @@ namespace Callbreak.Application.Ports
         UiTap,
         UiBack,
         Toggle,
+
+        /// <summary>Coins land in the wallet: a daily reward claimed, an Earn Coins ad paid (the owner, 8 Oct 2026).</summary>
+        CoinCollect,
     }
 
     public enum MusicTrack

@@ -35,10 +35,14 @@ static class Program
             return 2;
         }
 
-        // A cue with a generated source (ArtSource/Audio/Sources/sources.json) is made from it instead.
+        // A cue with a generated source (ArtSource/Audio/Sources/sources.json) is made from it instead. A cue
+        // that has only a source and no synthesized version (SFX_CoinCollect_01) is made from it too, listed
+        // after the other effects.
         var recorded = Recorded.Load(root);
-        var jobs = Sfx.All().Concat(Music.All(stems == null ? null : (name, ch) => WriteStem(stems, name, ch)))
-            .Select(j => recorded.TryGetValue(j.Name, out Job source) ? source : j)
+        var synthesized = Sfx.All().Concat(Music.All(stems == null ? null : (name, ch) => WriteStem(stems, name, ch))).ToList();
+        var jobs = synthesized.Select(j => recorded.TryGetValue(j.Name, out Job source) ? source : j)
+            .Concat(recorded.Values.Where(r => synthesized.All(j => j.Name != r.Name)))
+            .OrderBy(j => j.Music)
             .Where(j => only == null || j.Name.Contains(only, StringComparison.OrdinalIgnoreCase)).ToList();
         if (jobs.Count == 0) { Console.Error.WriteLine($"No cue matches '{only}'."); return 2; }
         if (pictures != null) Directory.CreateDirectory(pictures);

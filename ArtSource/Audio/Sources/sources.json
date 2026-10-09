@@ -1,5 +1,5 @@
 {
-  "about": "Cues made from generated sources instead of synthesis (Tools/AudioGen/Recorded.cs). Each entry replaces the synthesized cue of the same name. Sound effects: ElevenLabs Sound Effects, 1 October 2026, 48 kHz WAV downloads, prompt influence 60%, durations as given. Music: Gemini 'Create music' (instrumental), 1 October 2026, MP3 downloads decoded to 44.1 kHz WAV by Unity. To try another take, change 'source' and run: dotnet run --project Tools/AudioGen -c Release",
+  "about": "Cues made from generated sources instead of synthesis (Tools/AudioGen/Recorded.cs). Each entry replaces the synthesized cue of the same name; SFX_CoinCollect_01 has no synthesized version and is made from its source alone. Sound effects: ElevenLabs Sound Effects, 1 October 2026 (CoinCollect: 9 October 2026), 48 kHz WAV downloads, prompt influence 60%, durations as given. Music: Gemini 'Create music' (instrumental), 1 October 2026, MP3 downloads decoded to 44.1 kHz WAV by Unity. To try another take, change 'source' and run: dotnet run --project Tools/AudioGen -c Release",
   "sfx": {
     "SFX_CardPlay_01": { "source": "ElevenLabs/CardPlay/take1.wav", "max": 0.30, "fadeOut": 0.04 },
     "SFX_CardPlay_02": { "source": "ElevenLabs/CardPlay/take2.wav", "max": 0.30, "fadeOut": 0.04 },
@@ -19,7 +19,8 @@
     "SFX_Victory_01": { "source": "ElevenLabs/Victory/take1.wav", "max": 3.00, "fadeOut": 0.30 },
     "SFX_UiTap_01": { "source": "ElevenLabs/UiTap/take1.wav", "max": 0.10, "fadeOut": 0.02 },
     "SFX_UiBack_01": { "source": "ElevenLabs/UiBack/take1.wav", "max": 0.12, "fadeOut": 0.025, "drive": 1.4 },
-    "SFX_Toggle_01": { "source": "ElevenLabs/Toggle/take1.wav", "max": 0.15, "fadeOut": 0.025, "drive": 1.4 }
+    "SFX_Toggle_01": { "source": "ElevenLabs/Toggle/take1.wav", "max": 0.15, "fadeOut": 0.025, "drive": 1.4 },
+    "SFX_CoinCollect_01": { "source": "ElevenLabs/CoinCollect/take1.wav", "max": 0.70, "fadeOut": 0.10, "note": "Every take ends in a few-ms burst, so max makes the cut. take1: eleven clinks in 0.55 s, quiet by 0.65 s. take2 rattles on to 1.0 s and needs max 1.05 (it then imports as a Vorbis sting)." }
   },
   "music": {
     "MUS_Menu_Theme": { "source": "Gemini/MUS_Menu_Theme.wav", "from": 5.0, "to": 65.0, "crossfade": 1.5, "loop": [9.255, 63.021], "note": "125.0 BPM; 28 bars of 4 beats (53.77 s); found with Tools/AudioGen/find-loop.js" },
@@ -40,6 +41,7 @@
     "ElevenLabs/UiTap": "A small soft rounded wooden button tap for a mobile card game menu: one very short, clean and gentle tok, like a fingertip on a small wooden block. Dry, no echo, no ding, no plastic click, no music, no voices. (0.5 s)",
     "ElevenLabs/UiBack": "A soft low wooden tap for going back or closing a screen in a mobile card game menu: one very short rounded tok, a little lower and softer than a button tap, slightly falling. Dry, no echo, no whoosh, no music, no voices. (0.5 s)",
     "ElevenLabs/Toggle": "A tiny soft two-part wooden switch click, tk-tok, the second slightly lower, for flipping a settings toggle in a mobile card game menu. Very short and dry, no echo, no metal, no plastic snap, no music, no voices. (0.5 s)",
+    "ElevenLabs/CoinCollect": "A short bright cascade of a few small gold coins dropping and clinking into a little pile, the cheerful reward sound of a mobile card game when coins land in the wallet: crisp, clean and close, light metallic clinks that settle quickly. Dry, no reverb, no music, no voices, no whoosh, no cash register bell. (1.3 s; 9 October 2026, loop off, 'automatically improves short or unclear prompts' on as the page had it; it kept the prompt as written)",
     "Gemini/MUS_Menu_Theme": "Cheerful Nepali folk instrumental with a bansuri flute melody, a lively madal drum groove and sarangi. Warm, welcoming and lightly festive, for a game's main menu background music. (Create music: Short, Instrumental)",
     "Gemini/MUS_Table_Loop": "Gentle Nepali folk instrumental with bansuri flute and madal drum, calm and warm, for background music. (Create music: Short, Instrumental)"
   }

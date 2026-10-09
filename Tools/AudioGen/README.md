@@ -48,7 +48,9 @@ being synthesized, and goes through the same checks.
   44.1 kHz, starts 3 ms before its first sound, stops after its last (at most `max` seconds), fades
   in over 1 ms and out over `fadeOut` to an exact zero, and is peak-normalised and padded to whole
   ADPCM blocks. `drive` rounds the transient (tanh), as the synthesized card sounds did, where a take
-  was too quiet for its old in-game loudness at full volume.
+  was too quiet for its old in-game loudness at full volume. The downloads end in a burst a few
+  milliseconds long, so `max` should end the cut before it. `SFX_CoinCollect_01` (9 Oct 2026) has no
+  synthesized version: a cue that only `sources.json` lists is made from its source alone.
 - **Music** (`Gemini/MUS_*.mp3`, decoded to `.wav` beside it by Unity's own MP3 import): Gemini
   "Create music", instrumental. A loop is cut between `loop` [start, end], chosen as a whole number
   of bars at the track's tempo with `node Tools/AudioGen/find-loop.js <wav> <from> <to> <crossfade>
@@ -97,6 +99,7 @@ that fires over the music is therefore always in key with it.
 | `SFX_UiTap_01` | 0.08 s | Any button | A small rounded wooden "tok" on G5. |
 | `SFX_UiBack_01` | 0.10 s | Back / close | The same, a fourth lower (D5) and leaning downward. |
 | `SFX_Toggle_01` | 0.12 s | A switch flips | Two tiny wooden ticks, "tk-tok", the second lower. |
+| `SFX_CoinCollect_01` | 0.70 s | Coins land in the wallet after a daily reward or an Earn Coins ad (once, as the first coin lands) | A short bright cascade of small gold coins: a first clink, then about ten light clinks over half a second that settle by 0.6 s. Close and dry, high and glittering (nearly all of it between 8 and 12 kHz, ringing near 9.7 kHz); no whoosh, no cash-register bell. The game's one metallic sound, made from its ElevenLabs take alone. |
 
 ### Music
 
