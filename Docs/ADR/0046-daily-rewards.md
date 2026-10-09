@@ -91,3 +91,12 @@ It applies to both pages that pay coins and show the wallet, Daily Rewards and E
 - Leaving the page mid-flight lands every coin at once, so the number is never left behind.
 - **Tests:** `DailyRewardsFlowTests` (the flight, the count-up, one sound; Reduce motion at once);
   `EarnCoinsFlowTests` waits for the coins to land before it checks the page's wallet.
+- **Stake Match prizes** (the owner, 9 Oct 2026, the same day): a prize is paid at the table, where
+  no wallet shows, so it is shown on the main menu instead. The ledger remembers it as not yet
+  seen (`IUnseenCoins`, in memory only). When the main menu next loads, its wallet shows the
+  balance without it; once the menu is on screen with no dialog over it, the coins fly from the
+  middle of the screen (over the card fan) into the wallet, which counts up, with the coin sound.
+  After Play Again the coins wait, and several prizes fly in together. A stake given back for a
+  match called off is not a win and flies nowhere. Daily Rewards waits for them before it opens by
+  itself. `PrizeCoinsFlowTests` (PlayMode) and `UnseenCoinsTests` cover it; the main menu prefab
+  got the flight with `MainMenuBuilder.AddCoinFlight`, a targeted edit like the Daily Rewards button.

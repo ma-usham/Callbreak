@@ -37,6 +37,13 @@ namespace Callbreak.Presentation.Screens
         // while today's reward is ready. A prefab built before it has neither.
         [SerializeField] private UnityEngine.UI.Button _dailyRewardsButton;
         [SerializeField] private GameObject _dailyRewardsDot;
+
+        // Prize coins arriving (the owner, 9 Oct 2026): the flight over the menu, the wallet's coin it
+        // lands in and the point in the middle of the screen they come from. A prefab built before them
+        // has none; the balance then simply changes.
+        [SerializeField] private CoinFlight _coinFlight;
+        [SerializeField] private RectTransform _walletCoin;
+        [SerializeField] private RectTransform _prizeCoinsFrom;
         [SerializeField] private UnityEngine.UI.Button _playOnlineButton;
         [SerializeField] private UnityEngine.UI.Button _playWithFriendsButton;
         [SerializeField] private UnityEngine.UI.Button _playOfflineButton;
@@ -53,6 +60,11 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private float _mutedAlpha = 0.5f;
 
         private readonly MotionHandle[] _intro = new MotionHandle[4];
+
+        // The wallet's count-up while prize coins land.
+        private int _countFrom;
+        private int _countTo;
+        private bool _firstLanded;
         private bool _introPlayed;
         private bool _reduceMotion;
 
@@ -68,6 +80,12 @@ namespace Callbreak.Presentation.Screens
 
         /// <summary>The Daily Rewards button was tapped.</summary>
         public event Action DailyRewardsClicked;
+
+        /// <summary>The first prize coin reached the wallet: the coin sound.</summary>
+        public event Action CoinsLanding;
+
+        /// <summary>Every prize coin has landed and the wallet shows the new balance.</summary>
+        public event Action CoinsCollected;
 
         public event Action PlayOnlineClicked;
         public event Action PlayWithFriendsClicked;
@@ -100,6 +118,27 @@ namespace Callbreak.Presentation.Screens
             {
                 _noAdsButton.gameObject.SetActive(visible);
             }
+        }
+
+        /// <summary>
+        /// Prize coins arriving: they fly from the middle of the screen into the wallet's coin, the
+        /// wallet's number counting up from <paramref name="fromBalance"/> to <paramref name="toBalance"/>
+        /// as they land (<see cref="CoinFlight"/>). <see cref="CoinsLanding"/> comes with the first
+        /// landing, <see cref="CoinsCollected"/> with the last. With <paramref name="reduceMotion"/>, or
+        /// a prefab without the flight, both come at once.
+        /// </summary>
+        public void CollectCoins(int fromBalance, int toBalance, bool reduceMotion)
+        {
+            _countFrom = fromBalance;
+            _countTo = toBalance;
+            _firstLanded = false;
+            if (_coinFlight == null)
+            {
+                OnCoinLanded(1, 1);
+                return;
+            }
+
+            _coinFlight.Play(_prizeCoinsFrom, _walletCoin, CoinFlight.CountFor(toBalance - fromBalance), reduceMotion, OnCoinLanded);
         }
 
         /// <summary>The Daily Rewards button's red dot: shown while today's reward is ready to claim.</summary>
@@ -245,6 +284,22 @@ namespace Callbreak.Presentation.Screens
             for (int i = 0; i < _intro.Length; i++)
             {
                 UiMotion.Stop(ref _intro[i]);
+            }
+        }
+
+        private void OnCoinLanded(int landed, int count)
+        {
+            if (!_firstLanded)
+            {
+                _firstLanded = true;
+                CoinsLanding?.Invoke();
+            }
+
+            float part = count > 0 ? Mathf.Clamp01(landed / (float)count) : 1f;
+            SetCoins(CoinsFormat.Coins(_countFrom + Mathf.RoundToInt((_countTo - _countFrom) * part)));
+            if (landed >= count)
+            {
+                CoinsCollected?.Invoke();
             }
         }
 

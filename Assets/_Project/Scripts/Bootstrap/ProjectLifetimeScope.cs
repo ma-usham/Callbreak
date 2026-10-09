@@ -90,6 +90,9 @@ namespace Callbreak.Bootstrap
             builder.Register<OnlineMatchChoice>(Lifetime.Singleton).As<IOnlineMatchChoice>();
             builder.Register<StakeLedger>(Lifetime.Singleton).As<IStakeLedger>();
 
+            // A prize paid at the table is shown flying into the main menu's wallet (the owner, 9 Oct 2026).
+            builder.Register<UnseenCoins>(Lifetime.Singleton).As<IUnseenCoins>();
+
             builder.Register<OfflineMatchStore>(Lifetime.Singleton).As<IOfflineMatchStore>();
             builder.Register<IRejoinStore>(resolver => new RejoinStore(resolver.Resolve<ISaveStore>(), () => System.DateTime.UtcNow, resolver.Resolve<IStatsService>()), Lifetime.Singleton);
 

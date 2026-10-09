@@ -25,9 +25,13 @@ namespace Callbreak.Presentation.Screens
     /// button left of it sells the one-time purchase that removes the ads between matches
     /// (<see cref="NoAdsOffer"/>), with the game under the curtain's black cover while the store's
     /// sheet is up (ADR 042). The small button below No Ads opens Daily Rewards (the owner, 8 Oct
-    /// 2026; ADR 046), with a red dot while today's reward is ready.
+    /// 2026; ADR 046), with a red dot while today's reward is ready. Prize coins won at the table (a
+    /// Stake Match, <see cref="IUnseenCoins"/>) arrive here (the owner, 9 Oct 2026): the wallet first
+    /// shows the balance without them, and once the menu is on screen with no dialog over it they fly
+    /// from its middle into the wallet, which counts up, with the coin sound at the first landing; with
+    /// Reduce motion only the sound is left.
     /// </summary>
-    public sealed class MainMenuPresenter : IStartable, IDisposable
+    public sealed class MainMenuPresenter : IStartable, ITickable, IDisposable
     {
         private readonly MainMenuView _view;
         private readonly ScreenRouter _router;
@@ -47,10 +51,17 @@ namespace Callbreak.Presentation.Screens
         private readonly IWallet _wallet;
         private readonly NoAdsOffer _noAds;
         private readonly IDailyRewards _dailyRewards;
+        private readonly IUnseenCoins _unseen;
+        private readonly IAudioService _audio;
+        private readonly ILoadingCurtain _curtain;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
         private bool _asking;
         private bool _disposed;
+
+        // Prize coins still to be shown arriving, held out of the balance until they have flown in.
+        private int _heldCoins;
+        private bool _collecting;
 
         public MainMenuPresenter(
             MainMenuView view,
@@ -71,7 +82,9 @@ namespace Callbreak.Presentation.Screens
             IWallet wallet,
             INoAds noAds,
             ILoadingCurtain curtain,
-            IDailyRewards dailyRewards)
+            IDailyRewards dailyRewards,
+            IUnseenCoins unseen,
+            IAudioService audio)
         {
             _view = view;
             _router = router;
@@ -91,6 +104,9 @@ namespace Callbreak.Presentation.Screens
             _wallet = wallet;
             _noAds = new NoAdsOffer(noAds, toast, localization, curtain);
             _dailyRewards = dailyRewards;
+            _unseen = unseen;
+            _audio = audio;
+            _curtain = curtain;
         }
 
         public void Start()
@@ -101,6 +117,8 @@ namespace Callbreak.Presentation.Screens
             _view.EarnCoinsClicked += OnEarnCoins;
             _view.NoAdsClicked += OnNoAds;
             _view.DailyRewardsClicked += OnDailyRewards;
+            _view.CoinsLanding += OnCoinsLanding;
+            _view.CoinsCollected += OnCoinsCollected;
             _view.PlayOnlineClicked += OnPlayOnline;
             _view.PlayWithFriendsClicked += OnPlayWithFriends;
             _view.PlayOfflineClicked += OnPlayOffline;
@@ -115,6 +133,7 @@ namespace Callbreak.Presentation.Screens
             _dailyRewards.Changed += RenderDailyRewards;
             _network.Changed += OnNetworkChanged;
             _router.Changed += OnScreenChanged;
+            _heldCoins = _unseen.Amount;
             Render();
             RenderFan();
             RenderCoins();
@@ -139,6 +158,8 @@ namespace Callbreak.Presentation.Screens
             _view.EarnCoinsClicked -= OnEarnCoins;
             _view.NoAdsClicked -= OnNoAds;
             _view.DailyRewardsClicked -= OnDailyRewards;
+            _view.CoinsLanding -= OnCoinsLanding;
+            _view.CoinsCollected -= OnCoinsCollected;
             _view.PlayOnlineClicked -= OnPlayOnline;
             _view.PlayWithFriendsClicked -= OnPlayWithFriends;
             _view.PlayOfflineClicked -= OnPlayOffline;
@@ -179,7 +200,38 @@ namespace Callbreak.Presentation.Screens
             }
         }
 
-        private void RenderCoins() => _view.SetCoins(CoinsFormat.Coins(_wallet.Coins));
+        /// <summary>Once the menu is on screen with nothing over it, the prize coins held out of the balance fly into the wallet.</summary>
+        public void Tick()
+        {
+            if (_heldCoins <= 0 || _collecting || _disposed
+                || _router.Current != ScreenId.MainMenu || _curtain.IsCovering || _dialogs.IsOpen || _flow.State != AppState.Menu)
+            {
+                return;
+            }
+
+            _collecting = true;
+            int to = _wallet.Coins;
+            _view.CollectCoins(Math.Max(0, to - _heldCoins), to, _settings.ReduceMotion);
+        }
+
+        /// <summary>The balance; while prize coins are still to arrive, without them, and while they fly, their count-up.</summary>
+        private void RenderCoins()
+        {
+            if (!_collecting)
+            {
+                _view.SetCoins(CoinsFormat.Coins(Math.Max(0, _wallet.Coins - _heldCoins)));
+            }
+        }
+
+        private void OnCoinsLanding() => _audio.Play(SoundCue.CoinCollect);
+
+        private void OnCoinsCollected()
+        {
+            _collecting = false;
+            _heldCoins = 0;
+            _unseen.Clear();
+            RenderCoins();
+        }
 
         private void RenderNoAds() => _view.SetNoAdsVisible(_noAds.Visible);
 

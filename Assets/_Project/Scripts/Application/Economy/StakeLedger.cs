@@ -26,13 +26,16 @@ namespace Callbreak.Application.Economy
 
         private readonly ISaveStore _store;
         private readonly IWallet _wallet;
+        private readonly IUnseenCoins _unseen;
         private readonly StakeLedgerData _data;
         private readonly bool _readOnly;
 
-        public StakeLedger(ISaveStore store, IWallet wallet)
+        /// <param name="unseen">Where a prize is remembered until the main menu shows it flying into its wallet; none when null.</param>
+        public StakeLedger(ISaveStore store, IWallet wallet, IUnseenCoins unseen = null)
         {
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
+            _unseen = unseen;
             StakeLedgerData loaded = VersionedSave.Load<StakeLedgerData>(store, SaveKey, StakeLedgerData.CurrentVersion, d => d.schemaVersion, out _readOnly);
             _data = loaded ?? new StakeLedgerData();
             Repair(_data);
@@ -107,9 +110,11 @@ namespace Callbreak.Application.Economy
             entry.place = place;
             entry.prize = prize;
 
-            // Settled before the coins move: the same end seen again pays nothing.
+            // Settled before the coins move: the same end seen again pays nothing. Paid at the table,
+            // where no wallet shows: the main menu shows the coins arriving (the owner, 9 Oct 2026).
             Save();
             _wallet.Add(prize);
+            _unseen?.Add(prize);
             Changed?.Invoke();
             return prize;
         }

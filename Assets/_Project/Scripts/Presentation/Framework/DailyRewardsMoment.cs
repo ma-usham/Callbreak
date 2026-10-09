@@ -12,8 +12,9 @@ namespace Callbreak.Presentation.Framework
     /// 046). It only acts on the bare main menu: the menu up and visible (no curtain), no dialog open
     /// and the name already answered. So everything that comes first when the menu opens goes first:
     /// the name question, the rules primer and its practice offer, an invite link, a rejoin, the offer
-    /// to resume an offline match. The page then opens as soon as the main menu is bare again, also
-    /// when a new day starts while the player sits on it. Once it has opened, the day's opening is
+    /// to resume an offline match, and prize coins flying into the wallet. The page then opens as soon
+    /// as the main menu is bare again, also when a new day starts while the player sits on it. Once it
+    /// has opened, the day's opening is
     /// used (<see cref="IDailyRewards.TakeAutoOpen"/>), also across restarts; the button below No Ads
     /// still opens it.
     /// </summary>
@@ -28,6 +29,7 @@ namespace Callbreak.Presentation.Framework
         private readonly IDialogs _dialogs;
         private readonly ILoadingCurtain _curtain;
         private readonly IDailyRewards _rewards;
+        private readonly IUnseenCoins _unseen;
 
         private float _nextCheck = -1f;
 
@@ -37,7 +39,8 @@ namespace Callbreak.Presentation.Framework
             IProfileService profile,
             IDialogs dialogs,
             ILoadingCurtain curtain,
-            IDailyRewards rewards)
+            IDailyRewards rewards,
+            IUnseenCoins unseen)
         {
             _router = router;
             _flow = flow;
@@ -45,6 +48,7 @@ namespace Callbreak.Presentation.Framework
             _dialogs = dialogs;
             _curtain = curtain;
             _rewards = rewards;
+            _unseen = unseen;
         }
 
         public void Tick()
@@ -76,7 +80,8 @@ namespace Callbreak.Presentation.Framework
                 && _flow.State == AppState.Menu
                 && !_curtain.IsCovering
                 && !_dialogs.IsOpen
-                && !FirstRun.AsksName(_profile);
+                && !FirstRun.AsksName(_profile)
+                && _unseen.Amount == 0;
         }
     }
 }

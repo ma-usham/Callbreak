@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using Callbreak.Application.Economy;
 using Callbreak.Application.Ports;
 using Callbreak.Presentation.Framework;
@@ -142,24 +141,6 @@ namespace Callbreak.Tests.PlayMode
             yield return new WaitForSecondsRealtime(1.5f);
             Assert.AreNotEqual(ScreenId.DailyRewards, router.Current, "the name question comes first");
             Assert.IsTrue(_game.Services.Resolve<IDailyRewards>().TakeAutoOpen(), "today's opening is still to come");
-        }
-
-        /// <summary>The game's sounds, heard instead of played.</summary>
-        private sealed class HeardSounds : IAudioService
-        {
-            private readonly List<SoundCue> _heard = new List<SoundCue>();
-
-            public int Count(SoundCue cue) => _heard.FindAll(c => c == cue).Count;
-
-            public void Play(SoundCue cue) => _heard.Add(cue);
-
-            public void PlayMusic(MusicTrack track)
-            {
-            }
-
-            public void Duck(bool ducked)
-            {
-            }
         }
 
         /// <summary>A file of a player whose page already opened by itself today, Day 1 still to claim.</summary>

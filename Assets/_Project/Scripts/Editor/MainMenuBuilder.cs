@@ -90,6 +90,10 @@ namespace Callbreak.Editor
         private const float DailyRewardsGap = 10f;
         private const float DailyRewardsDotSize = 20f;
 
+        // Prize coins arriving (the owner, 9 Oct 2026): a Stake Match prize, won at the table, flies
+        // into the wallet from the middle of the screen, over the card fan, out of an area this big.
+        private static readonly Vector2 PrizeCoinsFromSize = new Vector2(240f, 140f);
+
         // The fan: the four aces of the player's deck (GDD §13), laid as mockup 00 draws its four
         // cards. For each, the middle of its top edge and its tilt (mockup pixels; degrees,
         // anticlockwise positive), measured on the mockup's card edges: the two left cards by their
@@ -287,6 +291,7 @@ namespace Callbreak.Editor
             serialized.FindProperty("_noAdsButton").objectReferenceValue = noAds;
             serialized.FindProperty("_dailyRewardsButton").objectReferenceValue = dailyRewards;
             serialized.FindProperty("_dailyRewardsDot").objectReferenceValue = dailyRewardsDot;
+            BindCoinFlight(serialized, root, content, coins.transform.parent.Find("Coin"));
             serialized.FindProperty("_playOnlineButton").objectReferenceValue = playOnline;
             serialized.FindProperty("_playWithFriendsButton").objectReferenceValue = playWithFriends;
             serialized.FindProperty("_playOfflineButton").objectReferenceValue = playOffline;
@@ -465,6 +470,67 @@ namespace Callbreak.Editor
             dot = dotRect.gameObject;
             dot.SetActive(false);
             return button;
+        }
+
+        /// <summary>
+        /// Prize coins arriving: the <see cref="CoinFlight"/> layer over the whole menu, last, and the
+        /// area in the middle of the screen the coins come from, bound to the view with the wallet's coin.
+        /// </summary>
+        private static void BindCoinFlight(SerializedObject view, RectTransform root, RectTransform content, Transform walletCoin)
+        {
+            RectTransform from = UiBuildKit.CreateAt("PrizeCoinsFrom", content, Screen, Screen, PrizeCoinsFromSize);
+            var layer = new GameObject("CoinFlight", typeof(RectTransform));
+            var rect = (RectTransform)layer.transform;
+            rect.SetParent(root, false);
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            rect.SetAsLastSibling();
+            var flight = layer.AddComponent<CoinFlight>();
+            var serializedFlight = new SerializedObject(flight);
+            serializedFlight.FindProperty("_coin").objectReferenceValue = UiBuildKit.LoadSpriteAt(WalletCoinPath, 0f);
+            serializedFlight.ApplyModifiedPropertiesWithoutUndo();
+
+            view.FindProperty("_coinFlight").objectReferenceValue = flight;
+            view.FindProperty("_walletCoin").objectReferenceValue = walletCoin;
+            view.FindProperty("_prizeCoinsFrom").objectReferenceValue = from;
+        }
+
+        /// <summary>
+        /// Adds the prize coins' flight (<see cref="BindCoinFlight"/>) to the saved main menu prefab and
+        /// binds it to the view; everything else in the prefab stays as it is. A prefab that already has
+        /// it is left alone.
+        /// </summary>
+        public static string AddCoinFlight()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+            try
+            {
+                var view = root.GetComponent<MainMenuView>();
+                var serialized = new SerializedObject(view);
+                if (serialized.FindProperty("_coinFlight").objectReferenceValue != null)
+                {
+                    return "the main menu already has its coin flight";
+                }
+
+                var coins = serialized.FindProperty("_coinsText").objectReferenceValue as TMP_Text;
+                Transform walletCoin = coins != null ? coins.transform.parent.Find("Coin") : null;
+                var content = serialized.FindProperty("_content").objectReferenceValue as RectTransform;
+                if (walletCoin == null || content == null)
+                {
+                    return "FAILED: the main menu has no wallet coin or no content to fly over";
+                }
+
+                BindCoinFlight(serialized, (RectTransform)root.transform, content, walletCoin);
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, PrefabPath, out bool saved);
+                return saved ? $"saved {PrefabPath} with the coin flight" : $"FAILED to save {PrefabPath}";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         /// <summary>
