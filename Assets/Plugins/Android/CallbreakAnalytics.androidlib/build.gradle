@@ -1,0 +1,17 @@
+apply plugin: 'com.android.library'
+
+android {
+    namespace "com.dayzerogames.callbreak.analytics"
+    compileSdk getProperty("unity.compileSdkVersion") as int
+    buildToolsVersion getProperty("unity.buildToolsVersion")
+
+    defaultConfig {
+        minSdk getProperty("unity.minSdkVersion") as int
+    }
+
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+        }
+    }
+}
