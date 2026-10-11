@@ -6,6 +6,7 @@ using Callbreak.Application.Localization;
 using Callbreak.Application.Matchmaking;
 using Callbreak.Application.Online;
 using Callbreak.Application.Ports;
+using Callbreak.Application.Analytics;
 using Callbreak.Application.Profile;
 using Callbreak.Application.Recording;
 using Callbreak.Application.Rooms;
@@ -108,7 +109,7 @@ namespace Callbreak.Bootstrap
             builder.Register<HapticsService>(Lifetime.Singleton).As<IHaptics>();
             builder.Register<OnScreenKeyboard>(Lifetime.Singleton).As<IOnScreenKeyboard>();
             builder.Register<LocalAuthService>(Lifetime.Singleton).As<IAuthService>();
-            builder.Register<LogAnalytics>(Lifetime.Singleton).As<IAnalytics>();
+            RegisterAnalytics(builder);
             builder.Register<AppExit>(Lifetime.Singleton).As<IAppExit>();
             builder.Register<DeepLinkService>(Lifetime.Singleton).As<IDeepLinks>();
             // Also the silence under a full-screen ad (RegisterAds).
@@ -169,6 +170,7 @@ namespace Callbreak.Bootstrap
 
             // Also as itself: the session recording hears its refreshes (RegisterSessionRecording).
             builder.RegisterInstance(privacy).As<IAdPrivacy>().AsSelf();
+            builder.Register<IRecordingConsent>(resolver => new UmpRecordingConsent(resolver.Resolve<AdMobAdPrivacy>()), Lifetime.Singleton);
             var rewarded = new AdMobRewardedAdNetwork(adUnit, privacy);
             builder.Register<IRewardedAds>(
                 resolver => new QuietRewardedAds(
@@ -235,7 +237,6 @@ namespace Callbreak.Bootstrap
             {
                 // Registrations of their own, so the container disposes the adapters.
                 builder.Register<ISessionRecorder>(_ => new SmartlookSessionRecorder(SmartlookProject.ProjectKey), Lifetime.Singleton);
-                builder.Register<IRecordingConsent>(resolver => new UmpRecordingConsent(resolver.Resolve<AdMobAdPrivacy>()), Lifetime.Singleton);
                 builder.Register<ISessionRecording>(
                     resolver => new SessionRecording(resolver.Resolve<ISessionRecorder>(), resolver.Resolve<IRecordingConsent>(), Debug.Log),
                     Lifetime.Singleton);
@@ -247,6 +248,26 @@ namespace Callbreak.Bootstrap
             Debug.Log("Session recording: off (no Smartlook project key in SmartlookProject).");
 #endif
             builder.Register<StandInSessionRecording>(Lifetime.Singleton).As<ISessionRecording>();
+        }
+
+        /// <summary>Firebase on the registered Android app; local logging in the Editor and other targets.</summary>
+        private static void RegisterAnalytics(IContainerBuilder builder)
+        {
+#if !UNITY_EDITOR && UNITY_ANDROID
+            builder.Register<FirebaseAnalyticsService>(Lifetime.Singleton);
+            builder.Register<IAnalytics>(resolver =>
+            {
+                var firebase = resolver.Resolve<FirebaseAnalyticsService>();
+                return new ProductAnalytics(firebase, firebase.SetCollectionEnabled, resolver.Resolve<IRecordingConsent>(), Debug.LogWarning);
+            }, Lifetime.Singleton);
+            builder.RegisterBuildCallback(resolver =>
+            {
+                resolver.Resolve<IAnalytics>();
+                resolver.Resolve<FirebaseAnalyticsService>().Initialize();
+            });
+#else
+            builder.Register<LogAnalytics>(Lifetime.Singleton).As<IAnalytics>();
+#endif
         }
 
         /// <summary>
