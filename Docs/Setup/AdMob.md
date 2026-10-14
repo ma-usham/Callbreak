@@ -1,12 +1,14 @@
-# AdMob setup (Earn Coins ads and ads between matches)
+# AdMob setup (Earn Coins ads, ads between matches and the table's banner)
 
-The Earn Coins page pays its coins for Google AdMob rewarded ads on phones, and a full-screen AdMob
-interstitial ad can show between matches (below, "Ads between matches"). They come through the
+The Earn Coins page pays its coins for Google AdMob rewarded ads on phones, a full-screen AdMob
+interstitial ad can show between matches (below, "Ads between matches"), and an AdMob banner shows
+on the table during a match (below, "The banner on the table"). They come through the
 Google Mobile Ads Unity plugin (`com.google.ads.mobile` 11.5.0, from OpenUPM) and the External
 Dependency Manager it brings (`com.google.external-dependency-manager` 1.2.187, EDM4U). In the
 Editor, in the tests and in desktop builds stand-ins take their place: one completes every Earn
-Coins ad (`StandInRewardedAds`), the other never has an ad between matches
-(`StandInInterstitialAds`). No ad network is touched there.
+Coins ad (`StandInRewardedAds`), another never has an ad between matches
+(`StandInInterstitialAds`), and the table's banner is never there (`StandInBannerAds`). No ad
+network is touched there.
 
 ## Identifiers (not secret: they ship inside the app)
 
@@ -15,7 +17,7 @@ Coins ad (`StandInRewardedAds`), the other never has an ad between matches
 | AdMob app (Android) | `ca-app-pub-1025159441369051~3176202879` |
 | Rewarded ad unit, Earn Coins (Android) | `ca-app-pub-1025159441369051/8532471334` |
 | Interstitial ad unit, between matches (Android) | `ca-app-pub-1025159441369051/4319920270` |
-| Banner `.../6484892497` | not used anywhere |
+| Banner ad unit, the table (Android) | `ca-app-pub-1025159441369051/6484892497` |
 
 They live in code, in `Assets/_Project/Scripts/Infrastructure/Ads/AdMobIds.cs`. Before every Android
 build, `Callbreak.Editor.AdMobSetup` writes the app id into the plugin's settings,
@@ -27,8 +29,9 @@ plugin's own **Assets > Google Mobile Ads > Settings...** window shows the same 
 
 - **Development builds** (Development Build ticked; `Debug.isDebugBuild`) always use Google's test
   units: rewarded `ca-app-pub-3940256099942544/5224354917`, interstitial
-  `ca-app-pub-3940256099942544/1033173712` (iOS: `.../1712485313` and `.../4411468910`). Those ads
-  say "Test Ad", work on any phone and need no AdMob review.
+  `ca-app-pub-3940256099942544/1033173712`, banner `ca-app-pub-3940256099942544/6300978111` (iOS:
+  `.../1712485313`, `.../4411468910` and `.../2934735716`). Those ads say "Test Ad", work on any
+  phone and need no AdMob review.
 - **Release builds** use the real units. Never tap your own live ads: AdMob can suspend the account.
   To try a release build on a phone, make it a test device first (below).
 

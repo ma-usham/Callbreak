@@ -160,7 +160,9 @@ namespace Callbreak.Bootstrap
         /// full-screen ads between matches: AdMob interstitials on phones, one kept loaded (Google's
         /// test ads in development builds); elsewhere a stand-in that never has one. On phones the
         /// game is silent while either kind of ad is up (the owner, 8 Oct 2026): Android keeps the
-        /// game running under an ad.
+        /// game running under an ad. And the banner network for the table's banner (the owner, 14 Oct
+        /// 2026): AdMob on phones (Google's test banners in development builds); none elsewhere, so the
+        /// table makes a stand-in that never has one.
         /// </summary>
         private static void RegisterAds(IContainerBuilder builder)
         {
@@ -188,6 +190,11 @@ namespace Callbreak.Bootstrap
                     resolver.Resolve<IAudioSilencer>(),
                     Debug.Log),
                 Lifetime.Singleton);
+
+            // The table's banner starts AdMob through the rewarded ads too; each table makes its own
+            // banner over this network (TableLifetimeScope), and No Ads removes it.
+            string bannerUnit = AdMobIds.BannerAdUnit(UnityEngine.Application.platform == RuntimePlatform.IPhonePlayer, Debug.isDebugBuild);
+            builder.RegisterInstance<IBannerAdNetwork>(new AdMobBannerAdNetwork(bannerUnit, rewarded.StartAsync));
 #else
             builder.Register<StandInRewardedAds>(Lifetime.Singleton).As<IRewardedAds>();
             builder.Register<StandInAdPrivacy>(Lifetime.Singleton).As<IAdPrivacy>();

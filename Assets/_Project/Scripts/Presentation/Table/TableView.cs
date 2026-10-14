@@ -1,4 +1,5 @@
 using System;
+using Callbreak.Application.Economy;
 using Callbreak.Presentation.Framework;
 using LitMotion;
 using TMPro;
@@ -60,6 +61,11 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private UnityEngine.UI.Image _backdropTable;
         [SerializeField] private UnityEngine.UI.Image _backdropFront;
 
+        // Where the banner ad may show, left of the Scores button (the owner, 14 Oct 2026): an empty
+        // rectangle in the HUD that the ad network's own view is placed over.
+        [SerializeField] private RectTransform _bannerSlot;
+
+        private readonly Vector3[] _bannerCorners = new Vector3[4];
         private MotionHandle _coverMotion;
         private bool _reduceMotion;
 
@@ -253,6 +259,35 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>Whether the table is waiting for a touch to bring the Away player back.</summary>
         public bool IsAway => _imBackButton.gameObject.activeSelf;
+
+        /// <summary>
+        /// Where the banner ad may show, left of the Scores button: the banner slot's rectangle in
+        /// screen pixels from the screen's top-left corner, rounded inwards. False when the table has
+        /// no slot (a prefab built before it), or it is hidden or empty.
+        /// </summary>
+        public bool TryGetBannerSlot(out BannerSlot slot)
+        {
+            slot = default;
+            if (_bannerSlot == null || !_bannerSlot.gameObject.activeInHierarchy)
+            {
+                return false;
+            }
+
+            // The table's canvases are screen-space overlays: world space is screen pixels, from the
+            // bottom-left corner.
+            _bannerSlot.GetWorldCorners(_bannerCorners);
+            int x = Mathf.CeilToInt(_bannerCorners[0].x);
+            int y = Mathf.CeilToInt(Screen.height - _bannerCorners[2].y);
+            int width = Mathf.FloorToInt(_bannerCorners[2].x) - x;
+            int height = Mathf.FloorToInt(Screen.height - _bannerCorners[0].y) - y;
+            if (width <= 0 || height <= 0)
+            {
+                return false;
+            }
+
+            slot = new BannerSlot(x, y, width, height);
+            return true;
+        }
 
         /// <summary>
         /// The wait before the next quick phrase (ADR 024): the button is covered by the wait's
