@@ -109,8 +109,9 @@ swap places with No Ads: Daily Rewards directly under the Shop, No Ads under Dai
 - The column under the Shop steps down by the spacing the owner gave No Ads when they moved it
   there (`HeaderColumnStep`, 128.67 mockup pixels). Daily Rewards takes No Ads' old place and No
   Ads moves one step lower.
-- Daily Rewards is now the header disc at full size with its gift icon pixel for pixel. Its red dot
-  keeps its size and sits on the larger rim.
+- Daily Rewards is now the header disc at full size. Its gift icon is drawn larger than the Shop's
+  and the gear's, so it is shown at 0.8 of its size (about 46 x 50 against 54 x 45 and 54 x 53)
+  to look like them (the owner, 15 Oct 2026). Its red dot keeps its size and sits on the larger rim.
 - With No Ads bought, Daily Rewards still sits right under the Shop, so the column has no gap.
 - The prefab got the change with `MainMenuBuilder.StackColumnUnderShop`, a targeted edit that
   replaces `AddDailyRewardsButton`. The full builder now places No Ads in this column too, not left

@@ -83,8 +83,11 @@ namespace Callbreak.Editor
 
         // The Daily Rewards button (the owner, 8 Oct 2026): the gear's disc and shadow with ChatGPT's
         // gift glyph (ArtSource/Working/DailyRewards) and a red dot on its top right rim while today's
-        // reward is ready.
+        // reward is ready. The glyph is drawn larger than the shop's and the gear's (57 x 61 of ink
+        // against 54 x 45 and 54 x 53), so it is shown at DailyRewardsIconScale of its size, which
+        // stands it between the two (the owner, 15 Oct 2026: "make it appear good like shop and setting").
         private const string DailyRewardsIconPath = "Icons/Icon_DailyReward.png";
+        private const float DailyRewardsIconScale = 0.8f;
         private const string DailyRewardsDotPath = "Controls/UI_Dot_Alert.png";
         private const float DailyRewardsDotSize = 20f;
 
@@ -451,7 +454,9 @@ namespace Callbreak.Editor
             float radius = UiBuildKit.NativeSize(circle).y / UiBuildKit.ScaleY / 2f;
             UnityEngine.UI.Button button = CreateButton(
                 "DailyRewardsButton", headerRight, centre, UiBuildKit.NativeSize(circle), circle, circleShadow, 1f, 0f, 4f, 0.2f);
-            Place("Icon", button.transform, centre, centre, Ui(DailyRewardsIconPath));
+            Sprite icon = Ui(DailyRewardsIconPath);
+            RectTransform iconRect = UiBuildKit.CreateAt("Icon", button.transform, centre, centre, UiBuildKit.NativeSize(icon) * DailyRewardsIconScale);
+            UiBuildKit.AddImage(iconRect, icon, false);
 
             // On the rim, up and to the right, as a badge sits on an app icon.
             float offset = radius * 0.72f;
