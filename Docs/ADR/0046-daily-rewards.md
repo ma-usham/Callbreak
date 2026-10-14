@@ -100,3 +100,19 @@ It applies to both pages that pay coins and show the wallet, Daily Rewards and E
   match called off is not a win and flies nowhere. Daily Rewards waits for them before it opens by
   itself. `PrizeCoinsFlowTests` (PlayMode) and `UnseenCoinsTests` cover it; the main menu prefab
   got the flight with `MainMenuBuilder.AddCoinFlight`, a targeted edit like the Daily Rewards button.
+
+## Addendum, 14 Oct 2026: Daily Rewards at full size, under the Shop
+
+The owner asked for the Daily Rewards button to be the size of the Settings and Shop discs, and to
+swap places with No Ads: Daily Rewards directly under the Shop, No Ads under Daily Rewards.
+
+- The column under the Shop steps down by the spacing the owner gave No Ads when they moved it
+  there (`HeaderColumnStep`, 128.67 mockup pixels). Daily Rewards takes No Ads' old place and No
+  Ads moves one step lower.
+- Daily Rewards is now the header disc at full size. Its gift icon is drawn larger than the Shop's
+  and the gear's, so it is shown at 0.8 of its size (about 46 x 50 against 54 x 45 and 54 x 53)
+  to look like them (the owner, 15 Oct 2026). Its red dot keeps its size and sits on the larger rim.
+- With No Ads bought, Daily Rewards still sits right under the Shop, so the column has no gap.
+- The prefab got the change with `MainMenuBuilder.StackColumnUnderShop`, a targeted edit that
+  replaces `AddDailyRewardsButton`. The full builder now places No Ads in this column too, not left
+  of the wallet, matching the prefab.
