@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using Callbreak.Application.Cosmetics;
+using Callbreak.Application.Economy;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Matchmaking;
 using Callbreak.Application.Ports;
@@ -94,6 +95,29 @@ namespace Callbreak.Bootstrap
             RegisterPresenter<ScorecardView, ScorecardPresenter>(builder);
             RegisterPresenter<SettingsView, SettingsPresenter>(builder);
             RegisterPresenter<HowToPlayView, HowToPlayPresenter>(builder);
+            RegisterBanner(builder);
+        }
+
+        /// <summary>
+        /// The banner ad at the top of the table (the owner, 14 and 26 Oct 2026, ADR 051): over the
+        /// project's banner network where there is one (AdMob on phones, or a test's), made with the
+        /// table and released with it; elsewhere a stand-in that never has one, so the table makes no
+        /// room for it. No Ads removes it.
+        /// </summary>
+        private static void RegisterBanner(IContainerBuilder builder)
+        {
+            if (builder.Exists(typeof(IBannerAdNetwork), includeInterfaceTypes: true, findParentScopes: true))
+            {
+                builder.Register<IBannerAds>(
+                    resolver => new BannerAds(resolver.Resolve<IBannerAdNetwork>(), resolver.Resolve<INoAds>(), Debug.Log),
+                    Lifetime.Scoped);
+            }
+            else
+            {
+                builder.Register<StandInBannerAds>(Lifetime.Scoped).As<IBannerAds>();
+            }
+
+            builder.RegisterEntryPoint<TableBannerPresenter>();
         }
 
         /// <summary>Registers a screen's presenter only when the scene has that screen.</summary>

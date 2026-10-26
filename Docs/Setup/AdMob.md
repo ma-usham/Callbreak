@@ -1,13 +1,15 @@
-# AdMob setup (Earn Coins ads, ads between matches and app open ads)
+# AdMob setup (Earn Coins ads, ads between matches, app open ads and the table's banner)
 
 The Earn Coins page pays its coins for Google AdMob rewarded ads on phones, a full-screen AdMob
-interstitial ad can show between matches (below, "Ads between matches"), and an AdMob app open ad can
-greet the player back to the game (below, "App open ads"). They come through the
+interstitial ad can show between matches (below, "Ads between matches"), an AdMob app open ad can
+greet the player back to the game (below, "App open ads"), and an AdMob banner shows on the table
+during a match (below, "The banner on the table"). They come through the
 Google Mobile Ads Unity plugin (`com.google.ads.mobile` 11.5.0, from OpenUPM) and the External
 Dependency Manager it brings (`com.google.external-dependency-manager` 1.2.187, EDM4U). In the
 Editor, in the tests and in desktop builds stand-ins take their place: one completes every Earn
-Coins ad (`StandInRewardedAds`), the other never has an ad between matches
-(`StandInInterstitialAds`). No ad network is touched there.
+Coins ad (`StandInRewardedAds`), another never has an ad between matches
+(`StandInInterstitialAds`), and the table's banner is never there (`StandInBannerAds`). No ad
+network is touched there.
 
 ## Identifiers (not secret: they ship inside the app)
 
@@ -17,7 +19,7 @@ Coins ad (`StandInRewardedAds`), the other never has an ad between matches
 | Rewarded ad unit, Earn Coins (Android) | `ca-app-pub-1025159441369051/8532471334` |
 | Interstitial ad unit, between matches (Android) | `ca-app-pub-1025159441369051/4319920270` |
 | App open ad unit, `Android_AppOpen`, on the return to the game (Android) | `ca-app-pub-1025159441369051/9889671064` |
-| Banner `.../6484892497` | not used anywhere: the owner dropped banners for now (15 Oct 2026, ADR 047) |
+| Banner ad unit, `Android_Banner`, the table (Android) | `ca-app-pub-1025159441369051/6484892497` |
 
 They live in code, in `Assets/_Project/Scripts/Infrastructure/Ads/AdMobIds.cs`. Before every Android
 build, `Callbreak.Editor.AdMobSetup` writes the app id into the plugin's settings,
@@ -29,9 +31,10 @@ plugin's own **Assets > Google Mobile Ads > Settings...** window shows the same 
 
 - **Development builds** (Development Build ticked; `Debug.isDebugBuild`) always use Google's test
   units: rewarded `ca-app-pub-3940256099942544/5224354917`, interstitial
-  `ca-app-pub-3940256099942544/1033173712`, app open `ca-app-pub-3940256099942544/9257395921`
-  (iOS: `.../1712485313`, `.../4411468910` and `.../5575463023`). Those ads
-  say "Test Ad", work on any phone and need no AdMob review.
+  `ca-app-pub-3940256099942544/1033173712`, app open `ca-app-pub-3940256099942544/9257395921`,
+  banner `ca-app-pub-3940256099942544/6300978111` (iOS: `.../1712485313`, `.../4411468910`,
+  `.../5575463023` and `.../2934735716`). Those ads say "Test Ad", work on any phone and need no
+  AdMob review.
 - **Release builds** use the real units. Never tap your own live ads: AdMob can suspend the account.
   To try a release build on a phone, make it a test device first (below).
 
@@ -101,6 +104,44 @@ prize coins waiting to fly.
   - the menu's `Presentation/Framework/ReturnToGameAdMoment.cs`;
   - registered next to the other ads in `ProjectLifetimeScope`, and the moment in `MenuLifetimeScope`.
 
+## The banner on the table
+
+The owner's rule (14 Oct 2026; its place picked 26 Oct 2026, ADR 051). During a match a standard
+**320 x 50 banner** (AdMob's smallest standard size, and the one with the most ads) shows at the
+**very top of the table**, over the scenery:
+
+- **Where:** at the top edge of the safe area, centred on the screen. On 16:9 phones it moves left
+  just enough to stay 48 canvas units clear of the round line; it is never nearer than that to Home
+  or the round line, and further from Scores and Settings.
+- **Room for it:** when the table opens and the player doesn't own No Ads, the CALLBREAK logo goes,
+  "ROUND 1 / 5" moves beside the Scores button (without its ornaments), and the top seat and the
+  trick come down 52 and 25 canvas units, so the banner covers nothing of the game. A player who
+  owns No Ads, and the Editor and desktop builds, get the table as it always was.
+- **Decided once per table**, so nothing moves under the player: buying No Ads mid-match takes the
+  banner away at once and the room stays until the next table; a refund mid-match brings a banner
+  only at the next table.
+- **Never over anything:** the banner is AdMob's own view, drawn over the game, so it is off the
+  screen while anything covers the bare table: the call (bidding) panel, the scorecard, the match
+  menu, settings, the rules, a round's or the match's results, a dialog, the loading curtain, the
+  "Reconnecting…" cover or a toast. It comes back when the table is bare again.
+- **Size:** 320 x 50 dp, about 840-960 x 131-150 canvas units on phones (12-14% of the screen's
+  height), 600 x 94 on a 1024 dp-wide tablet. A phone too small for it (under about 350 dp tall)
+  gets none.
+- **Loading and consent:** one banner per table, loaded at once, tried again after 5 s, 10 s, 20 s
+  ... at most every two minutes. AdMob refreshes what it shows itself, at the rate set on the unit
+  in AdMob. AdMob starts through the Earn Coins ads' start (one consent form, one SDK start).
+  Nothing is requested for No Ads owners.
+- **The pieces:**
+  - the rule `Application/Economy/BannerAds.cs`, its port `IBannerAds.cs` (with `BannerSlot`), the
+    SDK port `IBannerAdNetwork.cs` and the stand-in `StandInBannerAds.cs`;
+  - the AdMob side `Infrastructure/Ads/AdMobBannerAdNetwork.cs` (`AdSize.Banner`, placed in dp);
+  - the table's `Presentation/Table/TableBannerPresenter.cs` and `TableView` (`SetBannerRoom`,
+    `TryGetBannerSlot`), its slot and the round line beside Scores built by `TableCustomizer`
+    (`BuildBannerRoom`);
+  - the network registered in `ProjectLifetimeScope`, the banner and presenter in
+    `TableLifetimeScope`;
+  - tests: `BannerAdsTests` and `TableBannerRoomTests` (EditMode), `TableBannerFlowTests` (PlayMode).
+
 ## How the app asks for consent
 
 At every start, before any ad is requested, the app asks Google's User Messaging Platform (UMP) for
@@ -154,8 +195,8 @@ their choice later. Settings then shows a **Privacy options** button under its p
    ```
 
 6. **Play Console.**
-   - App content > Ads: "Yes, my app contains ads" (rewarded ads, and full-screen ads between
-     matches).
+   - App content > Ads: "Yes, my app contains ads" (rewarded ads, full-screen ads between
+     matches and on the return to the game, and a banner during matches).
    - App content > Advertising ID: the app uses it, for advertising (the SDK adds the
      `com.google.android.gms.permission.AD_ID` permission).
    - Data safety: declare the data the Google Mobile Ads SDK collects and shares (see Google's
