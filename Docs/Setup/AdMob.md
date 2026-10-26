@@ -1,8 +1,9 @@
-# AdMob setup (Earn Coins ads, ads between matches and the table's banner)
+# AdMob setup (Earn Coins ads, ads between matches, app open ads and the table's banner)
 
 The Earn Coins page pays its coins for Google AdMob rewarded ads on phones, a full-screen AdMob
-interstitial ad can show between matches (below, "Ads between matches"), and an AdMob banner shows
-on the table during a match (below, "The banner on the table"). They come through the
+interstitial ad can show between matches (below, "Ads between matches"), an AdMob app open ad can
+greet the player back to the game (below, "App open ads"), and an AdMob banner shows on the table
+during a match (below, "The banner on the table"). They come through the
 Google Mobile Ads Unity plugin (`com.google.ads.mobile` 11.5.0, from OpenUPM) and the External
 Dependency Manager it brings (`com.google.external-dependency-manager` 1.2.187, EDM4U). In the
 Editor, in the tests and in desktop builds stand-ins take their place: one completes every Earn
@@ -17,7 +18,8 @@ network is touched there.
 | AdMob app (Android) | `ca-app-pub-1025159441369051~3176202879` |
 | Rewarded ad unit, Earn Coins (Android) | `ca-app-pub-1025159441369051/8532471334` |
 | Interstitial ad unit, between matches (Android) | `ca-app-pub-1025159441369051/4319920270` |
-| Banner ad unit, the table (Android) | `ca-app-pub-1025159441369051/6484892497` |
+| App open ad unit, `Android_AppOpen`, on the return to the game (Android) | `ca-app-pub-1025159441369051/9889671064` |
+| Banner ad unit, `Android_Banner`, the table (Android) | `ca-app-pub-1025159441369051/6484892497` |
 
 They live in code, in `Assets/_Project/Scripts/Infrastructure/Ads/AdMobIds.cs`. Before every Android
 build, `Callbreak.Editor.AdMobSetup` writes the app id into the plugin's settings,
@@ -29,9 +31,10 @@ plugin's own **Assets > Google Mobile Ads > Settings...** window shows the same 
 
 - **Development builds** (Development Build ticked; `Debug.isDebugBuild`) always use Google's test
   units: rewarded `ca-app-pub-3940256099942544/5224354917`, interstitial
-  `ca-app-pub-3940256099942544/1033173712`, banner `ca-app-pub-3940256099942544/6300978111` (iOS:
-  `.../1712485313`, `.../4411468910` and `.../2934735716`). Those ads say "Test Ad", work on any
-  phone and need no AdMob review.
+  `ca-app-pub-3940256099942544/1033173712`, app open `ca-app-pub-3940256099942544/9257395921`,
+  banner `ca-app-pub-3940256099942544/6300978111` (iOS: `.../1712485313`, `.../4411468910`,
+  `.../5575463023` and `.../2934735716`). Those ads say "Test Ad", work on any phone and need no
+  AdMob review.
 - **Release builds** use the real units. Never tap your own live ads: AdMob can suspend the account.
   To try a release build on a phone, make it a test device first (below).
 
@@ -75,6 +78,31 @@ messages go out before the ad pauses the game. Then the ad, then the main menu.
   the stand-in `StandInInterstitialAds.cs`; the AdMob side `Infrastructure/Ads/AdMobInterstitialAdNetwork.cs`;
   the hook in `Presentation/Overlays/MatchResultsPresenter.cs`; registered next to the rewarded ads
   in `ProjectLifetimeScope`.
+
+## App open ads
+
+The owner's rule (15 Oct 2026, ADR 047). As the player comes back to the game after at least **30
+seconds** away, a full-screen app open ad shows, only on the **bare main menu**: the menu up and
+visible, no dialog, no curtain (so not over the store's purchase sheet), the name answered and no
+prize coins waiting to fly.
+
+- **Never:** on a start; in a match, matchmaking, a room, the shop or any other screen; for a player
+  who owns **No Ads**; before the player's second match; when none is loaded.
+- **At most one full-screen ad every three minutes**, counting the ads between matches too
+  (`FullScreenAdPacing`). The Earn Coins ads don't count.
+- **Each time away gives one chance.**
+- **Loading, consent and sound** are as for the ads between matches. One is kept loaded, AdMob
+  starts through the Earn Coins ads' start, nothing is requested for No Ads owners, and the game is
+  silent while it is up.
+- **Away and back** come from Google Mobile Ads' app state (`AppStateEventNotifier`). Closing one of
+  the game's own ads is not a return.
+- **The pieces:**
+  - the rule `Application/Economy/ReturnToGameAds.cs` and its port `IReturnToGameAds.cs`;
+  - the shared `FullScreenAdPacing.cs`;
+  - the port `Application/Ports/IAppForeground.cs` and its stand-in `StandInAppForeground.cs`;
+  - the AdMob side `Infrastructure/Ads/AdMobAppOpenAdNetwork.cs` and `AdMobAppForeground.cs`;
+  - the menu's `Presentation/Framework/ReturnToGameAdMoment.cs`;
+  - registered next to the other ads in `ProjectLifetimeScope`, and the moment in `MenuLifetimeScope`.
 
 ## How the app asks for consent
 

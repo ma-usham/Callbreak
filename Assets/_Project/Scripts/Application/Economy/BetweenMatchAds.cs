@@ -19,7 +19,9 @@ namespace Callbreak.Application.Economy
     /// <item>after the player's very first match: while the statistics count one match or none
     /// (<see cref="PlayerStats.gamesPlayed"/>, every match played, finished or left early, the one
     /// just finished or left included; an offline match left for later is not counted yet);</item>
-    /// <item>within <see cref="MinInterval"/> of the last ad coming up, on the wall clock;</item>
+    /// <item>within <see cref="MinInterval"/> of the last full-screen ad coming up, this kind or an
+    /// app open ad (<see cref="FullScreenAdPacing"/>, shared with <see cref="ReturnToGameAds"/>), on
+    /// the wall clock;</item>
     /// <item>when no ad is loaded at that moment: the game goes on without waiting for one.</item>
     /// </list>
     /// Only the match results and the match menu's Leave Match and Restart Game (offline, as a new
@@ -30,8 +32,8 @@ namespace Callbreak.Application.Economy
     /// </summary>
     public sealed class BetweenMatchAds : IBetweenMatchAds
     {
-        /// <summary>The least time from one ad coming up to the next: at most one every three minutes.</summary>
-        public static readonly TimeSpan MinInterval = TimeSpan.FromMinutes(3);
+        /// <summary>The least time from one full-screen ad coming up to the next: at most one every three minutes.</summary>
+        public static readonly TimeSpan MinInterval = FullScreenAdPacing.MinInterval;
 
         /// <summary>
         /// How long an ad after a match left early waits before it comes up: the leave just sent (and
@@ -45,8 +47,7 @@ namespace Callbreak.Application.Economy
         private readonly Func<DateTime> _utcNow;
         private readonly Action<string> _log;
         private readonly Func<TimeSpan, CancellationToken, Task> _delay;
-
-        private DateTime? _lastAdUtc;
+        private readonly FullScreenAdPacing _pacing;
 
         /// <param name="ads">The full-screen ads.</param>
         /// <param name="stats">The player's statistics, which count the matches played.</param>
@@ -54,7 +55,15 @@ namespace Callbreak.Application.Economy
         /// <param name="utcNow">The wall clock.</param>
         /// <param name="log">Where each decision goes, a line each (no player data); nowhere when null.</param>
         /// <param name="delay">Waits the given time (<see cref="LeaveSettle"/>); <see cref="Task.Delay(TimeSpan, CancellationToken)"/> when null.</param>
-        public BetweenMatchAds(IInterstitialAds ads, IStatsService stats, INoAds noAds, Func<DateTime> utcNow, Action<string> log = null, Func<TimeSpan, CancellationToken, Task> delay = null)
+        /// <param name="pacing">When the last full-screen ad came up, shared with the app open ads; this rule's own when null.</param>
+        public BetweenMatchAds(
+            IInterstitialAds ads,
+            IStatsService stats,
+            INoAds noAds,
+            Func<DateTime> utcNow,
+            Action<string> log = null,
+            Func<TimeSpan, CancellationToken, Task> delay = null,
+            FullScreenAdPacing pacing = null)
         {
             _ads = ads ?? throw new ArgumentNullException(nameof(ads));
             _stats = stats ?? throw new ArgumentNullException(nameof(stats));
@@ -62,6 +71,7 @@ namespace Callbreak.Application.Economy
             _utcNow = utcNow ?? throw new ArgumentNullException(nameof(utcNow));
             _log = log ?? (_ => { });
             _delay = delay ?? ((time, ct) => Task.Delay(time, ct));
+            _pacing = pacing ?? new FullScreenAdPacing();
         }
 
         public async Task<bool> ShowIfDueAsync(AfterMatch next, CancellationToken ct)
@@ -89,8 +99,8 @@ namespace Callbreak.Application.Economy
             }
 
             // Counted from now, so an exit while it is up finds it there.
-            DateTime? before = _lastAdUtc;
-            _lastAdUtc = now;
+            DateTime? before = _pacing.LastAdUtc;
+            _pacing.LastAdUtc = now;
             if (next == AfterMatch.LeftEarly)
             {
                 try
@@ -100,7 +110,7 @@ namespace Callbreak.Application.Economy
                 catch (OperationCanceledException)
                 {
                     // The caller stopped waiting before any ad came up: the three minutes don't start.
-                    _lastAdUtc = before;
+                    _pacing.LastAdUtc = before;
                     throw;
                 }
                 catch (Exception e)
@@ -128,7 +138,7 @@ namespace Callbreak.Application.Economy
             if (!shown)
             {
                 // None came up after all: the three minutes don't start.
-                _lastAdUtc = before;
+                _pacing.LastAdUtc = before;
                 _log("Between-match ads: the ad could not be shown; going on without it.");
                 return false;
             }
@@ -157,17 +167,17 @@ namespace Callbreak.Application.Economy
                 return false;
             }
 
-            if (_lastAdUtc.HasValue)
+            if (_pacing.LastAdUtc.HasValue)
             {
-                if (now < _lastAdUtc.Value)
+                if (now < _pacing.LastAdUtc.Value)
                 {
                     // The clock went back past the last ad: how long ago it was can't be told.
-                    _lastAdUtc = now;
+                    _pacing.LastAdUtc = now;
                     _log("Between-match ads: none, the clock was set back; the three minutes start again.");
                     return false;
                 }
 
-                if (now - _lastAdUtc.Value < MinInterval)
+                if (now - _pacing.LastAdUtc.Value < MinInterval)
                 {
                     _log("Between-match ads: none, the last one came up less than three minutes ago.");
                     return false;

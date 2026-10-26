@@ -158,8 +158,11 @@ namespace Callbreak.Bootstrap
         /// says they are required, learn that from the same consent flow. In the Editor, in the tests
         /// and on desktop, a stand-in completes every ad and never requires privacy options. Also the
         /// full-screen ads between matches: AdMob interstitials on phones, one kept loaded (Google's
-        /// test ads in development builds); elsewhere a stand-in that never has one. On phones the
-        /// game is silent while either kind of ad is up (the owner, 8 Oct 2026): Android keeps the
+        /// test ads in development builds); elsewhere a stand-in that never has one. And the app open
+        /// ads on the return to the game (the owner, 15 Oct 2026; ADR 047): AdMob's app open unit on
+        /// phones, one kept loaded, told of the game's moves by Google Mobile Ads' app state; elsewhere
+        /// a foreground that never moves. Both kinds of full-screen ad count towards one three minutes.
+        /// On phones the game is silent while any ad is up (the owner, 8 Oct 2026): Android keeps the
         /// game running under an ad. And the banner network for the table's banner (the owner, 14 Oct
         /// 2026): AdMob on phones (Google's test banners in development builds); none elsewhere, so the
         /// table makes a stand-in that never has one.
@@ -191,6 +194,22 @@ namespace Callbreak.Bootstrap
                     Debug.Log),
                 Lifetime.Singleton);
 
+            // The app open ads start AdMob through the rewarded ads as well, and are no ads for No Ads.
+            string appOpenUnit = AdMobIds.AppOpenAdUnit(UnityEngine.Application.platform == RuntimePlatform.IPhonePlayer, Debug.isDebugBuild);
+            builder.Register<AdMobAppForeground>(Lifetime.Singleton).As<IAppForeground>();
+            builder.Register<IReturnToGameAds>(
+                resolver => new ReturnToGameAds(
+                    new QuietInterstitialAds(
+                        new PreloadedInterstitialAds(new AdMobAppOpenAdNetwork(appOpenUnit, rewarded.StartAsync), resolver.Resolve<INoAds>(), () => System.DateTime.UtcNow, Debug.Log),
+                        resolver.Resolve<IAudioSilencer>(),
+                        Debug.Log),
+                    resolver.Resolve<IStatsService>(),
+                    resolver.Resolve<INoAds>(),
+                    resolver.Resolve<FullScreenAdPacing>(),
+                    () => System.DateTime.UtcNow,
+                    Debug.Log),
+                Lifetime.Singleton);
+
             // The table's banner starts AdMob through the rewarded ads too; each table makes its own
             // banner over this network (TableLifetimeScope), and No Ads removes it.
             string bannerUnit = AdMobIds.BannerAdUnit(UnityEngine.Application.platform == RuntimePlatform.IPhonePlayer, Debug.isDebugBuild);
@@ -199,12 +218,31 @@ namespace Callbreak.Bootstrap
             builder.Register<StandInRewardedAds>(Lifetime.Singleton).As<IRewardedAds>();
             builder.Register<StandInAdPrivacy>(Lifetime.Singleton).As<IAdPrivacy>();
             builder.Register<StandInInterstitialAds>(Lifetime.Singleton).As<IInterstitialAds>();
+            builder.Register<StandInAppForeground>(Lifetime.Singleton).As<IAppForeground>();
+            builder.Register<IReturnToGameAds>(
+                resolver => new ReturnToGameAds(
+                    new StandInInterstitialAds(),
+                    resolver.Resolve<IStatsService>(),
+                    resolver.Resolve<INoAds>(),
+                    resolver.Resolve<FullScreenAdPacing>(),
+                    () => System.DateTime.UtcNow,
+                    Debug.Log),
+                Lifetime.Singleton);
 #endif
+
+            // At most one full-screen ad every three minutes, between matches and on the return alike.
+            builder.Register<FullScreenAdPacing>(Lifetime.Singleton);
 
             // When an ad shows between matches: leaving a finished match's results, at most one every
             // three minutes, never after the first match or with No Ads (the owner, 5 Oct 2026).
             builder.Register<IBetweenMatchAds>(
-                resolver => new BetweenMatchAds(resolver.Resolve<IInterstitialAds>(), resolver.Resolve<IStatsService>(), resolver.Resolve<INoAds>(), () => System.DateTime.UtcNow, Debug.Log),
+                resolver => new BetweenMatchAds(
+                    resolver.Resolve<IInterstitialAds>(),
+                    resolver.Resolve<IStatsService>(),
+                    resolver.Resolve<INoAds>(),
+                    () => System.DateTime.UtcNow,
+                    Debug.Log,
+                    pacing: resolver.Resolve<FullScreenAdPacing>()),
                 Lifetime.Singleton);
         }
 

@@ -81,6 +81,9 @@ namespace Callbreak.Bootstrap
 
             // Daily Rewards opens by itself on the bare main menu once a day (ADR 046).
             RegisterPresenter<DailyRewardsView, DailyRewardsMoment>(builder);
+
+            // An app open ad may greet the player back on the bare main menu (ADR 047).
+            builder.RegisterEntryPoint<ReturnToGameAdMoment>();
         }
 
         /// <summary>Registers a screen's presenter only when the scene has that screen.</summary>
