@@ -182,6 +182,16 @@ namespace Callbreak.Editor.Screens
         private const float ChipTextScale = 0.8f;
         private const float ChipSpinnerSize = 15f;
 
+        // ---- The banner ad at the top of the table (the owner, 26 Oct 2026, ADR 049), canvas units.
+        // While a banner may come, the round line stands beside the Scores button, its words ending
+        // this far left of the button, and the banner's slot spans the top of the safe area from this
+        // far right of Home to this far left of those words, as tall as the largest standard banner
+        // (320 x 50 dp is 150 units on a 360 dp-tall phone) and a little more. TableView brings the
+        // top seat and the trick down to clear it.
+        private const float BannerRoundGap = 36f;
+        private const float BannerGap = 48f;
+        private const float BannerSlotHeight = 155f;
+
         // ---- The status pill hugs its words (the owner, 3 Oct 2026: the pill drawn for "Bid 3 • Won 1"
         // was too big for "3-7"). It keeps its centre under the name plate and its height. The words
         // keep about the margins mockup 08 draws round "Bid 3 • Won 1" (22 canvas units a side there,
@@ -254,6 +264,7 @@ namespace Callbreak.Editor.Screens
             RectTransform handLayer = BuildHand(ctx, pool, centre);
             BuildPrompt(ctx, handLayer, statusStyle);
             BuildTrickLabel(ctx);
+            BuildBannerRoom(ctx);
             BuildEmotePicker(ctx, statusStyle);
             BuildEmoteCooldown(ctx);
             BuildAwayCatcher(ctx);
@@ -886,6 +897,49 @@ namespace Callbreak.Editor.Screens
             label.text = "Trick 6 / 13";
             rect.gameObject.SetActive(false);
             ctx.Bound["_trickLabel"] = label;
+        }
+
+        /// <summary>
+        /// The table's room for the banner ad (ADR 049), off until TableView makes it: the round line
+        /// beside the Scores button (the same words, right-aligned, at the same height) and the
+        /// banner's empty slot across the top of the safe area between Home and those words. Both
+        /// are pinned to their sides, so they keep their distances on 21:9 and 4:3 screens.
+        /// </summary>
+        private static void BuildBannerRoom(ScreenBuildContext ctx)
+        {
+            RectTransform safe = ctx.SafeArea;
+            RectTransform round = ctx.Nodes["RoundLabel"];
+            RectTransform scores = ctx.Nodes["ScoresButton"];
+            RectTransform home = ctx.Nodes["HomeButton"];
+
+            var beside = (RectTransform)Object.Instantiate(round.gameObject, ctx.Groups["HeaderRight"]).transform;
+            beside.name = "RoundBeside";
+            TMP_Text words = beside.GetComponent<TMP_Text>();
+            words.horizontalAlignment = HorizontalAlignmentOptions.Right;
+            var corners = new Vector3[4];
+            scores.GetWorldCorners(corners);
+            float scoresLeft = beside.parent.InverseTransformPoint(corners[0]).x;
+            beside.GetWorldCorners(corners);
+            float besideRight = beside.parent.InverseTransformPoint(corners[2]).x;
+            beside.anchoredPosition += new Vector2(scoresLeft - BannerRoundGap - besideRight, 0f);
+            beside.gameObject.SetActive(false);
+            ctx.Bound["_roundBeside"] = words;
+
+            // Measured from the safe area's sides: Home stays on the left, the words on the right.
+            home.GetWorldCorners(corners);
+            float homeRight = safe.InverseTransformPoint(corners[2]).x - safe.rect.xMin;
+            beside.GetWorldCorners(corners);
+            float wordsLeft = safe.rect.xMax - safe.InverseTransformPoint(corners[2]).x + words.GetPreferredValues(words.text).x;
+
+            var slot = (RectTransform)new GameObject("BannerSlot", typeof(RectTransform)).transform;
+            slot.SetParent(safe, false);
+            slot.anchorMin = new Vector2(0f, 1f);
+            slot.anchorMax = new Vector2(1f, 1f);
+            slot.pivot = new Vector2(0.5f, 1f);
+            slot.offsetMin = new Vector2(homeRight + BannerGap, -BannerSlotHeight);
+            slot.offsetMax = new Vector2(-(wordsLeft + BannerGap), 0f);
+            slot.gameObject.SetActive(false);
+            ctx.Bound["_bannerSlot"] = slot;
         }
 
         /// <summary>

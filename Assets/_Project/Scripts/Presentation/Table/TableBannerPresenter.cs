@@ -7,16 +7,20 @@ using VContainer.Unity;
 namespace Callbreak.Presentation.Table
 {
     /// <summary>
-    /// The banner ad on the table (the owner, 14 Oct 2026): it may show in the table's banner slot,
-    /// left of the Scores button, while the bare table is in front of the player. The banner is the ad
-    /// network's own view, drawn over the whole game, so it goes off the screen whenever something
-    /// covers the table or would sit under it: a screen over the table (the scorecard, the match menu,
-    /// settings, the rules, a round's or the match's results), a dialog, the loading curtain, the
-    /// "Reconnecting…" cover, or a toast at the top of the screen. Asked every frame, so a slot that
-    /// moved (the phone turned round, and the notch with it) moves the banner too. Whether there is a
-    /// banner at all (No Ads, the network) is <see cref="IBannerAds"/>'s business.
+    /// The banner ad on the table (the owner, 14 and 26 Oct 2026, ADR 049). When the table opens it
+    /// makes room at its top while a banner may come (no No Ads), and keeps that look for the whole
+    /// table, so nothing moves under the player when an ad loads, No Ads is bought or a refund comes;
+    /// a player who owns No Ads, and the Editor, keep the table as it always was. The banner may then
+    /// show in the table's banner slot, at the top, while the bare table is in front of the player.
+    /// The banner is the ad network's own view, drawn over the whole game, so it goes off the screen
+    /// whenever something covers the table or would sit under it: a screen over the table (the
+    /// scorecard, the match menu, settings, the rules, a round's or the match's results), a dialog,
+    /// the loading curtain, the "Reconnecting…" cover, or a toast at the top of the screen. Asked
+    /// every frame, so a slot that moved (the phone turned round, and the notch with it) moves the
+    /// banner too. Whether there is a banner at all (No Ads, the network) is <see cref="IBannerAds"/>'s
+    /// business.
     /// </summary>
-    public sealed class TableBannerPresenter : ITickable, IDisposable
+    public sealed class TableBannerPresenter : IStartable, ITickable, IDisposable
     {
         private readonly TableView _table;
         private readonly ScreenRouter _router;
@@ -41,6 +45,8 @@ namespace Callbreak.Presentation.Table
             _curtain = curtain ?? throw new ArgumentNullException(nameof(curtain));
             _toast = toast;
         }
+
+        public void Start() => _table.SetBannerRoom(_banner.MayShow);
 
         public void Tick()
         {

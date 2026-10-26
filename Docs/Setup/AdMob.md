@@ -104,6 +104,44 @@ prize coins waiting to fly.
   - the menu's `Presentation/Framework/ReturnToGameAdMoment.cs`;
   - registered next to the other ads in `ProjectLifetimeScope`, and the moment in `MenuLifetimeScope`.
 
+## The banner on the table
+
+The owner's rule (14 Oct 2026; its place picked 26 Oct 2026, ADR 049). During a match a standard
+**320 x 50 banner** (AdMob's smallest standard size, and the one with the most ads) shows at the
+**very top of the table**, over the scenery:
+
+- **Where:** at the top edge of the safe area, centred on the screen. On 16:9 phones it moves left
+  just enough to stay 48 canvas units clear of the round line; it is never nearer than that to Home
+  or the round line, and further from Scores and Settings.
+- **Room for it:** when the table opens and the player doesn't own No Ads, the CALLBREAK logo goes,
+  "ROUND 1 / 5" moves beside the Scores button (without its ornaments), and the top seat and the
+  trick come down 52 and 25 canvas units, so the banner covers nothing of the game. A player who
+  owns No Ads, and the Editor and desktop builds, get the table as it always was.
+- **Decided once per table**, so nothing moves under the player: buying No Ads mid-match takes the
+  banner away at once and the room stays until the next table; a refund mid-match brings a banner
+  only at the next table.
+- **Never over anything:** the banner is AdMob's own view, drawn over the game, so it is off the
+  screen while anything covers the bare table: the call (bidding) panel, the scorecard, the match
+  menu, settings, the rules, a round's or the match's results, a dialog, the loading curtain, the
+  "Reconnecting…" cover or a toast. It comes back when the table is bare again.
+- **Size:** 320 x 50 dp, about 840-960 x 131-150 canvas units on phones (12-14% of the screen's
+  height), 600 x 94 on a 1024 dp-wide tablet. A phone too small for it (under about 350 dp tall)
+  gets none.
+- **Loading and consent:** one banner per table, loaded at once, tried again after 5 s, 10 s, 20 s
+  ... at most every two minutes. AdMob refreshes what it shows itself, at the rate set on the unit
+  in AdMob. AdMob starts through the Earn Coins ads' start (one consent form, one SDK start).
+  Nothing is requested for No Ads owners.
+- **The pieces:**
+  - the rule `Application/Economy/BannerAds.cs`, its port `IBannerAds.cs` (with `BannerSlot`), the
+    SDK port `IBannerAdNetwork.cs` and the stand-in `StandInBannerAds.cs`;
+  - the AdMob side `Infrastructure/Ads/AdMobBannerAdNetwork.cs` (`AdSize.Banner`, placed in dp);
+  - the table's `Presentation/Table/TableBannerPresenter.cs` and `TableView` (`SetBannerRoom`,
+    `TryGetBannerSlot`), its slot and the round line beside Scores built by `TableCustomizer`
+    (`BuildBannerRoom`);
+  - the network registered in `ProjectLifetimeScope`, the banner and presenter in
+    `TableLifetimeScope`;
+  - tests: `BannerAdsTests` and `TableBannerRoomTests` (EditMode), `TableBannerFlowTests` (PlayMode).
+
 ## How the app asks for consent
 
 At every start, before any ad is requested, the app asks Google's User Messaging Platform (UMP) for
@@ -157,8 +195,8 @@ their choice later. Settings then shows a **Privacy options** button under its p
    ```
 
 6. **Play Console.**
-   - App content > Ads: "Yes, my app contains ads" (rewarded ads, and full-screen ads between
-     matches).
+   - App content > Ads: "Yes, my app contains ads" (rewarded ads, full-screen ads between
+     matches and on the return to the game, and a banner during matches).
    - App content > Advertising ID: the app uses it, for advertising (the SDK adds the
      `com.google.android.gms.permission.AD_ID` permission).
    - Data safety: declare the data the Google Mobile Ads SDK collects and shares (see Google's

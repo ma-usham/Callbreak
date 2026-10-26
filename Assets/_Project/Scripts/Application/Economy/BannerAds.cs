@@ -12,9 +12,10 @@ namespace Callbreak.Application.Economy
     /// ads yet, or a load that brings no banner, is tried again after <see cref="FirstRetryDelay"/>,
     /// each wait twice the last, up to <see cref="MaxRetryDelay"/>, as the full-screen ads are.
     /// <para>
-    /// The banner shows only in the slot the table gives (<see cref="ShowIn"/>): right-aligned in it,
-    /// next to the Scores button, and centred in its height. One that doesn't fit its slot stays off
-    /// the screen rather than cover the game. <see cref="Hide"/> takes it off and keeps it loaded.
+    /// The banner shows only in the slot the table gives (<see cref="ShowIn"/>): at its top, centred on
+    /// the slot's middle line (the screen's middle) as far as the slot allows. One that doesn't fit its
+    /// slot stays off the screen rather than cover the game. <see cref="Hide"/> takes it off and keeps
+    /// it loaded. While No Ads isn't owned a banner <see cref="MayShow"/>, so the table makes room.
     /// </para>
     /// <para>
     /// A player who owns No Ads (<see cref="INoAds"/>) gets nothing requested, not even consent and
@@ -66,6 +67,8 @@ namespace Callbreak.Application.Economy
         }
 
         public bool IsShowing => _showing;
+
+        public bool MayShow => !_disposed && Wanted;
 
         /// <summary>Ads may be requested: the player doesn't own No Ads.</summary>
         private bool Wanted
@@ -210,9 +213,11 @@ namespace Callbreak.Application.Economy
                 return;
             }
 
+            // On the middle line, but never past either end of the slot (the Home button, the round line).
+            int x = Math.Max(slot.X, Math.Min(slot.CentreX - (width / 2), slot.X + slot.Width - width));
             try
             {
-                _banner.ShowAt(slot.X + slot.Width - width, slot.Y + ((slot.Height - height) / 2));
+                _banner.ShowAt(x, slot.Y);
                 _showing = true;
             }
             catch (Exception e)

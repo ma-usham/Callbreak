@@ -11,11 +11,12 @@ namespace Callbreak.Tests.EditMode.Application
     /// <summary>
     /// The table's banner over a real network (AdMob on phones): the network starts at once (consent,
     /// then the SDK) and one banner loads, off the screen; a failed start or load is tried again after
-    /// 5 s, 10 s, 20 s ... at most two minutes. The banner shows only where the table says it may,
-    /// right-aligned in that slot and centred in its height, and only when it fits there; it goes off
-    /// the screen when the table says so, and moves with its slot. A player who owns No Ads gets
-    /// nothing requested and sees nothing: buying it takes the banner away, a refund loads one again.
-    /// Nothing the network does makes it throw, and disposing it releases the banner.
+    /// 5 s, 10 s, 20 s ... at most two minutes. The banner shows only where the table says it may: at
+    /// the top of that slot, centred on the screen's middle as far as the slot allows, and only when it
+    /// fits there; it goes off the screen when the table says so, and moves with its slot. A player who
+    /// owns No Ads gets nothing requested and sees nothing, and the table makes no room for a banner:
+    /// buying it takes the banner away, a refund loads one again. Nothing the network does makes it
+    /// throw, and disposing it releases the banner.
     /// </summary>
     public sealed class BannerAdsTests
     {
@@ -24,8 +25,14 @@ namespace Callbreak.Tests.EditMode.Application
 
         private const int BannerHeight = 138;
 
-        /// <summary>Left of the Scores button at the top of a 2400 x 1080 screen, room for the banner and a little more.</summary>
+        /// <summary>Somewhere at the top of the screen, room for the banner and a little more; no middle line, so the banner is centred in it.</summary>
         private static readonly BannerSlot Slot = new BannerSlot(1100, 10, 1000, 150);
+
+        /// <summary>
+        /// The table's slot on a 2400 x 1080 phone: from right of the Home button to left of the round
+        /// line beside the Scores button, the screen's middle at 1200.
+        /// </summary>
+        private static readonly BannerSlot TableSlot = new BannerSlot(192, 0, 1500, 155, 1200);
 
         private ScriptedNetwork _network;
         private ScriptedNoAds _noAds;
@@ -72,16 +79,50 @@ namespace Callbreak.Tests.EditMode.Application
         }
 
         [Test]
-        public void ALoadedBanner_ShowsInItsSlot_RightAligned_AndCentredInItsHeight()
+        public void ALoadedBanner_ShowsAtTheTopOfItsSlot_CentredOnTheScreensMiddle()
+        {
+            BannerAds ads = ReadyAds(out ScriptedBanner banner);
+
+            ads.ShowIn(TableSlot);
+
+            Assert.IsTrue(ads.IsShowing);
+            Assert.IsTrue(banner.OnScreen);
+            Assert.AreEqual(1200 - (BannerWidth / 2), banner.X, "centred over the table");
+            Assert.AreEqual(0, banner.Y, "at the very top, clear of the top seat below");
+        }
+
+        [Test]
+        public void AMiddleTooNearTheSlotsRightEnd_KeepsTheBannerInsideTheSlot()
+        {
+            BannerAds ads = ReadyAds(out ScriptedBanner banner);
+
+            // A 16:9 phone: the round line beside Scores leaves less room right of the middle.
+            ads.ShowIn(new BannerSlot(192, 0, 1150, 155, 960));
+
+            Assert.IsTrue(ads.IsShowing);
+            Assert.AreEqual(192 + 1150 - BannerWidth, banner.X, "pushed left, clear of the round line");
+        }
+
+        [Test]
+        public void AMiddleTooNearTheSlotsLeftEnd_KeepsTheBannerInsideTheSlot()
+        {
+            BannerAds ads = ReadyAds(out ScriptedBanner banner);
+
+            ads.ShowIn(new BannerSlot(192, 0, 1500, 155, 300));
+
+            Assert.IsTrue(ads.IsShowing);
+            Assert.AreEqual(192, banner.X, "pushed right, clear of the Home button");
+        }
+
+        [Test]
+        public void ASlotWithoutAMiddleLine_HasTheBannerCentredInIt_AtItsTop()
         {
             BannerAds ads = ReadyAds(out ScriptedBanner banner);
 
             ads.ShowIn(Slot);
 
-            Assert.IsTrue(ads.IsShowing);
-            Assert.IsTrue(banner.OnScreen);
-            Assert.AreEqual(Slot.X + Slot.Width - BannerWidth, banner.X, "its right edge on the slot's, next to the Scores button");
-            Assert.AreEqual(Slot.Y + ((Slot.Height - BannerHeight) / 2), banner.Y);
+            Assert.AreEqual(Slot.X + ((Slot.Width - BannerWidth) / 2), banner.X);
+            Assert.AreEqual(Slot.Y, banner.Y);
         }
 
         [Test]
@@ -97,7 +138,7 @@ namespace Callbreak.Tests.EditMode.Application
 
             Assert.IsTrue(ads.IsShowing);
             Assert.IsTrue(banner.OnScreen);
-            Assert.AreEqual(Slot.X + Slot.Width - BannerWidth, banner.X);
+            Assert.AreEqual(Slot.X + ((Slot.Width - BannerWidth) / 2), banner.X);
         }
 
         [Test]
@@ -145,7 +186,7 @@ namespace Callbreak.Tests.EditMode.Application
             ads.ShowIn(moved);
 
             Assert.AreEqual(2, banner.ShowCount);
-            Assert.AreEqual(moved.X + moved.Width - BannerWidth, banner.X);
+            Assert.AreEqual(moved.X + ((moved.Width - BannerWidth) / 2), banner.X);
             Assert.IsTrue(ads.IsShowing);
         }
 
@@ -479,16 +520,48 @@ namespace Callbreak.Tests.EditMode.Application
 
             standIn.ShowIn(Slot);
             Assert.IsFalse(standIn.IsShowing);
+            Assert.IsFalse(standIn.MayShow, "the table keeps its look: no room is made for a banner that never comes");
             Assert.DoesNotThrow(standIn.Hide);
         }
 
         [Test]
-        public void Slots_AreEqual_ByTheirRectangle()
+        public void ABannerMayShow_UntilNoAdsIsOwned()
+        {
+            BannerAds ads = NewAds();
+            Assert.IsTrue(ads.MayShow, "the table makes room for it before one has loaded");
+
+            _noAds.Buy();
+            Assert.IsFalse(ads.MayShow);
+
+            _noAds.Refund();
+            Assert.IsTrue(ads.MayShow);
+        }
+
+        [Test]
+        public void ForAPlayerWhoOwnsNoAds_NoBannerMayShow()
+        {
+            _noAds.Buy();
+
+            Assert.IsFalse(NewAds().MayShow, "a paying player keeps the table as it always was");
+        }
+
+        [Test]
+        public void ANoAdsThatCannotBeAsked_LetsNoBannerShow()
+        {
+            _noAds.ThrowOnOwned = true;
+
+            Assert.IsFalse(NewAds().MayShow);
+        }
+
+        [Test]
+        public void Slots_AreEqual_ByTheirRectangleAndMiddleLine()
         {
             Assert.AreEqual(new BannerSlot(1, 2, 3, 4), new BannerSlot(1, 2, 3, 4));
             Assert.AreEqual(new BannerSlot(1, 2, 3, 4).GetHashCode(), new BannerSlot(1, 2, 3, 4).GetHashCode());
             Assert.AreNotEqual(new BannerSlot(1, 2, 3, 4), new BannerSlot(1, 2, 3, 5));
             Assert.AreNotEqual(new BannerSlot(1, 2, 3, 4), new BannerSlot(0, 2, 3, 4));
+            Assert.AreEqual(new BannerSlot(10, 2, 100, 4, 60), new BannerSlot(10, 2, 100, 4), "without a middle line, the slot's own middle");
+            Assert.AreNotEqual(new BannerSlot(10, 2, 100, 4, 60), new BannerSlot(10, 2, 100, 4, 61));
         }
 
         private BannerAds NewAds() => new BannerAds(_network, _noAds, _log.Add, Delay);

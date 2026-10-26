@@ -61,11 +61,26 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private UnityEngine.UI.Image _backdropTable;
         [SerializeField] private UnityEngine.UI.Image _backdropFront;
 
-        // Where the banner ad may show, left of the Scores button (the owner, 14 Oct 2026): an empty
-        // rectangle in the HUD that the ad network's own view is placed over.
+        // The banner ad at the top of the table (the owner, 14 and 26 Oct 2026, ADR 049). While a banner
+        // may come, the table makes room for it: the logo goes, the round line moves beside the Scores
+        // button without its ornaments, and the top seat and the trick come down a little (canvas
+        // units), so the banner covers nothing of the game. The slot is an empty rectangle across the
+        // top of the HUD, from right of Home to left of the round line, that the ad network's own view
+        // is placed over; it is off while the table makes no room. The banner keeps the gap from the
+        // round line's words, however long they are.
         [SerializeField] private RectTransform _bannerSlot;
+        [SerializeField] private GameObject _logo;
+        [SerializeField] private GameObject _roundOrnamentLeft;
+        [SerializeField] private GameObject _roundOrnamentRight;
+        [SerializeField] private TMP_Text _roundBeside;
+        [SerializeField] private float _bannerSeatDrop = 52f;
+        [SerializeField] private float _bannerTrickDrop = 25f;
+        [SerializeField] private float _bannerGap = 48f;
 
         private readonly Vector3[] _bannerCorners = new Vector3[4];
+        private bool _bannerRoom;
+        private Vector2 _topSeatHome;
+        private Vector2 _trickHome;
         private MotionHandle _coverMotion;
         private bool _reduceMotion;
 
@@ -203,6 +218,11 @@ namespace Callbreak.Presentation.Table
             {
                 _roundLabel.text = text;
             }
+
+            if (_roundBeside != null && _roundBeside.text != text)
+            {
+                _roundBeside.text = text;
+            }
         }
 
         /// <summary>The small "Trick 6 / 13" under the round line (GDD screen 08, callout 1); empty hides it.</summary>
@@ -260,10 +280,52 @@ namespace Callbreak.Presentation.Table
         /// <summary>Whether the table is waiting for a touch to bring the Away player back.</summary>
         public bool IsAway => _imBackButton.gameObject.activeSelf;
 
+        /// <summary>The table has made room at its top for the banner ad (<see cref="SetBannerRoom"/>).</summary>
+        public bool HasBannerRoom => _bannerRoom;
+
         /// <summary>
-        /// Where the banner ad may show, left of the Scores button: the banner slot's rectangle in
-        /// screen pixels from the screen's top-left corner, rounded inwards. False when the table has
-        /// no slot (a prefab built before it), or it is hidden or empty.
+        /// Makes room at the top of the table for the banner ad, or gives it back (ADR 049): the logo,
+        /// the round line, the top seat and the trick as the fields above describe. Called when the
+        /// table opens, before anything is dealt. A prefab built before the slot keeps its look.
+        /// </summary>
+        public void SetBannerRoom(bool room)
+        {
+            if (_bannerSlot == null || _roundBeside == null || room == _bannerRoom)
+            {
+                return;
+            }
+
+            _bannerRoom = room;
+            _bannerSlot.gameObject.SetActive(room);
+            _roundBeside.gameObject.SetActive(room);
+            _roundLabel.gameObject.SetActive(!room);
+            _logo.SetActive(!room);
+            _roundOrnamentLeft.SetActive(!room);
+            _roundOrnamentRight.SetActive(!room);
+
+            // Seat 2 is the top seat (relative positions: 0 bottom, 1 right, 2 top, 3 left).
+            var topSeat = (RectTransform)_seat[2].transform;
+            var trick = (RectTransform)_trick.transform;
+            if (room)
+            {
+                _topSeatHome = topSeat.anchoredPosition;
+                _trickHome = trick.anchoredPosition;
+                topSeat.anchoredPosition = _topSeatHome + (Vector2.down * _bannerSeatDrop);
+                trick.anchoredPosition = _trickHome + (Vector2.down * _bannerTrickDrop);
+            }
+            else
+            {
+                topSeat.anchoredPosition = _topSeatHome;
+                trick.anchoredPosition = _trickHome;
+            }
+        }
+
+        /// <summary>
+        /// Where the banner ad may show, at the top of the table: the banner slot's rectangle in screen
+        /// pixels from the screen's top-left corner, rounded inwards, ending the gap short of the round
+        /// line's words, with the screen's middle as the line to centre the banner on. False when the
+        /// table has no slot (a prefab built before it), or makes no room for a banner, or the slot is
+        /// empty.
         /// </summary>
         public bool TryGetBannerSlot(out BannerSlot slot)
         {
@@ -278,14 +340,25 @@ namespace Callbreak.Presentation.Table
             _bannerSlot.GetWorldCorners(_bannerCorners);
             int x = Mathf.CeilToInt(_bannerCorners[0].x);
             int y = Mathf.CeilToInt(Screen.height - _bannerCorners[2].y);
-            int width = Mathf.FloorToInt(_bannerCorners[2].x) - x;
+            int right = Mathf.FloorToInt(_bannerCorners[2].x);
+
+            // "ROUND 10 / 10", or longer words in another language, reach further left than the slot
+            // was built for.
+            if (_roundBeside != null && _roundBeside.gameObject.activeInHierarchy && _roundBeside.textInfo != null && _roundBeside.textInfo.characterCount > 0)
+            {
+                RectTransform words = _roundBeside.rectTransform;
+                float wordsLeft = words.TransformPoint(_roundBeside.textBounds.min).x;
+                right = Mathf.Min(right, Mathf.FloorToInt(wordsLeft - (_bannerGap * words.lossyScale.x)));
+            }
+
+            int width = right - x;
             int height = Mathf.FloorToInt(Screen.height - _bannerCorners[0].y) - y;
             if (width <= 0 || height <= 0)
             {
                 return false;
             }
 
-            slot = new BannerSlot(x, y, width, height);
+            slot = new BannerSlot(x, y, width, height, Screen.width / 2);
             return true;
         }
 

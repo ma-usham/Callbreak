@@ -99,9 +99,10 @@ namespace Callbreak.Bootstrap
         }
 
         /// <summary>
-        /// The banner ad left of the Scores button (the owner, 14 Oct 2026): over the project's banner
-        /// network where there is one (AdMob on phones, or a test's), made with the table and released
-        /// with it; elsewhere a stand-in that never has one. No Ads removes it.
+        /// The banner ad at the top of the table (the owner, 14 and 26 Oct 2026, ADR 049): over the
+        /// project's banner network where there is one (AdMob on phones, or a test's), made with the
+        /// table and released with it; elsewhere a stand-in that never has one, so the table makes no
+        /// room for it. No Ads removes it.
         /// </summary>
         private static void RegisterBanner(IContainerBuilder builder)
         {

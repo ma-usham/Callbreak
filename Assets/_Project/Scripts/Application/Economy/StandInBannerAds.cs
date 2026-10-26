@@ -9,6 +9,8 @@ namespace Callbreak.Application.Economy
     {
         public bool IsShowing => false;
 
+        public bool MayShow => false;
+
         public void ShowIn(BannerSlot slot)
         {
         }
