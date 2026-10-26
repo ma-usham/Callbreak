@@ -4,7 +4,7 @@ using System.Globalization;
 namespace AudioGen;
 
 /// <summary>
-/// Renders every sound effect and both music loops, writes them into the Unity project (with a copy
+/// Renders every sound effect and the music loop, writes them into the Unity project (with a copy
 /// under ArtSource/Audio), then measures each file from disk and fails if any check is off.
 /// See README.md.
 /// </summary>
@@ -39,7 +39,10 @@ static class Program
         // that has only a source and no synthesized version (SFX_CoinCollect_01) is made from it too, listed
         // after the other effects.
         var recorded = Recorded.Load(root);
-        var synthesized = Sfx.All().Concat(Music.All(stems == null ? null : (name, ch) => WriteStem(stems, name, ch))).ToList();
+        // The synthesized music loops (Music.cs) are no longer rendered: since 27 Oct 2026 the game has one
+        // music track, made from its source alone (ADR 049, addendum), and a synthesized menu or table loop
+        // would land beside it. So --stems, which wrote their parts, has nothing to write.
+        var synthesized = Sfx.All().ToList();
         var jobs = synthesized.Select(j => recorded.TryGetValue(j.Name, out Job source) ? source : j)
             .Concat(recorded.Values.Where(r => synthesized.All(j => j.Name != r.Name)))
             .OrderBy(j => j.Music)
@@ -172,7 +175,7 @@ static class Program
               --only <text>      only the cues whose file name contains <text> (e.g. CardPlay, MUS_)
               --check            measure the files already on disk; render nothing
               --pictures <dir>   also write a waveform + spectrogram PNG per file into <dir> (loops: plus one per 10 s)
-              --stems <dir>      also write each loop's separate parts (flute, madal, tanpura, drone, room) into <dir>
+              --stems <dir>      the synthesized loops' parts (flute, madal, tanpura, drone, room); nothing now, as they are not rendered
               --root <path>      the Unity project folder (default: found from the current folder)
             """);
     }

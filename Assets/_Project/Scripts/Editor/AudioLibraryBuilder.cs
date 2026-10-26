@@ -12,10 +12,12 @@ namespace Callbreak.Editor
 {
     /// <summary>
     /// Wires the audio files into the game (GDD §14). For every clip under
-    /// <c>Assets/_Project/Audio/SFX</c> named <c>SFX_&lt;Cue&gt;_&lt;nn&gt;</c> and every loop under
-    /// <c>Assets/_Project/Audio/Music</c> named <c>MUS_&lt;Track&gt;_...</c> it sets the GDD's import
-    /// settings and lists the clip in the <see cref="AudioCueLibrary"/> the audio service reads:
-    /// each <see cref="SoundCue"/> gets all its numbered takes, each <see cref="MusicTrack"/> its loop.
+    /// <c>Assets/_Project/Audio/SFX</c> named <c>SFX_&lt;Cue&gt;_&lt;nn&gt;</c> and the music loop under
+    /// <c>Assets/_Project/Audio/Music</c> (<c>MUS_...</c>) it sets the GDD's import settings and lists the
+    /// clip in the <see cref="AudioCueLibrary"/> the audio service reads: each <see cref="SoundCue"/> gets
+    /// all its numbered takes. The game has one music track for the menu and the table (the owner, 27 Oct
+    /// 2026; ADR 049, addendum), so every <see cref="MusicTrack"/> gets that one loop, each with its own
+    /// volume.
     /// <para>
     /// Import settings: effects shorter than <see cref="StingSeconds"/> are ADPCM, Decompress On Load,
     /// mono; longer stings are Vorbis 0.6, Compressed In Memory; music is Vorbis 0.5, Streaming,
@@ -144,29 +146,20 @@ namespace Callbreak.Editor
                 list[take] = clip;
             }
 
-            // Music loops: the first clip whose name starts with MUS_<Track>_.
-            var loops = new Dictionary<MusicTrack, AudioClip>();
+            // The music loop: the one clip named MUS_..., played on the menu and at the table alike.
+            AudioClip theme = null;
             foreach (string path in ClipPaths(MusicFolder))
             {
                 string name = Path.GetFileNameWithoutExtension(path);
-                MusicTrack track = MusicTrack.None;
-                foreach (MusicTrack candidate in Enum.GetValues(typeof(MusicTrack)))
+                if (!name.StartsWith("MUS_", StringComparison.Ordinal))
                 {
-                    if (candidate != MusicTrack.None && name.StartsWith($"MUS_{candidate}_", StringComparison.Ordinal))
-                    {
-                        track = candidate;
-                    }
-                }
-
-                if (track == MusicTrack.None)
-                {
-                    problems.Add($"{name}: not MUS_<Track>_... with a MusicTrack name");
+                    problems.Add($"{name}: not MUS_...");
                     continue;
                 }
 
-                if (loops.ContainsKey(track))
+                if (theme != null)
                 {
-                    problems.Add($"{name}: a second loop for {track}; using {loops[track].name}");
+                    problems.Add($"{name}: a second music loop; the game plays one, {theme.name}");
                     continue;
                 }
 
@@ -182,7 +175,7 @@ namespace Callbreak.Editor
                     continue;
                 }
 
-                loops[track] = clip;
+                theme = clip;
             }
 
             // The library, in enum order. Existing entries keep their volume.
@@ -230,19 +223,20 @@ namespace Callbreak.Editor
                 MusicTrack track = tracks[i];
                 SerializedProperty entry = music.GetArrayElementAtIndex(i);
                 entry.FindPropertyRelative("_track").intValue = (int)track;
-                entry.FindPropertyRelative("_clip").objectReferenceValue = loops.TryGetValue(track, out AudioClip loop) ? loop : null;
+                entry.FindPropertyRelative("_clip").objectReferenceValue = theme;
                 entry.FindPropertyRelative("_volume").floatValue = musicVolumes.TryGetValue((int)track, out float kept) ? kept : DefaultMusicVolume;
-                if (loop == null)
-                {
-                    problems.Add($"{track}: no loop (it will be silent)");
-                }
+            }
+
+            if (theme == null)
+            {
+                problems.Add("no music loop (the menu and the table will be silent)");
             }
 
             serialized.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();
 
-            string result = $"[AudioLibrary] {allCues.Length} cues with {clips} clips, {loops.Count} of {tracks.Length} music loops; {reimported} import settings changed";
+            string result = $"[AudioLibrary] {allCues.Length} cues with {clips} clips, music {(theme != null ? theme.name : "none")} for {tracks.Length} places; {reimported} import settings changed";
             return problems.Count == 0 ? result : result + "; problems: " + string.Join("; ", problems);
         }
 

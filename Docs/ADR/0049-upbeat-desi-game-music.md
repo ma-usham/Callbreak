@@ -70,3 +70,34 @@ loops made on 1 Oct 2026 from Nepali folk prompts (bansuri, madal, sarangi): 53.
   the game is published.
 - **Not verified on a phone.** Nobody has heard them in a build on a device yet; the owner listened
   to the loops and their loop points as files.
+
+## Addendum, 27 Oct 2026: one music for the menu and the table
+
+The owner gave the game a single track for both places: "use single music for both. remove the
+requirement of two different music." They first sent one Gemini track, then swapped it for another
+before it was done: **"The Quiet Round"** (Gemini, downloaded as `The_Quiet_Round.mp3`).
+
+- **The loop:** `MUS_Game_Theme`, 19.05-150.90 s of the 181.6 s track.
+  - That's 131.8 s, 178 beats at about 81 BPM, with the 12 s soft intro and the fade from 155 s left
+    out.
+  - Its beat is soft, so whole-bar loops matched poorly (texture 0.40). The loop was chosen by
+    harmony and timbre with `find-loop.py` (texture 0.71, about as good as the old table loop's 0.72).
+  - AudioGen: rhythm match 0.54, seam 0.01, kink 0.01, -14 LUFS, peaks at -1.1 dBFS.
+- **The library:** `AudioLibraryBuilder` takes the one `MUS_...` clip in the Music folder and gives it
+  to every `MusicTrack`. The menu and the table each keep their volume (0.7), and a second music file
+  is reported as a problem. Import settings are as before: Streaming, Vorbis 0.5, stereo.
+- **Playing on:** the code still says where the player is (`MusicTrack.Menu`, `MusicTrack.Table`).
+  - When the next place's clip is the one already playing, `AudioService` keeps it on its source.
+  - Only the level moves: the table's 6 dB drop (and the rise back on the menu) glides over the
+    usual 1.5 s instead of the song starting again.
+- **Removed:** the two loops of 26 Oct (`MUS_Menu_Theme`, `MUS_Table_Loop`), their Gemini sources and
+  prompts, and their `sources.json` entries. Git history has them.
+- **AudioGen** no longer renders its synthesized menu and table loops (`Music.cs`). A full run would
+  otherwise have put them back beside the one track.
+- **Tests:** `AudioServiceMusicTests` (EditMode, engine) check that the menu and the table share one
+  loop, and that going to the table, and back, keeps the song on its source with no second copy.
+- **Phone speakers:** the track is dark and mellow. 54% of its energy is below 150 Hz and 40% at
+  150-500 Hz, so a phone's own speaker loses about 9.2 dB of it, more than the old loops' 3.7 and
+  7.2 dB. If it's too quiet there, the library volumes can go from 0.7 to 1.0 (+3.1 dB).
+- **Not verified on a phone,** and nobody has heard it in the game yet. The owner gets a 20 s clip
+  across the loop point to listen to.
