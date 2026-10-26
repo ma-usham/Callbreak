@@ -1128,7 +1128,7 @@ public static class Cut
     // Weights of a separable Catmull-Rom (Keys a = -0.5) resample: output pixel u samples the
     // source at continuous position lo + (u + 0.5) * step; the kernel is widened by 'step' when
     // shrinking (step > 1). Returns per output pixel {firstIndex, w0, w1, ...} in patch indices.
-    static double[][] Weights(int n, double lo, double step, int origin, int len)
+    public static double[][] Weights(int n, double lo, double step, int origin, int len)
     {
         double[][] res = new double[n][];
         double scale = Math.Max(1.0, step), support = 2.0 * scale;
@@ -1206,6 +1206,30 @@ public static class Cut
                 for (int b = 0; b < ss; b++)
                     for (int a = 0; a < ss; a++)
                         if (Inside(i + (a + 0.5) / ss, j + (b + 0.5) / ss, 0, 0, W, H, rc)) n++;
+                m[j * W + i] = (float)n / (ss * ss);
+            }
+        return m;
+    }
+
+    // The same with elliptical corners of radii rx, ry (compose-decks.ps1: a corner scaled by
+    // slightly different factors across and down).
+    public static float[] RoundRectMask(int W, int H, double rx, double ry, int ss)
+    {
+        float[] m = new float[W * H];
+        for (int j = 0; j < H; j++)
+            for (int i = 0; i < W; i++)
+            {
+                bool cross = (i >= rx && i + 1 <= W - rx) || (j >= ry && j + 1 <= H - ry);
+                if (cross) { m[j * W + i] = 1f; continue; }
+                int n = 0;
+                for (int b = 0; b < ss; b++)
+                    for (int a = 0; a < ss; a++)
+                    {
+                        double x = i + (a + 0.5) / ss, y = j + (b + 0.5) / ss;
+                        double cx = x < rx ? rx : (x > W - rx ? W - rx : x), cy = y < ry ? ry : (y > H - ry ? H - ry : y);
+                        double dx = (x - cx) / rx, dy = (y - cy) / ry;
+                        if (dx * dx + dy * dy <= 1) n++;
+                    }
                 m[j * W + i] = (float)n / (ss * ss);
             }
         return m;

@@ -1,5 +1,10 @@
 # Card decks batch (faces and backs)
 
+> **Since ADR 050 (26 Oct 2026) the game's faces come from `compose-decks.ps1`**
+> (`Decks_Vintage.md`): the vintage pack's elements printed in these three decks' frames. This
+> batch still makes the **backs**; its face cuts now go to `ArtSource/Working/Decks/sheet-cut`
+> and are installed only with `-Install -InstallFaces`. What follows describes ADR 014's cut.
+
 No image generation in this batch: every sprite is cut from the approved reference art.
 
 | | |

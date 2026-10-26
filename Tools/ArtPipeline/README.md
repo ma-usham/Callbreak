@@ -44,6 +44,8 @@ bash Tools/ArtPipeline/unity-rebuild.sh
 | `sheet.ps1` | Lays several images side by side for review. |
 | `sample.ps1` | Reports ink and background colours in regions of an image. |
 | `compile-check.sh` | Compiles `Assets/_Project/Scripts` with Unity's own compiler, so a compile error is caught before the open Editor imports it. |
+| `compose-decks.ps1` | Prints the three decks' 156 faces from the vintage pack's elements in each deck's own frame (ADR 050; `ArtSource/Prompts/Decks_Vintage.md`). `-Sample` for a few cards, `-Install` to copy them into `Assets/`. |
+| `export-decks.ps1` | Cuts ADR 014's decks from the reference sheets; exports and installs the backs (the faces only with `-InstallFaces`). |
 
 ## What to know
 

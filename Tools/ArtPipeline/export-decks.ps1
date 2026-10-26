@@ -3,7 +3,11 @@
 # Collection mockup (game-screens/15-card-styles.png). Re-runnable end to end.
 #
 #   & Tools\ArtPipeline\export-decks.ps1             # measure, cut, check, review sheets
-#   & Tools\ArtPipeline\export-decks.ps1 -Install    # the same, then copy into Assets/ if QA passes
+#   & Tools\ArtPipeline\export-decks.ps1 -Install    # the same, then copy the backs into Assets/ if QA passes
+#
+# Since ADR 050 the game's faces are composed from the vintage pack (compose-decks.ps1); this
+# script's face cuts stay in ArtSource/Working/Decks/sheet-cut for reference, and only the backs
+# are exported and installed (-InstallFaces puts ADR 014's faces back).
 #
 # Method and numbers: ArtSource/Prompts/Decks_Batch.md. Do not pipe into Select-Object -First.
 param(
@@ -11,7 +15,8 @@ param(
     [int] $Height = 358,
     [double] $Radius = 14,       # output corner radius, px
     [string[]] $Decks = @('classic-crimson', 'himalayan-ivory', 'kathmandu-gold'),
-    [switch] $Install,           # copy the exported PNGs into Assets/_Project/Art/Cards (QA must pass)
+    [switch] $Install,           # copy the backs into Assets/_Project/Art/Cards (QA must pass)
+    [switch] $InstallFaces,      # with -Install: the faces too (undoes ADR 050)
     [switch] $NoReview           # skip the review sheets
 )
 $ErrorActionPreference = 'Stop'
@@ -29,10 +34,11 @@ $ranks = @('A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K')
 
 $fullDecks = Join-Path $repo 'Assets\ArtRefrences\card-designs\full-decks'
 $mockup = Join-Path $repo 'Assets\ArtRefrences\game-screens\15-card-styles.png'
-$exportRoot = Join-Path $repo 'ArtSource\Exports\Cards'
+$exportRoot = Join-Path $repo 'ArtSource\Exports\Cards'       # the backs
 $work = Join-Path $repo 'ArtSource\Working\Decks'
-$reviewDir = Join-Path $work 'review'
-$verifyDir = Join-Path $repo 'Docs\Verification\Decks'
+$sheetCut = Join-Path $work 'sheet-cut'                          # the faces, and their review sheets
+$reviewDir = Join-Path $sheetCut 'review'
+$verifyDir = $sheetCut
 $installRoot = Join-Path $repo 'Assets\_Project\Art\Cards'
 $handoff = Join-Path $repo 'ArtSource\handoff.csv'
 New-Item -ItemType Directory -Force $work, $reviewDir | Out-Null
@@ -135,7 +141,8 @@ $exported = @{}    # deck -> list of @{ file; img; label; notes }
 foreach ($d in $Decks) {
     $dn = $deckName[$d]
     $outDir = Join-Path $exportRoot $dn
-    New-Item -ItemType Directory -Force $outDir | Out-Null     # names are fixed: files are overwritten
+    $faceDir = Join-Path $sheetCut $dn
+    New-Item -ItemType Directory -Force $outDir, $faceDir | Out-Null     # names are fixed: files are overwritten
     $list = New-Object System.Collections.Generic.List[object]
     $rDeck = Median @($faces | Where-Object deck -eq $d | ForEach-Object { $_.rTL; $_.rTR; $_.rBR; $_.rBL })
     foreach ($x in ($faces | Where-Object deck -eq $d)) {
@@ -143,7 +150,7 @@ foreach ($d in $Decks) {
         $cut = New-Cut $name $x.m $rDeck
         $img = [Cut]::CutCard($sheets["$d/$($x.suit)"], $cut, $Width, $Height, $mask, 6)
         $fid = [Cut]::Fidelity($sheets["$d/$($x.suit)"], $cut, $img, 3)
-        $file = Join-Path $outDir "$name.png"
+        $file = Join-Path $faceDir "$name.png"
         $img.SavePng($file, $true)
         $list.Add([pscustomobject]@{ file = $file; img = $img; label = $name.Substring(5); bg = $x.bg; suit = $x.suit; rank = $x.rank; fid = $fid
             notes = "from full-decks/$d/$($x.suit).png; card $(F $x.W 0.0)x$(F $x.H 0.0) px on the sheet; scale $(F ($Width / $x.W))/$(F ($Height / $x.H))" })
@@ -288,11 +295,13 @@ $report | Set-Content -Encoding UTF8 (Join-Path $work 'report.txt')
 if (-not $NoReview) { Copy-Item (Join-Path $work 'report.txt') (Join-Path $verifyDir 'report.txt') -Force }
 $report | ForEach-Object { Write-Host $_ }
 
-# handoff.csv: drop earlier card rows, append one per exported file (UTF-8 with BOM, CRLF).
+# handoff.csv: drop the earlier rows of what this run hands off (the backs; the faces too with
+# -InstallFaces), append one per file (UTF-8 with BOM, CRLF). compose-decks.ps1 owns the faces' rows.
+$handed = { param($e) $e.label -eq 'Back' -or $InstallFaces }
 $lines = [IO.File]::ReadAllLines($handoff, [Text.Encoding]::UTF8)
-$keep = @($lines | Where-Object { $_ -notlike 'Cards/*' })
+$keep = @($lines | Where-Object { $_ -notlike 'Cards/*/Back_*' -and ($_ -notlike 'Cards/*' -or -not $InstallFaces) })
 foreach ($d in $Decks) {
-    foreach ($e in $exported[$d]) {
+    foreach ($e in ($exported[$d] | Where-Object { & $handed $_ })) {
         $rel = 'Cards/' + $deckName[$d] + '/' + [IO.Path]::GetFileName($e.file)
         $keep += "$rel,card,${Width}x$Height,,all,cut from sheet,review,$($e.notes)"
     }
@@ -305,7 +314,8 @@ if ($Install) {
     foreach ($d in $Decks) {
         $dst = Join-Path $installRoot $deckName[$d]
         New-Item -ItemType Directory -Force $dst | Out-Null
-        foreach ($e in $exported[$d]) { Copy-Item $e.file (Join-Path $dst ([IO.Path]::GetFileName($e.file))) -Force }
-        Write-Host "installed $($exported[$d].Count) files into $dst"
+        $files = @($exported[$d] | Where-Object { & $handed $_ })
+        foreach ($e in $files) { Copy-Item $e.file (Join-Path $dst ([IO.Path]::GetFileName($e.file))) -Force }
+        Write-Host "installed $($files.Count) files into $dst"
     }
 }
