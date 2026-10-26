@@ -46,9 +46,9 @@ loops made on 1 Oct 2026 from Nepali folk prompts (bansuri, madal, sarangi): 53.
   (about 3 minutes), Instrumental, genre Custom, 26 Oct 2026; the prompts are in `sources.json`. The
   MP3s (192 kbps; Google's C2PA "Created by Google Generative AI" and SynthID marks, nothing personal)
   are kept with WAVs decoded by the new `Tools/AudioGen/decode-mp3.ps1` (Windows Media Foundation).
-- **The old tracks stay** until the owner says they can go: their Gemini sources remain in
-  `ArtSource/Audio/Sources/Gemini/MUS_*`, and each music entry in `sources.json` keeps the old loop
-  under `previous`, so going back is moving those values up and running AudioGen.
+- **The old tracks are gone** (the owner, 26 Oct 2026): their Gemini sources
+  (`ArtSource/Audio/Sources/Gemini/MUS_Menu_Theme.*`, `MUS_Table_Loop.*`), their prompts and their
+  loop points are deleted. They are in git history before this change.
 
 ## Consequences
 

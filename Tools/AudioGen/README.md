@@ -54,9 +54,9 @@ being synthesized, and goes through the same checks.
 - **Music** (`Gemini/*.mp3`, decoded to `.wav` beside it): Gemini "Create music", instrumental.
   Since 26 Oct 2026 (ADR 049) the loops come from two "Standard" (about 3 minute) tracks,
   `Table_of_Kings` (menu) and `Copper_Tiles` (table), decoded with
-  `powershell -File Tools/AudioGen/decode-mp3.ps1 <mp3> <wav> 44100` (Windows Media Foundation). The
-  first loops (1 Oct 2026, `MUS_Menu_Theme` and `MUS_Table_Loop` there, decoded by Unity's own MP3
-  import) stay beside them, and each music entry keeps its old loop under `previous`. A loop is cut
+  `powershell -File Tools/AudioGen/decode-mp3.ps1 <mp3> <wav> 44100` (Windows Media Foundation). They
+  replaced the Nepali folk loops of 1 Oct 2026, whose sources were then deleted (git history has
+  them). A loop is cut
   between `loop` [start, end], a whole number of bars at the track's tempo, found with
   `node Tools/AudioGen/find-loop.js <wav> <from> <to> <crossfade> <beat guess> <beats per bar>`, or,
   where the beat is too soft for that, with `python -P Tools/AudioGen/find-loop.py <wav> <from> <to>
