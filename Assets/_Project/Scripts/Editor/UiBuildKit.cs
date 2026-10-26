@@ -260,10 +260,8 @@ namespace Callbreak.Editor
                 return null;
             }
 
-            // The Latin set at 90 pt fills about 600 rows of a 1024 atlas; a 2048 one was three
-            // quarters empty and cost 4 MB per font in the build.
             TMP_FontAsset fontAsset = TMP_FontAsset.CreateFontAsset(
-                source, 90, 9, GlyphRenderMode.SDFAA, 1024, 1024, AtlasPopulationMode.Dynamic, false);
+                source, 90, 9, GlyphRenderMode.SDFAA, 2048, 2048, AtlasPopulationMode.Dynamic, false);
             fontAsset.name = $"{fontFileName} SDF";
             AssetDatabase.CreateAsset(fontAsset, assetPath);
 

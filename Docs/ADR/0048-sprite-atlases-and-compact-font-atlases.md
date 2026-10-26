@@ -44,3 +44,21 @@ textures, and two causes stood out:
   no difference.
 - A new deck folder under `Art/Cards` needs `Callbreak/Build/Sprite Atlases` run again (the test says so).
 - To undo: delete the atlases (the cards go back to RGBA32) and set the packer back to Disabled.
+
+## Addendum, 27 Oct 2026: reverted for quality
+
+The owner found the game's look worse after this change: "dont change the quality the game quality
+has worsen. make it like before." Everything in it that touched how the game looks is undone:
+
+- **Sprite Packer Mode is Disabled again.** The four atlases (the three decks, the framed portraits)
+  and `SpriteAtlasBuilder` are gone. Each card face and portrait is its own texture again,
+  uncompressed RGBA32 with mip maps, as before. That includes ADR 050's 246 × 386 vintage faces.
+- **The six font atlases are back at 2048 × 2048,** and new fonts are created at 2048 again
+  (`UiBuildKit`).
+- **`TextureBudgetTests` is removed:** it enforced the atlases and the 1024 font atlases that the
+  owner reversed. ADR 050's notes about it no longer apply.
+- **Still in force:** the 40 unused images stay deleted. None was in the build, so they never
+  touched how the game looks.
+
+**Cost:** the build is back to roughly its size before this ADR (about 20 MB more in the APK). From
+now on, any size saving is the owner's call and must not lower image quality.
