@@ -51,12 +51,19 @@ being synthesized, and goes through the same checks.
   was too quiet for its old in-game loudness at full volume. The downloads end in a burst a few
   milliseconds long, so `max` should end the cut before it. `SFX_CoinCollect_01` (9 Oct 2026) has no
   synthesized version: a cue that only `sources.json` lists is made from its source alone.
-- **Music** (`Gemini/MUS_*.mp3`, decoded to `.wav` beside it by Unity's own MP3 import): Gemini
-  "Create music", instrumental. A loop is cut between `loop` [start, end], chosen as a whole number
-  of bars at the track's tempo with `node Tools/AudioGen/find-loop.js <wav> <from> <to> <crossfade>
-  <beat guess> <beats per bar>` (menu: 125 BPM, 28 bars; table: 80 BPM, 13 bars). The end is aligned
-  to the sample by waveform correlation, and the last `crossfade` seconds fade into the music just
-  before the start, so the seam is like any other sample. Then -14 LUFS, peaks under -1 dBFS.
+- **Music** (`Gemini/*.mp3`, decoded to `.wav` beside it): Gemini "Create music", instrumental.
+  Since 26 Oct 2026 (ADR 049) the loops come from two "Standard" (about 3 minute) tracks,
+  `Table_of_Kings` (menu) and `Copper_Tiles` (table), decoded with
+  `powershell -File Tools/AudioGen/decode-mp3.ps1 <mp3> <wav> 44100` (Windows Media Foundation). They
+  replaced the Nepali folk loops of 1 Oct 2026, whose sources were then deleted (git history has
+  them). A loop is cut
+  between `loop` [start, end], a whole number of bars at the track's tempo, found with
+  `node Tools/AudioGen/find-loop.js <wav> <from> <to> <crossfade> <beat guess> <beats per bar>`, or,
+  where the beat is too soft for that, with `python -P Tools/AudioGen/find-loop.py <wav> <from> <to>
+  <min length> <max length>`, which matches the harmony, timbre and onsets of the 6 s leading into each
+  point (menu: about 104 BPM, 50 bars, 115.4 s; table: about 95 BPM, 40 bars, 101.1 s). The end is
+  aligned to the sample by waveform correlation, and the last `crossfade` seconds fade into the music
+  just before the start, so the seam is like any other sample. Then -14 LUFS, peaks under -1 dBFS.
 
 The cue volumes in `AudioLibraryBuilder` were recomputed from the "loud" column so that each cue
 keeps the loudness it had in the game with the synthesized sounds (within 0.5 dB).
@@ -69,7 +76,8 @@ Gemini music, before the game is published.
 
 Everything tonal is in **G, just intonation**, on the pentatonic Sa Re Ga Pa Dha (G A B D E): the
 pitch of the common G-medium bansuri, and high enough that a phone speaker can play it. A sting
-that fires over the music is therefore always in key with it.
+that fires over the synthesized music is therefore always in key with it. (This describes the
+synthesized versions; the generated sources that replace them are in other keys, see Music below.)
 
 ### Cards
 
@@ -103,8 +111,18 @@ that fires over the music is therefore always in key with it.
 
 ### Music
 
-Both loops are a bansuri over a tanpura and a soft sustained drone with a light madal, in the manner
-of the hill tunes (Pahadi): phrases that dip to the Dha and Pa below Sa and come home.
+In the game (since 26 Oct 2026, ADR 049): upbeat desi game music, as in other Callbreak, Teen Patti
+and Ludo games, chosen by the owner from six Gemini tracks. They are not in G (both sit around F and
+B♭ major), and neither are all of the effects (the call-met chime is near B♭).
+
+| File | Length | What it is |
+| --- | --- | --- |
+| `MUS_Menu_Theme` | 115.4 s = 50 bars at about 104 BPM | Gemini's "Table of Kings": a sitar riff and a flute tune over tabla and dholak with hip-hop drums, claps, round bass and synth plucks. |
+| `MUS_Table_Loop` | 101.1 s = 40 bars at about 95 BPM | Gemini's "Copper Tiles": lighter, a relaxed tabla and madal groove over soft drums and warm bass, a flute and sitar motif that comes and goes, soft pads. Two thirds of its energy is below 150 Hz, so a phone speaker (which loses 7.2 dB of it, against 2.9 dB for the old table loop) plays it quieter than the old one. The game plays it 6 dB down. |
+
+The synthesizer's own loops, rendered only for a music file `sources.json` does not list, are a
+bansuri over a tanpura and a soft sustained drone with a light madal, in the manner of the hill tunes
+(Pahadi): phrases that dip to the Dha and Pa below Sa and come home.
 
 | File | Length | Form |
 | --- | --- | --- |
