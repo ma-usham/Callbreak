@@ -52,16 +52,16 @@ being synthesized, and goes through the same checks.
   milliseconds long, so `max` should end the cut before it. `SFX_CoinCollect_01` (9 Oct 2026) has no
   synthesized version: a cue that only `sources.json` lists is made from its source alone.
 - **Music** (`Gemini/*.mp3`, decoded to `.wav` beside it): Gemini "Create music", instrumental.
-  Since 26 Oct 2026 (ADR 049) the loops come from two "Standard" (about 3 minute) tracks,
-  `Table_of_Kings` (menu) and `Copper_Tiles` (table), decoded with
-  `powershell -File Tools/AudioGen/decode-mp3.ps1 <mp3> <wav> 44100` (Windows Media Foundation). They
-  replaced the Nepali folk loops of 1 Oct 2026, whose sources were then deleted (git history has
-  them). A loop is cut
+  Since 27 Oct 2026 (ADR 049, addendum) the one loop comes from the owner's "Standard" (about 3
+  minute) track `The_Quiet_Round`, decoded with
+  `powershell -File Tools/AudioGen/decode-mp3.ps1 <mp3> <wav> 44100` (Windows Media Foundation). It
+  replaced the menu's `Table_of_Kings` and the table's `Copper_Tiles` (26 Oct 2026), which had replaced
+  the Nepali folk loops of 1 Oct 2026; their sources were deleted (git history has them). A loop is cut
   between `loop` [start, end], a whole number of bars at the track's tempo, found with
   `node Tools/AudioGen/find-loop.js <wav> <from> <to> <crossfade> <beat guess> <beats per bar>`, or,
   where the beat is too soft for that, with `python -P Tools/AudioGen/find-loop.py <wav> <from> <to>
   <min length> <max length>`, which matches the harmony, timbre and onsets of the 6 s leading into each
-  point (menu: about 104 BPM, 50 bars, 115.4 s; table: about 95 BPM, 40 bars, 101.1 s). The end is
+  point (The Quiet Round: about 81 BPM, 178 beats, 131.8 s). The end is
   aligned to the sample by waveform correlation, and the last `crossfade` seconds fade into the music
   just before the start, so the seam is like any other sample. Then -14 LUFS, peaks under -1 dBFS.
 
@@ -111,26 +111,26 @@ synthesized versions; the generated sources that replace them are in other keys,
 
 ### Music
 
-In the game (since 26 Oct 2026, ADR 049): upbeat desi game music, as in other Callbreak, Teen Patti
-and Ludo games, chosen by the owner from six Gemini tracks. They are not in G (both sit around F and
-B♭ major), and neither are all of the effects (the call-met chime is near B♭).
+In the game (since 27 Oct 2026, ADR 049, addendum): **one music for the menu and the table**, the
+owner's Gemini track "The Quiet Round". The song plays on from the menu into the table (the table only
+6 dB quieter) instead of starting again.
 
 | File | Length | What it is |
 | --- | --- | --- |
-| `MUS_Menu_Theme` | 115.4 s = 50 bars at about 104 BPM | Gemini's "Table of Kings": a sitar riff and a flute tune over tabla and dholak with hip-hop drums, claps, round bass and synth plucks. |
-| `MUS_Table_Loop` | 101.1 s = 40 bars at about 95 BPM | Gemini's "Copper Tiles": lighter, a relaxed tabla and madal groove over soft drums and warm bass, a flute and sitar motif that comes and goes, soft pads. Two thirds of its energy is below 150 Hz, so a phone speaker (which loses 7.2 dB of it, against 2.9 dB for the old table loop) plays it quieter than the old one. The game plays it 6 dB down. |
+| `MUS_Game_Theme` | 131.8 s = 178 beats at about 81 BPM | Gemini's "The Quiet Round", 19.05-150.90 s of the track (its 12 s soft intro and its fade from 155 s are left out). A dark, mellow mix: 54% of its energy below 150 Hz and 40% at 150-500 Hz, so a phone speaker (modelled as a 400 Hz high-pass) loses 9.2 dB of it. Its beat is soft, so the loop was chosen by harmony and timbre (texture 0.71). |
 
-The synthesizer's own loops, rendered only for a music file `sources.json` does not list, are a
-bansuri over a tanpura and a soft sustained drone with a light madal, in the manner of the hill tunes
-(Pahadi): phrases that dip to the Dha and Pa below Sa and come home.
+The synthesizer's own loops (`Music.cs`; the two below) are no longer rendered: the game has one music
+track, from its source alone, and they would land beside it. They were a bansuri over a tanpura and a
+soft sustained drone with a light madal, in the manner of the hill tunes (Pahadi): phrases that dip
+to the Dha and Pa below Sa and come home.
 
 | File | Length | Form |
 | --- | --- | --- |
 | `MUS_Menu_Theme` | 80.0 s = 32 bars of 4/4 at 96 BPM | Bars 1-4: a slow opening, the flute gliding up to G after 1.25 s. 5-12: the tune (B. D B A, G A B A ...) and its answer, which dips to E and D below G. 13-20: a higher middle part that climbs to B5. 21-28: the tune again, closing on a long G. 29-30: a quiet echo. 31-32: drone and drum only, with a fill into the repeat. The madal plays a light eight-beat groove ("Dha . ta ti, ta ka Dhin ta"); the tanpura is plucked every 1.25 s (D, G, G, low G). |
 | `MUS_Table_Loop` | 84.0 s = 28 bars of 4/4 at 80 BPM | The drone and a slow tanpura (every 1.5 s) carry it. The flute says seven short things, softer and breathier than in the menu, with two to four bars of room between them. The madal is a slow pulse: a soft ringing "tin" on beat 1, a closed tick on beat 3, a soft bass stroke every other bar. The game plays this one 6 dB down. |
 
-Both loops repeat without a seam (see below). They do not start from silence: the first samples
-carry what rings over from the last bar, so always fade a loop in (the audio service does).
+A loop repeats without a seam (see below). It does not start from silence: the first samples carry
+what rings over from the last bar, so always fade a loop in (the audio service does).
 
 ## How it is checked
 

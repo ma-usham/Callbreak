@@ -14,7 +14,9 @@ namespace Callbreak.Infrastructure.Audio
     /// the first one asked for: a presenter that answers a press with its own cue (back, toggle)
     /// is heard instead of the button's tap, not on top of it. Music uses two looping sources that
     /// crossfade (equal power) over 1.5 s; the table loop sits 6 dB under the SFX level, and
-    /// <see cref="Duck"/> lowers music by 3 dB. Music, Sound effects and Volume follow
+    /// <see cref="Duck"/> lowers music by 3 dB. When the next track is the clip already playing (the
+    /// game's one music on the menu and the table, ADR 049), it plays on and only its level glides to
+    /// the new one over the same 1.5 s. Music, Sound effects and Volume follow
     /// <see cref="ISettingsService"/> live. Clips come from the <see cref="AudioCueLibrary"/>; a
     /// missing library, cue or clip is silent. Nothing here throws.
     /// The caller provides the GameObject that holds the sources (the bootstrap's persistent
@@ -47,6 +49,8 @@ namespace Callbreak.Infrastructure.Audio
         private readonly float[] _voiceGain = new float[SfxVoices];
         private readonly AudioSource[] _music = new AudioSource[2];
         private readonly float[] _trackGain = new float[2];
+        private readonly float[] _trackGainTarget = new float[2];
+        private readonly float[] _trackGainStep = new float[2];
         private readonly float[] _fade = new float[2];
         private readonly float[] _fadeTarget = new float[2];
         private readonly Dictionary<SoundCue, int> _lastClip = new Dictionary<SoundCue, int>();
@@ -296,7 +300,13 @@ namespace Callbreak.Infrastructure.Audio
                 }
             }
 
-            if (next < 0)
+            if (next >= 0)
+            {
+                // The same clip plays on: only its level moves, as a crossfade would.
+                _trackGainTarget[next] = gain;
+                _trackGainStep[next] = Mathf.Abs(gain - _trackGain[next]) / CrossfadeSeconds;
+            }
+            else
             {
                 next = _fade[0] <= _fade[1] ? 0 : 1;
                 AudioSource source = _music[next];
@@ -308,13 +318,14 @@ namespace Callbreak.Infrastructure.Audio
                 source.Stop();
                 source.clip = clip;
                 _fade[next] = 0f;
+                _trackGain[next] = gain;
+                _trackGainTarget[next] = gain;
                 if (!_musicMuted)
                 {
                     source.Play();
                 }
             }
 
-            _trackGain[next] = gain;
             _fadeTarget[next] = 1f;
             _current = next;
         }
@@ -332,6 +343,7 @@ namespace Callbreak.Infrastructure.Audio
                 for (int i = 0; i < _music.Length; i++)
                 {
                     _fade[i] = Mathf.MoveTowards(_fade[i], _fadeTarget[i], step);
+                    _trackGain[i] = Mathf.MoveTowards(_trackGain[i], _trackGainTarget[i], _trackGainStep[i] * deltaTime);
                     if (_fade[i] <= 0f && _fadeTarget[i] <= 0f && _music[i] != null && _music[i].isPlaying)
                     {
                         _music[i].Stop();
