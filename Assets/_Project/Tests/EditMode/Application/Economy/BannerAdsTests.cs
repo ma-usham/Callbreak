@@ -126,6 +126,30 @@ namespace Callbreak.Tests.EditMode.Application
         }
 
         [Test]
+        public void ABottomSlot_HasTheBannerAtItsBottom_InItsLeftCorner_WhenItsLineIsItsLeftEdge()
+        {
+            BannerAds ads = ReadyAds(out ScriptedBanner banner);
+
+            // The main menu's slot (the owner, 27 Oct 2026): the bottom-left corner.
+            ads.ShowIn(new BannerSlot(40, 900, 1000, 180, 40, atBottom: true));
+
+            Assert.AreEqual(40, banner.X, "flush with the slot's left edge");
+            Assert.AreEqual(900 + 180 - BannerHeight, banner.Y, "and with its bottom edge");
+        }
+
+        [Test]
+        public void ATopSlot_HasTheBannerInItsRightCorner_WhenItsLineIsItsRightEdge()
+        {
+            BannerAds ads = ReadyAds(out ScriptedBanner banner);
+
+            // The table's slot (the owner, 27 Oct 2026): the top-right corner, by the round line.
+            ads.ShowIn(new BannerSlot(192, 0, 1500, 155, 192 + 1500));
+
+            Assert.AreEqual(192 + 1500 - BannerWidth, banner.X, "flush with the slot's right edge");
+            Assert.AreEqual(0, banner.Y, "at its top");
+        }
+
+        [Test]
         public void ASlotGivenBeforeTheBannerLoads_GetsTheBannerOnceItComes()
         {
             BannerAds ads = NewAds();
@@ -562,6 +586,8 @@ namespace Callbreak.Tests.EditMode.Application
             Assert.AreNotEqual(new BannerSlot(1, 2, 3, 4), new BannerSlot(0, 2, 3, 4));
             Assert.AreEqual(new BannerSlot(10, 2, 100, 4, 60), new BannerSlot(10, 2, 100, 4), "without a middle line, the slot's own middle");
             Assert.AreNotEqual(new BannerSlot(10, 2, 100, 4, 60), new BannerSlot(10, 2, 100, 4, 61));
+            Assert.AreNotEqual(new BannerSlot(10, 2, 100, 4, 10, atBottom: true), new BannerSlot(10, 2, 100, 4, 10), "and which edge the banner sits on");
+            Assert.AreEqual(new BannerSlot(10, 2, 100, 4, 10, atBottom: true), new BannerSlot(10, 2, 100, 4, 10, atBottom: true));
         }
 
         private BannerAds NewAds() => new BannerAds(_network, _noAds, _log.Add, Delay);

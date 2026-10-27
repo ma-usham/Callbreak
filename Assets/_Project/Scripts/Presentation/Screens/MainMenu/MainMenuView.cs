@@ -1,4 +1,5 @@
 using System;
+using Callbreak.Application.Economy;
 using Callbreak.Core.Cards;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Widgets;
@@ -58,6 +59,25 @@ namespace Callbreak.Presentation.Screens
         // The fan's four aces, indexed by suit.
         [SerializeField] private UnityEngine.UI.Image[] _fanFaces;
         [SerializeField] private float _mutedAlpha = 0.5f;
+
+        // The banner ad in the bottom-left corner of the main menu (the owner, 27 Oct 2026, ADR 052).
+        // While a banner may come, the menu makes room for it: the centre column (logo, card fan, play
+        // buttons) is drawn a little smaller from its top, so the play buttons clear the banner's band
+        // at the bottom of a phone's screen; the footer line goes; and the "Resume match" banner moves
+        // under Play Offline, clear of the left corner. The slot is an empty rectangle in the safe area's
+        // bottom-left corner that the ad network's own view is placed over; it is off while the menu
+        // makes no room. The banner keeps the gap from the Resume banner when that shows.
+        [SerializeField] private RectTransform _centre;
+        [SerializeField] private RectTransform _bannerSlot;
+        [SerializeField] private float _bannerColumnScale = 0.94f;
+        [SerializeField] private float _bannerColumnTop = 48f;
+        [SerializeField] private float _bannerGap = 24f;
+
+        private readonly Vector3[] _bannerCorners = new Vector3[4];
+        private bool _bannerRoom;
+        private bool _bannerHomesKnown;
+        private Vector2 _centreHome;
+        private Vector2 _resumeHome;
 
         private readonly MotionHandle[] _intro = new MotionHandle[4];
 
@@ -179,8 +199,85 @@ namespace Callbreak.Presentation.Screens
             if (_resumeButton.gameObject.activeSelf != available)
             {
                 _resumeButton.gameObject.SetActive(available);
-                _footer.SetActive(!available);
+                _footer.SetActive(!available && !_bannerRoom);
             }
+        }
+
+        /// <summary>The menu has made room for the banner ad in its bottom-left corner (<see cref="SetBannerRoom"/>).</summary>
+        public bool HasBannerRoom => _bannerRoom;
+
+        /// <summary>
+        /// Makes room in the bottom-left corner of the menu for the banner ad, or gives it back (ADR 052):
+        /// the centre column, the footer line and the Resume banner as the fields above describe. Called
+        /// before the menu first shows, so its buttons rise into their new places. A prefab built before
+        /// the slot keeps its look.
+        /// </summary>
+        public void SetBannerRoom(bool room)
+        {
+            if (_bannerSlot == null || _centre == null || room == _bannerRoom)
+            {
+                return;
+            }
+
+            var resume = (RectTransform)_resumeButton.transform;
+            if (!_bannerHomesKnown)
+            {
+                _bannerHomesKnown = true;
+                _centreHome = _centre.anchoredPosition;
+                _resumeHome = resume.anchoredPosition;
+            }
+
+            _bannerRoom = room;
+            _bannerSlot.gameObject.SetActive(room);
+
+            // Smaller about the column's top (the logo's top edge), which stays where it was.
+            float scale = room ? _bannerColumnScale : 1f;
+            float top = (_centre.rect.height / 2f) - _bannerColumnTop;
+            _centre.localScale = new Vector3(scale, scale, 1f);
+            _centre.anchoredPosition = _centreHome + new Vector2(0f, top * (1f - scale));
+
+            float underPlayOffline = ((RectTransform)_playOfflineButton.transform).anchoredPosition.x;
+            resume.anchoredPosition = room ? new Vector2(underPlayOffline, _resumeHome.y) : _resumeHome;
+            _footer.SetActive(!room && !_resumeButton.gameObject.activeSelf);
+        }
+
+        /// <summary>
+        /// Where the banner ad may show, in the bottom-left corner of the menu: the banner slot's
+        /// rectangle in screen pixels from the screen's top-left corner, rounded inwards, ending the gap
+        /// short of the Resume banner while that shows, with its left edge as the line to centre the
+        /// banner on and its bottom edge to sit on. False when the menu has no slot (a prefab built before
+        /// it), or makes no room for a banner, or the slot is empty.
+        /// </summary>
+        public bool TryGetBannerSlot(out BannerSlot slot)
+        {
+            slot = default;
+            if (_bannerSlot == null || !_bannerSlot.gameObject.activeInHierarchy)
+            {
+                return false;
+            }
+
+            // A Screen Space - Overlay canvas: world corners are screen pixels from the bottom-left.
+            _bannerSlot.GetWorldCorners(_bannerCorners);
+            int x = Mathf.CeilToInt(_bannerCorners[0].x);
+            int y = Mathf.CeilToInt(Screen.height - _bannerCorners[2].y);
+            int right = Mathf.FloorToInt(_bannerCorners[2].x);
+            if (_resumeButton.gameObject.activeInHierarchy)
+            {
+                var resume = (RectTransform)_resumeButton.transform;
+                resume.GetWorldCorners(_bannerCorners);
+                right = Mathf.Min(right, Mathf.FloorToInt(_bannerCorners[0].x - (_bannerGap * resume.lossyScale.x)));
+                _bannerSlot.GetWorldCorners(_bannerCorners);
+            }
+
+            int width = right - x;
+            int height = Mathf.FloorToInt(Screen.height - _bannerCorners[0].y) - y;
+            if (width <= 0 || height <= 0)
+            {
+                return false;
+            }
+
+            slot = new BannerSlot(x, y, width, height, x, atBottom: true);
+            return true;
         }
 
         /// <summary>

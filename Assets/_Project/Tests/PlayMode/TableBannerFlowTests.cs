@@ -17,15 +17,20 @@ namespace Callbreak.Tests.PlayMode
     /// and Table scenes, over a scripted banner network (as AdMob is on phones) and the game's own No
     /// Ads, in an offline match. While No Ads isn't owned the table makes room when it opens (the logo
     /// goes, the round line moves beside Scores, the top seat and the trick come down) and the banner
-    /// shows at the top of its slot while the bare table is in front; under the scorecard, settings and
-    /// the match menu it is off the screen. Buying No Ads takes it away and the table keeps its look
-    /// for the rest of the match; a player who owns No Ads opens the table as it always was and nothing
-    /// is requested. Saves go to a temporary folder.
+    /// shows in the top-right corner of its slot (ADR 052) while the bare table is in front; under the
+    /// scorecard, settings and the match menu it is off the screen. Buying No Ads takes it away and the
+    /// table keeps its look for the rest of the match; a player who owns No Ads opens the table as it
+    /// always was and the table requests nothing. The main menu has its own banner over the same
+    /// network (MenuBannerFlowTests), so loads are counted from the table's opening. Saves go to a
+    /// temporary folder.
     /// </summary>
     public sealed class TableBannerFlowTests
     {
         private GameFixture _game;
         private ScriptedBannerNetwork _network;
+
+        // The main menu has a banner of its own over the same network (ADR 052): the table's are counted from here.
+        private int _loadsBeforeTable;
 
         [SetUp]
         public void SetUp()
@@ -58,8 +63,9 @@ namespace Callbreak.Tests.PlayMode
             Assert.IsTrue(table.TryGetBannerSlot(out BannerSlot slot));
             Assert.AreEqual(slot.Y, _network.Banner.Y, "at the top of its slot");
             Assert.GreaterOrEqual(_network.Banner.X, slot.X);
-            Assert.LessOrEqual(_network.Banner.X + _network.Banner.Width, slot.X + slot.Width);
-            Assert.AreEqual(Screen.width / 2, slot.CentreX, "centred on the screen's middle");
+            Assert.AreEqual(slot.X + slot.Width, _network.Banner.X + _network.Banner.Width, "in its top-right corner, by the round line");
+            Assert.AreEqual(slot.X + slot.Width, slot.CentreX);
+            Assert.IsFalse(slot.AtBottom);
 
             ScreenRouter router = _game.TableRouter;
             GameFixture.PressIn(table, "ScoresButton");
@@ -80,7 +86,7 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(ScreenId.MatchMenu, router.Current);
             yield return null;
             Assert.IsFalse(_network.Banner.OnScreen, "never over the match menu");
-            Assert.AreEqual(1, _network.Loads, "one banner all along");
+            Assert.AreEqual(1, _network.Loads - _loadsBeforeTable, "one banner all along at the table");
         }
 
         [UnityTest]
@@ -98,7 +104,7 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(1, _network.Banner.Destroys, "the banner is released");
             Assert.IsTrue(table.HasBannerRoom, "nothing moves under the player mid-match");
             yield return null;
-            Assert.AreEqual(1, _network.Loads, "and no other is requested");
+            Assert.AreEqual(1, _network.Loads - _loadsBeforeTable, "and no other is requested");
         }
 
         [UnityTest]
@@ -106,6 +112,7 @@ namespace Callbreak.Tests.PlayMode
         {
             yield return Boot();
             yield return BuyNoAds();
+            int requestedOnTheMenu = _network.Starts + _network.Loads;
             yield return StartOfflineMatch();
             TableView table = Object.FindFirstObjectByType<TableView>();
             yield return null;
@@ -115,7 +122,7 @@ namespace Callbreak.Tests.PlayMode
             Assert.IsTrue(Find(table, "RoundLabel").activeInHierarchy, "the round line stays in the middle");
             Assert.IsFalse(Find(table, "RoundBeside").activeInHierarchy);
             Assert.IsFalse(table.TryGetBannerSlot(out _), "no slot");
-            Assert.AreEqual(0, _network.Starts + _network.Loads, "nothing is requested");
+            Assert.AreEqual(requestedOnTheMenu, _network.Starts + _network.Loads, "the table requests nothing");
         }
 
         private IEnumerator Boot()
@@ -125,6 +132,7 @@ namespace Callbreak.Tests.PlayMode
 
         private IEnumerator StartOfflineMatch()
         {
+            _loadsBeforeTable = _network.Loads;
             GameFixture.Press(_game.MenuRouter, "PlayOfflineButton");
             GameFixture.Press(_game.MenuRouter, "StartButton");
             yield return _game.UntilTable();

@@ -91,6 +91,13 @@ namespace Callbreak.Editor
         private const string DailyRewardsDotPath = "Controls/UI_Dot_Alert.png";
         private const float DailyRewardsDotSize = 20f;
 
+        // The banner ad in the bottom-left corner of the main menu (the owner, 27 Oct 2026, ADR 052): an
+        // empty slot in the safe area's bottom-left corner, along the bottom of the screen, that the ad
+        // network's own view is placed over. A standard banner (320 x 50 dp) is about 960 x 150 canvas
+        // units on a phone 360 dp tall, so the slot is this big (canvas units); MainMenuView draws the
+        // centre column smaller while it is on, so the play buttons clear it.
+        private static readonly Vector2 BannerSlotSize = new Vector2(1000f, 180f);
+
         // Prize coins arriving (the owner, 9 Oct 2026): a Stake Match prize, won at the table, flies
         // into the wallet from the middle of the screen, over the card fan, out of an area this big.
         private static readonly Vector2 PrizeCoinsFromSize = new Vector2(240f, 140f);
@@ -269,6 +276,8 @@ namespace Callbreak.Editor
                 headerRight, UnderShop(shopCentre, 1), circle, circleShadow, out GameObject dailyRewardsDot);
             UnityEngine.UI.Button noAds = BuildNoAdsButton(headerRight, UnderShop(shopCentre, 2), circle, circleShadow);
 
+            RectTransform bannerSlot = BuildBannerSlot(safeArea);
+
             var view = rootObject.AddComponent<MainMenuView>();
             var serialized = new SerializedObject(view);
             serialized.FindProperty("_screenId").intValue = (int)ScreenId.MainMenu;
@@ -292,6 +301,8 @@ namespace Callbreak.Editor
             serialized.FindProperty("_noAdsButton").objectReferenceValue = noAds;
             serialized.FindProperty("_dailyRewardsButton").objectReferenceValue = dailyRewards;
             serialized.FindProperty("_dailyRewardsDot").objectReferenceValue = dailyRewardsDot;
+            serialized.FindProperty("_centre").objectReferenceValue = centre;
+            serialized.FindProperty("_bannerSlot").objectReferenceValue = bannerSlot;
             BindCoinFlight(serialized, root, content, coins.transform.parent.Find("Coin"));
             serialized.FindProperty("_playOnlineButton").objectReferenceValue = playOnline;
             serialized.FindProperty("_playWithFriendsButton").objectReferenceValue = playWithFriends;
@@ -466,6 +477,58 @@ namespace Callbreak.Editor
             dot = dotRect.gameObject;
             dot.SetActive(false);
             return button;
+        }
+
+        /// <summary>
+        /// The banner ad's slot in the safe area's bottom-left corner (see <see cref="BannerSlotSize"/>),
+        /// built off: the menu turns it on while it makes room for a banner.
+        /// </summary>
+        private static RectTransform BuildBannerSlot(RectTransform safeArea)
+        {
+            RectTransform corner = UiBuildKit.CreateDesignGroup("BottomLeft", safeArea, UiBuildKit.Attach.BottomLeft);
+            var centre = new Vector2(
+                BannerSlotSize.x / 2f / UiBuildKit.ScaleX,
+                (UiBuildKit.CanvasHeight - (BannerSlotSize.y / 2f)) / UiBuildKit.ScaleY);
+            RectTransform slot = UiBuildKit.CreateAt("BannerSlot", corner, centre, Screen, BannerSlotSize);
+            slot.gameObject.SetActive(false);
+            return slot;
+        }
+
+        /// <summary>
+        /// Adds the banner ad's slot (<see cref="BuildBannerSlot"/>) to the saved main menu prefab and
+        /// binds it, with the centre column the menu draws smaller to make room, to the view; everything
+        /// else in the prefab stays as it is (<see cref="Build"/> makes it anew and drops the changes
+        /// saved into it since). A prefab that already has the slot is left alone.
+        /// </summary>
+        public static string AddBannerSlot()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+            try
+            {
+                var view = root.GetComponent<MainMenuView>();
+                var serialized = new SerializedObject(view);
+                if (serialized.FindProperty("_bannerSlot").objectReferenceValue != null)
+                {
+                    return "the main menu already has its banner slot";
+                }
+
+                var safeArea = root.transform.Find("Content/SafeArea") as RectTransform;
+                var centre = root.transform.Find("Content/Centre") as RectTransform;
+                if (safeArea == null || centre == null)
+                {
+                    return "FAILED: the main menu has no Content/SafeArea or Content/Centre";
+                }
+
+                serialized.FindProperty("_centre").objectReferenceValue = centre;
+                serialized.FindProperty("_bannerSlot").objectReferenceValue = BuildBannerSlot(safeArea);
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, PrefabPath, out bool saved);
+                return saved ? $"saved {PrefabPath} with the banner slot" : $"FAILED to save {PrefabPath}";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         /// <summary>

@@ -1,14 +1,15 @@
-# AdMob setup (Earn Coins ads, ads between matches, app open ads and the table's banner)
+# AdMob setup (Earn Coins ads, ads between matches, app open ads and banners)
 
 The Earn Coins page pays its coins for Google AdMob rewarded ads on phones, a full-screen AdMob
 interstitial ad can show between matches (below, "Ads between matches"), an AdMob app open ad can
 greet the player back to the game (below, "App open ads"), and an AdMob banner shows on the table
-during a match (below, "The banner on the table"). They come through the
+during a match and on the main menu (below, "The banner on the table", "The banner on the main
+menu"). They come through the
 Google Mobile Ads Unity plugin (`com.google.ads.mobile` 11.5.0, from OpenUPM) and the External
 Dependency Manager it brings (`com.google.external-dependency-manager` 1.2.187, EDM4U). In the
 Editor, in the tests and in desktop builds stand-ins take their place: one completes every Earn
 Coins ad (`StandInRewardedAds`), another never has an ad between matches
-(`StandInInterstitialAds`), and the table's banner is never there (`StandInBannerAds`). No ad
+(`StandInInterstitialAds`), and the banners are never there (`StandInBannerAds`). No ad
 network is touched there.
 
 ## Identifiers (not secret: they ship inside the app)
@@ -19,7 +20,7 @@ network is touched there.
 | Rewarded ad unit, Earn Coins (Android) | `ca-app-pub-1025159441369051/8532471334` |
 | Interstitial ad unit, between matches (Android) | `ca-app-pub-1025159441369051/4319920270` |
 | App open ad unit, `Android_AppOpen`, on the return to the game (Android) | `ca-app-pub-1025159441369051/9889671064` |
-| Banner ad unit, `Android_Banner`, the table (Android) | `ca-app-pub-1025159441369051/6484892497` |
+| Banner ad unit, `Android_Banner`, the table and the main menu (Android) | `ca-app-pub-1025159441369051/8330163494` (made 27 Oct 2026; the first `Android_Banner`, `.../6484892497`, had been removed from AdMob) |
 
 They live in code, in `Assets/_Project/Scripts/Infrastructure/Ads/AdMobIds.cs`. Before every Android
 build, `Callbreak.Editor.AdMobSetup` writes the app id into the plugin's settings,
@@ -110,9 +111,11 @@ The owner's rule (14 Oct 2026; its place picked 26 Oct 2026, ADR 051). During a 
 **320 x 50 banner** (AdMob's smallest standard size, and the one with the most ads) shows at the
 **very top of the table**, over the scenery:
 
-- **Where:** at the top edge of the safe area, centred on the screen. On 16:9 phones it moves left
-  just enough to stay 48 canvas units clear of the round line; it is never nearer than that to Home
-  or the round line, and further from Scores and Settings.
+- **Where:** in the **top-right corner** of the space at the top of the table (the owner, 27 Oct
+  2026: "top right or left"; ADR 052): at the top edge of the safe area, its right edge 48 canvas
+  units short of the round line's words, which stand between it and the Scores button. It is never
+  nearer than that to the round line, and further from Home, Scores and Settings. (26 Oct: centred
+  on the screen.)
 - **Room for it:** when the table opens and the player doesn't own No Ads, the CALLBREAK logo goes,
   "ROUND 1 / 5" moves beside the Scores button (without its ornaments), and the top seat and the
   trick come down 52 and 25 canvas units, so the banner covers nothing of the game. A player who
@@ -141,6 +144,36 @@ The owner's rule (14 Oct 2026; its place picked 26 Oct 2026, ADR 051). During a 
   - the network registered in `ProjectLifetimeScope`, the banner and presenter in
     `TableLifetimeScope`;
   - tests: `BannerAdsTests` and `TableBannerRoomTests` (EditMode), `TableBannerFlowTests` (PlayMode).
+
+## The banner on the main menu
+
+The owner's rule (27 Oct 2026, ADR 052: "in the bottom left or right in the menu screen"). On the
+main menu the same **320 x 50 banner**, of the same ad unit, sits in the **bottom-left corner**:
+
+- **Where:** flush with the bottom and left edges of the safe area, over the scenery (the temple).
+- **Room for it:** when the Menu scene opens and the player doesn't own No Ads, before the menu
+  first shows:
+  - the centre column (logo, card fan, Play Online, Play with Friends, Play Offline) is drawn 6%
+    smaller from its top, so the play buttons clear the banner's band at the bottom of a phone;
+  - the footer line ("A GAME THAT BRINGS US CLOSER") goes;
+  - the "Resume match" banner stands under Play Offline, on the right, clear of the left corner.
+
+  A player who owns No Ads, and the Editor and desktop builds, get the menu as it always was.
+- **Decided once per Menu scene,** so nothing moves under the player: buying No Ads takes the banner
+  away at once and the room stays until the menu loads again.
+- **Never over anything:** it is off the screen while anything covers the bare main menu: another
+  screen (the shop, settings, the profile, Play Online, a room, Daily Rewards...), a dialog, the
+  loading curtain or the name question. It comes back when the main menu is bare again.
+- **The slot:** 1000 x 180 canvas units in the safe area's bottom-left corner, ending 24 units short
+  of the Resume banner while that shows. On a 16:9 phone with a notch on the left it can come out
+  too narrow, and then no banner shows rather than one covering anything.
+- **The pieces:**
+  - `MenuBannerPresenter` and `MainMenuView` (`SetBannerRoom`, `TryGetBannerSlot`);
+  - the slot built by `MainMenuBuilder` (`BuildBannerSlot`; `AddBannerSlot` added it to the saved
+    prefab);
+  - the banner and presenter in `MenuLifetimeScope`, over the same network as the table's;
+  - `BannerSlot` sits a banner on its bottom edge for the menu (`AtBottom`);
+  - tests: `BannerAdsTests` and `MenuBannerRoomTests` (EditMode), `MenuBannerFlowTests` (PlayMode).
 
 ## How the app asks for consent
 

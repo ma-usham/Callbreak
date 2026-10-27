@@ -67,7 +67,7 @@ namespace Callbreak.Presentation.Table
         // units), so the banner covers nothing of the game. The slot is an empty rectangle across the
         // top of the HUD, from right of Home to left of the round line, that the ad network's own view
         // is placed over; it is off while the table makes no room. The banner keeps the gap from the
-        // round line's words, however long they are.
+        // round line's words, however long they are, and sits in the slot's top-right corner (ADR 052).
         [SerializeField] private RectTransform _bannerSlot;
         [SerializeField] private GameObject _logo;
         [SerializeField] private GameObject _roundOrnamentLeft;
@@ -323,7 +323,9 @@ namespace Callbreak.Presentation.Table
         /// <summary>
         /// Where the banner ad may show, at the top of the table: the banner slot's rectangle in screen
         /// pixels from the screen's top-left corner, rounded inwards, ending the gap short of the round
-        /// line's words, with the screen's middle as the line to centre the banner on. False when the
+        /// line's words, with its right edge as the line to centre the banner on, which puts the banner in
+        /// the slot's top-right corner, by the round line and furthest from Home (the owner, 27 Oct 2026:
+        /// "top right or left"; ADR 052). False when the
         /// table has no slot (a prefab built before it), or makes no room for a banner, or the slot is
         /// empty.
         /// </summary>
@@ -358,7 +360,7 @@ namespace Callbreak.Presentation.Table
                 return false;
             }
 
-            slot = new BannerSlot(x, y, width, height, Screen.width / 2);
+            slot = new BannerSlot(x, y, width, height, right);
             return true;
         }
 
