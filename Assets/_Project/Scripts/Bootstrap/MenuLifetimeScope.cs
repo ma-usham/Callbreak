@@ -1,3 +1,4 @@
+using Callbreak.Application.Economy;
 using Callbreak.Application.Ports;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Screens;
@@ -58,6 +59,10 @@ namespace Callbreak.Bootstrap
             RegisterPresenter<PlayOnlineView, PlayOnlinePresenter>(builder);
             RegisterPresenter<DailyRewardsView, DailyRewardsPresenter>(builder);
 
+            // Before the first screen opens, so the main menu has made room for its banner when its
+            // buttons rise into place (ADR 052).
+            RegisterBanner(builder);
+
             // Last, so every presenter is already listening when the first screen opens.
             builder.RegisterEntryPoint<MenuEntryPoint>();
 
@@ -84,6 +89,28 @@ namespace Callbreak.Bootstrap
 
             // An app open ad may greet the player back on the bare main menu (ADR 047).
             builder.RegisterEntryPoint<ReturnToGameAdMoment>();
+        }
+
+        /// <summary>
+        /// The banner ad in the bottom-left corner of the main menu (the owner, 27 Oct 2026, ADR 052): over
+        /// the project's banner network where there is one (AdMob on phones, with the table's ad unit, or
+        /// a test's), made with the Menu scene and released with it; elsewhere a stand-in that never has
+        /// one, so the menu makes no room for it. No Ads removes it.
+        /// </summary>
+        private void RegisterBanner(IContainerBuilder builder)
+        {
+            if (builder.Exists(typeof(IBannerAdNetwork), includeInterfaceTypes: true, findParentScopes: true))
+            {
+                builder.Register<IBannerAds>(
+                    resolver => new BannerAds(resolver.Resolve<IBannerAdNetwork>(), resolver.Resolve<INoAds>(), Debug.Log),
+                    Lifetime.Scoped);
+            }
+            else
+            {
+                builder.Register<StandInBannerAds>(Lifetime.Scoped).As<IBannerAds>();
+            }
+
+            RegisterPresenter<MainMenuView, MenuBannerPresenter>(builder);
         }
 
         /// <summary>Registers a screen's presenter only when the scene has that screen.</summary>

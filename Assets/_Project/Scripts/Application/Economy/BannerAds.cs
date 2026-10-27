@@ -6,14 +6,15 @@ namespace Callbreak.Application.Economy
 {
     /// <summary>
     /// <see cref="IBannerAds"/> over a real ad network (<see cref="IBannerAdNetwork"/>; AdMob on
-    /// phones), for one table: the Table scene makes it and disposes it, which releases the banner. It
-    /// gets the network ready at once (the player's consent, then the SDK) and loads one banner, off
+    /// phones), for one screen: the Table scene and the Menu scene each make one and dispose it, which
+    /// releases the banner. It gets the network ready at once (the player's consent, then the SDK) and loads one banner, off
     /// the screen; the network refreshes what the banner shows by itself. A start that may not request
     /// ads yet, or a load that brings no banner, is tried again after <see cref="FirstRetryDelay"/>,
     /// each wait twice the last, up to <see cref="MaxRetryDelay"/>, as the full-screen ads are.
     /// <para>
-    /// The banner shows only in the slot the table gives (<see cref="ShowIn"/>): at its top, centred on
-    /// the slot's middle line (the screen's middle) as far as the slot allows. One that doesn't fit its
+    /// The banner shows only in the slot the screen gives (<see cref="ShowIn"/>): on its top or bottom
+    /// edge, centred on the slot's middle line as far as the slot allows (a line on the slot's edge
+    /// puts it in that corner). One that doesn't fit its
     /// slot stays off the screen rather than cover the game. <see cref="Hide"/> takes it off and keeps
     /// it loaded. While No Ads isn't owned a banner <see cref="MayShow"/>, so the table makes room.
     /// </para>
@@ -213,11 +214,13 @@ namespace Callbreak.Application.Economy
                 return;
             }
 
-            // On the middle line, but never past either end of the slot (the Home button, the round line).
+            // On the middle line, but never past either end of the slot (the Home button, the round line),
+            // so a line on an edge puts it in that corner; on the slot's top or bottom edge.
             int x = Math.Max(slot.X, Math.Min(slot.CentreX - (width / 2), slot.X + slot.Width - width));
+            int y = slot.AtBottom ? slot.Y + slot.Height - height : slot.Y;
             try
             {
-                _banner.ShowAt(x, slot.Y);
+                _banner.ShowAt(x, y);
                 _showing = true;
             }
             catch (Exception e)
