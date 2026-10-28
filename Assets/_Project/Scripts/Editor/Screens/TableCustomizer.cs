@@ -194,10 +194,9 @@ namespace Callbreak.Editor.Screens
         private const float BannerSlotHeight = 155f;
 
         // ---- Scores and Settings under Home (the owner, 28 Oct 2026, ADR 057), canvas units: the
-        // left column, each button centred on Home's middle with its label under it as the mockup
-        // draws it, this far below the piece above (Home, then the Scores label). On the left the
-        // labels stand over the scenery's temple and flags rather than the sky, so each sits on the
-        // seats' status pill (UI_StatusPill), as wide as its words and this much more.
+        // left column, each button centred on Home's middle, this far below the button above. The
+        // buttons show their icons only (the owner, the same day: no "Scores" and "Settings" words).
+        // The round line's pill, while a banner may show, is as wide as its words and this much more.
         private const float ColumnGap = 22f;
         private const float LabelPillPadding = 30f;
 
@@ -910,44 +909,28 @@ namespace Callbreak.Editor.Screens
         }
 
         /// <summary>
-        /// Scores and Settings under Home (the owner, 28 Oct 2026, ADR 057): the two buttons and their
-        /// labels move from the top-right corner into Home's group, one above the other in Home's column
-        /// (<see cref="ColumnGap"/> apart), each label kept where the mockup draws it under its button,
-        /// on a status pill so it reads over the scenery. The divider between them, drawn for buttons
-        /// side by side, goes.
+        /// Scores and Settings under Home (the owner, 28 Oct 2026, ADR 057): the two buttons move from
+        /// the top-right corner into Home's group, one above the other in Home's column
+        /// (<see cref="ColumnGap"/> apart), as icons only: the mockup's "Scores" and "Settings" words
+        /// under them go. So does the divider between them, drawn for buttons side by side.
         /// </summary>
         private static void StackUnderHome(ScreenBuildContext ctx)
         {
             RectTransform left = ctx.Groups["HeaderLeft"];
             RectTransform home = ctx.Nodes["HomeButton"];
-            Sprite pillSprite = LoadTableSprite("UI_StatusPill");
-            float pillHeight = UiBuildKit.FromMock(0f, ctx.Node("SeatPill3").rect[3]).y;
             float column = home.anchoredPosition.x;
             float above = home.anchoredPosition.y - (home.rect.height / 2f);
             foreach (string id in new[] { "Scores", "Settings" })
             {
                 RectTransform button = ctx.Nodes[id + "Button"];
-                RectTransform label = ctx.Nodes[id + "Label"];
-                Vector2 under = label.anchoredPosition - button.anchoredPosition;
                 button.SetParent(left, false);
-                label.SetParent(left, false);
                 float y = above - ColumnGap - (button.rect.height / 2f);
                 button.anchoredPosition = new Vector2(column, y);
-                label.anchoredPosition = new Vector2(column, y) + under;
+                above = y - (button.rect.height / 2f);
 
-                // The pill behind the words, as wide as they are and a little more.
-                TMP_Text words = label.GetComponent<TMP_Text>();
-                Vector2 size = words.GetPreferredValues(words.text);
-                var pill = (RectTransform)new GameObject(id + "Pill", typeof(RectTransform)).transform;
-                pill.SetParent(left, false);
-                pill.anchorMin = pill.anchorMax = pill.pivot = new Vector2(0.5f, 0.5f);
-                pill.sizeDelta = new Vector2(size.x + LabelPillPadding, Mathf.Max(pillHeight, size.y));
-                pill.anchoredPosition = label.anchoredPosition;
-                Sliced(pill, pillSprite);
-                pill.SetSiblingIndex(label.GetSiblingIndex());
-
-                // The next piece goes under this label's pill.
-                above = pill.anchoredPosition.y - (pill.sizeDelta.y / 2f);
+                RectTransform label = ctx.Nodes[id + "Label"];
+                ctx.Nodes.Remove(id + "Label");
+                Object.DestroyImmediate(label.gameObject);
             }
 
             RectTransform divider = ctx.Nodes["HeaderDivider"];

@@ -22,9 +22,10 @@ right and then round text to the left side."
     again whenever no ad banner needs its room.
 - **The table's top bar:**
   - **Scores and Settings stand under Home,** one above the other in Home's column, 22 canvas units
-    apart. Each label is where the mockup draws it under its button, on the seats' status pill
-    (`UI_StatusPill`), since on the left the labels stand over the scenery's temple and flags. The
-    divider between the two buttons, drawn for buttons side by side, goes.
+    apart, as icons only. Their "Scores" and "Settings" words went the same day (the owner: "remove
+    that score and settings text ... just show the icon there"); they had stood on a status pill,
+    since on the left they were over the scenery's temple and flags. The divider between the two
+    buttons, drawn for buttons side by side, goes.
   - **While a banner may show:**
     - The logo still goes (ADR 051).
     - The round line moves to the left: left-aligned, 36 units right of Home, centred on Home's
@@ -50,7 +51,7 @@ right and then round text to the left side."
 - **AdMob:** the banner now has no button beside it (it had Scores 48 units away).
 - **Tests:**
   - `TableBannerRoomTests`:
-    - Scores and Settings under Home and clear of the left seat at 16:9, 21:9 and 4:3;
+    - Scores and Settings under Home, icons only, and clear of the left seat at 16:9, 21:9 and 4:3;
     - the round line on the left on its pill;
     - the slot from past the pill to the right edge, under no button;
     - the pill growing with "ROUND 10 / 10".
