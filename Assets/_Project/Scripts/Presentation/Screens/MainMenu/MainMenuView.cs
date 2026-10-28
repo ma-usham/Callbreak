@@ -56,9 +56,8 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private CanvasGroup _playWithFriendsGroup;
         [SerializeField] private IdleSway _fanSway;
 
-        // The fan's four aces, indexed by suit, and under each its deck's base (ADR 053).
+        // The fan's four aces, indexed by suit.
         [SerializeField] private UnityEngine.UI.Image[] _fanFaces;
-        [SerializeField] private UnityEngine.UI.Image[] _fanBases;
         [SerializeField] private float _mutedAlpha = 0.5f;
 
         // The banner ad in the bottom-left corner of the main menu (the owner, 27 Oct 2026, ADR 052).
@@ -282,27 +281,15 @@ namespace Callbreak.Presentation.Screens
         }
 
         /// <summary>
-        /// The ace of <paramref name="suit"/> in the card fan, in the player's deck (GDD §13): the
-        /// face over the deck's base (ADR 053). A missing face keeps the card that is showing.
+        /// The ace of <paramref name="suit"/> in the card fan, in the player's deck (GDD §13). A
+        /// missing sprite keeps the card that is showing.
         /// </summary>
-        public void SetFanFace(Suit suit, Sprite face, Sprite cardBase)
+        public void SetFanFace(Suit suit, Sprite face)
         {
-            if (face == null)
-            {
-                return;
-            }
-
             UnityEngine.UI.Image image = _fanFaces[(int)suit];
-            if (image.sprite != face)
+            if (face != null && image.sprite != face)
             {
                 image.sprite = face;
-            }
-
-            UnityEngine.UI.Image under = _fanBases != null && (int)suit < _fanBases.Length ? _fanBases[(int)suit] : null;
-            if (under != null)
-            {
-                under.sprite = cardBase;
-                under.enabled = cardBase != null;
             }
         }
 

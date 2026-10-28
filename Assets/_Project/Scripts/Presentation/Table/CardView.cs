@@ -50,7 +50,6 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private CanvasGroup _group;
         [SerializeField] private Image _shadow;
         [SerializeField] private Image _glow;
-        [SerializeField] private Image _base;
         [SerializeField] private Image _face;
         [SerializeField] private Image _dim;
         [SerializeField] private CardPerspective[] _perspectives;
@@ -89,23 +88,17 @@ namespace Callbreak.Presentation.Table
             }
         }
 
-        /// <summary>
-        /// The card face up: its face over its deck's base, the border and paper the shared faces
-        /// leave out (ADR 053). A null base shows the face alone.
-        /// </summary>
-        public void ShowFace(Card card, Sprite face, Sprite cardBase)
+        public void ShowFace(Card card, Sprite face)
         {
             Card = card;
             IsFaceUp = true;
             SetSprite(face);
-            SetBase(face != null ? cardBase : null);
         }
 
         public void ShowBack(Sprite back)
         {
             IsFaceUp = false;
             SetSprite(back);
-            SetBase(null);
         }
 
         /// <summary>The gold glow of a legal card (and of the card that wins a trick).</summary>
@@ -189,25 +182,6 @@ namespace Callbreak.Presentation.Table
             if (_face.enabled != visible)
             {
                 _face.enabled = visible;
-            }
-        }
-
-        private void SetBase(Sprite cardBase)
-        {
-            if (_base == null)
-            {
-                return;
-            }
-
-            if (_base.sprite != cardBase)
-            {
-                _base.sprite = cardBase;
-            }
-
-            bool visible = cardBase != null;
-            if (_base.enabled != visible)
-            {
-                _base.enabled = visible;
             }
         }
 

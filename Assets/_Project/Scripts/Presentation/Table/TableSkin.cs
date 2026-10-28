@@ -38,9 +38,6 @@ namespace Callbreak.Presentation.Table
 
         public Sprite Face(string deckId, Card card) => _cards.Face(deckId, card);
 
-        /// <summary>The deck's border and paper, drawn under its faces (ADR 053).</summary>
-        public Sprite Base(string deckId) => _cards.Base(deckId);
-
         public Sprite Back(string deckId) => _cards.Back(deckId);
 
         /// <summary>The avatar for a preset id; null when there is no library (the seat keeps its picture).</summary>

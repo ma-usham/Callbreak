@@ -320,8 +320,6 @@ namespace Callbreak.Tests.PlayMode
                     Assert.IsNotNull(ace, deck + " has its ace of " + (Suit)suit);
                     Assert.IsTrue(Shows(menu, ace), "GDD 13: the fan shows the " + deck + " ace of " + (Suit)suit);
                 }
-
-                Assert.IsTrue(Shows(menu, cards.Base(deck)), "ADR 053: the aces lie on the " + deck + " base");
             }
         }
 

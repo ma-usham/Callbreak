@@ -140,7 +140,7 @@ namespace Callbreak.Presentation.Table
                     }
 
                     shown = _view.Cards.Rent(trick.Area);
-                    shown.ShowFace(card, _skin.Face(LocalDeck, card), _skin.Base(LocalDeck));
+                    shown.ShowFace(card, _skin.Face(LocalDeck, card));
                     trick.Adopt(rel, shown);
                 }
 

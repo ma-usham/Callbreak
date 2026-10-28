@@ -222,7 +222,7 @@ namespace Callbreak.Presentation.Screens
             if (kind == CosmeticKind.Deck)
             {
                 string deck = _shop.Catalog(kind)[index].Id;
-                _view.PeekFace(index, _cards.Face(deck, AceOfSpades), _cards.Base(deck), _cards.Back(deck), _settings.ReduceMotion);
+                _view.PeekFace(index, _cards.Face(deck, AceOfSpades), _cards.Back(deck), _settings.ReduceMotion);
             }
         }
 
