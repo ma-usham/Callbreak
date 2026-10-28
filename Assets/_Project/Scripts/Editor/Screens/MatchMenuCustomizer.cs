@@ -16,8 +16,11 @@ namespace Callbreak.Editor.Screens
     /// </summary>
     public static class MatchMenuCustomizer
     {
-        // Mockup 13 is mockup 08 at 44.5% of its sRGB values: black at 83% when blended in linear light.
-        private const float DimOpacity = 0.83f;
+        // V2 (13 Match Menu) dims the table with black at 60%, as the table's other dims.
+        private const float DimOpacity = TableCustomizer.V2DimOpacity;
+
+        /// <summary>The mode tag's room round its words, as MatchMenuView gives it (canvas units).</summary>
+        private const float ModePadding = 51f;
 
         public static void Customize(ScreenBuildContext ctx)
         {
@@ -38,6 +41,12 @@ namespace Callbreak.Editor.Screens
 
             // The mode tag hugs its words (the owner, 3 Oct 2026): MatchMenuView sets its width.
             TableCustomizer.HugWords(ctx.Nodes["ModePill"], ctx.Nodes["ModeLabel"].GetComponent<TMP_Text>());
+
+            // As built it hugs the sample's words too: V2 draws the tag a little narrower than its
+            // letter-spaced words, whose gold ends would vanish on the panel.
+            TMP_Text mode = ctx.Nodes["ModeLabel"].GetComponent<TMP_Text>();
+            RectTransform pill = ctx.Nodes["ModePill"];
+            pill.sizeDelta = new Vector2(Mathf.Ceil(mode.GetPreferredValues(mode.text).x) + ModePadding, pill.sizeDelta.y);
         }
 
         /// <summary>

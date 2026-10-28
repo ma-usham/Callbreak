@@ -42,7 +42,10 @@ FRAMES = {
     '04 Private Lobby': 'PrivateLobby',
     '05 Matchmaking': 'Matchmaking',
     '06 Offline Setup': 'OfflineSetup',
+    '07 Bidding': 'BiddingPanel',
+    '08 Gameplay': 'Table',
     '11 Settings': 'Settings',
+    '13 Match Menu': 'MatchMenu',
     '12 How to Play': 'HowToPlay',
     '14 Profile': 'Profile',
     '15 Shop · Cards': 'Shop',
@@ -66,6 +69,9 @@ MATCH = {
     'CreateRoom': {'TurnLabel15': 'TurnTrack/Segment/Label#0', 'TurnLabel30': 'TurnTrack/Segment/Label#1',
                    'RoomNameText': 'RoomNameField/Value'},
     'PlayOnline': {'ChipLabel0': 'ChipNormal0/Amount', 'ChipLabel1': 'ChipSelected1/Amount'},
+    # 07 Bidding's own number layers are garbled (34 and 12 pt, off the chips' centres): each chip's
+    # number is the Bid Chip component's own, in its place.
+    'BiddingPanel': {'ChipLabel%d' % i: 'Chip%d/Number' % i for i in range(8)},
 }
 
 # Labels that take V2's font and colour but keep their fitted size and place: the game's own
@@ -119,6 +125,9 @@ SET = {
         'sprite': 'Assets/_Project/Art/UI/Buttons/UI_ButtonIcon_Crimson.png',
         'shadowUse': 'UI/Buttons/UI_Shadow_Circle.png', 'shadowSpread': 9.86, 'shadowDrop': 3.49},
         'CopyIcon': {'use': 'UI/Icons/Icon_Copy_Ivory.png', 'sprite': 'Assets/_Project/Art/UI/Icons/Icon_Copy_Ivory.png'}},
+    # The mockup's chosen chip (4) shows its number in the Bid Chip's Selected colour; the chip
+    # row (BiddingPanelCustomizer) takes the chosen and the other numbers' colours from these.
+    'BiddingPanel': {'ChipLabel3': {'color': '#FFFCF7'}},
     # How to Play's two cards are the deck's own (HowToPlayCustomizer), not one picture.
     'HowToPlay': {'CardsArt': {'use': None, 'sprite': None, 'spriteRect': None, 'spritePpu': None, 'shadowUse': None,
                                'shadowSpread': None, 'shadowDrop': None, 'shadowOpacity': None}},

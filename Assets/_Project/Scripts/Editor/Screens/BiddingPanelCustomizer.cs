@@ -14,7 +14,8 @@ namespace Callbreak.Editor.Screens
     /// (it borrows the panel subtitle's type); the line that says why a call was refused, in the
     /// subtitle's place and type, in burgundy; the faint dot of the beginner assist (the kit's
     /// crimson disc, small and half transparent, under the number of the suggested chip); a canvas
-    /// group so the panel can fade and slide away; and 88 px touch areas on the 83 px chips.
+    /// group so the panel can fade and slide away; V2's dim over the table behind it; and 88 px
+    /// touch areas on the 83 px chips.
     /// </summary>
     public static class BiddingPanelCustomizer
     {
@@ -30,6 +31,11 @@ namespace Callbreak.Editor.Screens
         private const float HintDrop = 24f;
         private const float HintSize = 8f;
         private const float HintOpacity = 0.5f;
+
+        // V2's dim over the table while the panel is up (07 Bidding: black at 60%, as the table's other
+        // dims), canvas units: it covers the backdrop's 2560 x 1440 frame and the panel's 24-unit slide.
+        private const float DimOpacity = TableCustomizer.V2DimOpacity;
+        private static readonly Vector2 DimSize = new Vector2(2620f, 1500f);
 
         public static void Customize(ScreenBuildContext ctx)
         {
@@ -59,6 +65,7 @@ namespace Callbreak.Editor.Screens
             // The panel leaves as a whole once the call is placed (it fades as it slides).
             ctx.Bound["_panelGroup"] = panel.gameObject.AddComponent<CanvasGroup>();
 
+            BuildDim(ctx, panel);
             BuildReason(ctx);
             BuildHint(ctx, panel);
 
@@ -103,6 +110,20 @@ namespace Callbreak.Editor.Screens
             ScreenExtras.LimitWidth(ctx, "Reason", ReasonWidth);
             copy.SetActive(false);
             ctx.Bound["_reason"] = reason;
+        }
+
+        /// <summary>
+        /// V2's dim over the table, under the panel's shadow and face: part of the panel, so it comes
+        /// and goes, fades and slides with it, and the table is clear again once the call is placed.
+        /// It takes no touches, so the HUD's buttons answer as before.
+        /// </summary>
+        private static void BuildDim(ScreenBuildContext ctx, RectTransform panel)
+        {
+            RectTransform dim = UiBuildKit.CreateAt("Dim", panel, UiBuildKit.ScreenCentre, ctx.CentreOf("Panel"), DimSize);
+            dim.SetAsFirstSibling();
+            Image image = dim.gameObject.AddComponent<Image>();
+            image.color = new Color(0f, 0f, 0f, DimOpacity);
+            image.raycastTarget = false;
         }
 
         /// <summary>The beginner assist's dot, built on the mockup's chosen chip; the view moves it along the row.</summary>

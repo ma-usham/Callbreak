@@ -86,22 +86,61 @@ namespace Callbreak.Editor.Screens
 
         // ---- Derived pieces (not on the mockup): where they sit.
         private static readonly Vector2 PromptCentre = new Vector2(869.3f, 652f);
-        private const float PromptHeight = 38f;
+
+        // The prompt is V2's "Prompt Strip" (08 · Your Turn, without its tip), in canvas units: a pill
+        // 62 high, #17140F at 80% with a gold rim, its words 32 in from each end in Inter SemiBold 28,
+        // ivory, suits too. It flashes crimson for a card that cannot be played. The UI is blended in
+        // linear light, so V2's 80% is 94% here (Tools/ArtPipeline/V2/pieces.py, linear_alpha).
+        private const float PromptHeight = 62f;
+        private const float PromptPadding = 64f;
+        private const float PromptFontSize = 28f;
+        private static readonly Color PromptColor = new Color32(0x17, 0x14, 0x0F, 0xEF);
+        private static readonly Color PromptRefuseColor = new Color32(0xA3, 0x12, 0x1F, 0xE6);
+        private static readonly Color PromptWordsColor = new Color32(0xFF, 0xFC, 0xF7, 0xFF);
         private static readonly Vector2 TrickLabelCentre = new Vector2(836f, 104f);
-        // Six phrases, each an 88 px touch target with 16 px between them (GDD §16): 76.8 and 14 mockup px.
         // The panel opens to the left of the emote button, 112 px in from the right edge (ADR 021),
-        // and since the side seats came down (ADR 027) it starts below the right seat's status pill.
-        private static readonly Rect EmotePanel = new Rect(1112f, 545.6f, 448f, 294.4f);
-        private const float BubbleHeight = 33f;
+        // and since the side seats came down (ADR 027) it starts below the right seat's status pill:
+        // its bottom-right corner stays here (mockup px). It is V2's "Emote Picker" (08 · Emotes), in
+        // canvas units: 556 x 296, its six phrases V2's pill buttons, 250 x 76 (each an 88 px touch
+        // target, GDD §16), two columns of three, 22 in from its edges and 12 apart, in Inter Bold 28.
+        private static readonly Vector2 EmoteCorner = new Vector2(1560f, 840f);
+        private static readonly Vector2 EmotePickerSize = new Vector2(556f, 296f);
+        private const float EmotePad = 22f;
+        private const float EmoteGap = 12f;
+        private const float EmoteFontSize = 28f;
+        private static readonly Color EmoteWordsColor = new Color32(0x17, 0x14, 0x0F, 0xFF);
+
+        // The call bubble is V2's tag pill (canvas units): 42 high, its words Inter SemiBold 20 in
+        // gold, letter-spaced 22%, 24 in from each end.
+        private const float BubbleHeight = 42f;
+        private const float TagFontSize = 20f;
+        private const float TagSpacing = 22f;
+        private const float TagPadding = 48f;
 
         // While the next quick phrase has to wait, the emote button is covered in this colour, which
         // sweeps away as the wait runs out (ADR 024).
         private static readonly Color EmoteCooldownColor = new Color(0f, 0f, 0f, 0.5f);
 
-        // The "Reconnecting…" cover: the dim over the table, and its words, the speech box's ivory
-        // (the loading screen's dark brown would not read on the dim).
-        private const float ReconnectingDim = 0.45f;
-        private static readonly Color ReconnectingWordsColor = new Color32(0xFD, 0xF5, 0xED, 0xFF);
+        /// <summary>
+        /// V2 dims the table with black at 60% under its overlays (the call panel, the match menu,
+        /// Reconnecting). The UI is blended in linear light, so that is black at 85.5% here
+        /// (Tools/ArtPipeline/V2/pieces.py, linear_alpha).
+        /// </summary>
+        public const float V2DimOpacity = 0.855f;
+
+        // The "Reconnecting…" cover, as V2 draws it (Overlay · Reconnecting), in canvas units from
+        // the middle of the screen: the table dimmed, a 520 x 280 plain panel (the match menu's,
+        // with its shadow), V2's 64-unit spinner above the words, and the words in Source Serif 4
+        // Bold 44, crimson.
+        private const float ReconnectingDim = V2DimOpacity;
+        private static readonly Vector2 ReconnectingPanelSize = new Vector2(520f, 280f);
+        private const float ReconnectingShadowSpread = 62f;
+        private const float ReconnectingShadowDrop = 12f;
+        private const float ReconnectingSpinnerSize = 64f;
+        private const float ReconnectingSpinnerRise = 58f;
+        private static readonly float[] ReconnectingInk = { 811.7f, 575.1f, 1107f, 616.5f };
+        private const float ReconnectingFontSize = 44f;
+        private static readonly Color ReconnectingWordsColor = new Color32(0x8E, 0x0E, 0x19, 0xFF);
 
         /// <summary>GDD §16 "Touch targets are ≥ 88 px", in canvas units.</summary>
         public const float MinTouch = 88f;
@@ -197,9 +236,9 @@ namespace Callbreak.Editor.Screens
         // was too big for "3-7"). It keeps its centre under the name plate and its height. The words
         // keep about the margins mockup 08 draws round "Bid 3 • Won 1" (22 canvas units a side there,
         // 23 here, which keeps them clear of the round ends). The narrowest pill holds the widest
-        // one-digit line, "4-4", so "0-3" and "3-7" are as wide; "Choosing bid" or "10-8" widen it.
+        // one-digit line in the status type (StatusMinWidth), so "0-3" and "3-7" are as wide;
+        // "Choosing bid" or "10-8" widen it.
         private const float StatusPadding = 46f;                // canvas units, both sides together
-        private const float StatusMinWidth = 84f;               // canvas units
 
         // ---- Names: up to 16 characters (GDD §11 screen 14) on a plate that holds about ten. A longer
         // name shrinks to 60% and then ends in an ellipsis; the width is the plate without its caps.
@@ -476,11 +515,12 @@ namespace Callbreak.Editor.Screens
 
             TMP_Text timerText = disc.GetComponentInChildren<TMP_Text>(true);
 
-            // Bubble for a call as it is placed: the name plate's white pill.
+            // Bubble for a call as it is placed: V2's tag pill ("auto" in 08 · Seat States).
             Vector2 bubbleCentre = avatarCentre + BubbleOffsets[seat];
-            RectTransform bubble = UiBuildKit.CreateAt("Bubble", root, bubbleCentre, seatCentre, UiBuildKit.FromMock(90f, BubbleHeight));
-            Sliced(bubble, LoadTableSprite("UI_NamePlate"));
+            RectTransform bubble = UiBuildKit.CreateAt("Bubble", root, bubbleCentre, seatCentre, new Vector2(90f * UiBuildKit.ScaleX, BubbleHeight));
+            Sliced(bubble, LoadTableSprite("UI_Pill_Tag"));
             TextMeshProUGUI bubbleText = Label("Text", bubble, nameStyle, "4");
+            SetType(bubbleText, "SansSemiBold", TagFontSize, ChipTextColor, TagSpacing);
             bubble.gameObject.SetActive(false);
 
             // The chip: how the seat's player is connected (GDD §8; a fill-in bot has none, ADR 025).
@@ -511,13 +551,13 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_statusPill").objectReferenceValue = statusPill.Find("Face").GetComponent<Image>();
             so.FindProperty("_statusPillRoot").objectReferenceValue = statusPill;
             so.FindProperty("_statusPadding").floatValue = StatusPadding;
-            so.FindProperty("_statusMinWidth").floatValue = StatusMinWidth;
+            so.FindProperty("_statusMinWidth").floatValue = StatusMinWidth(ctx.Nodes[$"SeatStatus{seat}"].GetComponent<TMP_Text>());
             so.FindProperty("_timerRing").objectReferenceValue = ringImage;
             so.FindProperty("_timerDisc").objectReferenceValue = disc.gameObject;
             so.FindProperty("_timerText").objectReferenceValue = timerText;
             so.FindProperty("_bubble").objectReferenceValue = bubble;
             so.FindProperty("_bubbleText").objectReferenceValue = bubbleText;
-            so.FindProperty("_bubblePadding").floatValue = 40f;
+            so.FindProperty("_bubblePadding").floatValue = TagPadding;
             so.FindProperty("_bubbleMinWidth").floatValue = 64f * UiBuildKit.ScaleX;
             so.FindProperty("_chip").objectReferenceValue = chip;
             so.FindProperty("_chipText").objectReferenceValue = chipText;
@@ -529,10 +569,11 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_chatPadding").floatValue = ChatTextPadding + 2f * ChatRimSide;
             so.FindProperty("_chatMinWidth").floatValue = ChatMinWidth;
 
-            // The kit's ring sprite is orange (#F6960B); the last five seconds multiply it towards
-            // crimson (#861018, GDD §12); a met call tints the sand pill gold.
+            // The kit's ring sprite is V2's turn ring, gold at the top to crimson at the foot; the
+            // last five seconds multiply it towards red, GDD §12's warning (its gold #F3DFA8 becomes
+            // #F34332, its crimson foot #C2080C); a met call tints the sand pill gold.
             so.FindProperty("_ringColor").colorValue = Color.white;
-            so.FindProperty("_ringWarningColor").colorValue = new Color(0x86 / 246f, 0x10 / 150f, 1f, 1f);
+            so.FindProperty("_ringWarningColor").colorValue = new Color(1f, 0.3f, 0.3f, 1f);
             so.FindProperty("_pillColor").colorValue = Color.white;
             so.FindProperty("_pillMetColor").colorValue = new Color(1f, 0.96f, 0.62f, 1f);
 
@@ -655,9 +696,27 @@ namespace Callbreak.Editor.Screens
             }
 
             HugWords(pill, words);
-            float width = Mathf.Max(StatusMinWidth, Mathf.Ceil(words.GetPreferredValues(words.text).x) + StatusPadding);
+            float width = Mathf.Max(StatusMinWidth(words), Mathf.Ceil(words.GetPreferredValues(words.text).x) + StatusPadding);
             pill.sizeDelta = new Vector2(width, pill.sizeDelta.y);
             return pill;
+        }
+
+        /// <summary>
+        /// The narrowest status pill (canvas units): the widest one-digit "won-bid" line in these
+        /// words' type (ui.seat.won_bid, "{0}-{1}": "4-4" and the like) and its margins.
+        /// </summary>
+        private static float StatusMinWidth(TMP_Text words)
+        {
+            float widest = 0f;
+            for (int won = 0; won <= 9; won++)
+            {
+                for (int call = 0; call <= 9; call++)
+                {
+                    widest = Mathf.Max(widest, words.GetPreferredValues($"{won}-{call}").x);
+                }
+            }
+
+            return Mathf.Ceil(widest) + StatusPadding;
         }
 
         /// <summary>
@@ -857,14 +916,20 @@ namespace Callbreak.Editor.Screens
             var pill = (RectTransform)pillObject.transform;
             pill.SetParent(holderRect, false);
             pill.anchorMin = pill.anchorMax = pill.pivot = new Vector2(0.5f, 0.5f);
-            pill.sizeDelta = UiBuildKit.FromMock(280f, PromptHeight);
-            Image pillImage = Sliced(pill, LoadTableSprite("UI_StatusPill"));
+            pill.sizeDelta = new Vector2(280f * UiBuildKit.ScaleX, PromptHeight);
+
+            // The pill is white and takes the prompt's colour, so it can flash; its rim lies over it.
+            Image pillImage = Sliced(pill, LoadTableSprite("UI_PromptStrip"));
+            pillImage.color = PromptColor;
+            Sliced(Stretched("Rim", pill), LoadTableSprite("UI_PromptStrip_Rim"));
             TextMeshProUGUI label = Label("Text", pill, style, "Your turn · Lead any card");
+            SetType(label, "SansSemiBold", PromptFontSize, PromptWordsColor);
             label.richText = true;
 
             // The prompt names cards and suits ("Beat Q♥"); the fonts have no suit symbols, so they
-            // are drawn from the suit sprites (each sprite answers to its Unicode character).
-            label.spriteAsset = SuitSpriteBuilder.Ensure();
+            // are drawn from the suit sprites (each sprite answers to its Unicode character), in
+            // ivory on the dark strip.
+            label.spriteAsset = SuitSpriteBuilder.EnsureLight();
             pillObject.SetActive(false);
 
             var prompt = holder.AddComponent<TablePromptView>();
@@ -872,8 +937,10 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_pill").objectReferenceValue = pill;
             so.FindProperty("_pillImage").objectReferenceValue = pillImage;
             so.FindProperty("_label").objectReferenceValue = label;
-            so.FindProperty("_padding").floatValue = 56f;
+            so.FindProperty("_padding").floatValue = PromptPadding;
             so.FindProperty("_minWidth").floatValue = 180f;
+            so.FindProperty("_pillColor").colorValue = PromptColor;
+            so.FindProperty("_refuseColor").colorValue = PromptRefuseColor;
             so.ApplyModifiedPropertiesWithoutUndo();
             ctx.Bound["_prompt"] = prompt;
         }
@@ -958,9 +1025,9 @@ namespace Callbreak.Editor.Screens
             cardRect.SetParent(panelRoot, false);
             cardRect.anchorMin = cardRect.anchorMax = cardRect.pivot = new Vector2(1f, 0f);
             cardRect.anchoredPosition = new Vector2(
-                -(UiBuildKit.MockWidth - EmotePanel.xMax) * UiBuildKit.ScaleX,
-                (UiBuildKit.MockHeight - EmotePanel.yMax) * UiBuildKit.ScaleY);
-            cardRect.sizeDelta = UiBuildKit.FromMock(EmotePanel.width, EmotePanel.height);
+                -(UiBuildKit.MockWidth - EmoteCorner.x) * UiBuildKit.ScaleX,
+                (UiBuildKit.MockHeight - EmoteCorner.y) * UiBuildKit.ScaleY);
+            cardRect.sizeDelta = EmotePickerSize;
 
             Sprite panelShadow = UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Common/UI_Panel_Card_Shadow.png", 0f);
             RectTransform shadowRect = Stretched("Shadow", cardRect);
@@ -973,8 +1040,8 @@ namespace Callbreak.Editor.Screens
 
             Sprite buttonSprite = UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Buttons/UI_ButtonSecondary_Normal.png", 0f);
             const int columns = 2, rows = 3;
-            const float pad = 18f, gap = 14f;
-            float width = (EmotePanel.width - 2f * pad - gap) / columns, height = (EmotePanel.height - 2f * pad - (rows - 1) * gap) / rows;
+            float width = (EmotePickerSize.x - 2f * EmotePad - EmoteGap) / columns;
+            float height = (EmotePickerSize.y - 2f * EmotePad - (rows - 1) * EmoteGap) / rows;
             string[] samples = { "Namaste!", "Well played!", "Nice call!", "Oops!", "Thinking…", "Good game!" };
             var buttons = new Button[columns * rows];
             var labels = new TMP_Text[columns * rows];
@@ -986,10 +1053,10 @@ namespace Callbreak.Editor.Screens
                 rect.SetParent(cardRect, false);
                 rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
                 rect.pivot = new Vector2(0.5f, 0.5f);
-                rect.sizeDelta = UiBuildKit.FromMock(width, height);
+                rect.sizeDelta = new Vector2(width, height);
                 rect.anchoredPosition = new Vector2(
-                    (pad + column * (width + gap) + width / 2f) * UiBuildKit.ScaleX,
-                    -(pad + row * (height + gap) + height / 2f) * UiBuildKit.ScaleY);
+                    EmotePad + column * (width + EmoteGap) + width / 2f,
+                    -(EmotePad + row * (height + EmoteGap) + height / 2f));
                 RectTransform buttonFace = Stretched("Face", rect);
                 Image image = Sliced(buttonFace, buttonSprite);
                 image.raycastTarget = true;
@@ -1009,6 +1076,7 @@ namespace Callbreak.Editor.Screens
                 feedbackSo.ApplyModifiedPropertiesWithoutUndo();
                 buttons[i] = button;
                 labels[i] = Label("Text", rect, style, samples[i]);
+                SetType((TextMeshProUGUI)labels[i], "SansBold", EmoteFontSize, EmoteWordsColor);
             }
 
             panelRoot.gameObject.SetActive(false);
@@ -1080,11 +1148,10 @@ namespace Callbreak.Editor.Screens
         }
 
         /// <summary>
-        /// "Reconnecting…" while the session re-joins (GDD §8): a light dim over the whole table, which
-        /// stays visible but takes no input, and the loading screen's emblem (mockup 17, laid out as
-        /// ArtSource/Screens/SceneLoading has it) in the middle of the screen: its ring turning round
-        /// the still spade, on unscaled time (standing still with Reduce motion), and the words below
-        /// in its serif, light on the dim.
+        /// "Reconnecting…" while the session re-joins (GDD §8), as V2 draws it: the whole table
+        /// dimmed, which stays visible but takes no input, and in the middle of the screen a plain
+        /// panel with V2's spinner turning above the words, on unscaled time (standing still with
+        /// Reduce motion).
         /// </summary>
         private static void BuildReconnecting(ScreenBuildContext ctx)
         {
@@ -1093,29 +1160,26 @@ namespace Callbreak.Editor.Screens
             dim.color = new Color(0f, 0f, 0f, ReconnectingDim);
             dim.raycastTarget = true;
 
-            // The loading screen's ring, spade and words, moved together to the middle of the screen.
-            ScreenLayout loading = ScreenLayout.Load("SceneLoading");
-            LayoutNode ringNode = NodeOf(loading, "Ring"), spadeNode = NodeOf(loading, "Spade"), wordsNode = NodeOf(loading, "Loading");
-            float top = ringNode.rect[1], bottom = wordsNode.inkBox[3];
-            Vector2 shift = UiBuildKit.ScreenCentre - new Vector2(ringNode.Centre.x, (top + bottom) / 2f);
+            RectTransform shadow = Centred("Shadow", cover, ReconnectingPanelSize + 2f * ReconnectingShadowSpread * Vector2.one, new Vector2(0f, -ReconnectingShadowDrop));
+            UiBuildKit.AddImage(shadow, UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Common/UI_Panel_Large_Shadow.png", 0f), false).type = Image.Type.Sliced;
+            RectTransform panel = Centred("Panel", cover, ReconnectingPanelSize, Vector2.zero);
+            UiBuildKit.AddImage(panel, UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Panels/UI_Panel_Modal_Menu.png", 0f), false).type = Image.Type.Sliced;
 
-            RectTransform ring = UiBuildKit.CreateAt("Ring", cover, ringNode.Centre + shift, UiBuildKit.ScreenCentre, UiBuildKit.FromMock(ringNode.rect[2], ringNode.rect[3]));
-            UiBuildKit.AddImage(ring, UiBuildKit.LoadSpriteAt(ringNode.sprite, 0f), false);
+            RectTransform ring = Centred("Ring", cover, ReconnectingSpinnerSize * Vector2.one, new Vector2(0f, ReconnectingSpinnerRise));
+            UiBuildKit.AddImage(ring, UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Controls/UI_Spinner.png", 0f), false);
             var spinner = ring.gameObject.AddComponent<Spinner>();
             var spinnerSo = new SerializedObject(spinner);
             spinnerSo.FindProperty("_unscaledTime").boolValue = true;
             spinnerSo.ApplyModifiedPropertiesWithoutUndo();
 
-            RectTransform spade = UiBuildKit.CreateAt("Spade", cover, spadeNode.Centre + shift, UiBuildKit.ScreenCentre, UiBuildKit.FromMock(spadeNode.rect[2], spadeNode.rect[3]));
-            UiBuildKit.AddImage(spade, UiBuildKit.LoadSpriteAt(spadeNode.sprite, 0f), false);
-
-            // Fitted to the loading line, so the words come out at its size, then given their own.
-            float[] ink = wordsNode.inkBox;
-            float[] inkHere = { ink[0] + shift.x, ink[1] + shift.y, ink[2] + shift.x, ink[3] + shift.y };
-            TMP_FontAsset serif = UiBuildKit.LoadFontRole(wordsNode.font);
-            TextMeshProUGUI label = UiBuildKit.FitLabel(
-                "Text", cover, UiBuildKit.ScreenCentre, wordsNode.text, serif, inkHere, "centre", false, ReconnectingWordsColor, ReconnectingWordsColor);
-            label.text = "Reconnecting…";
+            float[] ink =
+            {
+                ReconnectingInk[0] / UiBuildKit.ScaleX, ReconnectingInk[1] / UiBuildKit.ScaleY,
+                ReconnectingInk[2] / UiBuildKit.ScaleX, ReconnectingInk[3] / UiBuildKit.ScaleY,
+            };
+            TextMeshProUGUI label = UiBuildKit.PlaceLabel(
+                "Text", cover, UiBuildKit.ScreenCentre, "Reconnecting…", null, UiBuildKit.LoadFontRole("SerifBold"),
+                ReconnectingFontSize, 0f, ink, "centre", ReconnectingWordsColor);
             var localized = label.gameObject.AddComponent<LocalizedText>();
             var so = new SerializedObject(localized);
             so.FindProperty("_key").stringValue = "ui.seat.reconnecting";
@@ -1124,19 +1188,6 @@ namespace Callbreak.Editor.Screens
             cover.gameObject.SetActive(false);
             ctx.Bound["_reconnecting"] = cover.gameObject;
             ctx.Bound["_reconnectingRing"] = spinner;
-        }
-
-        private static LayoutNode NodeOf(ScreenLayout layout, string id)
-        {
-            foreach (LayoutNode node in layout.nodes)
-            {
-                if (node.id == id)
-                {
-                    return node;
-                }
-            }
-
-            throw new System.InvalidOperationException($"{layout.name} has no node {id}");
         }
 
         // ------------------------------------------------------------------ helpers
@@ -1192,6 +1243,17 @@ namespace Callbreak.Editor.Screens
         /// <summary>A mockup-pixel offset (y down) as a canvas offset (y up).</summary>
         private static Vector2 FromMock(Vector2 offset) => new Vector2(offset.x * UiBuildKit.ScaleX, -offset.y * UiBuildKit.ScaleY);
 
+        /// <summary>A rect of this size (canvas units) at this offset from its parent's middle.</summary>
+        private static RectTransform Centred(string name, Transform parent, Vector2 size, Vector2 offset)
+        {
+            var rect = (RectTransform)new GameObject(name, typeof(RectTransform)).transform;
+            rect.SetParent(parent, false);
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = size;
+            rect.anchoredPosition = offset;
+            return rect;
+        }
+
         private static RectTransform Stretched(string name, Transform parent)
         {
             var go = new GameObject(name, typeof(RectTransform));
@@ -1234,6 +1296,17 @@ namespace Callbreak.Editor.Screens
             label.alignment = TextAlignmentOptions.Center;
             label.text = text;
             return label;
+        }
+
+        /// <summary>A label in V2's type: a font role, a size in canvas units, a colour and a letter spacing (1/100 em).</summary>
+        private static void SetType(TextMeshProUGUI label, string role, float size, Color color, float spacing = 0f)
+        {
+            label.font = UiBuildKit.LoadFontRole(role);
+            label.fontSharedMaterial = label.font.material;
+            label.fontSize = size;
+            label.characterHorizontalScale = 1f;
+            label.characterSpacing = spacing;
+            label.color = color;
         }
 
         private static void CopyStyle(TMP_Text from, TextMeshProUGUI to)

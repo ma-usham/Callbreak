@@ -8,8 +8,8 @@ namespace Callbreak.Presentation.Table
 {
     /// <summary>
     /// The turn prompt above the local hand (GDD §11 T rules "the prompt pill above your hand on
-    /// your turn"; screen 08 callout 6): "Your turn · Beat Q♥", "Waiting for Asha…". The mockups do
-    /// not draw it, so it borrows the status pill's look. An illegal tap makes it flash: the prompt
+    /// your turn"; screen 08 callout 6): "Your turn · Beat Q♥", "Waiting for Asha…". It is V2's
+    /// prompt strip, a dark pill with a gold rim. An illegal tap makes it flash: the prompt
     /// is the reason the card cannot be played. It pops in when it appears, swells a little when
     /// its words change, and shrinks a touch as it fades out (ADR 023); with Reduce motion it only
     /// fades.

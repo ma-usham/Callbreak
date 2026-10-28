@@ -8,7 +8,8 @@
 // size (s), colour (c, "#RRGGBB" or "#RRGGBB@opacity"), alignment (a: L, C, R), letter spacing (ls)
 // and the box round their rendered glyphs (ink). Instances carry their component and properties;
 // shapes their fill. The insides of instances are read for their text and nested instances only;
-// lattice ornaments, card faces and scene backgrounds are skipped.
+// lattice ornaments, card faces, scene backgrounds and the table states' copy of 08 Gameplay are
+// skipped.
 const ids = ['63:9273'];
 const hex = c => '#' + [c.r, c.g, c.b].map(v => Math.round(v * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
 const r = v => Math.round(v * 10) / 10;
@@ -21,7 +22,7 @@ for (const id of ids) {
   const walk = (n, path, depth, inInst) => {
     const p = path ? path + '/' + n.name : n.name;
     const comp = n.type === 'INSTANCE' && n.mainComponent ? (n.mainComponent.parent && n.mainComponent.parent.type === 'COMPONENT_SET' ? n.mainComponent.parent.name + ' / ' + n.mainComponent.name : n.mainComponent.name) : null;
-    if (comp && /^(Motif\/|Card\/Face|Card\/Pip|Background|Card\/Court)/.test(comp)) return;
+    if (comp && (/^(Motif\/|Card\/Face|Card\/Pip|Background|Card\/Court)/.test(comp) || /08 Gameplay$/.test(comp))) return;
     if (n.name === 'Ornament' || n.name === 'Index') return;
     const row = [p, n.type[0], ...box(n.absoluteBoundingBox)];
     const x = {};

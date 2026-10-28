@@ -15,8 +15,22 @@
   Name Entry paint theirs black at 80%, the lost colour variable again.)
 - UI/Panels/UI_DayTile_Bonus.png: Day 7's tile (26 Daily Rewards "Tile6"), the light card with
   V2's gold frame ("Tile6Gold", 4 px of #DDB565 inside the edge) drawn into it.
+- UI/Table/UI_PromptStrip.png and UI_PromptStrip_Rim.png: the table's prompt (V2 "Prompt Strip",
+  62 units high without its tip: a pill of #17140F at 80% with a 1-unit #DDB565 rim at 50%). The
+  pill is white, as the prompt tints it (#17140F, crimson as it flashes for a card that cannot be
+  played); the rim is its own picture over it, so it stays gold.
+- UI/Table/UI_NamePlate.png: the seats' name plate (V2 "Name Plate": a 40-unit pill of #17140F at
+  80% with a 1-unit #DDB565 rim at 60%), redrawn over kit.py's cut (run this after it).
+- UI/Controls/UI_Spinner.png: V2's "Spinner" (the table's Reconnecting overlay): a #E6D4BD ring
+  (inner radius 0.78 of the outer) with a #A3121F arc from twelve o'clock round 225°, here 64
+  units across.
 
-Each file keeps its size, so its import settings (ArtSource/Kit/V2.json) stand.
+The game draws its UI in linear light (Player settings: Linear colour space), so a translucent
+colour over the table looks different from Figma's blend, which is in sRGB: V2's dark plates at 80%
+come out grey. Their opacities are raised (linear_alpha) so that, over the table's felt, they look
+as V2 draws them; the table's dims (black at 60% in V2) are set the same way in code.
+
+Each existing file keeps its size, so its import settings (ArtSource/Kit/V2.json) stand.
 
     python Tools/ArtPipeline/V2/pieces.py
 """
@@ -30,6 +44,27 @@ from scipy.ndimage import distance_transform_edt
 from kit import ART, REPO, hex_rgb, merge_manifest
 
 SUPER = 4      # supersampling for the ring's edges
+TABLE_FELT = '#C0AC8E'      # the Himalayan Ivory felt round the seats, as the game draws it
+
+
+def to_linear(v):
+    return np.where(v <= 0.04045, v / 12.92, ((v + 0.055) / 1.055) ** 2.4)
+
+
+def linear_alpha(alpha, colour, ground=TABLE_FELT):
+    """The opacity at which `colour`, blended in linear light over `ground`, looks as Figma's sRGB
+    blend at `alpha` does."""
+    c, g = np.array(hex_rgb(colour)), np.array(hex_rgb(ground))
+    seen = (1.0 - alpha) * g + alpha * c
+    return float(np.mean((to_linear(g) - to_linear(seen)) / (to_linear(g) - to_linear(c))))
+
+
+def over(top, bottom):
+    """`top` over `bottom` (straight RGBA, 0-1), in sRGB as Figma composites a layer's parts."""
+    ta, ba = top[..., 3:4], bottom[..., 3:4]
+    a = ta + ba * (1.0 - ta)
+    rgb = np.where(a > 1e-6, (top[..., :3] * ta + bottom[..., :3] * ba * (1.0 - ta)) / np.maximum(a, 1e-6), 0.0)
+    return np.dstack([rgb, a])
 
 
 def save(rgba, path):
@@ -109,6 +144,22 @@ def vertical_line(path, width_px, colour='#C9AE8C', alpha=0.8):
     return rgba
 
 
+def pill(width_px, height_px, rim_px=0.0, colour='#FFFFFF', alpha=1.0):
+    """A pill (ends as round as it is high), anti-aliased; with rim_px, only a band that wide inside its edge."""
+    ys, xs = np.mgrid[0:height_px, 0:width_px].astype(np.float64) + 0.5
+    r = height_px / 2.0
+    # Distance from the pill's spine (a horizontal segment between the ends' centres), less the radius.
+    dx = np.maximum(np.abs(xs - width_px / 2.0) - (width_px / 2.0 - r), 0.0)
+    d = np.hypot(dx, ys - r) - r
+    cover = np.clip(0.5 - d, 0.0, 1.0)
+    if rim_px:
+        cover -= np.clip(0.5 - (d + rim_px), 0.0, 1.0)
+    rgba = np.zeros((height_px, width_px, 4))
+    rgba[..., :3] = hex_rgb(colour)
+    rgba[..., 3] = cover * alpha
+    return rgba
+
+
 def gold_frame(path, width_px, colour='#DDB565'):
     """The card with a frame of this colour drawn inside its edge, width_px wide (anti-aliased)."""
     rgba = np.asarray(Image.open(path).convert('RGBA')).astype(np.float64) / 255.0
@@ -124,7 +175,9 @@ def main():
     glow_path = os.path.join(ART, 'UI', 'Decor', 'Deco_CoinGlow.png')
     save(glow(Image.open(glow_path).size[0]), glow_path)
     tile_path = os.path.join(ART, 'UI', 'Panels', 'UI_DayTile_Bonus.png')
-    save(gold_frame(tile_path, 8), tile_path)     # 4 canvas units at 200 pixels per unit
+    tile = np.asarray(Image.open(tile_path).convert('RGB')).astype(int)
+    if np.abs(tile[tile.shape[0] // 2, 4] - np.round(np.array(hex_rgb('#DDB565')) * 255)).max() > 3:   # not framed yet
+        save(gold_frame(tile_path, 8), tile_path)     # 4 canvas units at 200 pixels per unit
     disc_path = os.path.join(ART, 'UI', 'Buttons', 'UI_ButtonIcon_Crimson.png')
     save(crimson_disc(128), disc_path)            # 64 canvas units at 200 pixels per unit
     # The copy icon on that disc, in ivory: V2's dark glyph does not read on crimson (as with Icon_Play).
@@ -132,14 +185,31 @@ def main():
     copy[..., :3] = hex_rgb('#FFFCF7')
     copy_path = os.path.join(ART, 'UI', 'Icons', 'Icon_Copy_Ivory.png')
     save(copy, copy_path)
+    # The prompt strip: 62 units high and 124 wide at 200 pixels per unit, its round ends sliced.
+    strip_path = os.path.join(ART, 'UI', 'Table', 'UI_PromptStrip.png')
+    save(pill(248, 124), strip_path)
+    rim_path = os.path.join(ART, 'UI', 'Table', 'UI_PromptStrip_Rim.png')
+    save(pill(248, 124, rim_px=2, colour='#DDB565', alpha=linear_alpha(0.5, '#DDB565', '#17140F')), rim_path)
+    # The name plate: 140 x 40 units, its rim on its fill.
+    plate_path = os.path.join(ART, 'UI', 'Table', 'UI_NamePlate.png')
+    fill = pill(280, 80, colour='#17140F', alpha=linear_alpha(0.8, '#17140F'))
+    rim = pill(280, 80, rim_px=2, colour='#DDB565', alpha=0.6)
+    save(over(rim, fill), plate_path)
+    spinner_path = os.path.join(ART, 'UI', 'Controls', 'UI_Spinner.png')
+    save(spinner(128, inner=0.78, end=math.radians(135), ring='#E6D4BD', ring_alpha=1.0), spinner_path)
     merge_manifest(os.path.join(REPO, 'ArtSource', 'Kit', 'V2.json'), [
         {'path': 'UI/Buttons/UI_ButtonIcon_Crimson.png', 'ppu': 200},
+        {'path': 'UI/Controls/UI_Spinner.png', 'ppu': 200},
         {'path': 'UI/Icons/Icon_Copy_Ivory.png', 'ppu': 200},
+        {'path': 'UI/Table/UI_PromptStrip.png', 'ppu': 200, 'nine': [62, 0, 62, 0]},
+        {'path': 'UI/Table/UI_PromptStrip_Rim.png', 'ppu': 200, 'nine': [62, 0, 62, 0]},
     ])
     lines = [os.path.join(ART, 'UI', 'Decor', f) for f in ('Deco_ModeDivider_Vertical.png', 'Deco_ProfileDividerVertical.png')]
     for p in lines:
         save(vertical_line(p, 4), p)              # 2 canvas units at 200 pixels per unit
-    for p in (arc_path, glow_path, tile_path, disc_path, copy_path, *lines):
+    print('prompt and plate opacity over the felt: %.3f; the table dims (black at 60%%): %.3f'
+          % (linear_alpha(0.8, '#17140F'), linear_alpha(0.6, '#000000')))
+    for p in (arc_path, glow_path, tile_path, disc_path, copy_path, *lines, strip_path, rim_path, plate_path, spinner_path):
         print(os.path.relpath(p, os.path.join(ART, '..', '..', '..')).replace('\\', '/'))
 
 

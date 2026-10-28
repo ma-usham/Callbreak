@@ -11,9 +11,10 @@ using Object = UnityEngine.Object;
 namespace Callbreak.Tests.EditMode.Unity
 {
     /// <summary>
-    /// The menu screens in V2's type (Figma "V2 · Screens", Tools/ArtPipeline/V2/screens.py): every
-    /// layout label that has V2's size is built at that size, in its font and colour, and its words
-    /// stand where V2 draws them; the main menu (built in code) too, against V2's own measures
+    /// The menu screens, the table, the call panel and the match menu in V2's type (Figma "V2 ·
+    /// Screens", Tools/ArtPipeline/V2/screens.py): every layout label that has V2's size is built at
+    /// that size, in its font and colour, and its words stand where V2 draws them; the main menu
+    /// (built in code) too, against V2's own measures
     /// (screens-v2.json). How to Play shows the deck's ace over its king, and the name screen rings
     /// the chosen portrait in crimson with the check at its top right. The prefabs are the built
     /// ones, so these live outside the folders the dotnet harness compiles. This assembly has no
@@ -25,12 +26,13 @@ namespace Callbreak.Tests.EditMode.Unity
         private const float ScaleX = 1920f / 1672f;
         private const float ScaleY = 1080f / 941f;
 
-        // The phase 3a screens whose prefab is built from the layout of the same name. The shop is
-        // three layouts in one prefab, its tiles placed by ShopCustomizer, so it is checked by size only.
+        // The phase 3a and 3b screens whose prefab is built from the layout of the same name. The shop
+        // is three layouts in one prefab, its tiles placed by ShopCustomizer, so it is checked by size only.
         private static readonly string[] Screens =
         {
             "PlayWithFriends", "CreateRoom", "JoinRoom", "PrivateLobby", "Matchmaking", "OfflineSetup", "Settings",
             "HowToPlay", "Profile", "SceneLoading", "NamePrompt", "EarnCoins", "PlayOnline", "DailyRewards",
+            "Table", "BiddingPanel", "MatchMenu",
         };
 
         // Labels a customizer sets in a common style after the build (ScreenExtras.UnifyStyle: V2's
@@ -42,12 +44,15 @@ namespace Callbreak.Tests.EditMode.Unity
         };
 
         // Labels a customizer moves after the build, as their views do at runtime: the lobby's seat
-        // lines share one baseline (PrivateLobbyCustomizer), and the reset line is centred with its
-        // clock (EarnCoinsView.CentreClockLine).
+        // lines share one baseline (PrivateLobbyCustomizer), the reset line is centred with its
+        // clock (EarnCoinsView.CentreClockLine), and the table's seats stand where the owner put them
+        // (TableCustomizer, ADR 027), their words centred on their plates and pills.
         private static readonly HashSet<string> Moved = new HashSet<string>
         {
             "PrivateLobby/SeatStatus0", "PrivateLobby/SeatStatus1", "PrivateLobby/SeatStatus2", "PrivateLobby/SeatStatus3",
             "EarnCoins/ResetLabel",
+            "Table/SeatName0", "Table/SeatName1", "Table/SeatName2", "Table/SeatName3",
+            "Table/SeatStatus0", "Table/SeatStatus1", "Table/SeatStatus2", "Table/SeatStatus3", "Table/SeatTimerText0",
         };
 
         // Labels whose words show in another object: the name field is empty until typed, and its

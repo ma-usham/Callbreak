@@ -20,6 +20,8 @@ namespace Callbreak.Editor
     /// on) once they are published; until then from placeholders of the same names that this
     /// builder draws into <see cref="PlaceholderFolder"/>. Only an icon's outline (its alpha) is
     /// used. Rebuild after the icons change: Callbreak/Build/Suit Sprites.
+    /// A second asset (<see cref="LightAssetPath"/>) draws all four suits in ivory, for words on a
+    /// dark ground: V2's prompt strip writes its suits in its words' ivory.
     /// </summary>
     public static class SuitSpriteBuilder
     {
@@ -27,12 +29,17 @@ namespace Callbreak.Editor
         public const string SheetPath = "Assets/_Project/Art/UI/Table/UI_SuitSprites.png";
         public const string KitFolder = "Assets/_Project/Art/UI/Icons";
         public const string PlaceholderFolder = "Assets/_Project/Art/UI/Table";
+        public const string LightAssetPath = "Assets/_Project/Config/UI/SuitSprites_Light.asset";
+        public const string LightSheetPath = "Assets/_Project/Art/UI/Table/UI_SuitSprites_Light.png";
 
         /// <summary>♥ ♦ (GDD §13 FIG 13.1, Classic Crimson).</summary>
         public const string RedSuitColour = "#B7191D";
 
         /// <summary>♠ ♣: the colour of the text on the table's pills (the status label of layout 08).</summary>
         public const string BlackSuitColour = "#272019";
+
+        /// <summary>Every suit on a dark ground: V2's ivory (#FFFCF7), as the prompt strip's words.</summary>
+        public const string LightSuitColour = "#FFFCF7";
 
         private const int GlyphHeight = 96;
         private const int Padding = 4;
@@ -50,31 +57,44 @@ namespace Callbreak.Editor
             ("club", "Icon_Suit_Club", 0x2663, false),
         };
 
+        // The two assets: the suits in their own colours, and all four in ivory for a dark ground.
+        private static readonly Variant Coloured = new Variant(AssetPath, SheetPath, RedSuitColour, BlackSuitColour);
+        private static readonly Variant Light = new Variant(LightAssetPath, LightSheetPath, LightSuitColour, LightSuitColour);
+
         [MenuItem("Callbreak/Build/Suit Sprites")]
-        private static void BuildFromMenu() => Debug.Log(Build(out _));
+        private static void BuildFromMenu()
+        {
+            Debug.Log(Build(out _));
+            Debug.Log(Build(Light, out _));
+        }
 
         /// <summary>The sprite asset, built on first use.</summary>
-        public static TMP_SpriteAsset Ensure()
+        public static TMP_SpriteAsset Ensure() => Ensure(Coloured);
+
+        /// <summary>The ivory sprite asset (every suit in <see cref="LightSuitColour"/>), built on first use.</summary>
+        public static TMP_SpriteAsset EnsureLight() => Ensure(Light);
+
+        private static TMP_SpriteAsset Ensure(Variant variant)
         {
-            var asset = AssetDatabase.LoadAssetAtPath<TMP_SpriteAsset>(AssetPath);
-            if (asset != null && asset.spriteSheet != null && asset.spriteCharacterTable.Count == Suits.Length && !IconsChanged())
+            var asset = AssetDatabase.LoadAssetAtPath<TMP_SpriteAsset>(variant.AssetPath);
+            if (asset != null && asset.spriteSheet != null && asset.spriteCharacterTable.Count == Suits.Length && !IconsChanged(variant.SheetPath))
             {
                 return asset;
             }
 
-            Build(out asset);
+            Build(variant, out asset);
             return asset;
         }
 
         /// <summary>An icon was published or replaced after the sheet was made (the kit's icons taking over from the placeholders).</summary>
-        private static bool IconsChanged()
+        private static bool IconsChanged(string sheetPath)
         {
-            if (!File.Exists(SheetPath))
+            if (!File.Exists(sheetPath))
             {
                 return true;
             }
 
-            DateTime built = File.GetLastWriteTimeUtc(SheetPath);
+            DateTime built = File.GetLastWriteTimeUtc(sheetPath);
             foreach ((string _, string file, uint _, bool _) in Suits)
             {
                 string source = SourceOf(file);
@@ -95,7 +115,9 @@ namespace Callbreak.Editor
         }
 
         /// <summary>Builds the sheet and the sprite asset from the suit icons; returns a report.</summary>
-        public static string Build(out TMP_SpriteAsset asset)
+        public static string Build(out TMP_SpriteAsset asset) => Build(Coloured, out asset);
+
+        private static string Build(Variant variant, out TMP_SpriteAsset asset)
         {
             // 1. Each icon's outline, scaled to the glyph height.
             var shapes = new float[Suits.Length][];
@@ -121,7 +143,7 @@ namespace Callbreak.Editor
             int x = Padding;
             for (int i = 0; i < Suits.Length; i++)
             {
-                Color32 ink = UiBuildKit.Hex(Suits[i].red ? RedSuitColour : BlackSuitColour);
+                Color32 ink = UiBuildKit.Hex(Suits[i].red ? variant.Red : variant.Black);
 
                 // The colour also fills the transparent pixels around the shape, so filtering never
                 // pulls in a dark fringe.
@@ -154,28 +176,29 @@ namespace Callbreak.Editor
             sheet.Apply();
             byte[] png = sheet.EncodeToPNG();
             UnityEngine.Object.DestroyImmediate(sheet);
-            UiBuildKit.EnsureFolder(Path.GetDirectoryName(SheetPath).Replace('\\', '/'));
-            if (!File.Exists(SheetPath) || !SameBytes(File.ReadAllBytes(SheetPath), png))
+            string sheetPath = variant.SheetPath, assetPath = variant.AssetPath;
+            UiBuildKit.EnsureFolder(Path.GetDirectoryName(sheetPath).Replace('\\', '/'));
+            if (!File.Exists(sheetPath) || !SameBytes(File.ReadAllBytes(sheetPath), png))
             {
-                File.WriteAllBytes(SheetPath, png);
+                File.WriteAllBytes(sheetPath, png);
             }
             else
             {
                 // Same picture: only note that it is up to date with the icons.
-                File.SetLastWriteTimeUtc(SheetPath, DateTime.UtcNow);
+                File.SetLastWriteTimeUtc(sheetPath, DateTime.UtcNow);
             }
 
-            AssetDatabase.ImportAsset(SheetPath, ImportAssetOptions.ForceSynchronousImport);
-            ConfigureSheet();
-            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(SheetPath);
+            AssetDatabase.ImportAsset(sheetPath, ImportAssetOptions.ForceSynchronousImport);
+            ConfigureSheet(sheetPath);
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(sheetPath);
 
             // 3. The sprite asset.
-            UiBuildKit.EnsureFolder(Path.GetDirectoryName(AssetPath).Replace('\\', '/'));
-            asset = AssetDatabase.LoadAssetAtPath<TMP_SpriteAsset>(AssetPath);
+            UiBuildKit.EnsureFolder(Path.GetDirectoryName(assetPath).Replace('\\', '/'));
+            asset = AssetDatabase.LoadAssetAtPath<TMP_SpriteAsset>(assetPath);
             if (asset == null)
             {
                 asset = ScriptableObject.CreateInstance<TMP_SpriteAsset>();
-                AssetDatabase.CreateAsset(asset, AssetPath);
+                AssetDatabase.CreateAsset(asset, assetPath);
             }
 
             // A current version keeps TextMeshPro from "upgrading" (and emptying) the tables.
@@ -223,12 +246,12 @@ namespace Callbreak.Editor
             EditorUtility.SetDirty(material);
             EditorUtility.SetDirty(asset);
             AssetDatabase.SaveAssets();
-            return $"[SuitSpriteBuilder] {AssetPath}: {string.Join(", ", sources)} -> {SheetPath} ({sheetWidth} x {sheetHeight})";
+            return $"[SuitSpriteBuilder] {assetPath}: {string.Join(", ", sources)} -> {sheetPath} ({sheetWidth} x {sheetHeight})";
         }
 
-        private static void ConfigureSheet()
+        private static void ConfigureSheet(string sheetPath)
         {
-            var importer = (TextureImporter)AssetImporter.GetAtPath(SheetPath);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(sheetPath);
             bool changed = importer.textureType != TextureImporterType.Default
                 || importer.mipmapEnabled
                 || !importer.alphaIsTransparency
@@ -423,6 +446,23 @@ namespace Callbreak.Editor
         private static bool Stem(float x, float y, float top)
         {
             return y <= top && y >= -0.96f && Mathf.Abs(x) <= 0.07f + (top - y) * 0.34f;
+        }
+
+        /// <summary>One sprite asset: where it and its sheet go, and the red and the black suits' colours.</summary>
+        private readonly struct Variant
+        {
+            public readonly string AssetPath;
+            public readonly string SheetPath;
+            public readonly string Red;
+            public readonly string Black;
+
+            public Variant(string assetPath, string sheetPath, string red, string black)
+            {
+                AssetPath = assetPath;
+                SheetPath = sheetPath;
+                Red = red;
+                Black = black;
+            }
         }
     }
 }

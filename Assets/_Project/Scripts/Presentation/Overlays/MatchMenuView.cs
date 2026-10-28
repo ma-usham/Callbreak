@@ -26,9 +26,10 @@ namespace Callbreak.Presentation.Overlays
 
         // The mode tag hugs its words (the owner, 3 Oct 2026: "Online game" sat in the pill drawn for
         // "Offline match · Paused"). Its art and its words' area span the tag, so only its width
-        // changes, round its centre. The margins are mockup 13's: the offline tag keeps its width.
+        // changes, round its centre. The margins are V2's tag pill's (24 a side and its rim), with
+        // room for the letter spacing TextMeshPro adds after the last letter.
         [SerializeField] private RectTransform _modePill;
-        [SerializeField] private float _modePadding = 49f;
+        [SerializeField] private float _modePadding = 51f;
         [SerializeField] private GameObject _pausedNote;
 
         private MotionHandle _panelMotion;
