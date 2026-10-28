@@ -78,10 +78,10 @@ namespace Callbreak.Editor.Screens
         private const float DeckShadowOpacity = 0.55f;
 
         // The drawer's round buttons cast the kit's round shadow, grown by this share of their
-        // diameter each side and dropped 2 px, at half strength (ArtSource/Working/ShopUI/notes.md).
-        private const float DiscShadowGrowth = 0.099f;
-        private const float DiscShadowDrop = 2f;
-        private const float DiscShadowOpacity = 0.5f;
+        // diameter each side and dropped as the kit drops it (mockup pixels).
+        private const float DiscShadowGrowth = CommonKit.CircleShadowSpread / CommonKit.CircleShadowDiameter;
+        private const float DiscShadowDrop = CommonKit.CircleShadowDrop / UiBuildKit.ScaleY;
+        private const float DiscShadowOpacity = 1f;
 
         private static readonly string[] CategoryKeys = { "ui.shop.category.cards", "ui.shop.category.backgrounds", "ui.shop.category.tables" };
 

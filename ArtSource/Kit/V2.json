@@ -1,0 +1,656 @@
+{
+  "comment": "V2 UI kit, written by Tools/ArtPipeline/V2/kit.py: pixels per unit 200 (2x exports); nine is left, top, right, bottom in sprite pixels; shadow is how far (spread) beyond the face it was rendered for (face, w x h) a shadow reaches and how far below it lies (drop), in canvas units.",
+  "sprites": [
+    {
+      "path": "UI/Panels/UI_Panel_Large.png",
+      "ppu": 200,
+      "nine": [
+        200,
+        200,
+        200,
+        200
+      ]
+    },
+    {
+      "path": "UI/Panels/UI_Panel_Modal_Bid.png",
+      "ppu": 200,
+      "nine": [
+        80,
+        80,
+        80,
+        80
+      ]
+    },
+    {
+      "path": "UI/Panels/UI_Panel_Modal_Menu.png",
+      "ppu": 200,
+      "nine": [
+        80,
+        80,
+        80,
+        80
+      ]
+    },
+    {
+      "path": "UI/Panels/UI_Panel_Card.png",
+      "ppu": 200,
+      "nine": [
+        64,
+        64,
+        64,
+        64
+      ]
+    },
+    {
+      "path": "UI/Panels/UI_RewardBlock_Normal.png",
+      "ppu": 200,
+      "nine": [
+        64,
+        64,
+        64,
+        64
+      ]
+    },
+    {
+      "path": "UI/Panels/UI_DayTile_Normal.png",
+      "ppu": 200,
+      "nine": [
+        64,
+        64,
+        64,
+        64
+      ]
+    },
+    {
+      "path": "UI/Panels/UI_Panel_Card_Light.png",
+      "ppu": 200,
+      "nine": [
+        64,
+        64,
+        64,
+        64
+      ]
+    },
+    {
+      "path": "UI/Panels/UI_DayTile_Bonus.png",
+      "ppu": 200,
+      "nine": [
+        64,
+        64,
+        64,
+        64
+      ]
+    },
+    {
+      "path": "UI/Panels/UI_RewardBlock_Selected.png",
+      "ppu": 200,
+      "nine": [
+        64,
+        64,
+        64,
+        64
+      ]
+    },
+    {
+      "path": "UI/Controls/UI_Outline_Selected.png",
+      "ppu": 200,
+      "nine": [
+        64,
+        64,
+        64,
+        64
+      ]
+    },
+    {
+      "path": "UI/Controls/UI_Outline_Thin_Selected.png",
+      "ppu": 200,
+      "nine": [
+        64,
+        64,
+        64,
+        64
+      ]
+    },
+    {
+      "path": "UI/Panels/UI_Drawer.png",
+      "ppu": 200,
+      "nine": [
+        240,
+        200,
+        0,
+        200
+      ]
+    },
+    {
+      "path": "UI/Panels/UI_Popover.png",
+      "ppu": 200,
+      "nine": [
+        80,
+        80,
+        80,
+        80
+      ]
+    },
+    {
+      "path": "UI/Panels/UI_Popover_Pointer.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Table/UI_TableBody.png",
+      "ppu": 200,
+      "nine": [
+        48,
+        48,
+        48,
+        48
+      ]
+    },
+    {
+      "path": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "ppu": 200,
+      "nine": [
+        112,
+        0,
+        112,
+        0
+      ]
+    },
+    {
+      "path": "UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "ppu": 200,
+      "nine": [
+        88,
+        0,
+        88,
+        0
+      ]
+    },
+    {
+      "path": "UI/Table/UI_ButtonSecondary_Box_Normal.png",
+      "ppu": 200,
+      "nine": [
+        48,
+        0,
+        48,
+        0
+      ]
+    },
+    {
+      "path": "UI/Buttons/UI_ButtonDisc_Normal.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Buttons/UI_ButtonDisc_Selected.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Buttons/UI_ButtonDisc_Emblem.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Buttons/UI_ButtonInfo.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Buttons/UI_ButtonPlus_Normal.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Controls/UI_Button_Crimson.png",
+      "ppu": 200,
+      "nine": [
+        160,
+        0,
+        160,
+        0
+      ]
+    },
+    {
+      "path": "UI/Controls/UI_Button_Crimson_Box.png",
+      "ppu": 200,
+      "nine": [
+        160,
+        0,
+        160,
+        0
+      ]
+    },
+    {
+      "path": "UI/Controls/UI_Toggle_On.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Controls/UI_Toggle_Off.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Controls/UI_Radio_On.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Controls/UI_Radio_Off.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Controls/UI_Check_Badge.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Controls/UI_Field.png",
+      "ppu": 200,
+      "nine": [
+        48,
+        48,
+        48,
+        48
+      ]
+    },
+    {
+      "path": "UI/Controls/UI_Field_Light.png",
+      "ppu": 200,
+      "nine": [
+        48,
+        48,
+        48,
+        48
+      ]
+    },
+    {
+      "path": "UI/Controls/UI_Dropdown.png",
+      "ppu": 200,
+      "nine": [
+        48,
+        0,
+        120,
+        0
+      ]
+    },
+    {
+      "path": "UI/Controls/UI_CodeBox_Normal.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Controls/UI_CodeBox_Focus.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Controls/UI_CodeBox_Error.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Controls/UI_StakeChip_Normal.png",
+      "ppu": 200,
+      "nine": [
+        84,
+        0,
+        84,
+        0
+      ]
+    },
+    {
+      "path": "UI/Controls/UI_StakeChip_Selected.png",
+      "ppu": 200,
+      "nine": [
+        84,
+        0,
+        84,
+        0
+      ]
+    },
+    {
+      "path": "UI/Controls/UI_ReadyDot.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Controls/UI_Dot_Alert.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Controls/UI_Disc_Number.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Controls/UI_Ring_Spinner.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Controls/UI_Segment_Track.png",
+      "ppu": 200,
+      "nine": [
+        68,
+        0,
+        68,
+        0
+      ]
+    },
+    {
+      "path": "UI/Controls/UI_Segment_Selected.png",
+      "ppu": 200,
+      "nine": [
+        60,
+        0,
+        60,
+        0
+      ]
+    },
+    {
+      "path": "UI/Controls/UI_Slider_Track.png",
+      "ppu": 200,
+      "nine": [
+        14,
+        0,
+        14,
+        0
+      ]
+    },
+    {
+      "path": "UI/Controls/UI_Slider_Fill.png",
+      "ppu": 200,
+      "nine": [
+        14,
+        0,
+        14,
+        0
+      ]
+    },
+    {
+      "path": "UI/Controls/UI_Slider_Knob.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Controls/UI_Pill_RoomCode.png",
+      "ppu": 200,
+      "nine": [
+        92,
+        0,
+        92,
+        0
+      ]
+    },
+    {
+      "path": "UI/Table/UI_NamePlate.png",
+      "ppu": 200,
+      "nine": [
+        40,
+        0,
+        40,
+        0
+      ]
+    },
+    {
+      "path": "UI/Table/UI_StatusPill.png",
+      "ppu": 200,
+      "nine": [
+        44,
+        0,
+        44,
+        0
+      ]
+    },
+    {
+      "path": "UI/Table/UI_Pill_Tag.png",
+      "ppu": 200,
+      "nine": [
+        42,
+        0,
+        42,
+        0
+      ]
+    },
+    {
+      "path": "UI/Table/UI_Pill_Elapsed.png",
+      "ppu": 200,
+      "nine": [
+        60,
+        0,
+        60,
+        0
+      ]
+    },
+    {
+      "path": "UI/Table/UI_TimerRing.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Table/UI_Chip_Normal.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Table/UI_Chip_Selected.png",
+      "ppu": 200
+    },
+    {
+      "path": "UI/Common/UI_Panel_Large_Shadow.png",
+      "ppu": 200,
+      "nine": [
+        312,
+        312,
+        312,
+        312
+      ],
+      "shadow": {
+        "spread": 62,
+        "drop": 12,
+        "slice": "both",
+        "face": [
+          190,
+          190
+        ]
+      }
+    },
+    {
+      "path": "UI/Panels/UI_Panel_Card_Shadow.png",
+      "ppu": 200,
+      "nine": [
+        128,
+        128,
+        128,
+        128
+      ],
+      "shadow": {
+        "spread": 20,
+        "drop": 4,
+        "slice": "both",
+        "face": [
+          90,
+          90
+        ]
+      }
+    },
+    {
+      "path": "UI/Panels/UI_Popover_Shadow.png",
+      "ppu": 200,
+      "nine": [
+        288,
+        288,
+        288,
+        288
+      ],
+      "shadow": {
+        "spread": 62,
+        "drop": 12,
+        "slice": "both",
+        "face": [
+          166,
+          166
+        ]
+      }
+    },
+    {
+      "path": "UI/Panels/UI_Drawer_Shadow.png",
+      "ppu": 200,
+      "nine": [
+        0,
+        312,
+        0,
+        312
+      ],
+      "shadow": {
+        "spread": 62,
+        "drop": 12,
+        "slice": "vertical",
+        "face": [
+          267,
+          190
+        ]
+      }
+    },
+    {
+      "path": "UI/Panels/UI_Popover_Pointer_Shadow.png",
+      "ppu": 200,
+      "shadow": {
+        "spread": 62,
+        "drop": 12,
+        "slice": "none",
+        "face": [
+          52,
+          27
+        ]
+      }
+    },
+    {
+      "path": "UI/Buttons/UI_Shadow_Circle.png",
+      "ppu": 200,
+      "shadow": {
+        "spread": 17,
+        "drop": 4,
+        "slice": "none",
+        "face": [
+          96,
+          96
+        ]
+      }
+    },
+    {
+      "path": "UI/Buttons/UI_Shadow_Primary.png",
+      "ppu": 200,
+      "nine": [
+        200,
+        0,
+        200,
+        0
+      ],
+      "shadow": {
+        "spread": 23,
+        "drop": 6,
+        "slice": "horizontal",
+        "face": [
+          360,
+          112
+        ]
+      }
+    },
+    {
+      "path": "UI/Buttons/UI_Shadow_Secondary.png",
+      "ppu": 200,
+      "nine": [
+        152,
+        0,
+        152,
+        0
+      ],
+      "shadow": {
+        "spread": 17,
+        "drop": 4,
+        "slice": "horizontal",
+        "face": [
+          220,
+          88
+        ]
+      }
+    },
+    {
+      "path": "UI/Table/UI_ButtonSecondary_Box_Shadow.png",
+      "ppu": 200,
+      "nine": [
+        100,
+        0,
+        100,
+        0
+      ],
+      "shadow": {
+        "spread": 17,
+        "drop": 4,
+        "slice": "horizontal",
+        "face": [
+          220,
+          88
+        ]
+      }
+    },
+    {
+      "path": "UI/Controls/UI_Button_Crimson_Shadow.png",
+      "ppu": 200,
+      "nine": [
+        218,
+        0,
+        218,
+        0
+      ],
+      "shadow": {
+        "spread": 29,
+        "drop": 8,
+        "slice": "horizontal",
+        "face": [
+          600,
+          104
+        ]
+      }
+    },
+    {
+      "path": "UI/Controls/UI_Button_Crimson_Box_Shadow.png",
+      "ppu": 200,
+      "nine": [
+        218,
+        0,
+        218,
+        0
+      ],
+      "shadow": {
+        "spread": 29,
+        "drop": 8,
+        "slice": "horizontal",
+        "face": [
+          600,
+          104
+        ]
+      }
+    },
+    {
+      "path": "UI/Buttons/UI_ButtonDisc_Emblem_Shadow.png",
+      "ppu": 200,
+      "shadow": {
+        "spread": 46,
+        "drop": 0,
+        "slice": "none",
+        "face": [
+          160,
+          160
+        ]
+      }
+    },
+    {
+      "path": "UI/Controls/UI_StakeChip_Shadow.png",
+      "ppu": 200,
+      "nine": [
+        148,
+        0,
+        148,
+        0
+      ],
+      "shadow": {
+        "spread": 17,
+        "drop": 4,
+        "slice": "horizontal",
+        "face": [
+          200,
+          84
+        ]
+      }
+    }
+  ]
+}

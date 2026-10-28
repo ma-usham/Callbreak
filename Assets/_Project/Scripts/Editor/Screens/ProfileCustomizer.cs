@@ -51,8 +51,8 @@ namespace Callbreak.Editor.Screens
         private const float PickerDoneWidth = 400f;
         private const float PickerDoneHeight = 89.7f;
         private const float PickerDoneLabelSize = 40f;
-        private const float PickerShadowSpread = 27.5f;
-        private const float PickerShadowDrop = 3.5f;
+        private const float PickerShadowSpread = CommonKit.PanelShadowSpread;
+        private const float PickerShadowDrop = CommonKit.PanelShadowDrop;
 
         /// <summary>The name question's dim.</summary>
         private static readonly Color PickerDim = new Color(0f, 0f, 0f, 0.817f);
@@ -134,7 +134,7 @@ namespace Callbreak.Editor.Screens
 
             Button done = DialogBuilder.KitButton(
                 "AvatarDoneButton", panel, new Vector2(PickerDoneWidth, PickerDoneHeight),
-                "UI/Controls/UI_Button_Crimson_Box.png", "UI/Controls/UI_Button_Crimson_Box_Shadow.png", 1.7f, 0.82f);
+                "UI/Controls/UI_Button_Crimson_Box.png", "UI/Controls/UI_Button_Crimson_Box_Shadow.png", CommonKit.HeroShadowDrop, 1f);
             ((RectTransform)done.transform).anchoredPosition = new Vector2(0f, -y);
             y += PickerDoneHeight;
             RectTransform labelRect = Child("Label", done.transform);

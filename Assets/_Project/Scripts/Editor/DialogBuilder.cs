@@ -30,8 +30,8 @@ namespace Callbreak.Editor
         // The primary button is the crimson box of mockup 13's Resume; its sprite's box is the
         // outer edge, 78.12 mockup px tall where the keyline's inside measured 79 canvas px.
         private const float ConfirmHeight = 89.7f;
-        private const float PanelShadowSpread = 27.5f;
-        private const float PanelShadowDrop = 3.5f;
+        private const float PanelShadowSpread = CommonKit.PanelShadowSpread;
+        private const float PanelShadowDrop = CommonKit.PanelShadowDrop;
 
         private const float TitleSize = 60f;
         private const float BodySize = 28f;
@@ -114,11 +114,11 @@ namespace Callbreak.Editor
             var buttonSize = new Vector2(ButtonWidth, ButtonHeight);
             Button confirm = KitButton(
                 "ConfirmButton", panel, new Vector2(ButtonWidth, ConfirmHeight),
-                "UI/Controls/UI_Button_Crimson_Box.png", "UI/Controls/UI_Button_Crimson_Box_Shadow.png", 1.7f, 0.82f);
+                "UI/Controls/UI_Button_Crimson_Box.png", "UI/Controls/UI_Button_Crimson_Box_Shadow.png", CommonKit.HeroShadowDrop, 1f);
             TextMeshProUGUI confirmLabel = ButtonLabel(confirm.transform, serif, ConfirmLabelSize, "Leave Match", UiBuildKit.Hex("#FEFCFC"));
             confirmLabel.fontSharedMaterial = UiBuildKit.LoadShadowPreset(serif, "ButtonLabel", new Color(0.29f, 0.03f, 0.04f, 0.9f), new Vector2(0.25f, -0.35f), 0.2f);
 
-            Button cancel = KitButton("CancelButton", panel, buttonSize, "UI/Buttons/UI_ButtonSecondary_Normal.png", "UI/Buttons/UI_Shadow_Secondary.png", 2.3f, 0.4f);
+            Button cancel = KitButton("CancelButton", panel, buttonSize, "UI/Buttons/UI_ButtonSecondary_Normal.png", "UI/Buttons/UI_Shadow_Secondary.png", CommonKit.SecondaryShadowDrop, 1f);
             TextMeshProUGUI cancelLabel = ButtonLabel(cancel.transform, UiBuildKit.LoadFontRole("SansSemiBold"), CancelLabelSize, "Cancel", UiBuildKit.Hex("#222424"));
 
             var view = root.AddComponent<DialogView>();

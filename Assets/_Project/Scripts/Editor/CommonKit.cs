@@ -4,10 +4,11 @@ using UnityEngine;
 namespace Callbreak.Editor
 {
     /// <summary>
-    /// Import settings for the shared UI kit (Assets/_Project/Art/UI/Common and the main menu's
-    /// buttons): pixels per unit and 9-slice borders, so every screen can reuse the same panels,
-    /// buttons and icons at any size. Screens refer to these sprites with "use" in their layout.
-    /// Borders are (left, bottom, right, top) in sprite pixels.
+    /// Import settings for the shared UI kit's older pieces (Assets/_Project/Art/UI/Common):
+    /// pixels per unit and 9-slice borders, so every screen can reuse the same pieces at any size.
+    /// Screens refer to these sprites with "use" in their layout. Borders are (left, bottom, right,
+    /// top) in sprite pixels. The V2 panels, buttons and controls are set by KitImporter from
+    /// ArtSource/Kit/V2.json.
     /// </summary>
     public static class CommonKit
     {
@@ -20,11 +21,32 @@ namespace Callbreak.Editor
         /// <summary>The main menu's @2x exports (Designer Handbook recipe E).</summary>
         public const float PpuMenu = 200f;
 
+        // The V2 kit's shadows (Tools/ArtPipeline/V2/kit.json, rendered by kit.py), in canvas units:
+        // how far a shadow sprite reaches beyond the face it was rendered for, and how far below the
+        // face it lies. Their colour and strength are in the sprites, so they are drawn at full opacity.
+
+        /// <summary>UI/Common/UI_Panel_Large_Shadow.png around a panel, sliced at its native size.</summary>
+        public const float PanelShadowSpread = 62f;
+
+        public const float PanelShadowDrop = 12f;
+
+        /// <summary>UI/Buttons/UI_Shadow_Circle.png reaches this far around a disc of <see cref="CircleShadowDiameter"/>.</summary>
+        public const float CircleShadowSpread = 17f;
+
+        public const float CircleShadowDiameter = 96f;
+
+        public const float CircleShadowDrop = 4f;
+
+        /// <summary>UI/Buttons/UI_Shadow_Secondary.png under the ivory pill (and the box's shadow under the box).</summary>
+        public const float SecondaryShadowDrop = 4f;
+
+        /// <summary>UI/Controls/UI_Button_Crimson_Shadow.png (and _Box_Shadow) under the crimson button.</summary>
+        public const float HeroShadowDrop = 8f;
+
         [MenuItem("Callbreak/Build/Common Kit Import Settings")]
         public static void Apply()
         {
             Set("UI/Common/UI_Panel_Large.png", Ppu1x, new Vector4(160, 110, 160, 170));
-            Set("UI/Common/UI_Panel_Large_Shadow.png", Ppu1x, new Vector4(52, 52, 52, 52));
             Set("UI/Common/UI_Panel_Card.png", Ppu1x, new Vector4(26, 26, 26, 26));
             Set("UI/Common/UI_Panel_Card_Shadow.png", Ppu1x, new Vector4(35, 35, 35, 35));
             Set("UI/Common/Deco_TitleDivider.png", Ppu2x, Vector4.zero);
@@ -35,12 +57,8 @@ namespace Callbreak.Editor
             Set("UI/Common/Icon_Chevron_Light.png", PpuMenu, Vector4.zero);
             Set("UI/Common/Logo_Callbreak_NoFlag.png", PpuMenu, Vector4.zero);
 
-            // The main menu's pieces, reused everywhere (their borders were set by the main menu build).
-            Set("UI/Buttons/UI_ButtonPrimary_Normal.png", PpuMenu, new Vector4(202, 0, 202, 0));
-            Set("UI/Buttons/UI_Shadow_Primary.png", PpuMenu, new Vector4(286, 0, 286, 0));
-            Set("UI/Buttons/UI_ButtonSecondary_Normal.png", PpuMenu, new Vector4(117, 0, 117, 0));
-            Set("UI/Buttons/UI_Shadow_Secondary.png", PpuMenu, new Vector4(150, 0, 150, 0));
-
+            // The panels, the buttons and their shadows are the V2 kit's: ArtSource/Kit/V2.json
+            // (KitImporter) sets them.
             Set("Backgrounds/BG_Menu_Wide.png", 100f, Vector4.zero);
             AssetDatabase.SaveAssets();
             Debug.Log("[CommonKit] import settings applied");

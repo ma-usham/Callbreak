@@ -160,6 +160,7 @@ namespace Callbreak.Editor.Screens
         private const float ChatTextPadding = 52f;              // canvas units from the rim to the words, both sides together
         private const float ChatMinWidth = 140f;                // canvas units, the image
         private static readonly Color ChatTextColor = new Color32(0x7A, 0x10, 0x16, 0xFF);    // Heading Burgundy (GDD §12)
+        private static readonly Color ChipTextColor = new Color32(0xF3, 0xDF, 0xA8, 0xFF);    // V2 tag pill: gold on crimson
 
         // The tail's tip stops this far outside the avatar's timer ring (mockup px), up and 30° over
         // to the box's side, so that the tail, which leans 30°, points at the avatar's centre. The
@@ -500,6 +501,7 @@ namespace Callbreak.Editor.Screens
             Sliced(chip, LoadTableSprite("UI_Pill_Tag"));
             TextMeshProUGUI chipText = Label("Text", chip, statusStyle, "BOT");
             chipText.fontSize = statusStyle.fontSize * ChipTextScale;
+            chipText.color = ChipTextColor;
             float spinnerSize = ChipSpinnerSize * UiBuildKit.ScaleX;
             GameObject chipSpinner = BuildSpinner(chip, spinnerSize, 12f + spinnerSize / 2f, chipText.color);
             chipSpinner.SetActive(false);

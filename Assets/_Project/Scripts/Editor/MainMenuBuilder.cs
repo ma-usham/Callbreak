@@ -65,8 +65,17 @@ namespace Callbreak.Editor
         private static readonly Rect WalletPlus = new Rect(1276.6f, 75.4f, 48.4f, 48.4f);
         private const string WalletCoinPath = "Assets/_Project/Art/UI/Icons/Icon_Coin.png";
         private const string WalletPlusPath = "Assets/_Project/Art/UI/Buttons/UI_ButtonPlus_Normal.png";
-        private const float WalletShadowDrop = 2f;
-        private const float WalletShadowOpacity = 0.4f;
+        private const float WalletShadowDrop = CommonKit.SecondaryShadowDrop / UiBuildKit.ScaleY;
+        private const float WalletShadowOpacity = 1f;
+
+        // The buttons keep the sizes mockup 00 drew them at (canvas units); the V2 kit's sprites
+        // are sliced or scaled to them.
+        private static readonly Vector2 HeaderButtonSize = new Vector2(106f, 106f);
+        private static readonly Vector2 PlayOnlineSize = new Vector2(786f, 163f);
+        private static readonly Vector2 SecondaryButtonSize = new Vector2(385f, 106f);
+
+        // The portrait fills the profile ring's opening; the portraits are 512 px (ADR 041).
+        private static readonly Vector2 ProfileAvatarSize = new Vector2(111f, 111f);
 
         // The "+" takes a touch a little beyond its disc (GDD: touch targets of about 88 px).
         private const float WalletPlusHitGrowth = 15f;
@@ -167,10 +176,12 @@ namespace Callbreak.Editor
             TMP_FontAsset sansSemiBold = UiBuildKit.LoadFont("Inter-SemiBold");
             TMP_FontAsset sansBold = UiBuildKit.LoadFont("Inter-Bold");
 
-            Sprite circle = Ui("Buttons/UI_ButtonCircle_Normal.png");
-            Sprite circleShadow = Ui("Buttons/UI_Shadow_Circle.png");
-            Sprite secondary = Ui("Buttons/UI_ButtonSecondary_Normal.png", 117f);
-            Sprite secondaryShadow = Ui("Buttons/UI_Shadow_Secondary.png", 150f);
+            Sprite circle = Kit("Buttons/UI_ButtonCircle_Normal.png");
+            Sprite circleShadow = Kit("Buttons/UI_Shadow_Circle.png");
+            Sprite secondary = Kit("Buttons/UI_ButtonSecondary_Normal.png");
+            Sprite secondaryShadow = Kit("Buttons/UI_Shadow_Secondary.png");
+            float circleDrop = CommonKit.CircleShadowDrop / UiBuildKit.ScaleY;
+            float secondaryDrop = CommonKit.SecondaryShadowDrop / UiBuildKit.ScaleY;
             Sprite chevron = Ui("Icons/Icon_Chevron.png");
 
             var rootObject = new GameObject("MainMenu", typeof(RectTransform));
@@ -202,10 +213,9 @@ namespace Callbreak.Editor
             UnityEngine.UI.Image[] fanFaces = BuildFanCards(fan, out UnityEngine.UI.Image[] fanBases);
 
             var playOnlineCentre = new Vector2(835.75f, 636.25f);
-            Sprite primary = Ui("Buttons/UI_ButtonPrimary_Normal.png", 202f);
             UnityEngine.UI.Button playOnline = CreateButton(
-                "PlayOnlineButton", centre, playOnlineCentre, UiBuildKit.NativeSize(primary), primary,
-                Ui("Buttons/UI_Shadow_Primary.png", 286f), 1f, 0f, 10f, 0.5f);
+                "PlayOnlineButton", centre, playOnlineCentre, PlayOnlineSize, Kit("Controls/UI_Button_Crimson.png"),
+                Kit("Controls/UI_Button_Crimson_Shadow.png"), CommonKit.HeroShadowDrop / UiBuildKit.ScaleY, 1f);
             Place("Icon", playOnline.transform, new Vector2(641.25f, 634.75f), playOnlineCentre, Ui("Icons/Icon_Spade_Gold.png"));
             TextMeshProUGUI playOnlineLabel = Label(
                 "Label", playOnline.transform, playOnlineCentre, "PLAY ONLINE", serifBold, Color.white, PlayOnlineText, false);
@@ -217,13 +227,12 @@ namespace Callbreak.Editor
                 serifBold, "ButtonLabel", new Color(0.29f, 0.03f, 0.04f, 0.9f), new Vector2(0.25f, -0.35f), 0.2f);
 
             Color ink = UiBuildKit.Hex("#0B0C0E");
-            Vector2 secondarySize = UiBuildKit.NativeSize(secondary);
 
             // Play Offline is 4 mockup pixels narrower than Play with Friends; the same sliced
             // sprite serves both.
             var friendsCentre = new Vector2(656.5f, 783.25f);
             UnityEngine.UI.Button playWithFriends = CreateButton(
-                "PlayWithFriendsButton", centre, friendsCentre, secondarySize, secondary, secondaryShadow, 1f, 0f, 2f, 0.4f);
+                "PlayWithFriendsButton", centre, friendsCentre, SecondaryButtonSize, secondary, secondaryShadow, secondaryDrop, 1f);
             Place("Icon", playWithFriends.transform, new Vector2(544f, 781.25f), friendsCentre, Ui("Icons/Icon_Friends.png"));
             Localize(
                 Label("Label", playWithFriends.transform, friendsCentre, "Play with Friends", sansBold, ink, PlayWithFriendsText, false),
@@ -233,7 +242,7 @@ namespace Callbreak.Editor
             var offlineCentre = new Vector2(1015.5f, 783.25f);
             float narrower = (335f - 331f) * UiBuildKit.ScaleX;
             UnityEngine.UI.Button playOffline = CreateButton(
-                "PlayOfflineButton", centre, offlineCentre, secondarySize - new Vector2(narrower, 0f), secondary, secondaryShadow, 1f, -narrower, 2f, 0.4f);
+                "PlayOfflineButton", centre, offlineCentre, SecondaryButtonSize - new Vector2(narrower, 0f), secondary, secondaryShadow, secondaryDrop, 1f);
             Place("Icon", playOffline.transform, new Vector2(924.5f, 782f), offlineCentre, Ui("Icons/Icon_Offline.png"));
             Localize(
                 Label("Label", playOffline.transform, offlineCentre, "Play Offline", sansBold, ink, PlayOfflineText, false),
@@ -247,8 +256,9 @@ namespace Callbreak.Editor
             var profileCentre = new Vector2(127.5f, 98f);
             Sprite ring = Ui("Avatars/UI_AvatarRing.png");
             UnityEngine.UI.Button profile = CreateButton(
-                "ProfileButton", headerLeft, profileCentre, UiBuildKit.NativeSize(ring), ring, circleShadow, 104f / 92f, 0f, 6f, 0.15f);
-            UnityEngine.UI.Image avatar = Place("Avatar", profile.transform, new Vector2(127.25f, 98f), profileCentre, Ui("Avatars/Avatar_Default.png"));
+                "ProfileButton", headerLeft, profileCentre, UiBuildKit.NativeSize(ring), ring, circleShadow, circleDrop, 1f, circle);
+            RectTransform avatarRect = UiBuildKit.CreateAt("Avatar", profile.transform, new Vector2(127.25f, 98f), profileCentre, ProfileAvatarSize);
+            UnityEngine.UI.Image avatar = UiBuildKit.AddImage(avatarRect, Ui("Avatars/Avatar_Default.png"), false);
             Localize(
                 Label("Greeting", headerLeft, Screen, "Namaste,", sansSemiBold, UiBuildKit.Hex("#9F7558"), GreetingText, false),
                 "ui.main_menu.greeting");
@@ -260,7 +270,7 @@ namespace Callbreak.Editor
 
             var settingsCentre = new Vector2(1402f, 97f);
             UnityEngine.UI.Button settings = CreateButton(
-                "SettingsButton", headerRight, settingsCentre, UiBuildKit.NativeSize(circle), circle, circleShadow, 1f, 0f, 4f, 0.2f);
+                "SettingsButton", headerRight, settingsCentre, HeaderButtonSize, circle, circleShadow, circleDrop, 1f);
             Place("Icon", settings.transform, new Vector2(1401.1f, 96.85f), settingsCentre, Ui("Icons/Icon_Settings.png"));
 
             RectTransform divider = UiBuildKit.CreateAt(
@@ -269,7 +279,7 @@ namespace Callbreak.Editor
 
             var shopCentre = new Vector2(1547.5f, 97f);
             UnityEngine.UI.Button shop = CreateButton(
-                "ShopButton", headerRight, shopCentre, UiBuildKit.NativeSize(circle), circle, circleShadow, 1f, 0f, 4f, 0.2f);
+                "ShopButton", headerRight, shopCentre, HeaderButtonSize, circle, circleShadow, circleDrop, 1f);
             Place("Icon", shop.transform, new Vector2(1548.75f, 96f), shopCentre, Ui("Icons/Icon_Shop.png"));
 
             UnityEngine.UI.Button dailyRewards = BuildDailyRewardsButton(
@@ -360,7 +370,7 @@ namespace Callbreak.Editor
         private static UnityEngine.UI.Button BuildResumeBanner(RectTransform centre, TMP_FontAsset font, Color ink, Sprite chevron)
         {
             UnityEngine.UI.Button banner = DialogBuilder.KitButton(
-                "ResumeBanner", centre, ResumeBannerSize, "UI/Buttons/UI_ButtonSecondary_Normal.png", "UI/Buttons/UI_Shadow_Secondary.png", 2f, 0.4f);
+                "ResumeBanner", centre, ResumeBannerSize, "UI/Buttons/UI_ButtonSecondary_Normal.png", "UI/Buttons/UI_Shadow_Secondary.png", CommonKit.SecondaryShadowDrop, 1f);
             var rect = (RectTransform)banner.transform;
             rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = new Vector2(
@@ -413,7 +423,7 @@ namespace Callbreak.Editor
             RectTransform wallet = UiBuildKit.CreateAt("Wallet", headerRight, centre, Screen, size);
 
             float scale = size.y / UiBuildKit.NativeSize(pill).y;
-            Sprite shadow = Ui("Buttons/UI_Shadow_Secondary.png", 150f);
+            Sprite shadow = Kit("Buttons/UI_Shadow_Secondary.png");
             Vector2 shadowSize = size + ((UiBuildKit.NativeSize(shadow) - UiBuildKit.NativeSize(pill)) * scale);
             RectTransform shadowRect = UiBuildKit.CreateAt("Shadow", wallet, centre + new Vector2(0f, WalletShadowDrop), centre, shadowSize);
             UnityEngine.UI.Image shadowImage = UiBuildKit.AddImage(shadowRect, shadow, false);
@@ -449,7 +459,7 @@ namespace Callbreak.Editor
         private static UnityEngine.UI.Button BuildNoAdsButton(RectTransform headerRight, Vector2 centre, Sprite circle, Sprite circleShadow)
         {
             UnityEngine.UI.Button button = CreateButton(
-                "NoAdsButton", headerRight, centre, UiBuildKit.NativeSize(circle), circle, circleShadow, 1f, 0f, 4f, 0.2f);
+                "NoAdsButton", headerRight, centre, HeaderButtonSize, circle, circleShadow, CommonKit.CircleShadowDrop / UiBuildKit.ScaleY, 1f);
             Place("Icon", button.transform, centre, centre, Ui(NoAdsIconPath));
             button.gameObject.SetActive(false);
             return button;
@@ -469,9 +479,9 @@ namespace Callbreak.Editor
         private static UnityEngine.UI.Button BuildDailyRewardsButton(
             RectTransform headerRight, Vector2 centre, Sprite circle, Sprite circleShadow, out GameObject dot)
         {
-            float radius = UiBuildKit.NativeSize(circle).y / UiBuildKit.ScaleY / 2f;
+            float radius = HeaderButtonSize.y / UiBuildKit.ScaleY / 2f;
             UnityEngine.UI.Button button = CreateButton(
-                "DailyRewardsButton", headerRight, centre, UiBuildKit.NativeSize(circle), circle, circleShadow, 1f, 0f, 4f, 0.2f);
+                "DailyRewardsButton", headerRight, centre, HeaderButtonSize, circle, circleShadow, CommonKit.CircleShadowDrop / UiBuildKit.ScaleY, 1f);
             Sprite icon = Ui(DailyRewardsIconPath);
             RectTransform iconRect = UiBuildKit.CreateAt("Icon", button.transform, centre, centre, UiBuildKit.NativeSize(icon) * DailyRewardsIconScale);
             UiBuildKit.AddImage(iconRect, icon, false);
@@ -677,7 +687,7 @@ namespace Callbreak.Editor
                 noAdsRect.anchoredPosition = new Vector2((noAdsCentre.x - Screen.x) * UiBuildKit.ScaleX, -(noAdsCentre.y - Screen.y) * UiBuildKit.ScaleY);
 
                 UnityEngine.UI.Button button = BuildDailyRewardsButton(
-                    (RectTransform)noAdsRect.parent, UnderShop(shopCentre, 1), Ui("Buttons/UI_ButtonCircle_Normal.png"), Ui("Buttons/UI_Shadow_Circle.png"), out GameObject dot);
+                    (RectTransform)noAdsRect.parent, UnderShop(shopCentre, 1), Kit("Buttons/UI_ButtonCircle_Normal.png"), Kit("Buttons/UI_Shadow_Circle.png"), out GameObject dot);
                 button.transform.SetSiblingIndex(noAdsRect.GetSiblingIndex());
                 serialized.FindProperty("_dailyRewardsButton").objectReferenceValue = button;
                 serialized.FindProperty("_dailyRewardsDot").objectReferenceValue = dot;
@@ -767,10 +777,11 @@ namespace Callbreak.Editor
 
         /// <summary>
         /// A button is a root with the Button component and, back to front, its shadow, its face
-        /// and whatever the caller adds. The shadow sprite is padded, so it keeps its own size:
-        /// <paramref name="shadowScale"/> reuses the shadow of one shape under a larger face of the
-        /// same shape, and <paramref name="shadowWidthDelta"/> follows a sliced face made wider or
-        /// narrower.
+        /// and whatever the caller adds. The face is scaled as a whole to <paramref name="size"/>'s
+        /// height (a pill sliced only across keeps its round ends), and the shadow, a padded copy
+        /// of <paramref name="shadowFace"/>'s shape (the face itself when null), with it; a sliced
+        /// face made wider or narrower takes its shadow along. <paramref name="shadowDrop"/> is in
+        /// mockup pixels.
         /// </summary>
         private static UnityEngine.UI.Button CreateButton(
             string name,
@@ -779,20 +790,23 @@ namespace Callbreak.Editor
             Vector2 size,
             Sprite face,
             Sprite shadow,
-            float shadowScale,
-            float shadowWidthDelta,
             float shadowDrop,
-            float shadowOpacity)
+            float shadowOpacity,
+            Sprite shadowFace = null)
         {
             RectTransform root = UiBuildKit.CreateAt(name, parent, centre, Screen, size);
 
-            Vector2 shadowSize = UiBuildKit.NativeSize(shadow) * shadowScale;
-            shadowSize.x += shadowWidthDelta;
+            Vector2 shapeSize = UiBuildKit.NativeSize(shadowFace != null ? shadowFace : face);
+            float scale = size.y / shapeSize.y;
+            Vector2 shadowSize = size + ((UiBuildKit.NativeSize(shadow) - shapeSize) * scale);
             RectTransform shadowRect = UiBuildKit.CreateAt("Shadow", root, centre + new Vector2(0f, shadowDrop), centre, shadowSize);
-            UiBuildKit.AddImage(shadowRect, shadow, false).color = new Color(1f, 1f, 1f, shadowOpacity);
+            UnityEngine.UI.Image shadowImage = UiBuildKit.AddImage(shadowRect, shadow, false);
+            shadowImage.color = new Color(1f, 1f, 1f, shadowOpacity);
+            shadowImage.pixelsPerUnitMultiplier = 1f / scale;
 
             RectTransform faceRect = UiBuildKit.CreateAt("Face", root, centre, centre, size);
             UnityEngine.UI.Image faceImage = UiBuildKit.AddImage(faceRect, face, true);
+            faceImage.pixelsPerUnitMultiplier = UiBuildKit.NativeSize(face).y / size.y;
             return MakeButton(root, faceImage);
         }
 
@@ -865,6 +879,12 @@ namespace Callbreak.Editor
         private static Sprite Ui(string path, float sideBorder = 0f)
         {
             return UiBuildKit.LoadSprite($"UI/{path}", UiPixelsPerUnit, new Vector4(sideBorder, 0f, sideBorder, 0f));
+        }
+
+        /// <summary>A V2 kit sprite, as ArtSource/Kit/V2.json imports it (KitImporter): its settings are left alone.</summary>
+        private static Sprite Kit(string path)
+        {
+            return UiBuildKit.LoadSprite($"UI/{path}", 0f);
         }
 
         private static void BuildScene(GameObject prefab)
