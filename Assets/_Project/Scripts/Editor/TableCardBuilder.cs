@@ -13,7 +13,8 @@ namespace Callbreak.Editor
     /// <summary>
     /// Everything the table needs to draw cards (GDD §13, §23):
     /// the import settings of the three decks (sprites with mip maps, since a fan card is a fifth
-    /// of its texture's size); the <see cref="CardSpriteProvider"/> asset indexing 52 faces and a
+    /// of its texture's size, filtered anisotropically, since a thrown card lies flat); the
+    /// <see cref="CardSpriteProvider"/> asset indexing 52 faces and a
     /// back per deck; the two effect sprites the game draws itself (GDD §13 "glow, dimming and
     /// shadows are drawn by the game, never baked"): the card silhouette for the subdued overlay
     /// and the gold glow of a legal card, both derived from the cards' own outline; and the Card
@@ -53,6 +54,12 @@ namespace Callbreak.Editor
         private const float ShadowDrop = 3f;
         private const float ShadowOpacity = 0.55f;
         private const float ShadowSliceScale = 2.6f;
+
+        // A card thrown on the table lies flat, drawn at 64% of its height (CardView): without
+        // anisotropic filtering the GPU picks its mip level from that squash and the face blurs.
+        // Phones use the Mobile quality level, which filters anisotropically only the textures that
+        // ask for it (the Editor's PC level forces it on, so there the cards looked clear).
+        private const int CardAnisoLevel = 8;
 
         private static readonly (string id, string folder)[] Decks =
         {
@@ -146,7 +153,8 @@ namespace Callbreak.Editor
 
         /// <summary>
         /// Card textures are sprites shown far below their own size (a fan card is 46 px wide from a
-        /// 228 px texture), so they keep mip maps; everything else follows the UI recipe.
+        /// 228 px texture), so they keep mip maps, and lying on the table, so they are filtered
+        /// anisotropically (<see cref="CardAnisoLevel"/>); everything else follows the UI recipe.
         /// </summary>
         private static Sprite LoadCardSprite(string path)
         {
@@ -171,6 +179,7 @@ namespace Callbreak.Editor
                 || !importer.alphaIsTransparency
                 || importer.wrapMode != TextureWrapMode.Clamp
                 || importer.filterMode != FilterMode.Trilinear
+                || importer.anisoLevel != CardAnisoLevel
                 || !Mathf.Approximately(importer.spritePixelsPerUnit, 100f)
                 || settings.spriteMeshType != SpriteMeshType.FullRect;
             if (changed)
@@ -182,6 +191,7 @@ namespace Callbreak.Editor
                 importer.alphaIsTransparency = true;
                 importer.wrapMode = TextureWrapMode.Clamp;
                 importer.filterMode = FilterMode.Trilinear;
+                importer.anisoLevel = CardAnisoLevel;
                 importer.ReadTextureSettings(settings);
                 settings.spriteMeshType = SpriteMeshType.FullRect;
                 importer.SetTextureSettings(settings);
