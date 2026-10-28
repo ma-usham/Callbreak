@@ -14,8 +14,8 @@ namespace Callbreak.Editor.Screens
     /// never hides it. The screen built from the layout becomes the <see cref="NamePromptView"/>, on
     /// a canvas of its own above the menu and its dialogs; a transparent blocker under its content
     /// takes every touch. Built here, not measured on the mockup: the name field with its
-    /// placeholder; the big portrait (framed, chosen: crimson ring and gold check badge); and the
-    /// grid, three over two, each portrait in its gold ring, the chosen one ringed in crimson.
+    /// placeholder; the big portrait in its gold ring; and the grid, three over three, each portrait
+    /// in its gold ring, the chosen one's ring crimson with V2's check badge (V2, 22 Name Entry).
     /// </summary>
     public static class NamePromptCustomizer
     {
@@ -33,17 +33,19 @@ namespace Callbreak.Editor.Screens
         private const AdditionalCanvasShaderChannels TextChannels =
             AdditionalCanvasShaderChannels.TexCoord1 | AdditionalCanvasShaderChannels.Normal | AdditionalCanvasShaderChannels.Tangent;
 
-        // The big portrait, mockup pixels: centred above the name, 206 wide with its crimson ring.
-        private static readonly Vector2 PortraitCentre = new Vector2(588f, 487f);
-        private const float PortraitSize = 206f;
+        // The big portrait, mockup pixels: where V2 draws it above the name (22 Name Entry, "Portrait":
+        // 220 canvas units wide with its gold ring).
+        private static readonly Vector2 PortraitCentre = new Vector2(576.5f, 475.7f);
+        private const float PortraitSize = 191.6f;
 
-        // The grid, mockup pixels: centred under the header, its top 12 below the header's ink;
-        // portraits 128 wide, 20 apart, rows 10 apart, three over two.
-        private const float GridCentreX = 1016f;
-        private const float GridTop = 419f;
-        private const float GridCell = 128f;
-        private const float GridGap = 20f;
-        private const float GridRowGap = 10f;
+        // The grid, mockup pixels, as V2 lays out its characters: portraits 132 canvas units wide,
+        // 170 apart, rows 162 apart (each choice a little larger than its portrait, which fills
+        // AvatarPickerBuilder.FramedPictureShare of it), centred under the header.
+        private const float GridCentreX = 1023.2f;
+        private const float GridTop = 426.8f;
+        private const float GridCell = 122.3f;
+        private const float GridGap = 25.8f;
+        private const float GridRowGap = 18.8f;
         private const int GridColumns = 3;
 
         /// <summary>Warm Sand #DFC8AE (GDD §12 palette) behind selected text, as on the Profile screen.</summary>
@@ -185,7 +187,7 @@ namespace Callbreak.Editor.Screens
             Vector2 panelCentre = panelNode.Centre;
 
             Vector2 offset = new Vector2((PortraitCentre.x - panelCentre.x) * UiBuildKit.ScaleX, -(PortraitCentre.y - panelCentre.y) * UiBuildKit.ScaleY);
-            Image portrait = AvatarPickerBuilder.BuildChosenFrame(panel, "Portrait", PortraitSize * UiBuildKit.ScaleX, offset);
+            Image portrait = AvatarPickerBuilder.BuildFramedPortrait(panel, "Portrait", PortraitSize * UiBuildKit.ScaleX, offset);
             ctx.Bound["_avatar"] = portrait;
 
             AvatarPicker grid = AvatarPickerBuilder.BuildFramedGrid(

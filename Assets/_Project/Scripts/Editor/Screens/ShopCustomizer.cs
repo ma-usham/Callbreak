@@ -683,19 +683,10 @@ namespace Callbreak.Editor.Screens
             return UiBuildKit.AddImage(rect, sprite, raycast);
         }
 
-        /// <summary>A label as the builder makes it: fitted on the mockup's ink box, its key, the button-label shadow.</summary>
+        /// <summary>A label as the builder makes it: V2's type (or fitted on the mockup's ink box), its key, the button-label shadow.</summary>
         private static TextMeshProUGUI Label(LayoutNode node, Transform parent, Vector2 parentCentre, string name = null, string text = null, string key = null)
         {
-            TMP_FontAsset font = UiBuildKit.LoadFontRole(node.font);
-            Color top = UiBuildKit.Hex(string.IsNullOrEmpty(node.colorTop) ? node.color : node.colorTop);
-            Color bottom = UiBuildKit.Hex(string.IsNullOrEmpty(node.colorBottom) ? node.color : node.colorBottom);
-            TextMeshProUGUI label = UiBuildKit.FitLabel(
-                name ?? node.id, parent, parentCentre, text ?? node.text ?? string.Empty, font, node.inkBox, string.IsNullOrEmpty(node.align) ? "centre" : node.align, node.tracked, top, bottom);
-            if (node.style == "buttonLabel")
-            {
-                label.fontSharedMaterial = UiBuildKit.LoadShadowPreset(font, "ButtonLabel", new Color(0.29f, 0.03f, 0.04f, 0.9f), new Vector2(0.25f, -0.35f), 0.2f);
-            }
-
+            TextMeshProUGUI label = ScreenLayoutBuilder.LayoutLabel(node, parent, parentCentre, name, text);
             AddKey(label.gameObject, key ?? node.key);
             return label;
         }

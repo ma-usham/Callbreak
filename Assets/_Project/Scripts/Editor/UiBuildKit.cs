@@ -473,6 +473,59 @@ namespace Callbreak.Editor
         }
 
         /// <summary>
+        /// Creates a single-line label at a given size and character spacing (V2's type), placed so
+        /// that its rendered ink lands on <paramref name="inkBox"/> (left, top, right, bottom in mockup
+        /// pixels): the edge <paramref name="align"/> keeps when the text changes at runtime, and the
+        /// vertical centre. The ink is measured with <paramref name="measure"/> (the text the box was
+        /// measured on) where it is given, and the label then shows <paramref name="text"/> on the
+        /// same baseline.
+        /// </summary>
+        public static TextMeshProUGUI PlaceLabel(
+            string name,
+            Transform parent,
+            Vector2 parentCentre,
+            string text,
+            string measure,
+            TMP_FontAsset font,
+            float size,
+            float spacing,
+            float[] inkBox,
+            string align,
+            Color color)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            var rect = (RectTransform)go.transform;
+            rect.SetParent(parent, false);
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(align == "left" ? 0f : align == "right" ? 1f : 0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(Mathf.Max((inkBox[2] - inkBox[0]) * ScaleX * 1.8f, 240f), Mathf.Max(size * 3f, 60f));
+            float anchorX = align == "left" ? inkBox[0] : align == "right" ? inkBox[2] : (inkBox[0] + inkBox[2]) / 2f;
+            var target = new Vector2((anchorX - parentCentre.x) * ScaleX, -((inkBox[1] + inkBox[3]) / 2f - parentCentre.y) * ScaleY);
+            rect.anchoredPosition = target;
+
+            var label = go.AddComponent<TextMeshProUGUI>();
+            label.font = font;
+            label.fontSize = size;
+            label.characterSpacing = spacing;
+            label.color = color;
+            label.raycastTarget = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.overflowMode = TextOverflowModes.Overflow;
+            label.alignment = align == "left" ? TextAlignmentOptions.BaselineLeft
+                : align == "right" ? TextAlignmentOptions.BaselineRight
+                : TextAlignmentOptions.Baseline;
+            label.text = string.IsNullOrEmpty(measure) ? text : measure;
+            if (InkBounds(label, out Rect ink, out _))
+            {
+                float inkX = align == "left" ? ink.xMin : align == "right" ? ink.xMax : ink.center.x;
+                rect.anchoredPosition += target - (rect.anchoredPosition + new Vector2(inkX, ink.center.y));
+            }
+
+            label.text = text;
+            return label;
+        }
+
+        /// <summary>
         /// The union of the visible glyphs' ink boxes, in the label's local space. TMP's character
         /// corners are the quad vertices, which include the SDF padding, so each quad is shrunk to
         /// the glyph's own metrics (the padding is symmetric around the glyph).

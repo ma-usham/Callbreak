@@ -34,32 +34,45 @@ namespace Callbreak.Editor
 
         private static readonly Vector2 Screen = UiBuildKit.ScreenCentre;
 
-        // The mockup's lettering is narrower than Inter and Source Serif 4 at their natural
-        // width, so each label carries a horizontal scale and spacing measured against it.
-        // Size, left edge or centre x, baseline y, horizontal scale, character spacing.
-        private static readonly LabelSpec PlayOnlineText = new LabelSpec(72f, 703.3f, 657.6f, 0.886f, 0f);
-        private static readonly LabelSpec PlayWithFriendsText = new LabelSpec(35.4f, 589.3f, 793.4f, 0.747f, -2f);
-        private static readonly LabelSpec PlayOfflineText = new LabelSpec(35.4f, 971.7f, 793.4f, 0.842f, -2f);
-        private static readonly LabelSpec TaglineText = new LabelSpec(21.6f, 829.6f, 883.5f, 1f, 26.2f);
-        private static readonly LabelSpec GreetingText = new LabelSpec(27f, 206.6f, 82.1f, 1f, 0f);
-        private static readonly LabelSpec PlayerNameText = new LabelSpec(39.6f, 205.4f, 117.5f, 0.966f, 0f);
+        // V2's type (Figma "V2 · Screens", 00 Main Menu): font size, colour, letter spacing, and the
+        // box round the glyphs V2 renders (canvas units: x, y, width, height), on which the label's
+        // ink is placed by its alignment's edge (Tools/ArtPipeline/V2/screens-v2.json).
+        private static readonly LabelSpec PlayOnlineText = new LabelSpec(44f, "#FFFCF7", new Rect(871.5f, 715.9f, 259.8f, 34.4f), "left");
+        private static readonly LabelSpec PlayWithFriendsText = new LabelSpec(28f, "#17140F", new Rect(642.7f, 887.9f, 231.1f, 27.3f), "left");
+        private static readonly LabelSpec PlayOfflineText = new LabelSpec(28f, "#17140F", new Rect(1092.9f, 887.9f, 154.4f, 27.3f), "left");
+        private static readonly LabelSpec TaglineText = new LabelSpec(20f, "#F3DFA8", new Rect(726.5f, 998.3f, 452f, 15f), "centre", 22f);
+        private static readonly LabelSpec GreetingText = new LabelSpec(28f, "#6E4F37", new Rect(239f, 72.6f, 124.5f, 25.3f), "left");
+        private static readonly LabelSpec PlayerNameText = new LabelSpec(32f, "#17140F", new Rect(238f, 107.7f, 95.2f, 29.8f), "left");
 
-        // Mockup 23's balance, "250" in Inter Bold: its ink 52.3 x 22.9 at 1202.6..1254.9 x 88.4..111.3
-        // (the digits' overshoot puts the baseline 0.3 above the ink's foot).
-        private static readonly LabelSpec BalanceText = new LabelSpec(35.23f, 1228.65f, 111.02f, 0.933f, 0f);
+        // The balance starts right of the coin, as V2 draws it, and a longer one shrinks to stay
+        // left of the "+".
+        private static readonly LabelSpec BalanceText = new LabelSpec(32f, "#17140F", new Rect(1349.5f, 100.5f, 59.5f, 24.1f), "left");
+
+        // V2's art, each where V2 draws it: the picture's own ink box lands on V2's (Tools/ArtPipeline/V2,
+        // screens.py's icon pass): centre in mockup pixels, size in canvas units.
+        private static readonly Rect LogoArt = new Rect(836.19f, 159.62f, 580.3f, 230.4f);
+        private static readonly Rect PlayOnlineIconArt = new Rect(712.68f, 636.26f, 47.9f, 51.9f);
+        private static readonly Rect FriendsIconArt = new Rect(530.38f, 784.16f, 39.6f, 27.4f);
+        private static readonly Rect FriendsChevronArt = new Rect(786.75f, 783.64f, 12.4f, 20.4f);
+        private static readonly Rect OfflineIconArt = new Rect(922.3f, 784.51f, 31.1f, 27.3f);
+        private static readonly Rect OfflineChevronArt = new Rect(1112.62f, 783.64f, 12.4f, 20.4f);
+        private static readonly Rect SettingsIconArt = new Rect(1402.05f, 97.06f, 42.6f, 41.8f);
+        private static readonly Rect ShopIconArt = new Rect(1547.65f, 97.5f, 44.2f, 36.9f);
+        private static readonly Vector2 DailyRewardsIconSize = new Vector2(40.4f, 43.2f);
+        private static readonly Vector2 NoAdsIconSize = new Vector2(41.9f, 41.9f);
 
         // The "Resume match" banner is on no mockup: it is the ivory secondary button, smaller,
         // standing where the footer line is (the two never show together).
         private static readonly Vector2 ResumeBannerCentre = new Vector2(835.75f, 877f);
         private static readonly Vector2 ResumeBannerSize = new Vector2(336f, 64f);
-        private const float ResumeLabelSize = 27f;
+        private const float ResumeLabelSize = 28f;
 
         // The coin wallet (mockup 23): the ivory pill (the kit's secondary pill, which the wallet is
         // drawn like) measured on its edges, the room the balance may grow into between the coin and
         // the "+", and the ShopUI kit's coin and crimson "+" (ArtSource/Working/ShopUI/notes.md) at the
         // rects its notes give.
         private static readonly Rect WalletPill = new Rect(1107.5f, 64.5f, 235.5f, 69.5f);
-        private static readonly Rect WalletCoin = new Rect(1130.53f, 73.43f, 52.55f, 52.55f);
+        private static readonly Rect WalletCoin = new Rect(1140.62f - (52f / UiBuildKit.ScaleX / 2f), 97.67f - (52f / UiBuildKit.ScaleY / 2f), 52f / UiBuildKit.ScaleX, 52f / UiBuildKit.ScaleY);
         private const float WalletBalanceRoom = 84f;
         private static readonly Rect WalletPlus = new Rect(1276.6f, 75.4f, 48.4f, 48.4f);
         private const string WalletCoinPath = "Assets/_Project/Art/UI/Icons/Icon_Coin.png";
@@ -69,9 +82,9 @@ namespace Callbreak.Editor
 
         // The buttons keep the sizes mockup 00 drew them at (canvas units); the V2 kit's sprites
         // are sliced or scaled to them.
-        private static readonly Vector2 HeaderButtonSize = new Vector2(106f, 106f);
-        private static readonly Vector2 PlayOnlineSize = new Vector2(786f, 163f);
-        private static readonly Vector2 SecondaryButtonSize = new Vector2(385f, 106f);
+        private static readonly Vector2 HeaderButtonSize = new Vector2(104f, 104f);
+        private static readonly Vector2 PlayOnlineSize = new Vector2(720f, 132f);
+        private static readonly Vector2 SecondaryButtonSize = new Vector2(400f, 92f);
 
         // The portrait fills the profile ring's opening; the portraits are 512 px (ADR 041).
         private static readonly Vector2 ProfileAvatarSize = new Vector2(111f, 111f);
@@ -89,13 +102,10 @@ namespace Callbreak.Editor
         // (ChatGPT's, ArtSource/Working/MainMenu/chatgpt/NoAds_prompts.md) centred on it.
         private const string NoAdsIconPath = "Icons/Icon_NoAds.png";
 
-        // The Daily Rewards button (the owner, 8 Oct 2026): the gear's disc and shadow with ChatGPT's
-        // gift glyph (ArtSource/Working/DailyRewards) and a red dot on its top right rim while today's
-        // reward is ready. The glyph is drawn larger than the shop's and the gear's (57 x 61 of ink
-        // against 54 x 45 and 54 x 53), so it is shown at DailyRewardsIconScale of its size, which
-        // stands it between the two (the owner, 15 Oct 2026: "make it appear good like shop and setting").
+        // The Daily Rewards button (the owner, 8 Oct 2026): the gear's disc and shadow with the gift
+        // glyph, at V2's size, and a red dot on its top right rim while today's reward is ready (ADR 046:
+        // a dot, where V2 draws a count).
         private const string DailyRewardsIconPath = "Icons/Icon_DailyReward.png";
-        private const float DailyRewardsIconScale = 0.8f;
         private const string DailyRewardsDotPath = "Controls/UI_Dot_Alert.png";
         private const float DailyRewardsDotSize = 20f;
 
@@ -147,10 +157,21 @@ namespace Callbreak.Editor
                 return;
             }
 
-            GameObject root = BuildHierarchy();
-            UiBuildKit.EnsureFolder(Path.GetDirectoryName(PrefabPath).Replace('\\', '/'));
-            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
-            Object.DestroyImmediate(root);
+            // TextMeshPro only lays text out under a Canvas, and the labels are placed by measuring
+            // their glyphs, so the menu is built inside a temporary one (as the layout builder does).
+            var canvasObject = new GameObject("MainMenuBuildCanvas", typeof(Canvas));
+            canvasObject.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            GameObject prefab;
+            try
+            {
+                GameObject root = BuildHierarchy(canvasObject.transform);
+                UiBuildKit.EnsureFolder(Path.GetDirectoryName(PrefabPath).Replace('\\', '/'));
+                prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+            }
+            finally
+            {
+                Object.DestroyImmediate(canvasObject);
+            }
 
             // The scene only hosts an instance of the prefab, so it is created once and then left
             // alone: rebuilding it would overwrite a scene someone has open.
@@ -169,7 +190,7 @@ namespace Callbreak.Editor
             Build();
         }
 
-        private static GameObject BuildHierarchy()
+        private static GameObject BuildHierarchy(Transform buildParent)
         {
             TMP_FontAsset serifBold = UiBuildKit.LoadFont("SourceSerif4-Bold");
             TMP_FontAsset sansSemiBold = UiBuildKit.LoadFont("Inter-SemiBold");
@@ -185,6 +206,7 @@ namespace Callbreak.Editor
 
             var rootObject = new GameObject("MainMenu", typeof(RectTransform));
             var root = (RectTransform)rootObject.transform;
+            root.SetParent(buildParent, false);
             Stretch(root);
 
             BuildBackground(root);
@@ -199,7 +221,7 @@ namespace Callbreak.Editor
             RectTransform headerRight = UiBuildKit.CreateDesignGroup("HeaderRight", safeArea, UiBuildKit.Attach.TopRight);
 
             // Centre column, back to front
-            Place("Logo", centre, new Vector2(834.75f, 180.25f), Screen, Ui("Ornaments/Logo_Callbreak.png"));
+            PlaceArt("Logo", centre, LogoArt, Screen, Ui("Ornaments/Logo_Callbreak.png"));
 
             // The fan and its shadow rock together about the fan's foot, which the Play Online
             // button covers (GDD screen 00: the fan "idles with a gentle sway"). Their own canvas
@@ -215,38 +237,31 @@ namespace Callbreak.Editor
             UnityEngine.UI.Button playOnline = CreateButton(
                 "PlayOnlineButton", centre, playOnlineCentre, PlayOnlineSize, Kit("Controls/UI_Button_Crimson.png"),
                 Kit("Controls/UI_Button_Crimson_Shadow.png"), CommonKit.HeroShadowDrop / UiBuildKit.ScaleY, 1f);
-            Place("Icon", playOnline.transform, new Vector2(641.25f, 634.75f), playOnlineCentre, Ui("Icons/Icon_Spade_Gold.png"));
-            TextMeshProUGUI playOnlineLabel = Label(
-                "Label", playOnline.transform, playOnlineCentre, "PLAY ONLINE", serifBold, Color.white, PlayOnlineText, false);
+            PlaceArt("Icon", playOnline.transform, PlayOnlineIconArt, playOnlineCentre, Ui("Icons/Icon_Spade_Gold.png"));
+            TextMeshProUGUI playOnlineLabel = Label("Label", playOnline.transform, playOnlineCentre, "PLAY ONLINE", serifBold, PlayOnlineText);
             Localize(playOnlineLabel, "ui.main_menu.play_online");
-            playOnlineLabel.enableVertexGradient = true;
-            Color labelFoot = UiBuildKit.Hex("#E8D4B8");
-            playOnlineLabel.colorGradient = new VertexGradient(Color.white, Color.white, labelFoot, labelFoot);
             playOnlineLabel.fontSharedMaterial = UiBuildKit.LoadShadowPreset(
                 serifBold, "ButtonLabel", new Color(0.29f, 0.03f, 0.04f, 0.9f), new Vector2(0.25f, -0.35f), 0.2f);
 
-            Color ink = UiBuildKit.Hex("#0B0C0E");
+            Color ink = UiBuildKit.Hex("#17140F");
 
-            // Play Offline is 4 mockup pixels narrower than Play with Friends; the same sliced
-            // sprite serves both.
             var friendsCentre = new Vector2(656.5f, 783.25f);
             UnityEngine.UI.Button playWithFriends = CreateButton(
                 "PlayWithFriendsButton", centre, friendsCentre, SecondaryButtonSize, secondary, secondaryShadow, secondaryDrop, 1f);
-            Place("Icon", playWithFriends.transform, new Vector2(544f, 781.25f), friendsCentre, Ui("Icons/Icon_Friends.png"));
+            PlaceArt("Icon", playWithFriends.transform, FriendsIconArt, friendsCentre, Ui("Icons/Icon_Friends.png"));
             Localize(
-                Label("Label", playWithFriends.transform, friendsCentre, "Play with Friends", sansBold, ink, PlayWithFriendsText, false),
+                Label("Label", playWithFriends.transform, friendsCentre, "Play with Friends", sansBold, PlayWithFriendsText),
                 "ui.main_menu.play_with_friends");
-            Place("Chevron", playWithFriends.transform, new Vector2(796f, 783.5f), friendsCentre, chevron);
+            PlaceArt("Chevron", playWithFriends.transform, FriendsChevronArt, friendsCentre, chevron);
 
             var offlineCentre = new Vector2(1015.5f, 783.25f);
-            float narrower = (335f - 331f) * UiBuildKit.ScaleX;
             UnityEngine.UI.Button playOffline = CreateButton(
-                "PlayOfflineButton", centre, offlineCentre, SecondaryButtonSize - new Vector2(narrower, 0f), secondary, secondaryShadow, secondaryDrop, 1f);
-            Place("Icon", playOffline.transform, new Vector2(924.5f, 782f), offlineCentre, Ui("Icons/Icon_Offline.png"));
+                "PlayOfflineButton", centre, offlineCentre, SecondaryButtonSize, secondary, secondaryShadow, secondaryDrop, 1f);
+            PlaceArt("Icon", playOffline.transform, OfflineIconArt, offlineCentre, Ui("Icons/Icon_Offline.png"));
             Localize(
-                Label("Label", playOffline.transform, offlineCentre, "Play Offline", sansBold, ink, PlayOfflineText, false),
+                Label("Label", playOffline.transform, offlineCentre, "Play Offline", sansBold, PlayOfflineText),
                 "ui.main_menu.play_offline");
-            Place("Chevron", playOffline.transform, new Vector2(1140.75f, 783.75f), offlineCentre, chevron);
+            PlaceArt("Chevron", playOffline.transform, OfflineChevronArt, offlineCentre, chevron);
 
             RectTransform footer = BuildFooter(centre, sansSemiBold);
             UnityEngine.UI.Button resume = BuildResumeBanner(centre, sansBold, ink, chevron);
@@ -258,11 +273,8 @@ namespace Callbreak.Editor
                 "ProfileButton", headerLeft, profileCentre, UiBuildKit.NativeSize(ring), ring, circleShadow, circleDrop, 1f, circle);
             RectTransform avatarRect = UiBuildKit.CreateAt("Avatar", profile.transform, new Vector2(127.25f, 98f), profileCentre, ProfileAvatarSize);
             UnityEngine.UI.Image avatar = UiBuildKit.AddImage(avatarRect, Ui("Avatars/Avatar_Default.png"), false);
-            Localize(
-                Label("Greeting", headerLeft, Screen, "Namaste,", sansSemiBold, UiBuildKit.Hex("#9F7558"), GreetingText, false),
-                "ui.main_menu.greeting");
-            TextMeshProUGUI playerName = Label(
-                "PlayerName", headerLeft, Screen, "Player", sansBold, UiBuildKit.Hex("#151617"), PlayerNameText, false);
+            Localize(Label("Greeting", headerLeft, Screen, "Namaste,", sansSemiBold, GreetingText), "ui.main_menu.greeting");
+            TextMeshProUGUI playerName = Label("PlayerName", headerLeft, Screen, "Player", sansBold, PlayerNameText);
 
             // Header, right: the coin wallet, settings and shop, then Daily Rewards and No Ads under the shop
             UnityEngine.UI.Button earnCoins = BuildWallet(headerRight, sansBold, secondary, out TextMeshProUGUI coins);
@@ -270,7 +282,7 @@ namespace Callbreak.Editor
             var settingsCentre = new Vector2(1402f, 97f);
             UnityEngine.UI.Button settings = CreateButton(
                 "SettingsButton", headerRight, settingsCentre, HeaderButtonSize, circle, circleShadow, circleDrop, 1f);
-            Place("Icon", settings.transform, new Vector2(1401.1f, 96.85f), settingsCentre, Ui("Icons/Icon_Settings.png"));
+            PlaceArt("Icon", settings.transform, SettingsIconArt, settingsCentre, Ui("Icons/Icon_Settings.png"));
 
             RectTransform divider = UiBuildKit.CreateAt(
                 "Divider", headerRight, new Vector2(1474.5f, 98.4f), Screen, UiBuildKit.FromMock(2f, 65.75f));
@@ -279,7 +291,7 @@ namespace Callbreak.Editor
             var shopCentre = new Vector2(1547.5f, 97f);
             UnityEngine.UI.Button shop = CreateButton(
                 "ShopButton", headerRight, shopCentre, HeaderButtonSize, circle, circleShadow, circleDrop, 1f);
-            Place("Icon", shop.transform, new Vector2(1548.75f, 96f), shopCentre, Ui("Icons/Icon_Shop.png"));
+            PlaceArt("Icon", shop.transform, ShopIconArt, shopCentre, Ui("Icons/Icon_Shop.png"));
 
             UnityEngine.UI.Button dailyRewards = BuildDailyRewardsButton(
                 headerRight, UnderShop(shopCentre, 1), circle, circleShadow, out GameObject dailyRewardsDot);
@@ -351,9 +363,7 @@ namespace Callbreak.Editor
             RectTransform left = UiBuildKit.CreateAt("LineLeft", footer, new Vector2(553.25f, 876f), Screen, UiBuildKit.FromMock(58.5f, 1.9f));
             UiBuildKit.AddImage(left, null, false).color = line;
 
-            Localize(
-                Label("Tagline", footer, Screen, "A GAME THAT BRINGS US CLOSER", font, UiBuildKit.Hex("#9D795D"), TaglineText, true),
-                "ui.main_menu.tagline");
+            Localize(Label("Tagline", footer, Screen, "A GAME THAT BRINGS US CLOSER", font, TaglineText), "ui.main_menu.tagline");
 
             RectTransform right = UiBuildKit.CreateAt("LineRight", footer, new Vector2(1112.5f, 876f), Screen, UiBuildKit.FromMock(63f, 1.9f));
             UiBuildKit.AddImage(right, null, false).color = line;
@@ -391,8 +401,6 @@ namespace Callbreak.Editor
             label.overflowMode = TextOverflowModes.Overflow;
             label.raycastTarget = false;
             label.text = "Resume match";
-            label.characterHorizontalScale = PlayOfflineText.HorizontalScale;
-            label.characterSpacing = PlayOfflineText.Spacing;
             Localize(label, "ui.main_menu.resume_match");
 
             var chevronObject = new GameObject("Chevron", typeof(RectTransform));
@@ -432,7 +440,7 @@ namespace Callbreak.Editor
             RectTransform coin = UiBuildKit.CreateAt("Coin", wallet, WalletCoin.center, centre, UiBuildKit.FromMock(WalletCoin.width, WalletCoin.height));
             UiBuildKit.AddImage(coin, UiBuildKit.LoadSpriteAt(WalletCoinPath, 0f), false);
 
-            balance = Label("Balance", wallet, centre, "250", font, UiBuildKit.Hex("#181C22"), BalanceText, true);
+            balance = Label("Balance", wallet, centre, "250", font, BalanceText);
             RectTransform balanceRect = balance.rectTransform;
             balanceRect.sizeDelta = new Vector2(WalletBalanceRoom * UiBuildKit.ScaleX, balanceRect.sizeDelta.y);
             balance.fontSizeMax = balance.fontSize;
@@ -457,7 +465,8 @@ namespace Callbreak.Editor
         {
             UnityEngine.UI.Button button = CreateButton(
                 "NoAdsButton", headerRight, centre, HeaderButtonSize, circle, circleShadow, CommonKit.CircleShadowDrop / UiBuildKit.ScaleY, 1f);
-            Place("Icon", button.transform, centre, centre, Ui(NoAdsIconPath));
+            Sprite icon = Ui(NoAdsIconPath);
+            UiBuildKit.AddImage(UiBuildKit.CreateAt("Icon", button.transform, centre, centre, NoAdsIconSize), icon, false);
             button.gameObject.SetActive(false);
             return button;
         }
@@ -480,7 +489,7 @@ namespace Callbreak.Editor
             UnityEngine.UI.Button button = CreateButton(
                 "DailyRewardsButton", headerRight, centre, HeaderButtonSize, circle, circleShadow, CommonKit.CircleShadowDrop / UiBuildKit.ScaleY, 1f);
             Sprite icon = Ui(DailyRewardsIconPath);
-            RectTransform iconRect = UiBuildKit.CreateAt("Icon", button.transform, centre, centre, UiBuildKit.NativeSize(icon) * DailyRewardsIconScale);
+            RectTransform iconRect = UiBuildKit.CreateAt("Icon", button.transform, centre, centre, DailyRewardsIconSize);
             UiBuildKit.AddImage(iconRect, icon, false);
 
             // On the rim, up and to the right, as a badge sits on an app icon.
@@ -831,13 +840,6 @@ namespace Callbreak.Editor
             return button;
         }
 
-        /// <summary>Places a sprite pixel for pixel, centred on a mockup point.</summary>
-        private static UnityEngine.UI.Image Place(string name, Transform parent, Vector2 centre, Vector2 parentCentre, Sprite sprite)
-        {
-            RectTransform rect = UiBuildKit.CreateAt(name, parent, centre, parentCentre, UiBuildKit.NativeSize(sprite));
-            return UiBuildKit.AddImage(rect, sprite, false);
-        }
-
         private static void PlaceShadow(string name, Transform parent, Vector2 ownerCentre, Vector2 parentCentre, Sprite sprite, float drop, float opacity)
         {
             RectTransform rect = UiBuildKit.CreateAt(
@@ -845,30 +847,38 @@ namespace Callbreak.Editor
             UiBuildKit.AddImage(rect, sprite, false).color = new Color(1f, 1f, 1f, opacity);
         }
 
-        private static TextMeshProUGUI Label(
-            string name, Transform parent, Vector2 parentCentre, string text, TMP_FontAsset font, Color color, LabelSpec spec, bool centred)
+        /// <summary>Places a sprite at a size (canvas units), centred on a mockup point: <paramref name="art"/>'s position is the centre, its size the size.</summary>
+        private static UnityEngine.UI.Image PlaceArt(string name, Transform parent, Rect art, Vector2 parentCentre, Sprite sprite)
         {
-            TextMeshProUGUI label = UiBuildKit.CreateLabel(
-                name, parent, parentCentre, text, font, spec.Size, color, spec.X, spec.Baseline, centred);
-            label.characterHorizontalScale = spec.HorizontalScale;
-            label.characterSpacing = spec.Spacing;
-            return label;
+            RectTransform rect = UiBuildKit.CreateAt(name, parent, art.position, parentCentre, art.size);
+            return UiBuildKit.AddImage(rect, sprite, false);
         }
 
+        /// <summary>A label in V2's type, its ink on V2's (see <see cref="LabelSpec"/>).</summary>
+        private static TextMeshProUGUI Label(string name, Transform parent, Vector2 parentCentre, string text, TMP_FontAsset font, LabelSpec spec)
+        {
+            float[] inkBox =
+            {
+                spec.Ink.xMin / UiBuildKit.ScaleX, spec.Ink.yMin / UiBuildKit.ScaleY, spec.Ink.xMax / UiBuildKit.ScaleX, spec.Ink.yMax / UiBuildKit.ScaleY,
+            };
+            return UiBuildKit.PlaceLabel(name, parent, parentCentre, text, null, font, spec.Size, spec.Spacing, inkBox, spec.Align, UiBuildKit.Hex(spec.Color));
+        }
+
+        /// <summary>A label's V2 type: size and colour, the box round its glyphs in canvas units, the edge it keeps, letter spacing.</summary>
         private readonly struct LabelSpec
         {
             public readonly float Size;
-            public readonly float X;
-            public readonly float Baseline;
-            public readonly float HorizontalScale;
+            public readonly string Color;
+            public readonly Rect Ink;
+            public readonly string Align;
             public readonly float Spacing;
 
-            public LabelSpec(float size, float x, float baseline, float horizontalScale, float spacing)
+            public LabelSpec(float size, string color, Rect ink, string align, float spacing = 0f)
             {
                 Size = size;
-                X = x;
-                Baseline = baseline;
-                HorizontalScale = horizontalScale;
+                Color = color;
+                Ink = ink;
+                Align = align;
                 Spacing = spacing;
             }
         }

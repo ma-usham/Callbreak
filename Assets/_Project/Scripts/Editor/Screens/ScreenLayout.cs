@@ -80,6 +80,14 @@ namespace Callbreak.Editor.Screens
         public string key;           // string-table key
         public bool tracked;         // letter-spaced capitals: fit spacing, not width scale
         public float[] inkBox;       // left, top, right, bottom
+
+        // V2's type (Tools/ArtPipeline/V2/screens.py): a label with a size is drawn at that size
+        // (canvas units) and letter spacing (TextMeshPro character spacing), its ink placed on the
+        // ink box by its alignment's edge, measured with "measure" (V2's text) where that differs
+        // from the sample text. Without a size the label is fitted to the ink box.
+        public float size;
+        public float spacing;
+        public string measure;
         public string color;
         public string colorTop;
         public string colorBottom;

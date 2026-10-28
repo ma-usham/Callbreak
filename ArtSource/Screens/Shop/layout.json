@@ -42,19 +42,19 @@
       "parent": "BackButton",
       "shape": "ink",
       "rect": [
-        60,
-        55,
-        52,
-        48
+        70.86,
+        63.19,
+        32.98,
+        30.44
       ],
       "use": "UI/Icons/Icon_Back.png",
       "kind": "sprite",
       "sprite": "Assets/_Project/Art/UI/Icons/Icon_Back.png",
       "spriteRect": [
-        60,
-        55,
-        52,
-        48
+        70.86,
+        63.19,
+        32.98,
+        30.44
       ],
       "spritePpu": 0,
       "color": "#06080B",
@@ -73,23 +73,21 @@
       ],
       "key": "ui.shop.cards.title",
       "inkBox": [
-        562.48,
-        55.26,
-        1114.61,
-        120.83
+        569.09,
+        56.46,
+        1109.27,
+        118.93
       ],
       "capTop": 60,
       "baseline": 120,
-      "color": "#810911",
-      "colorTop": "#970611",
-      "colorBottom": "#700B10"
+      "color": "#8E0E19",
+      "size": 96
     },
     {
       "id": "Subtitle0",
       "kind": "label",
       "text": "A LITTLE NEPAL IN EVERY HAND",
       "font": "SansSemiBold",
-      "tracked": true,
       "rect": [
         528,
         133,
@@ -98,14 +96,16 @@
       ],
       "key": "ui.shop.cards.subtitle",
       "inkBox": [
-        539.6,
-        139.54,
-        1132.65,
-        157.94
+        577.28,
+        139.32,
+        1094.9,
+        157.7
       ],
       "capTop": 140,
       "baseline": 158,
-      "color": "#6E4E35"
+      "color": "#6E4F37",
+      "size": 29,
+      "spacing": 18.0
     },
     {
       "id": "TitleDivider",
@@ -153,6 +153,25 @@
       ],
       "spritePpu": 0,
       "checkError": 21.7
+    },
+    {
+      "id": "PanelOutline",
+      "rect": [
+        329.0,
+        198.83,
+        977.77,
+        537.5
+      ],
+      "kind": "sprite",
+      "use": "UI/Controls/UI_Outline_Selected.png",
+      "sprite": "Assets/_Project/Art/UI/Controls/UI_Outline_Selected.png",
+      "spritePpu": 0,
+      "spriteRect": [
+        329.0,
+        198.83,
+        977.77,
+        537.5
+      ]
     },
     {
       "id": "Tile0",
@@ -237,14 +256,15 @@
         42
       ],
       "inkBox": [
-        440.01,
-        542.59,
-        643.67,
-        566.34
+        436.81,
+        547.35,
+        646.07,
+        569.48
       ],
       "capTop": 550,
       "baseline": 566,
-      "color": "#1C1E1F"
+      "color": "#17140F",
+      "size": 34
     },
     {
       "id": "RadioOn0",
@@ -272,7 +292,7 @@
       "kind": "label",
       "parent": "Tile0",
       "text": "Equipped",
-      "font": "SansMedium",
+      "font": "SansBold",
       "align": "left",
       "rect": [
         515,
@@ -281,14 +301,15 @@
         34
       ],
       "inkBox": [
-        523.56,
-        598.43,
-        618.78,
-        622.73
+        516.23,
+        599.02,
+        626.22,
+        622.8
       ],
       "capTop": 604,
       "baseline": 618,
-      "color": "#624229"
+      "color": "#6E4F37",
+      "size": 28
     },
     {
       "id": "Tile1",
@@ -352,14 +373,15 @@
         42
       ],
       "inkBox": [
-        719.37,
-        542.51,
-        927.57,
-        572.7
+        714.52,
+        547.35,
+        932.92,
+        576.01
       ],
       "capTop": 550,
       "baseline": 566,
-      "color": "#1D1F20"
+      "color": "#17140F",
+      "size": 34
     },
     {
       "id": "RadioOff1",
@@ -396,14 +418,15 @@
         34
       ],
       "inkBox": [
-        812.13,
-        598.44,
-        883.51,
-        617.79
+        805.87,
+        601.46,
+        874.14,
+        617.14
       ],
       "capTop": 601,
       "baseline": 617,
-      "color": "#5F4029"
+      "color": "#6E4F37",
+      "size": 24
     },
     {
       "id": "Tile2",
@@ -467,14 +490,15 @@
         42
       ],
       "inkBox": [
-        994.38,
-        542.49,
-        1207.69,
-        566.3
+        988.48,
+        547.35,
+        1211.42,
+        569.48
       ],
       "capTop": 550,
       "baseline": 566,
-      "color": "#1C1D1E"
+      "color": "#17140F",
+      "size": 34
     },
     {
       "id": "RadioOff2",
@@ -511,14 +535,15 @@
         34
       ],
       "inkBox": [
-        1090.38,
-        598.41,
-        1162.27,
-        617.8
+        1084.54,
+        601.46,
+        1152.81,
+        617.14
       ],
       "capTop": 601,
       "baseline": 617,
-      "color": "#5F3F29"
+      "color": "#6E4F37",
+      "size": 24
     },
     {
       "id": "PrimaryButton",
@@ -549,7 +574,7 @@
       "kind": "label",
       "parent": "PrimaryButton",
       "text": "Use Selected Style",
-      "font": "SerifSemiBold",
+      "font": "SerifBold",
       "ink": "light",
       "style": "buttonLabel",
       "rect": [
@@ -560,14 +585,15 @@
       ],
       "key": "ui.shop.cards.use",
       "inkBox": [
-        686.47,
-        795.12,
-        985.78,
-        832.57
+        687.7,
+        796.1,
+        985.35,
+        836.79
       ],
       "capTop": 797,
       "baseline": 824,
-      "color": "#FDFBFB"
+      "color": "#FFFCF7",
+      "size": 44
     },
     {
       "id": "Drawer",
@@ -641,7 +667,7 @@
       "kind": "label",
       "parent": "Drawer",
       "text": "Cards",
-      "font": "SerifSemiBold",
+      "font": "SerifBold",
       "rect": [
         1512,
         365,
@@ -650,14 +676,15 @@
       ],
       "key": "ui.shop.category.cards",
       "inkBox": [
-        1519.09,
-        371.36,
-        1601.73,
-        397.46
+        1513.07,
+        371.09,
+        1606.77,
+        399.66
       ],
       "capTop": 373,
       "baseline": 397,
-      "color": "#951216"
+      "color": "#8E0E19",
+      "size": 44
     },
     {
       "id": "CategoryButton1",
@@ -707,7 +734,7 @@
       "kind": "label",
       "parent": "Drawer",
       "text": "Backgrounds",
-      "font": "SerifSemiBold",
+      "font": "SerifBold",
       "rect": [
         1480,
         571,
@@ -716,14 +743,15 @@
       ],
       "key": "ui.shop.category.backgrounds",
       "inkBox": [
-        1486.62,
-        578.08,
-        1634.86,
-        606.84
+        1481.29,
+        581.76,
+        1645.18,
+        608.6
       ],
       "capTop": 585,
       "baseline": 600,
-      "color": "#51341E"
+      "color": "#6E4F37",
+      "size": 32
     },
     {
       "id": "CategoryButton2",
@@ -773,7 +801,7 @@
       "kind": "label",
       "parent": "Drawer",
       "text": "Tables",
-      "font": "SerifSemiBold",
+      "font": "SerifBold",
       "rect": [
         1514,
         779,
@@ -782,14 +810,15 @@
       ],
       "key": "ui.shop.category.tables",
       "inkBox": [
-        1521.07,
-        785.58,
-        1599.62,
-        808.63
+        1514.99,
+        786.08,
+        1599.81,
+        808.13
       ],
       "capTop": 787,
       "baseline": 808,
-      "color": "#53361E"
+      "color": "#6E4F37",
+      "size": 34
     }
   ]
 }

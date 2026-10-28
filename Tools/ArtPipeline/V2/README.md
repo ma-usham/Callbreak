@@ -81,6 +81,24 @@ menus; the equipped table fills the screen at the table.
 4. **Library.** In the Editor run `TableBackdropBuilder.Build()` (menu *Callbreak/Table/Build Table
    Backdrops*). Then rebuild the screens.
 
+## The menu screens' type and pieces
+
+1. **Read.** Run `figma-screens-dump.js` with `use_figma` on the V2 screen frames, a few at a time,
+   and merge the results into `screens-v2.json`: every layer's box, and for text its font, size,
+   colour, letter spacing and the box round its rendered glyphs. `icons-v2.json` holds each icon and
+   art instance's ink box (the same walk, keeping the ink of `Icon/` and `Art/` instances).
+2. **Pieces.** Run `python Tools/ArtPipeline/V2/pieces.py`. It draws the pieces V2 makes of plain
+   shapes (the spinner, the coin glow, Day 7's gold frame, the crimson copy button, the plain vertical
+   dividers) into their files.
+3. **Layouts.** Run `python Tools/ArtPipeline/V2/screens.py` to see what changes, then with `--apply`.
+   For each menu layout it gives every label V2's font, size, colour and letter spacing, and puts its
+   words where V2 draws them (`size`, `spacing`, `inkBox`; the builder places such a label instead of
+   fitting it). It sizes and places every icon on V2's ink, hides the chevrons V2's crimson buttons
+   do not have, and adds V2's few new nodes. Only the keys it sets change in each file.
+4. **Main menu.** It is built in code: `MainMenuBuilder`'s label and art constants are V2's, from the
+   same data.
+5. **Import and rebuild** as above (`KitImporter.Apply()` for the new pieces' import settings).
+
 Rebuild the screens only while the Editor is **not** in Play mode. In Play mode a view's `Awake`
 runs as its builder adds it, and its runtime state (a hidden canvas, for one) is saved into the
 prefab.

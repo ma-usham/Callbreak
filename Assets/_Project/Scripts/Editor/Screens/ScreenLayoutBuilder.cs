@@ -376,16 +376,7 @@ namespace Callbreak.Editor.Screens
                 return;
             }
 
-            TMP_FontAsset font = UiBuildKit.LoadFontRole(node.font);
-            Color top = UiBuildKit.Hex(string.IsNullOrEmpty(node.colorTop) ? node.color : node.colorTop);
-            Color bottom = UiBuildKit.Hex(string.IsNullOrEmpty(node.colorBottom) ? node.color : node.colorBottom);
-            TextMeshProUGUI label = UiBuildKit.FitLabel(node.id, parent, parentCentre, node.text ?? "", font, node.inkBox,
-                string.IsNullOrEmpty(node.align) ? "centre" : node.align, node.tracked, top, bottom);
-            if (node.style == "buttonLabel")
-            {
-                label.fontSharedMaterial = UiBuildKit.LoadShadowPreset(font, "ButtonLabel", new Color(0.29f, 0.03f, 0.04f, 0.9f), new Vector2(0.25f, -0.35f), 0.2f);
-            }
-
+            TextMeshProUGUI label = LayoutLabel(node, parent, parentCentre);
             if (!string.IsNullOrEmpty(node.key))
             {
                 var localized = label.gameObject.AddComponent<LocalizedText>();
@@ -399,6 +390,37 @@ namespace Callbreak.Editor.Screens
             {
                 label.gameObject.SetActive(false);
             }
+        }
+
+        /// <summary>
+        /// A layout label: at V2's size and spacing, its ink placed on the ink box, when the node has
+        /// a size; otherwise fitted to the ink box (font size, width scale or spacing, baseline). A
+        /// "buttonLabel" gets the button label's soft shadow. <paramref name="name"/> and
+        /// <paramref name="text"/> override the node's id and sample text.
+        /// </summary>
+        public static TextMeshProUGUI LayoutLabel(LayoutNode node, Transform parent, Vector2 parentCentre, string name = null, string text = null)
+        {
+            TMP_FontAsset font = UiBuildKit.LoadFontRole(node.font);
+            string align = string.IsNullOrEmpty(node.align) ? "centre" : node.align;
+            TextMeshProUGUI label;
+            if (node.size > 0f)
+            {
+                label = UiBuildKit.PlaceLabel(name ?? node.id, parent, parentCentre, text ?? node.text ?? string.Empty,
+                    text == null ? node.measure : null, font, node.size, node.spacing, node.inkBox, align, UiBuildKit.Hex(node.color));
+            }
+            else
+            {
+                Color top = UiBuildKit.Hex(string.IsNullOrEmpty(node.colorTop) ? node.color : node.colorTop);
+                Color bottom = UiBuildKit.Hex(string.IsNullOrEmpty(node.colorBottom) ? node.color : node.colorBottom);
+                label = UiBuildKit.FitLabel(name ?? node.id, parent, parentCentre, text ?? node.text ?? string.Empty, font, node.inkBox, align, node.tracked, top, bottom);
+            }
+
+            if (node.style == "buttonLabel")
+            {
+                label.fontSharedMaterial = UiBuildKit.LoadShadowPreset(font, "ButtonLabel", new Color(0.29f, 0.03f, 0.04f, 0.9f), new Vector2(0.25f, -0.35f), 0.2f);
+            }
+
+            return label;
         }
 
         /// <summary>

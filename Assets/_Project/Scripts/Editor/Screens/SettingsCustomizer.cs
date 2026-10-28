@@ -29,8 +29,7 @@ namespace Callbreak.Editor.Screens
         /// <summary>The lock's height on How to Play's button (mockup px): a little under the book's 52, as it is a solid shape.</summary>
         private const float LockHeight = 48f;
 
-        /// <summary>Mockup px from the button's words to its chevron, as on How to Play, and the least a longer translation keeps.</summary>
-        private const float WordsToChevron = 52.15f;
+        /// <summary>Mockup px a longer translation keeps from the chevron.</summary>
         private const float MinWordsToChevron = 16f;
 
         /// <summary>GDD: touch targets of at least 88 px (canvas).</summary>
@@ -104,6 +103,7 @@ namespace Callbreak.Editor.Screens
             float iconStart = book.rect[0] - button.rect[0];
             float iconToWords = bookWords[0] - (book.rect[0] + book.rect[2]);
             float chevronToEnd = button.rect[0] + button.rect[2] - (arrow.rect[0] + arrow.rect[2]);
+            float wordsToChevron = arrow.rect[0] - bookWords[2];
 
             // The lock in the book's place, on the same line.
             var lockSize = new Vector2(LockHeight * lockSprite.rect.width / lockSprite.rect.height, LockHeight);
@@ -128,7 +128,7 @@ namespace Callbreak.Editor.Screens
 
             // As wide as the words need, every part as far from its end as on How to Play.
             float wordsWidth = ink.width / UiBuildKit.ScaleX;
-            float width = iconStart + lockSize.x + iconToWords + wordsWidth + WordsToChevron + arrow.rect[2] + chevronToEnd;
+            float width = iconStart + lockSize.x + iconToWords + wordsWidth + wordsToChevron + arrow.rect[2] + chevronToEnd;
             float half = width / 2f;
             float grow = (width - button.rect[2]) * UiBuildKit.ScaleX;
             root.sizeDelta = new Vector2(width * UiBuildKit.ScaleX, root.sizeDelta.y);
@@ -139,7 +139,7 @@ namespace Callbreak.Editor.Screens
             chevron.anchoredPosition = new Vector2((half - chevronToEnd - (arrow.rect[2] / 2f)) * UiBuildKit.ScaleX, chevron.anchoredPosition.y);
 
             // A longer translation runs on towards the chevron, then shrinks, then ends in an ellipsis.
-            label.sizeDelta = new Vector2((wordsWidth + WordsToChevron - MinWordsToChevron) * UiBuildKit.ScaleX, label.sizeDelta.y);
+            label.sizeDelta = new Vector2((wordsWidth + wordsToChevron - MinWordsToChevron) * UiBuildKit.ScaleX, label.sizeDelta.y);
             words.enableAutoSizing = true;
             words.fontSizeMax = words.fontSize;
             words.fontSizeMin = words.fontSize * 0.7f;

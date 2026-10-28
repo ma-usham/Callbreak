@@ -15,9 +15,9 @@ namespace Callbreak.Editor
     /// <item>plain (ADR 041, the Profile screen's picker): the kit's crimson "selected" disc behind
     /// the chosen one, the white disc every avatar sits on, the portrait, and the crimson check
     /// badge on the chosen one, in one row;</item>
-    /// <item>framed (ADR 043, the name screen at the start, as its mockup draws it): each portrait in
-    /// its own gold ring, the chosen one hugged by a thin crimson ring and wearing the gold check
-    /// badge, in rows of a given length, a shorter last row centred.</item>
+    /// <item>framed (ADR 043, the name screen at the start, as V2 draws it): each portrait in its own
+    /// gold ring, the chosen one's ring crimson and wearing the crimson check badge at its top right,
+    /// in rows of a given length, a shorter last row centred.</item>
     /// </list>
     /// </summary>
     public static class AvatarPickerBuilder
@@ -27,10 +27,13 @@ namespace Callbreak.Editor
         /// <summary>The framed portrait's share of a choice: it ends where the crimson ring's inner edge begins.</summary>
         public const float FramedPictureShare = 0.94f;
 
-        /// <summary>The gold check badge's share of a framed choice, and where its centre sits (from the bottom left).</summary>
-        public const float FramedCheckShare = 0.22f;
+        /// <summary>
+        /// The check badge's share of a framed choice, and where its centre sits (from the bottom left):
+        /// V2's 44 on a 132 portrait, centred 0.89 across and 0.12 down it, in the portrait's share of the choice.
+        /// </summary>
+        public const float FramedCheckShare = 0.313f;
 
-        public static readonly Vector2 FramedCheckAnchor = new Vector2(0.82f, 0.16f);
+        public static readonly Vector2 FramedCheckAnchor = new Vector2(0.87f, 0.857f);
 
         private static readonly Look Plain = new Look
         {
@@ -48,7 +51,7 @@ namespace Callbreak.Editor
         {
             Selected = "UI/Avatars/UI_AvatarRing_Chosen.png",
             Disc = null,
-            Check = "UI/Controls/UI_Check_Badge_Gold.png",
+            Check = "UI/Controls/UI_Check_Badge.png",
             DiscShare = 0f,
             PictureShare = FramedPictureShare,
             CheckShare = FramedCheckShare,
@@ -76,22 +79,19 @@ namespace Callbreak.Editor
         }
 
         /// <summary>
-        /// One framed portrait shown as chosen, for good: the crimson ring, the portrait in its gold
-        /// ring and the gold check badge, <paramref name="size"/> wide, centred on its parent's
-        /// <paramref name="centre"/> (canvas units from the parent's centre). Returns the portrait,
-        /// whose picture the view changes.
+        /// The player's portrait in its gold ring, as V2 draws it above the name, <paramref name="size"/>
+        /// wide, centred on its parent's <paramref name="centre"/> (canvas units from the parent's
+        /// centre). Returns the portrait, whose picture the view changes.
         /// </summary>
-        public static Image BuildChosenFrame(Transform parent, string name, float size, Vector2 centre)
+        public static Image BuildFramedPortrait(Transform parent, string name, float size, Vector2 centre)
         {
             var library = AssetDatabase.LoadAssetAtPath<AvatarLibrary>(LibraryPath);
             RectTransform root = Child(name, parent);
             root.anchorMin = root.anchorMax = root.pivot = new Vector2(0.5f, 0.5f);
             root.sizeDelta = new Vector2(size, size);
             root.anchoredPosition = centre;
-            Centred("Ring", root, KitSprite(Framed.Selected), size);
-            Image picture = Centred("Picture", root, library != null ? library.Framed(0) : null, size * FramedPictureShare);
+            Image picture = Centred("Picture", root, library != null ? library.Framed(0) : null, size);
             picture.preserveAspect = true;
-            Badge(root, Framed, size);
             return picture;
         }
 
@@ -149,8 +149,9 @@ namespace Callbreak.Editor
                 feedbackSo.FindProperty("_cue").intValue = (int)SoundCue.UiTap;
                 feedbackSo.ApplyModifiedPropertiesWithoutUndo();
 
-                Image chosen = Centred("Selected", choice, selectedSprite, cell);
-                selected[i] = chosen.gameObject;
+                // The plain look's crimson disc lies behind the portrait; the framed look's crimson
+                // ring lies over the portrait's gold one.
+                Image chosen = look.Framed ? null : Centred("Selected", choice, selectedSprite, cell);
                 if (discSprite != null)
                 {
                     Centred("Disc", choice, discSprite, cell * look.DiscShare);
@@ -160,6 +161,8 @@ namespace Callbreak.Editor
                 Image picture = Centred("Picture", choice, portrait, cell * look.PictureShare);
                 picture.preserveAspect = true;
                 pictures[i] = picture;
+                chosen ??= Centred("Selected", choice, selectedSprite, cell * look.PictureShare);
+                selected[i] = chosen.gameObject;
                 checks[i] = Badge(choice, look, cell);
 
                 // Nothing is chosen until the presenter says what is.
