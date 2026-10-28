@@ -44,11 +44,14 @@ FRAMES = {
     '06 Offline Setup': 'OfflineSetup',
     '07 Bidding': 'BiddingPanel',
     '08 Gameplay': 'Table',
+    '09 Round Results': 'RoundResults',
+    '10 Match Results': 'MatchResults',
     '11 Settings': 'Settings',
     '13 Match Menu': 'MatchMenu',
     '12 How to Play': 'HowToPlay',
     '14 Profile': 'Profile',
     '15 Shop · Cards': 'Shop',
+    '16 Scorecard': 'Scorecard',
     '17 Scene Loading': 'SceneLoading',
     '20 Shop · Backgrounds': 'ShopBackgroundsLayout',
     '21 Shop · Tables': 'ShopTablesLayout',
@@ -94,6 +97,9 @@ HIDDEN = {
     'OfflineSetup': {'StartChevron'},
     'PlayOnline': {'PlayQuickChevron', 'PlayStakeChevron'},
     'PlayWithFriends': {'CreateChevron', 'JoinChevron'},
+    'RoundResults': {'NextChevron'},
+    'MatchResults': {'PlayAgainChevron'},
+    'Scorecard': {'PrimaryChevron'},
 }
 
 # Icons the passes cannot match by name: layout id -> the V2 icon instance it shows.

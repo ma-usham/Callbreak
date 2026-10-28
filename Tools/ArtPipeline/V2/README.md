@@ -81,7 +81,7 @@ menus; the equipped table fills the screen at the table.
 4. **Library.** In the Editor run `TableBackdropBuilder.Build()` (menu *Callbreak/Table/Build Table
    Backdrops*). Then rebuild the screens.
 
-## The menu and table screens' type and pieces
+## The menu, table and results screens' type and pieces
 
 1. **Read.** Run `figma-screens-dump.js` with `use_figma` on the V2 screen frames, a few at a time,
    and merge the results into `screens-v2.json`: every layer's box, and for text its font, size,
@@ -93,20 +93,20 @@ menus; the equipped table fills the screen at the table.
    makes of plain shapes into their files:
    - the menus' spinner arc, the coin glow, Day 7's gold frame, the crimson copy button and the
      plain vertical dividers;
-   - the table's prompt strip and its rim, the name plate and the Reconnecting spinner.
+   - the table's prompt strip and its rim, the name plate and the Reconnecting spinner;
+   - the text field's error look.
 
    The game blends its UI in linear light, so V2's translucent darks would look lighter than in
    Figma. The script raises their opacity to match V2 over the table's felt, and prints the values
    the table's code uses.
 3. **Layouts.** Run `python Tools/ArtPipeline/V2/screens.py` to see what changes, then with `--apply`.
-   For each menu layout, and the table, call panel and match menu, it gives every label V2's font,
-   size, colour and letter spacing, and puts its
-   words where V2 draws them (`size`, `spacing`, `inkBox`; the builder places such a label instead of
-   fitting it). It sizes and places every icon on V2's ink, hides the chevrons V2's crimson buttons
+   For each menu layout, the table, call panel and match menu, and the results screens, it gives
+   every label V2's font, size, colour and letter spacing, and puts its words where V2 draws them
+   (`size`, `spacing`, `inkBox`; the builder places such a label instead of fitting it). It sizes and places every icon on V2's ink, hides the chevrons V2's crimson buttons
    do not have, and adds V2's few new nodes. Only the keys it sets change in each file.
-4. **Built in code.** The main menu's labels and art (`MainMenuBuilder`) and the table's own pieces
-   (`TableCustomizer`: the prompt, the call bubble, the emote picker, Reconnecting) take V2's
-   constants from the same data.
+4. **Built in code.** The main menu's labels and art (`MainMenuBuilder`), the table's own pieces
+   (`TableCustomizer`: the prompt, the call bubble, the emote picker, Reconnecting), the dialog
+   (`DialogBuilder`) and the toast (`ToastBuilder`) take V2's constants from the same data.
 5. **Import and rebuild** as above (`KitImporter.Apply()` for the new pieces' import settings).
 
 Rebuild the screens only while the Editor is **not** in Play mode. In Play mode a view's `Awake`

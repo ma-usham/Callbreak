@@ -23,9 +23,9 @@ namespace Callbreak.Editor.Screens
         private const int MockupChoice = 4;
         private const float CallingScale = 1.25f;
 
-        // The refusal line: as wide as the panel allows (the panel is 706 mockup px), GDD §12 burgundy.
+        // The refusal line: as wide as the panel allows (the panel is 706 mockup px), in V2's error crimson.
         private const float ReasonWidth = 640f;
-        private const string ReasonColor = "#7A1016";
+        private const string ReasonColor = "#A3121F";
 
         // The assist's dot: under the chip's number, above its bottom edge (mockup px from the chip's centre).
         private const float HintDrop = 24f;

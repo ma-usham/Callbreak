@@ -12,11 +12,13 @@ namespace Callbreak.Editor
     /// <summary>
     /// Builds the toast overlay (GDD §23 toast layer, sorting order 60): its own overlay canvas
     /// scaled like the screens (1920 × 1080, Expand), a pill anchored 40 px below the top of the
-    /// safe area with a soft shadow, and a <see cref="ToastView"/>. The pill is Panel Ivory
-    /// #FFFBF5 with a 1 px Warm Sand #DFC8AE rim (GDD §12 "chip rims") and Charcoal #231C19 Inter
-    /// Medium at 26 px; the shadow follows the GDD panel spec (y 8, blur 24, 12% Mountain Brown).
-    /// Both sprites are drawn here as 9-sliced @2x PNGs (PPU 200), so re-running rebuilds
-    /// everything; a PNG is only rewritten when its pixels change.
+    /// safe area with a soft shadow, and a <see cref="ToastView"/>. The pill is V2's toast (Figma
+    /// "V2 · Screens", Messages &amp; Errors): #17140F at 90% with a 1-unit #DDB565 rim at 50%,
+    /// 74 high, round-ended, the words ivory Inter SemiBold 28; its shadow is V2's (y 8, blur 24,
+    /// #17140F at 30%). The UI is blended in linear light, so V2's 90% is 97.5% here
+    /// (Tools/ArtPipeline/V2/pieces.py, linear_alpha). Both sprites are drawn here as 9-sliced @2x
+    /// PNGs (PPU 200), so re-running rebuilds everything; a PNG is only rewritten when its pixels
+    /// change.
     /// </summary>
     public static class ToastBuilder
     {
@@ -26,28 +28,29 @@ namespace Callbreak.Editor
 
         // Sprite pixels are @2x: two per 1080p canvas pixel.
         private const float PixelsPerUnit = 200f;
-        private const int Radius = 64;
+        private const int Radius = 74;
         private const int Outline = 2;
         private const int StretchWidth = 8;
         private const int StretchHeight = 4;
         private const float ShadowSigma = 24f;
         private const int ShadowMargin = 72;
-        private const float ShadowOpacity = 0.12f;
+        private const float ShadowOpacity = 0.3f;
+        private const float FaceOpacity = 0.975f;
+        private const float RimOpacity = 0.5f;
 
         // Canvas pixels.
         private const float ShadowDrop = 8f;
         private const float TopMargin = 40f;
-        private const float FontSize = 26f;
-        private const float PaddingX = 36f;
-        private const float PaddingY = 16f;
-        private const float MinHeight = 64f;
+        private const float FontSize = 28f;
+        private const float PaddingX = 32f;
+        private const float PaddingY = 18f;
+        private const float MinHeight = 74f;
         private const float MaxTextWidth = 1100f;
         private const int SortingOrder = 60;
 
-        private const string Ivory = "#FFFBF5";
-        private const string WarmSand = "#DFC8AE";
-        private const string Charcoal = "#231C19";
-        private const string MountainBrown = "#7A5B45";
+        private const string Ink = "#17140F";
+        private const string Gold = "#DDB565";
+        private const string Ivory = "#FFFCF7";
 
         [MenuItem("Callbreak/Build/Toast")]
         public static void Build()
@@ -109,9 +112,9 @@ namespace Callbreak.Editor
             RectTransform labelRect = Child("Label", pill);
             Stretch(labelRect, new Vector2(PaddingX, PaddingY), new Vector2(-PaddingX, -PaddingY));
             var label = labelRect.gameObject.AddComponent<TextMeshProUGUI>();
-            label.font = UiBuildKit.LoadFontRole("SansMedium");
+            label.font = UiBuildKit.LoadFontRole("SansSemiBold");
             label.fontSize = FontSize;
-            label.color = UiBuildKit.Hex(Charcoal);
+            label.color = UiBuildKit.Hex(Ivory);
             label.alignment = TextAlignmentOptions.Center;
             label.textWrappingMode = TextWrappingModes.Normal;
             label.overflowMode = TextOverflowModes.Overflow;
@@ -145,13 +148,16 @@ namespace Callbreak.Editor
             return root;
         }
 
-        /// <summary>The pill face: an ivory rounded rectangle (radius = half the pill height) with a 1 px sand rim.</summary>
+        /// <summary>
+        /// The pill face: a dark rounded rectangle (radius = half the pill height) with a 1-unit gold
+        /// rim, the rim laid on the fill as Figma lays it.
+        /// </summary>
         private static byte[] RenderFace()
         {
             int width = 2 * Radius + StretchWidth;
             int height = 2 * Radius + StretchHeight;
-            Color32 fill = UiBuildKit.Hex(Ivory);
-            Color32 rim = UiBuildKit.Hex(WarmSand);
+            Color fill = UiBuildKit.Hex(Ink);
+            Color rim = Color.Lerp(fill, UiBuildKit.Hex(Gold), RimOpacity);
             var pixels = new Color32[width * height];
             for (int y = 0; y < height; y++)
             {
@@ -160,8 +166,8 @@ namespace Callbreak.Editor
                     float d = RoundedRectDistance(x + 0.5f, y + 0.5f, width, height, Radius);
                     float coverage = Mathf.Clamp01(0.5f - d);
                     float inner = Mathf.Clamp01(0.5f - (d + Outline));
-                    Color32 c = Color32.Lerp(rim, fill, inner);
-                    c.a = (byte)Mathf.RoundToInt(coverage * 255f);
+                    Color32 c = Color.Lerp(rim, fill, inner);
+                    c.a = (byte)Mathf.RoundToInt(coverage * FaceOpacity * 255f);
                     pixels[y * width + x] = c;
                 }
             }
@@ -176,7 +182,7 @@ namespace Callbreak.Editor
             int shapeHeight = 2 * Radius + StretchHeight;
             int width = shapeWidth + 2 * ShadowMargin;
             int height = shapeHeight + 2 * ShadowMargin;
-            Color32 brown = UiBuildKit.Hex(MountainBrown);
+            Color32 ink = UiBuildKit.Hex(Ink);
             var pixels = new Color32[width * height];
             for (int y = 0; y < height; y++)
             {
@@ -184,7 +190,7 @@ namespace Callbreak.Editor
                 {
                     float d = RoundedRectDistance(x + 0.5f - ShadowMargin, y + 0.5f - ShadowMargin, shapeWidth, shapeHeight, Radius);
                     float alpha = ShadowOpacity * 0.5f * Erfc(d / (ShadowSigma * 1.41421356f));
-                    Color32 c = brown;
+                    Color32 c = ink;
                     c.a = (byte)Mathf.RoundToInt(Mathf.Clamp01(alpha) * 255f);
                     pixels[y * width + x] = c;
                 }

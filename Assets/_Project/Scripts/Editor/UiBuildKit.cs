@@ -132,6 +132,27 @@ namespace Callbreak.Editor
         }
 
         /// <summary>
+        /// Gives a text field (a layout node with its art on a "Face" child) V2's error look
+        /// (UI/Controls/UI_Field_Error.png, Tools/ArtPipeline/V2/pieces.py), which its view shows
+        /// while the text cannot be used. Null when the field has no face.
+        /// </summary>
+        public static Callbreak.Presentation.Widgets.FieldErrorLook AddFieldErrorLook(RectTransform field)
+        {
+            UnityEngine.UI.Image face = field.Find("Face")?.GetComponent<UnityEngine.UI.Image>();
+            if (face == null)
+            {
+                return null;
+            }
+
+            var look = field.gameObject.AddComponent<Callbreak.Presentation.Widgets.FieldErrorLook>();
+            var so = new SerializedObject(look);
+            so.FindProperty("_face").objectReferenceValue = face;
+            so.FindProperty("_errorSprite").objectReferenceValue = LoadSpriteAt($"{ArtRoot}/UI/Controls/UI_Field_Error.png", 0f);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return look;
+        }
+
+        /// <summary>
         /// Creates a single-line label whose baseline sits at <paramref name="baselineY"/> and
         /// whose text starts at, or is centred on, <paramref name="x"/> (mockup pixels).
         /// </summary>

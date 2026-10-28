@@ -36,7 +36,10 @@ namespace Callbreak.Presentation.Framework
         [SerializeField] private TMP_Text _message;
         [SerializeField] private Button _saveButton;
         [SerializeField] private TMP_Text _saveLabel;
-        [SerializeField] private Color _errorColor = new Color(0.478f, 0.063f, 0.086f, 1f);
+
+        // V2's error crimson #A3121F, and the field's error look; a prefab built before it has none.
+        [SerializeField] private Color _errorColor = new Color(0.639f, 0.071f, 0.122f, 1f);
+        [SerializeField] private FieldErrorLook _fieldLook;
         [SerializeField] private float _fadeSeconds = 0.18f;
 
         private readonly Vector3[] _corners = new Vector3[4];
@@ -154,12 +157,20 @@ namespace Callbreak.Presentation.Framework
             }
         }
 
-        /// <summary>The line under the field: a note, or (in the error colour) why the name cannot be used.</summary>
+        /// <summary>
+        /// The line under the field: a note, or (in the error colour, the field in its error look)
+        /// why the name cannot be used.
+        /// </summary>
         public void SetMessage(string text, bool isError)
         {
             RememberNoteColor();
             text ??= string.Empty;
             _message.color = isError ? _errorColor : _noteColor;
+            if (_fieldLook != null)
+            {
+                _fieldLook.SetError(isError);
+            }
+
             if (_message.text != text)
             {
                 _message.text = text;

@@ -112,7 +112,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
   m_AnchoredPosition: {x: 0, y: -40}
-  m_SizeDelta: {x: 480, y: 64}
+  m_SizeDelta: {x: 480, y: 74}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!225 &3483324430052731014
 CanvasGroup:
@@ -161,7 +161,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -72, y: -32}
+  m_SizeDelta: {x: -64, y: -36}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7671430653837506717
 CanvasRenderer:
@@ -193,15 +193,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: "A hand had no spades \u2014 redealing."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 9157b80a28e447948bd5868d6bf57bd6, type: 2}
-  m_sharedMaterial: {fileID: -7919326205970144150, guid: 9157b80a28e447948bd5868d6bf57bd6, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 18cbfce3bbe20ab42b9cdcc2af6adf8a, type: 2}
+  m_sharedMaterial: {fileID: 8532917658395578001, guid: 18cbfce3bbe20ab42b9cdcc2af6adf8a, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 0.13725491, g: 0.10980392, b: 0.09803922, a: 1}
+  m_fontColor: {r: 1, g: 0.9882353, b: 0.96862745, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -218,8 +218,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 26
-  m_fontSizeBase: 26
+  m_fontSize: 28
+  m_fontSizeBase: 28
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -366,8 +366,10 @@ MonoBehaviour:
   _fadeSeconds: 0.2
   _holdSeconds: 2.4
   _maxTextWidth: 1100
-  _padding: {x: 36, y: 16}
-  _minHeight: 64
+  _padding: {x: 32, y: 18}
+  _minHeight: 74
+  _dropDistance: 20
+  _liftDistance: 12
 --- !u!1 &6962811263098992537
 GameObject:
   m_ObjectHideFlags: 0

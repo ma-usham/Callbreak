@@ -26,13 +26,13 @@ namespace Callbreak.Tests.EditMode.Unity
         private const float ScaleX = 1920f / 1672f;
         private const float ScaleY = 1080f / 941f;
 
-        // The phase 3a and 3b screens whose prefab is built from the layout of the same name. The shop
-        // is three layouts in one prefab, its tiles placed by ShopCustomizer, so it is checked by size only.
+        // The phase 3a, 3b and 3c screens whose prefab is built from the layout of the same name. The
+        // shop is three layouts in one prefab, its tiles placed by ShopCustomizer, so it is checked by size only.
         private static readonly string[] Screens =
         {
             "PlayWithFriends", "CreateRoom", "JoinRoom", "PrivateLobby", "Matchmaking", "OfflineSetup", "Settings",
             "HowToPlay", "Profile", "SceneLoading", "NamePrompt", "EarnCoins", "PlayOnline", "DailyRewards",
-            "Table", "BiddingPanel", "MatchMenu",
+            "Table", "BiddingPanel", "MatchMenu", "RoundResults", "MatchResults", "Scorecard",
         };
 
         // Labels a customizer sets in a common style after the build (ScreenExtras.UnifyStyle: V2's
@@ -42,6 +42,11 @@ namespace Callbreak.Tests.EditMode.Unity
             "PlayOnline/Place0", "PlayOnline/Place1", "PlayOnline/Place2", "PlayOnline/Place3",
             "PlayOnline/PrizeAmount0", "PlayOnline/PrizeAmount1", "PlayOnline/PrizeAmount2", "PlayOnline/PrizeAmount3",
         };
+
+        // The results tables, whose cells ("Row...") their customizers make regular: one size per
+        // kind of cell, on common columns and lines (ScreenExtras.UnifyStyle, AlignColumn, AlignRow).
+        // V2 draws a few at other sizes (a 28 among the 32s).
+        private static readonly HashSet<string> UnifiedTables = new HashSet<string> { "RoundResults", "MatchResults", "Scorecard" };
 
         // Labels a customizer moves after the build, as their views do at runtime: the lobby's seat
         // lines share one baseline (PrivateLobbyCustomizer), the reset line is centred with its
@@ -99,7 +104,7 @@ namespace Callbreak.Tests.EditMode.Unity
                 foreach (Node node in V2Labels(screen))
                 {
                     Component label = FindLabel(prefab.transform, node.id);
-                    if (label == null || Unified.Contains(screen + "/" + node.id))
+                    if (label == null || IsUnified(screen, node.id))
                     {
                         continue;
                     }
@@ -147,7 +152,7 @@ namespace Callbreak.Tests.EditMode.Unity
                 {
                     string id = screen + "/" + node.id;
                     Component label = FindLabel(instance.transform, ShownBy.TryGetValue(id, out string shown) ? shown : node.id);
-                    if (label == null || Unified.Contains(id) || Moved.Contains(id))
+                    if (label == null || IsUnified(screen, node.id) || Moved.Contains(id))
                     {
                         continue;
                     }
@@ -219,6 +224,9 @@ namespace Callbreak.Tests.EditMode.Unity
             Transform portrait = prefab.GetComponentsInChildren<Transform>(true).First(t => t.name == "Portrait");
             Assert.AreEqual(1, portrait.childCount, "the big portrait is the framed picture alone, as V2 draws it");
         }
+
+        private static bool IsUnified(string screen, string id) =>
+            Unified.Contains(screen + "/" + id) || (UnifiedTables.Contains(screen) && id.StartsWith("Row", StringComparison.Ordinal));
 
         private static IEnumerable<Node> V2Labels(string screen)
         {

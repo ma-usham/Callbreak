@@ -7,10 +7,10 @@ namespace Callbreak.Presentation.Widgets
 {
     /// <summary>
     /// The line under the profile's name field (GDD §11 screen 14): normally the note "Your name is
-    /// visible at the table." in its mockup colour, or a validation message in the error colour
-    /// (Heading Burgundy from the GDD §12 palette; the mockup shows no error state). A tap on the
-    /// field while the saved name has to stay (ADR 041) nudges it: the line flashes the error
-    /// colour and fades back, and shakes three times (only the colour with Reduce motion).
+    /// visible at the table." in its mockup colour, or a validation message in V2's error crimson
+    /// with the field in its error look (V2's "Messages &amp; Errors"). A tap on the field while the
+    /// saved name has to stay (ADR 041) nudges it: the line flashes the error colour and fades
+    /// back, and shakes three times (only the colour with Reduce motion).
     /// </summary>
     public sealed class ProfileNameMessage : MonoBehaviour
     {
@@ -21,7 +21,10 @@ namespace Callbreak.Presentation.Widgets
 
         [SerializeField] private TMP_Text _label;
         [SerializeField] private Color _noteColor = new Color(0.565f, 0.427f, 0.318f);
-        [SerializeField] private Color _errorColor = new Color(0.478f, 0.063f, 0.086f);
+        [SerializeField] private Color _errorColor = new Color(0.639f, 0.071f, 0.122f);
+
+        // The name field's error look; a prefab built before it has none.
+        [SerializeField] private FieldErrorLook _fieldLook;
 
         private MotionHandle _shake;
         private MotionHandle _flash;
@@ -42,6 +45,10 @@ namespace Callbreak.Presentation.Widgets
 
             _shown = isError ? _errorColor : _noteColor;
             _label.color = _shown;
+            if (_fieldLook != null)
+            {
+                _fieldLook.SetError(isError);
+            }
         }
 
         /// <summary>

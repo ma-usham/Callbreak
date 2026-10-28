@@ -32,8 +32,8 @@ namespace Callbreak.Editor.Screens
         /// <summary>A long name shrinks to no less than this share of the mockup's size.</summary>
         private const float MinNameScale = 0.5f;
 
-        /// <summary>Validation messages use Heading Burgundy (GDD §12 palette); the mockup shows no error state.</summary>
-        private const string ErrorColor = "#7A1016";
+        /// <summary>Validation messages use V2's error crimson, the field its error look (V2, "Messages &amp; Errors").</summary>
+        private const string ErrorColor = "#A3121F";
 
         /// <summary>Warm Sand #DFC8AE (GDD §12 palette) behind selected text.</summary>
         private static readonly Color SelectionColor = new Color(0.875f, 0.784f, 0.682f, 0.75f);
@@ -285,6 +285,11 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_label").objectReferenceValue = note;
             so.FindProperty("_noteColor").colorValue = note.color;
             so.FindProperty("_errorColor").colorValue = UiBuildKit.Hex(ErrorColor);
+            if (ctx.Nodes.TryGetValue("NameField", out RectTransform field))
+            {
+                so.FindProperty("_fieldLook").objectReferenceValue = UiBuildKit.AddFieldErrorLook(field);
+            }
+
             so.ApplyModifiedPropertiesWithoutUndo();
         }
     }

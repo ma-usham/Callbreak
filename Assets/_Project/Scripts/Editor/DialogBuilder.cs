@@ -9,10 +9,12 @@ namespace Callbreak.Editor
 {
     /// <summary>
     /// Builds the shared confirmation dialog (GDD §23 popup layer, sorting order 50) from the UI kit
-    /// only: the 9-sliced modal panel, the crimson primary button and the ivory secondary button.
-    /// Its proportions and type follow the Game Menu panel of mockup 13 (panel 567 wide, buttons
-    /// 448 x 69, serif title, stacked buttons), which is the only modal the mockups show; the dim
-    /// behind it is the one measured there (the table drops to 46% brightness).
+    /// only, as V2 draws it (Figma "V2 · Screens", Dialogs and Overlay · Confirm Dialog): the
+    /// 9-sliced plain panel 800 wide; the title in Source Serif 4 Bold 44, crimson, over the
+    /// ornament divider; the body in Inter SemiBold 28, brown; and the buttons side by side, the
+    /// ivory secondary pill (88 high, Inter Bold 28) left of the crimson primary pill (96 high,
+    /// Source Serif 4 Bold 34). DialogView lays them out. The table, or the menu, is dimmed as V2
+    /// dims it under its overlays.
     /// </summary>
     public static class DialogBuilder
     {
@@ -20,26 +22,28 @@ namespace Callbreak.Editor
 
         private const int SortingOrder = 50;
 
-        // Canvas pixels (mockup pixels x 1920 / 1672).
-        private const float PanelWidth = 652f;
-        private const float PanelStartHeight = 470f;
-        private const float TextWidth = 540f;
-        private const float ButtonWidth = 514f;
-        private const float ButtonHeight = 79f;
-
-        // The primary button is the crimson box of mockup 13's Resume; its sprite's box is the
-        // outer edge, 78.12 mockup px tall where the keyline's inside measured 79 canvas px.
-        private const float ConfirmHeight = 89.7f;
+        // Canvas units.
+        private const float PanelWidth = 800f;
+        private const float PanelStartHeight = 395f;
+        private const float TextWidth = 672f;
+        private static readonly Vector2 DividerSize = new Vector2(360f, 16f);
+        private static readonly Vector2 ConfirmSize = new Vector2(280f, 96f);
+        private static readonly Vector2 CancelSize = new Vector2(200f, 88f);
         private const float PanelShadowSpread = CommonKit.PanelShadowSpread;
         private const float PanelShadowDrop = CommonKit.PanelShadowDrop;
 
-        private const float TitleSize = 60f;
+        private const float TitleSize = 44f;
         private const float BodySize = 28f;
-        private const float ConfirmLabelSize = 40f;
-        private const float CancelLabelSize = 32f;
+        private const float ConfirmLabelSize = 34f;
+        private const float CancelLabelSize = 28f;
 
-        // Measured on mockup 13: black at this opacity, blended in linear light.
-        private static readonly Color Dim = new Color(0f, 0f, 0f, 0.817f);
+        // The primary pill's shadow drop (Tools/ArtPipeline/V2/kit.json, "primary").
+        private const float PrimaryShadowDrop = 6f;
+
+        // A label in a row too wide for the panel shrinks to no less than this share of its size.
+        private const float LabelMinScale = 0.7f;
+
+        private static readonly Color Dim = new Color(0f, 0f, 0f, Screens.TableCustomizer.V2DimOpacity);
 
         [MenuItem("Callbreak/Build/Dialog")]
         public static void Build()
@@ -103,27 +107,30 @@ namespace Callbreak.Editor
 
             TMP_FontAsset serif = UiBuildKit.LoadFontRole("SerifBold");
             TextMeshProUGUI title = Text("Title", panel, serif, TitleSize, "Leave match?");
-            title.enableVertexGradient = true;
-            title.colorGradient = new VertexGradient(UiBuildKit.Hex("#8E0A17"), UiBuildKit.Hex("#8E0A17"), UiBuildKit.Hex("#750A14"), UiBuildKit.Hex("#750A14"));
-            title.color = Color.white;
+            title.color = UiBuildKit.Hex("#8E0E19");
 
-            TextMeshProUGUI body = Text("Body", panel, UiBuildKit.LoadFontRole("SansRegular"), BodySize, "A bot will take your seat and it counts as a loss.");
-            body.color = UiBuildKit.Hex("#7A593F");
+            // The ornament under the title, as the screens draw theirs.
+            RectTransform divider = Child("Divider", panel);
+            divider.anchorMin = divider.anchorMax = divider.pivot = new Vector2(0.5f, 1f);
+            divider.sizeDelta = DividerSize;
+            UiBuildKit.AddImage(divider, UiBuildKit.LoadSpriteAt($"{UiBuildKit.ArtRoot}/UI/Decor/Deco_TitleDivider.png", 0f), false).preserveAspect = true;
+
+            TextMeshProUGUI body = Text("Body", panel, UiBuildKit.LoadFontRole("SansSemiBold"), BodySize, "A bot will take your seat and it counts as a loss.");
+            body.color = UiBuildKit.Hex("#6E4F37");
             body.lineSpacing = 8f;
 
-            var buttonSize = new Vector2(ButtonWidth, ButtonHeight);
             Button confirm = KitButton(
-                "ConfirmButton", panel, new Vector2(ButtonWidth, ConfirmHeight),
-                "UI/Controls/UI_Button_Crimson_Box.png", "UI/Controls/UI_Button_Crimson_Box_Shadow.png", CommonKit.HeroShadowDrop, 1f);
-            TextMeshProUGUI confirmLabel = ButtonLabel(confirm.transform, serif, ConfirmLabelSize, "Leave Match", UiBuildKit.Hex("#FEFCFC"));
+                "ConfirmButton", panel, ConfirmSize, "UI/Buttons/UI_ButtonPrimary_Normal.png", "UI/Buttons/UI_Shadow_Primary.png", PrimaryShadowDrop, 1f);
+            TextMeshProUGUI confirmLabel = ButtonLabel(confirm.transform, serif, ConfirmLabelSize, "Leave Match", UiBuildKit.Hex("#FFFCF7"));
             confirmLabel.fontSharedMaterial = UiBuildKit.LoadShadowPreset(serif, "ButtonLabel", new Color(0.29f, 0.03f, 0.04f, 0.9f), new Vector2(0.25f, -0.35f), 0.2f);
 
-            Button cancel = KitButton("CancelButton", panel, buttonSize, "UI/Buttons/UI_ButtonSecondary_Normal.png", "UI/Buttons/UI_Shadow_Secondary.png", CommonKit.SecondaryShadowDrop, 1f);
-            TextMeshProUGUI cancelLabel = ButtonLabel(cancel.transform, UiBuildKit.LoadFontRole("SansSemiBold"), CancelLabelSize, "Cancel", UiBuildKit.Hex("#222424"));
+            Button cancel = KitButton("CancelButton", panel, CancelSize, "UI/Buttons/UI_ButtonSecondary_Normal.png", "UI/Buttons/UI_Shadow_Secondary.png", CommonKit.SecondaryShadowDrop, 1f);
+            TextMeshProUGUI cancelLabel = ButtonLabel(cancel.transform, UiBuildKit.LoadFontRole("SansBold"), CancelLabelSize, "Cancel", UiBuildKit.Hex("#17140F"));
 
             var view = root.AddComponent<DialogView>();
             var so = new SerializedObject(view);
             so.FindProperty("_panel").objectReferenceValue = panel;
+            so.FindProperty("_divider").objectReferenceValue = divider;
             so.FindProperty("_backdrop").objectReferenceValue = backdropButton;
             so.FindProperty("_title").objectReferenceValue = title;
             so.FindProperty("_body").objectReferenceValue = body;
@@ -215,6 +222,10 @@ namespace Callbreak.Editor
             label.textWrappingMode = TextWrappingModes.NoWrap;
             label.overflowMode = TextOverflowModes.Overflow;
             label.raycastTarget = false;
+
+            // DialogView turns auto-sizing on when a long translation's row is too wide.
+            label.fontSizeMax = size;
+            label.fontSizeMin = size * LabelMinScale;
             label.text = sample;
             return label;
         }

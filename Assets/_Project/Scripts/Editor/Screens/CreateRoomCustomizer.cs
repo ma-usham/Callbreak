@@ -24,7 +24,7 @@ namespace Callbreak.Editor.Screens
         private const float SpinnerArc = 0.75f;     // the part of the ring that is drawn
         private const float ErrorInset = 12f;       // mockup px kept free between the error line and the button's ends
         private const float ChevronGap = 16f;       // mockup px kept free between the button's words and its chevron
-        private static readonly Color ErrorColor = new Color32(0x7A, 0x10, 0x16, 0xFF);   // Heading Burgundy (GDD §12)
+        private static readonly Color ErrorColor = new Color32(0xA3, 0x12, 0x1F, 0xFF);   // V2's error crimson ("Messages & Errors")
 
         public static void Customize(ScreenBuildContext ctx)
         {

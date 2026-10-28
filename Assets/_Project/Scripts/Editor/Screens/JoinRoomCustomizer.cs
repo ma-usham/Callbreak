@@ -27,7 +27,8 @@ namespace Callbreak.Editor.Screens
         private const float ErrorGap = 10f;                                     // mockup px between the error line and the footer rules
         private const float CaretWidth = 4f;                                    // canvas units: a text caret's bar, at the boxes' size
         private const float CaretHeight = 0.5f;                                 // of a box's height: about a letter's cap height
-        private static readonly Color ErrorColor = new Color32(0x7A, 0x10, 0x16, 0xFF);  // Heading Burgundy (GDD §12)
+        private static readonly Color ErrorColor = new Color32(0xA3, 0x12, 0x1F, 0xFF);   // V2's error crimson ("Messages & Errors")
+        private const float ErrorSize = 28f;                                    // V2's room-code errors: Inter SemiBold 28
 
         public static void Customize(ScreenBuildContext ctx)
         {
@@ -252,6 +253,9 @@ namespace Callbreak.Editor.Screens
             label.text = "Room not found";          // design-time sample; the presenter sets the message
             label.enableVertexGradient = false;
             label.color = ErrorColor;
+            label.font = UiBuildKit.LoadFontRole("SansSemiBold");
+            label.fontSharedMaterial = label.font.material;
+            label.fontSize = ErrorSize;
 
             // The message stays between the two footer rules: it shrinks a little, then ends in an ellipsis.
             if (ctx.Nodes.ContainsKey("FooterLineLeft") && ctx.Nodes.ContainsKey("FooterLineRight"))

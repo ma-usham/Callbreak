@@ -24,6 +24,10 @@
 - UI/Controls/UI_Spinner.png: V2's "Spinner" (the table's Reconnecting overlay): a #E6D4BD ring
   (inner radius 0.78 of the outer) with a #A3121F arc from twelve o'clock round 225°, here 64
   units across.
+- UI/Controls/UI_Field_Error.png: V2's field in its error state ("Field", State=Error): the light
+  field's shape and inner shadow, filled #FFF8F6, with a 2.5-unit #A3121F rim in place of its tan
+  one. The name screens show it while the name is refused.
+- UI/Common/UI_Toast.png and UI_Toast_Shadow.png are drawn by the Editor's ToastBuilder, not here.
 
 The game draws its UI in linear light (Player settings: Linear colour space), so a translucent
 colour over the table looks different from Figma's blend, which is in sRGB: V2's dark plates at 80%
@@ -160,6 +164,19 @@ def pill(width_px, height_px, rim_px=0.0, colour='#FFFFFF', alpha=1.0):
     return rgba
 
 
+def field_error(path, rim_px, fill='#FFF8F6', rim='#A3121F'):
+    """The field at `path` in its error look: its fill tinted to `fill`, keeping its inner shadow,
+    and a `rim_px` band inside its edge in `rim`."""
+    src = np.asarray(Image.open(path).convert('RGBA')).astype(np.float64) / 255.0
+    h, w = src.shape[:2]
+    inside = distance_transform_edt(np.pad(src[..., 3] > 0.5, 1))[1:-1, 1:-1]
+    shade = src[..., :3] / np.maximum(src[h // 2, w // 2, :3], 1e-6)       # the inner shadow, as a share of the middle
+    rgb = np.clip(shade * np.array(hex_rgb(fill)), 0.0, 1.0)
+    cover = np.clip(rim_px + 0.5 - inside, 0.0, 1.0)[..., None]
+    rgb = rgb * (1.0 - cover) + np.array(hex_rgb(rim)) * cover
+    return np.dstack([rgb, src[..., 3]])
+
+
 def gold_frame(path, width_px, colour='#DDB565'):
     """The card with a frame of this colour drawn inside its edge, width_px wide (anti-aliased)."""
     rgba = np.asarray(Image.open(path).convert('RGBA')).astype(np.float64) / 255.0
@@ -197,9 +214,13 @@ def main():
     save(over(rim, fill), plate_path)
     spinner_path = os.path.join(ART, 'UI', 'Controls', 'UI_Spinner.png')
     save(spinner(128, inner=0.78, end=math.radians(135), ring='#E6D4BD', ring_alpha=1.0), spinner_path)
+    # The field's error look, from the light field (the name screens' field): 2.5 units is 5 pixels.
+    field_path = os.path.join(ART, 'UI', 'Controls', 'UI_Field_Error.png')
+    save(field_error(os.path.join(ART, 'UI', 'Controls', 'UI_Field_Light.png'), 5), field_path)
     merge_manifest(os.path.join(REPO, 'ArtSource', 'Kit', 'V2.json'), [
         {'path': 'UI/Buttons/UI_ButtonIcon_Crimson.png', 'ppu': 200},
         {'path': 'UI/Controls/UI_Spinner.png', 'ppu': 200},
+        {'path': 'UI/Controls/UI_Field_Error.png', 'ppu': 200, 'nine': [48, 48, 48, 48]},
         {'path': 'UI/Icons/Icon_Copy_Ivory.png', 'ppu': 200},
         {'path': 'UI/Table/UI_PromptStrip.png', 'ppu': 200, 'nine': [62, 0, 62, 0]},
         {'path': 'UI/Table/UI_PromptStrip_Rim.png', 'ppu': 200, 'nine': [62, 0, 62, 0]},
@@ -209,7 +230,7 @@ def main():
         save(vertical_line(p, 4), p)              # 2 canvas units at 200 pixels per unit
     print('prompt and plate opacity over the felt: %.3f; the table dims (black at 60%%): %.3f'
           % (linear_alpha(0.8, '#17140F'), linear_alpha(0.6, '#000000')))
-    for p in (arc_path, glow_path, tile_path, disc_path, copy_path, *lines, strip_path, rim_path, plate_path, spinner_path):
+    for p in (arc_path, glow_path, tile_path, disc_path, copy_path, *lines, strip_path, rim_path, plate_path, spinner_path, field_path):
         print(os.path.relpath(p, os.path.join(ART, '..', '..', '..')).replace('\\', '/'))
 
 

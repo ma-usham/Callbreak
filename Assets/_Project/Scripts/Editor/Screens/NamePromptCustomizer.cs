@@ -177,6 +177,9 @@ namespace Callbreak.Editor.Screens
             text.text = string.Empty;
             placeholder.text = PlaceholderText;
             ctx.Bound["_field"] = input;
+
+            // A name that cannot be used shows the field in V2's error look.
+            ctx.Bound["_fieldLook"] = UiBuildKit.AddFieldErrorLook(field);
         }
 
         /// <summary>The big portrait left of the divider, and the grid of the six right of it, both on the panel.</summary>

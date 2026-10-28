@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Callbreak.Presentation.Framework
 {
     /// <summary>
-    /// One toast on screen (GDD §23 toast layer): an ivory pill at the top centre that sizes itself
+    /// One toast on screen (GDD §23 toast layer): V2's dark pill at the top centre that sizes itself
     /// to its text, drops into place as it fades in, stays for <c>_holdSeconds</c>, lifts a little
     /// as it fades out, then raises <see cref="Finished"/> (ADR 023). With Reduce motion it only
     /// fades. It never takes input. <see cref="ToastService"/> queues the texts; this view shows one
