@@ -199,7 +199,7 @@ namespace Callbreak.Editor
             fan.gameObject.AddComponent<Canvas>();
             var fanSway = fan.gameObject.AddComponent<IdleSway>();
             PlaceShadow("CardFanShadow", fan, fanCentre, FanFoot, Ui("Ornaments/UI_Shadow_MenuFan.png"), 6f, 0.3f);
-            UnityEngine.UI.Image[] fanFaces = BuildFanCards(fan);
+            UnityEngine.UI.Image[] fanFaces = BuildFanCards(fan, out UnityEngine.UI.Image[] fanBases);
 
             var playOnlineCentre = new Vector2(835.75f, 636.25f);
             Sprite primary = Ui("Buttons/UI_ButtonPrimary_Normal.png", 202f);
@@ -291,6 +291,13 @@ namespace Callbreak.Editor
             for (int i = 0; i < fanFaces.Length; i++)
             {
                 faces.GetArrayElementAtIndex(i).objectReferenceValue = fanFaces[i];
+            }
+
+            SerializedProperty bases = serialized.FindProperty("_fanBases");
+            bases.arraySize = fanBases.Length;
+            for (int i = 0; i < fanBases.Length; i++)
+            {
+                bases.GetArrayElementAtIndex(i).objectReferenceValue = fanBases[i];
             }
 
             serialized.FindProperty("_profileButton").objectReferenceValue = profile;
@@ -495,6 +502,48 @@ namespace Callbreak.Editor
         }
 
         /// <summary>
+        /// Adds the deck's base under each ace of the saved main menu's fan and binds them to the view
+        /// (ADR 053); everything else in the prefab stays as it is. A fan that has its bases is left alone.
+        /// </summary>
+        public static string AddFanBases()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+            try
+            {
+                var serialized = new SerializedObject(root.GetComponent<MainMenuView>());
+                SerializedProperty faces = serialized.FindProperty("_fanFaces");
+                SerializedProperty bases = serialized.FindProperty("_fanBases");
+                if (bases.arraySize == faces.arraySize && bases.arraySize > 0 && bases.GetArrayElementAtIndex(0).objectReferenceValue != null)
+                {
+                    return "the main menu's fan already has its bases";
+                }
+
+                CardSpriteProvider cards = TableCardBuilder.EnsureLibrary();
+                bases.arraySize = faces.arraySize;
+                for (int i = 0; i < faces.arraySize; i++)
+                {
+                    var face = faces.GetArrayElementAtIndex(i).objectReferenceValue as UnityEngine.UI.Image;
+                    if (face == null)
+                    {
+                        return $"FAILED: the fan has no face {i}";
+                    }
+
+                    RectTransform baseRect = StretchedChild("Base", face.transform.parent);
+                    baseRect.SetSiblingIndex(face.transform.GetSiblingIndex());
+                    bases.GetArrayElementAtIndex(i).objectReferenceValue = UiBuildKit.AddImage(baseRect, cards.Base(cards.DefaultDeckId), false);
+                }
+
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, PrefabPath, out bool saved);
+                return saved ? $"saved {PrefabPath} with the fan's bases" : $"FAILED to save {PrefabPath}";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        /// <summary>
         /// Adds the banner ad's slot (<see cref="BuildBannerSlot"/>) to the saved main menu prefab and
         /// binds it, with the centre column the menu draws smaller to make room, to the view; everything
         /// else in the prefab stays as it is (<see cref="Build"/> makes it anew and drops the changes
@@ -643,14 +692,16 @@ namespace Callbreak.Editor
         }
 
         /// <summary>
-        /// The four aces, each a card with its own soft shadow. The prefab shows the default deck's;
-        /// the presenter puts in the equipped deck's. Returns the face images indexed by suit.
+        /// The four aces, each a card with its own soft shadow, its deck's base and its face (ADR
+        /// 053). The prefab shows the default deck's; the presenter puts in the equipped deck's.
+        /// Returns the face images, and the bases under them, indexed by suit.
         /// </summary>
-        private static UnityEngine.UI.Image[] BuildFanCards(RectTransform fan)
+        private static UnityEngine.UI.Image[] BuildFanCards(RectTransform fan, out UnityEngine.UI.Image[] bases)
         {
             CardSpriteProvider cards = TableCardBuilder.EnsureLibrary();
             Sprite shadow = UiBuildKit.LoadSpriteAt(CardShadowPath, 0f);
             var faces = new UnityEngine.UI.Image[4];
+            bases = new UnityEngine.UI.Image[4];
             foreach (FanCard card in FanCards)
             {
                 Sprite face = cards.Face(cards.DefaultDeckId, new Card(card.Suit, Rank.Ace));
@@ -669,6 +720,9 @@ namespace Callbreak.Editor
                 UnityEngine.UI.Image shadowImage = UiBuildKit.AddImage(shadowRect, shadow, false);
                 shadowImage.color = new Color(1f, 1f, 1f, CardShadowOpacity);
                 shadowImage.pixelsPerUnitMultiplier = CardShadowSliceScale;
+
+                RectTransform baseRect = StretchedChild("Base", rect);
+                bases[(int)card.Suit] = UiBuildKit.AddImage(baseRect, cards.Base(cards.DefaultDeckId), false);
 
                 RectTransform faceRect = StretchedChild("Face", rect);
                 faces[(int)card.Suit] = UiBuildKit.AddImage(faceRect, face, false);

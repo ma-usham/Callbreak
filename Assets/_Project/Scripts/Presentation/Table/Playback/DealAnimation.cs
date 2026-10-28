@@ -378,6 +378,7 @@ namespace Callbreak.Presentation.Table.Playback
         private readonly int _step;
         private readonly IReadOnlyList<Card> _handCards;
         private readonly Func<Card, Sprite> _face;
+        private readonly Sprite _cardBase;
         private readonly Action _onCard;
         private readonly List<CardFlight> _flights = new List<CardFlight>(12);
         private readonly List<int> _flightTargets = new List<int>(12);
@@ -397,6 +398,7 @@ namespace Callbreak.Presentation.Table.Playback
         /// <param name="step">+1 when play goes to the next relative seat (anticlockwise), +3 when clockwise.</param>
         /// <param name="handCards">The local hand in display order.</param>
         /// <param name="face">The face sprite of a card in the local deck.</param>
+        /// <param name="cardBase">The local deck's base under every face (ADR 053).</param>
         /// <param name="onCard">Called as each card leaves the deck (the deal sound).</param>
         public DealAnimation(
             CardViewPool pool,
@@ -407,6 +409,7 @@ namespace Callbreak.Presentation.Table.Playback
             int step,
             IReadOnlyList<Card> handCards,
             Func<Card, Sprite> face,
+            Sprite cardBase,
             Action onCard)
         {
             _pool = pool;
@@ -417,6 +420,7 @@ namespace Callbreak.Presentation.Table.Playback
             _step = step;
             _handCards = handCards;
             _face = face;
+            _cardBase = cardBase;
             _onCard = onCard;
             _inAir = new int[targets.Length];
             _total = handCards.Count * targets.Length;
@@ -554,7 +558,7 @@ namespace Callbreak.Presentation.Table.Playback
             if (index < _handCards.Count)
             {
                 Card dealt = _handCards[index];
-                card.ShowFace(dealt, _face(dealt));
+                card.ShowFace(dealt, _face(dealt), _cardBase);
                 card.SetShadow(true);
                 _hand.Insert(card);
             }

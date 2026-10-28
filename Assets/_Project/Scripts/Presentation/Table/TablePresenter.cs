@@ -609,7 +609,7 @@ namespace Callbreak.Presentation.Table
                 if (own == null)
                 {
                     own = _view.Cards.Rent(_view.Trick.Area);
-                    own.ShowFace(played.Card, _skin.Face(_renderer.LocalDeck, played.Card));
+                    own.ShowFace(played.Card, _skin.Face(_renderer.LocalDeck, played.Card), _skin.Base(_renderer.LocalDeck));
                     own.Placement = _view.Trick.Slot(0);
                 }
 
@@ -627,7 +627,7 @@ namespace Callbreak.Presentation.Table
                 card.Placement = new CardPlacement(Vector2.zero, 0f, fan.CardScale, 0f);
             }
 
-            card.ShowFace(played.Card, _skin.Face(_renderer.LocalDeck, played.Card));
+            card.ShowFace(played.Card, _skin.Face(_renderer.LocalDeck, played.Card), _skin.Base(_renderer.LocalDeck));
             _view.Trick.Adopt(rel, card);
             return new CardFlight(card, _view.Trick.Slot(rel), seconds);
         }
@@ -654,7 +654,7 @@ namespace Callbreak.Presentation.Table
             _dealSoundAt = double.NaN;
             var deck = new DeckPile(
                 _view.Cards, _view.Trick.Area, _skin.Back(_renderer.LocalDeck), _dealOrder.Count * TableView.SeatCount, _view.Trick.Slot(0).Scale);
-            var deal = new DealAnimation(_view.Cards, _view.Hand, deck, targets, first, step, _dealOrder, FaceOf, OnCardDealt);
+            var deal = new DealAnimation(_view.Cards, _view.Hand, deck, targets, first, step, _dealOrder, FaceOf, _skin.Base(_renderer.LocalDeck), OnCardDealt);
             ShuffleStyle style = ShuffleStyles.Next(_lastShuffle, _shuffleRandom);
             _lastShuffle = style;
             return new InOrder()
