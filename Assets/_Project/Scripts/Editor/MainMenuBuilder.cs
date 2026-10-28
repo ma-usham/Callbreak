@@ -49,12 +49,6 @@ namespace Callbreak.Editor
         // (the digits' overshoot puts the baseline 0.3 above the ink's foot).
         private static readonly LabelSpec BalanceText = new LabelSpec(35.23f, 1228.65f, 111.02f, 0.933f, 0f);
 
-        // The "Resume match" banner is on no mockup: it is the ivory secondary button, smaller,
-        // standing where the footer line is (the two never show together).
-        private static readonly Vector2 ResumeBannerCentre = new Vector2(835.75f, 877f);
-        private static readonly Vector2 ResumeBannerSize = new Vector2(336f, 64f);
-        private const float ResumeLabelSize = 27f;
-
         // The coin wallet (mockup 23): the ivory pill (the kit's secondary pill, which the wallet is
         // drawn like) measured on its edges, the room the balance may grow into between the coin and
         // the "+", and the ShopUI kit's coin and crimson "+" (ArtSource/Working/ShopUI/notes.md) at the
@@ -241,7 +235,6 @@ namespace Callbreak.Editor
             Place("Chevron", playOffline.transform, new Vector2(1140.75f, 783.75f), offlineCentre, chevron);
 
             RectTransform footer = BuildFooter(centre, sansSemiBold);
-            UnityEngine.UI.Button resume = BuildResumeBanner(centre, sansBold, ink, chevron);
 
             // Header, left: who you are. The mockup's ring is plain white, not the ivory button.
             var profileCentre = new Vector2(127.5f, 98f);
@@ -282,7 +275,6 @@ namespace Callbreak.Editor
             var serialized = new SerializedObject(view);
             serialized.FindProperty("_screenId").intValue = (int)ScreenId.MainMenu;
             serialized.FindProperty("_content").objectReferenceValue = content;
-            serialized.FindProperty("_resumeButton").objectReferenceValue = resume;
             serialized.FindProperty("_footer").objectReferenceValue = footer.gameObject;
             serialized.FindProperty("_avatar").objectReferenceValue = avatar;
             serialized.FindProperty("_fanSway").objectReferenceValue = fanSway;
@@ -351,53 +343,6 @@ namespace Callbreak.Editor
             RectTransform right = UiBuildKit.CreateAt("LineRight", footer, new Vector2(1112.5f, 876f), Screen, UiBuildKit.FromMock(63f, 1.9f));
             UiBuildKit.AddImage(right, null, false).color = line;
             return footer;
-        }
-
-        /// <summary>
-        /// GDD screen 00: "If an unfinished offline match exists, a banner offers 'Resume match'."
-        /// Hidden in the prefab; the presenter shows it in the footer line's place.
-        /// </summary>
-        private static UnityEngine.UI.Button BuildResumeBanner(RectTransform centre, TMP_FontAsset font, Color ink, Sprite chevron)
-        {
-            UnityEngine.UI.Button banner = DialogBuilder.KitButton(
-                "ResumeBanner", centre, ResumeBannerSize, "UI/Buttons/UI_ButtonSecondary_Normal.png", "UI/Buttons/UI_Shadow_Secondary.png", 2f, 0.4f);
-            var rect = (RectTransform)banner.transform;
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = new Vector2(
-                (ResumeBannerCentre.x - Screen.x) * UiBuildKit.ScaleX, -(ResumeBannerCentre.y - Screen.y) * UiBuildKit.ScaleY);
-
-            // The label is centred in the room the chevron leaves.
-            Vector2 chevronSize = UiBuildKit.NativeSize(chevron) * 0.8f;
-            float chevronInset = 34f;
-            var labelObject = new GameObject("Label", typeof(RectTransform));
-            var labelRect = (RectTransform)labelObject.transform;
-            labelRect.SetParent(rect, false);
-            Stretch(labelRect);
-            labelRect.offsetMin = new Vector2(chevronInset, 0f);
-            labelRect.offsetMax = new Vector2(-(chevronInset + chevronSize.x), 0f);
-            var label = labelObject.AddComponent<TextMeshProUGUI>();
-            label.font = font;
-            label.fontSize = ResumeLabelSize;
-            label.color = ink;
-            label.alignment = TextAlignmentOptions.Center;
-            label.textWrappingMode = TextWrappingModes.NoWrap;
-            label.overflowMode = TextOverflowModes.Overflow;
-            label.raycastTarget = false;
-            label.text = "Resume match";
-            label.characterHorizontalScale = PlayOfflineText.HorizontalScale;
-            label.characterSpacing = PlayOfflineText.Spacing;
-            Localize(label, "ui.main_menu.resume_match");
-
-            var chevronObject = new GameObject("Chevron", typeof(RectTransform));
-            var chevronRect = (RectTransform)chevronObject.transform;
-            chevronRect.SetParent(rect, false);
-            chevronRect.anchorMin = chevronRect.anchorMax = chevronRect.pivot = new Vector2(1f, 0.5f);
-            chevronRect.sizeDelta = chevronSize;
-            chevronRect.anchoredPosition = new Vector2(-chevronInset, 0f);
-            UiBuildKit.AddImage(chevronRect, chevron, false);
-
-            banner.gameObject.SetActive(false);
-            return banner;
         }
 
         /// <summary>
@@ -499,6 +444,40 @@ namespace Callbreak.Editor
             RectTransform slot = UiBuildKit.CreateAt("BannerSlot", corner, centre, Screen, BannerSlotSize);
             slot.gameObject.SetActive(false);
             return slot;
+        }
+
+        /// <summary>
+        /// Takes the "Resume match" banner out of the saved main menu (the owner, 28 Oct 2026, ADR 057:
+        /// an unfinished offline match is offered back by the resume dialog instead); everything else
+        /// in the prefab stays as it is.
+        /// </summary>
+        public static string RemoveResumeBanner()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+            try
+            {
+                int removed = 0;
+                foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+                {
+                    if (t != null && t.name == "ResumeBanner")
+                    {
+                        Object.DestroyImmediate(t.gameObject);
+                        removed++;
+                    }
+                }
+
+                if (removed == 0)
+                {
+                    return "the main menu has no Resume banner";
+                }
+
+                PrefabUtility.SaveAsPrefabAsset(root, PrefabPath, out bool saved);
+                return saved ? $"saved {PrefabPath} without the Resume banner" : $"FAILED to save {PrefabPath}";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         /// <summary>

@@ -182,15 +182,24 @@ namespace Callbreak.Editor.Screens
         private const float ChipTextScale = 0.8f;
         private const float ChipSpinnerSize = 15f;
 
-        // ---- The banner ad at the top of the table (the owner, 26 Oct 2026, ADR 051), canvas units.
-        // While a banner may come, the round line stands beside the Scores button, its words ending
-        // this far left of the button, and the banner's slot spans the top of the safe area from this
-        // far right of Home to this far left of those words, as tall as the largest standard banner
-        // (320 x 50 dp is 150 units on a 360 dp-tall phone) and a little more. TableView brings the
-        // top seat and the trick down to clear it.
+        // ---- The banner ad at the top of the table (the owner, 26 Oct 2026, ADR 051; 28 Oct 2026, ADR
+        // 057), canvas units. While a banner may come, the round line stands on the left, its words
+        // starting this far right of Home and centred on Home's height, and the banner's slot spans the
+        // top of the safe area from this far right of those words to the right edge, as tall as the
+        // largest standard banner (320 x 50 dp is 150 units on a 360 dp-tall phone) and a little more;
+        // the banner sits in its top-right corner. TableView brings the top seat and the trick down to
+        // clear it.
         private const float BannerRoundGap = 36f;
         private const float BannerGap = 48f;
         private const float BannerSlotHeight = 155f;
+
+        // ---- Scores and Settings under Home (the owner, 28 Oct 2026, ADR 057), canvas units: the
+        // left column, each button centred on Home's middle with its label under it as the mockup
+        // draws it, this far below the piece above (Home, then the Scores label). On the left the
+        // labels stand over the scenery's temple and flags rather than the sky, so each sits on the
+        // seats' status pill (UI_StatusPill), as wide as its words and this much more.
+        private const float ColumnGap = 22f;
+        private const float LabelPillPadding = 30f;
 
         // ---- The status pill hugs its words (the owner, 3 Oct 2026: the pill drawn for "Bid 3 • Won 1"
         // was too big for "3-7"). It keeps its centre under the name plate and its height. The words
@@ -264,6 +273,7 @@ namespace Callbreak.Editor.Screens
             RectTransform handLayer = BuildHand(ctx, pool, centre);
             BuildPrompt(ctx, handLayer, statusStyle);
             BuildTrickLabel(ctx);
+            StackUnderHome(ctx);
             BuildBannerRoom(ctx);
             BuildEmotePicker(ctx, statusStyle);
             BuildEmoteCooldown(ctx);
@@ -900,44 +910,102 @@ namespace Callbreak.Editor.Screens
         }
 
         /// <summary>
-        /// The table's room for the banner ad (ADR 051), off until TableView makes it: the round line
-        /// beside the Scores button (the same words, right-aligned, at the same height) and the
-        /// banner's empty slot across the top of the safe area between Home and those words. Both
-        /// are pinned to their sides, so they keep their distances on 21:9 and 4:3 screens.
+        /// Scores and Settings under Home (the owner, 28 Oct 2026, ADR 057): the two buttons and their
+        /// labels move from the top-right corner into Home's group, one above the other in Home's column
+        /// (<see cref="ColumnGap"/> apart), each label kept where the mockup draws it under its button,
+        /// on a status pill so it reads over the scenery. The divider between them, drawn for buttons
+        /// side by side, goes.
+        /// </summary>
+        private static void StackUnderHome(ScreenBuildContext ctx)
+        {
+            RectTransform left = ctx.Groups["HeaderLeft"];
+            RectTransform home = ctx.Nodes["HomeButton"];
+            Sprite pillSprite = LoadTableSprite("UI_StatusPill");
+            float pillHeight = UiBuildKit.FromMock(0f, ctx.Node("SeatPill3").rect[3]).y;
+            float column = home.anchoredPosition.x;
+            float above = home.anchoredPosition.y - (home.rect.height / 2f);
+            foreach (string id in new[] { "Scores", "Settings" })
+            {
+                RectTransform button = ctx.Nodes[id + "Button"];
+                RectTransform label = ctx.Nodes[id + "Label"];
+                Vector2 under = label.anchoredPosition - button.anchoredPosition;
+                button.SetParent(left, false);
+                label.SetParent(left, false);
+                float y = above - ColumnGap - (button.rect.height / 2f);
+                button.anchoredPosition = new Vector2(column, y);
+                label.anchoredPosition = new Vector2(column, y) + under;
+
+                // The pill behind the words, as wide as they are and a little more.
+                TMP_Text words = label.GetComponent<TMP_Text>();
+                Vector2 size = words.GetPreferredValues(words.text);
+                var pill = (RectTransform)new GameObject(id + "Pill", typeof(RectTransform)).transform;
+                pill.SetParent(left, false);
+                pill.anchorMin = pill.anchorMax = pill.pivot = new Vector2(0.5f, 0.5f);
+                pill.sizeDelta = new Vector2(size.x + LabelPillPadding, Mathf.Max(pillHeight, size.y));
+                pill.anchoredPosition = label.anchoredPosition;
+                Sliced(pill, pillSprite);
+                pill.SetSiblingIndex(label.GetSiblingIndex());
+
+                // The next piece goes under this label's pill.
+                above = pill.anchoredPosition.y - (pill.sizeDelta.y / 2f);
+            }
+
+            RectTransform divider = ctx.Nodes["HeaderDivider"];
+            ctx.Nodes.Remove("HeaderDivider");
+            Object.DestroyImmediate(divider.gameObject);
+        }
+
+        /// <summary>
+        /// The table's room for the banner ad (ADR 051, 057), off until TableView makes it: the round
+        /// line on the left (the same words, left-aligned, starting <see cref="BannerRoundGap"/> right of
+        /// Home and centred on its height, on a status pill so they read over the 21:9 scenery's prayer
+        /// flags; TableView keeps the pill as wide as the words) and the banner's empty slot across the
+        /// top of the safe area from <see cref="BannerGap"/> past the pill to the right edge. Both are
+        /// pinned to the left side, so they keep their distances on 21:9 and 4:3 screens.
         /// </summary>
         private static void BuildBannerRoom(ScreenBuildContext ctx)
         {
             RectTransform safe = ctx.SafeArea;
             RectTransform round = ctx.Nodes["RoundLabel"];
-            RectTransform scores = ctx.Nodes["ScoresButton"];
             RectTransform home = ctx.Nodes["HomeButton"];
 
-            var beside = (RectTransform)Object.Instantiate(round.gameObject, ctx.Groups["HeaderRight"]).transform;
+            var beside = (RectTransform)Object.Instantiate(round.gameObject, ctx.Groups["HeaderLeft"]).transform;
             beside.name = "RoundBeside";
             TMP_Text words = beside.GetComponent<TMP_Text>();
-            words.horizontalAlignment = HorizontalAlignmentOptions.Right;
-            var corners = new Vector3[4];
-            scores.GetWorldCorners(corners);
-            float scoresLeft = beside.parent.InverseTransformPoint(corners[0]).x;
-            beside.GetWorldCorners(corners);
-            float besideRight = beside.parent.InverseTransformPoint(corners[2]).x;
-            beside.anchoredPosition += new Vector2(scoresLeft - BannerRoundGap - besideRight, 0f);
+            words.horizontalAlignment = HorizontalAlignmentOptions.Left;
+            words.verticalAlignment = VerticalAlignmentOptions.Middle;
+            float homeRight = home.anchoredPosition.x + (home.rect.width / 2f);
+            beside.anchoredPosition = new Vector2(homeRight + BannerRoundGap + (beside.rect.width / 2f), home.anchoredPosition.y);
             beside.gameObject.SetActive(false);
             ctx.Bound["_roundBeside"] = words;
 
-            // Measured from the safe area's sides: Home stays on the left, the words on the right.
-            home.GetWorldCorners(corners);
-            float homeRight = safe.InverseTransformPoint(corners[2]).x - safe.rect.xMin;
-            beside.GetWorldCorners(corners);
-            float wordsLeft = safe.rect.xMax - safe.InverseTransformPoint(corners[2]).x + words.GetPreferredValues(words.text).x;
+            // The pill behind the words, from half the padding before them, left-pivoted so TableView
+            // only has to set its width.
+            Vector2 size = words.GetPreferredValues(words.text);
+            float pillHeight = Mathf.Max(UiBuildKit.FromMock(0f, ctx.Node("SeatPill3").rect[3]).y, size.y + 8f);
+            var pill = (RectTransform)new GameObject("RoundBesidePill", typeof(RectTransform)).transform;
+            pill.SetParent(beside.parent, false);
+            pill.SetSiblingIndex(beside.GetSiblingIndex());
+            pill.anchorMin = pill.anchorMax = new Vector2(0.5f, 0.5f);
+            pill.pivot = new Vector2(0f, 0.5f);
+            pill.sizeDelta = new Vector2(size.x + LabelPillPadding, pillHeight);
+            pill.anchoredPosition = new Vector2(beside.anchoredPosition.x - (beside.rect.width / 2f) - (LabelPillPadding / 2f), beside.anchoredPosition.y);
+            Sliced(pill, LoadTableSprite("UI_StatusPill"));
+            pill.gameObject.SetActive(false);
+            ctx.Bound["_roundBesidePill"] = pill;
+
+            // Measured from the safe area's left side: where the pill ends.
+            var corners = new Vector3[4];
+            pill.GetWorldCorners(corners);
+            float wordsRight = safe.InverseTransformPoint(corners[0]).x - safe.rect.xMin + pill.sizeDelta.x;
 
             var slot = (RectTransform)new GameObject("BannerSlot", typeof(RectTransform)).transform;
             slot.SetParent(safe, false);
             slot.anchorMin = new Vector2(0f, 1f);
             slot.anchorMax = new Vector2(1f, 1f);
             slot.pivot = new Vector2(0.5f, 1f);
-            slot.offsetMin = new Vector2(homeRight + BannerGap, -BannerSlotHeight);
-            slot.offsetMax = new Vector2(-(wordsLeft + BannerGap), 0f);
+            slot.offsetMin = new Vector2(wordsRight + BannerGap, -BannerSlotHeight);
+            slot.offsetMax = Vector2.zero;
             slot.gameObject.SetActive(false);
             ctx.Bound["_bannerSlot"] = slot;
         }

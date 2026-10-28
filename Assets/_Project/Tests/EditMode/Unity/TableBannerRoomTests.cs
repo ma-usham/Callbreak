@@ -6,14 +6,16 @@ using UnityEngine;
 namespace Callbreak.Tests.EditMode.Unity
 {
     /// <summary>
-    /// The table's room for the banner ad (the owner, 26 Oct 2026, ADR 051), on the table prefab laid
-    /// out on a 16:9, 21:9 and 4:3 canvas. A table opens as it always was. With room made, the logo
-    /// and the round line's ornaments go, the round line stands beside the Scores button, the top
-    /// seat and the trick come down, and the banner's slot spans the top of the safe area from right
-    /// of Home to left of the round line's words, tall enough for the largest standard banner (320 x
-    /// 50 dp on a 360 dp-tall phone: 960 x 150 canvas units) and clear of the top seat. Giving the
-    /// room back puts everything where it was. The prefab is the built one, so these live outside
-    /// the folders the dotnet harness compiles.
+    /// The table's top bar and its room for the banner ad (the owner, 26 Oct 2026, ADR 051; 28 Oct
+    /// 2026, ADR 057), on the table prefab laid out on a 16:9, 21:9 and 4:3 canvas. Scores and
+    /// Settings stand under Home, in the left column, clear of the left seat. A table opens with the
+    /// logo and the round line at the top. With room made, the logo and the round line's ornaments
+    /// go, the round line stands on the left beside Home, the top seat and the trick come down, and
+    /// the banner's slot spans the top of the safe area from right of the round line's words to the
+    /// right edge, tall enough for the largest standard banner (320 x 50 dp on a 360 dp-tall phone:
+    /// 960 x 150 canvas units), clear of every button and of the top seat; the banner sits in its
+    /// top-right corner. Giving the room back puts everything where it was. The prefab is the built
+    /// one, so these live outside the folders the dotnet harness compiles.
     /// </summary>
     public sealed class TableBannerRoomTests
     {
@@ -47,8 +49,36 @@ namespace Callbreak.Tests.EditMode.Unity
             Assert.IsTrue(Find("RoundOrnamentRight").gameObject.activeSelf);
             Assert.IsTrue(Find("RoundLabel").gameObject.activeSelf);
             Assert.IsFalse(Find("RoundBeside").gameObject.activeSelf);
+            Assert.IsFalse(Find("RoundBesidePill").gameObject.activeSelf);
             Assert.IsFalse(Find("BannerSlot").gameObject.activeSelf);
             Assert.IsFalse(_view.TryGetBannerSlot(out _), "no slot, no banner");
+        }
+
+        [TestCase(1920f, 1080f)]
+        [TestCase(2520f, 1080f)]
+        [TestCase(1920f, 1440f)]
+        public void ScoresAndSettings_StandUnderHome_ClearOfTheLeftSeat(float width, float height)
+        {
+            Open(width, height);
+            Rect home = Box(Find("HomeButton"));
+            Rect scores = Box(Find("ScoresButton"));
+            Rect settings = Box(Find("SettingsButton"));
+            Rect scoresLabel = InkBox(Find("ScoresLabel"));
+            Rect settingsLabel = InkBox(Find("SettingsLabel"));
+
+            Assert.AreEqual(home.center.x, scores.center.x, 1f, "Scores in Home's column");
+            Assert.AreEqual(home.center.x, settings.center.x, 1f, "Settings too");
+            Assert.Less(scores.yMax, home.yMin, "Scores below Home");
+            Assert.LessOrEqual(scoresLabel.yMax, scores.yMin + 1f, "its label under it (as the mockup draws it, just under the button)");
+            Assert.Less(settings.yMax, scoresLabel.yMin, "Settings below Scores and its label");
+            Assert.LessOrEqual(settingsLabel.yMax, settings.yMin + 1f, "its label under it");
+            Assert.IsNull(FindOrNull("HeaderDivider"), "no divider between buttons that are one above the other");
+
+            Rect column = Rect.MinMaxRect(Mathf.Min(home.xMin, scores.xMin, settings.xMin), settingsLabel.yMin, Mathf.Max(home.xMax, scores.xMax, settings.xMax), home.yMax);
+            foreach (string piece in new[] { "SeatPlate3", "SeatPill3", "SeatRing3", "SeatFan3", "SeatPlate2", "SeatRing2" })
+            {
+                Assert.IsFalse(column.Overlaps(Box(Find(piece))), piece + " clear of the left column");
+            }
         }
 
         [TestCase(1920f, 1080f)]
@@ -67,23 +97,40 @@ namespace Callbreak.Tests.EditMode.Unity
             Assert.IsFalse(Find("RoundOrnamentRight").gameObject.activeSelf);
             Assert.IsFalse(Find("RoundLabel").gameObject.activeSelf);
             RectTransform beside = Find("RoundBeside");
-            Assert.IsTrue(beside.gameObject.activeSelf, "the round line stands beside Scores");
+            Assert.IsTrue(beside.gameObject.activeSelf, "the round line stands on the left, beside Home");
             Assert.AreEqual("ROUND 1 / 5", TextOf(beside));
 
             Rect canvas = Box(_canvas.transform);
             Rect slot = Box(Find("BannerSlot"));
-            Rect scores = Box(Find("ScoresButton"));
             Rect home = Box(Find("HomeButton"));
-            Bounds ink = InkOf(beside);
-            float wordsLeft = beside.TransformPoint(ink.min).x;
-            float wordsRight = beside.TransformPoint(ink.max).x;
-
+            Rect words = InkBox(beside);
+            Assert.Greater(words.xMin, home.xMax, "the words right of Home");
+            Assert.Less(words.xMin, home.xMax + 48f, "beside it");
+            Assert.Greater(words.center.y, home.yMin, "at Home's height");
+            Assert.Less(words.center.y, home.yMax);
             Assert.AreEqual(canvas.yMax, slot.yMax, 0.5f, "the slot starts at the top of the screen");
+            Assert.AreEqual(canvas.xMax, slot.xMax, 0.5f, "and reaches its right edge: the banner sits in the top-right corner");
             Assert.AreEqual(155f, slot.height, 0.5f);
-            Assert.AreEqual(home.xMax + 48f, slot.xMin, 0.5f, "clear of Home");
-            Assert.LessOrEqual(slot.xMax, wordsLeft - 47.5f, "clear of the round line's words");
-            Assert.Less(wordsRight, scores.xMin, "the words end before the Scores button");
-            Assert.Greater(wordsRight, scores.xMin - 48f, "beside it");
+            Rect pill = Box(Find("RoundBesidePill"));
+            Assert.IsTrue(Find("RoundBesidePill").gameObject.activeSelf, "the words sit on a pill, over any scenery");
+            Assert.Less(pill.xMin, words.xMin, "the pill starts before the words");
+            Assert.Greater(pill.xMax, words.xMax, "and ends after them");
+            Assert.Less(pill.yMin, words.yMin, "and holds them top to bottom");
+            Assert.Greater(pill.yMax, words.yMax);
+            Assert.GreaterOrEqual(slot.xMin, pill.xMax + 47.5f, "clear of the round line and its pill");
+
+            // No button under the slot (AdMob: no ad next to buttons). The table's own tap catchers
+            // cover the whole screen and are not buttons a player aims at.
+            foreach (UnityEngine.UI.Button button in _canvas.GetComponentsInChildren<UnityEngine.UI.Button>(false))
+            {
+                Rect box = Box(button.transform);
+                if (box.width >= canvas.width - 1f && box.height >= canvas.height - 1f)
+                {
+                    continue;
+                }
+
+                Assert.IsFalse(box.Overlaps(slot), button.name + " clear of the banner's slot");
+            }
 
             Vector2 banner = height > 1080f ? TabletBanner : PhoneBanner;
             Assert.GreaterOrEqual(slot.width, banner.x, "the banner fits across");
@@ -134,9 +181,13 @@ namespace Callbreak.Tests.EditMode.Unity
             Open(1920f, 1080f);
 
             _view.SetRound("ROUND 10 / 10");
-
             Assert.AreEqual("ROUND 10 / 10", TextOf(Find("RoundLabel")));
             Assert.AreEqual("ROUND 10 / 10", TextOf(Find("RoundBeside")));
+
+            // The pill keeps the width of the longer words.
+            _view.SetBannerRoom(true);
+            Canvas.ForceUpdateCanvases();
+            Assert.Greater(Box(Find("RoundBesidePill")).xMax, InkBox(Find("RoundBeside")).xMax, "the pill grows with the words");
         }
 
         /// <summary>The table prefab under a world-space canvas of the given size, as the capture tool lays it out.</summary>
@@ -155,6 +206,13 @@ namespace Callbreak.Tests.EditMode.Unity
 
         private RectTransform Find(string name)
         {
+            RectTransform found = FindOrNull(name);
+            Assert.IsNotNull(found, "the table has " + name);
+            return found;
+        }
+
+        private RectTransform FindOrNull(string name)
+        {
             foreach (RectTransform t in _canvas.GetComponentsInChildren<RectTransform>(true))
             {
                 if (t.name == name)
@@ -163,8 +221,15 @@ namespace Callbreak.Tests.EditMode.Unity
                 }
             }
 
-            Assert.Fail("the table has " + name);
             return null;
+        }
+
+        /// <summary>A label's ink in canvas units.</summary>
+        private static Rect InkBox(RectTransform label)
+        {
+            Bounds ink = InkOf(label);
+            Vector3 min = label.TransformPoint(ink.min), max = label.TransformPoint(ink.max);
+            return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
         }
 
         private Vector2 Anchored(string name) => Find(name).anchoredPosition;

@@ -74,6 +74,33 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator TappingTodaysTile_CollectsItsCoins_AndOtherDaysDoNothing()
+        {
+            // The owner (28 Oct 2026): tapping the coin block collects the coins too.
+            yield return _game.Boot(seed: saves => saves.Save(DailyRewards.SaveKey, OpenedToday()));
+            ScreenRouter router = _game.MenuRouter;
+            var wallet = _game.Services.Resolve<IWallet>();
+            GameFixture.Press(router, "DailyRewardsButton");
+            yield return null;
+            UIScreen page = Screen(ScreenId.DailyRewards);
+
+            GameFixture.Press(router, "Tile3");
+            yield return null;
+            Assert.AreEqual(WalletRules.StartingCoins, wallet.Coins, "Day 4 is not today: nothing is paid");
+            Assert.IsTrue(GameFixture.CanPress(page, "ClaimButton"), "today's reward still waits");
+
+            GameFixture.Press(router, "Tile0");
+            yield return null;
+            Assert.AreEqual(WalletRules.StartingCoins + 10, wallet.Coins, "today's tile pays Day 1's 10 coins, as Claim does");
+            Assert.AreEqual(Get("ui.daily_rewards.claimed"), Label(page, "ClaimLabel").text);
+            Assert.IsTrue(Child(page, "Tile0", "ClaimedBadge").activeSelf, "Day 1 now carries the check");
+
+            GameFixture.Press(router, "Tile0");
+            yield return null;
+            Assert.AreEqual(WalletRules.StartingCoins + 10, wallet.Coins, "one claim a day, however it is tapped");
+        }
+
+        [UnityTest]
         public IEnumerator Claim_FliesTheCoinsIntoTheWallet_WhichCountsUp_WithTheCoinSound()
         {
             var audio = new HeardSounds();
