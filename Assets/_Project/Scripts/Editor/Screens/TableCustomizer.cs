@@ -13,8 +13,8 @@ namespace Callbreak.Editor.Screens
     /// Screen 08, the table. The layout gives the HUD, the seats' plates and pills and the empty
     /// areas for cards; this adds what the game fills in at runtime and what the mockup does not
     /// draw:
-    /// the backdrop's three layers in place of the plate (the equipped background's scenery, the
-    /// equipped table and the scenery's foreground, the owner's shop of 4 Oct 2026);
+    /// the equipped table in place of the plate, filling the screen (the owner's shop of 4 Oct 2026;
+    /// V2, 28 Oct 2026);
     /// the layers (table, hand, HUD as nested canvases, GDD §23); the card pool; the hand with its
     /// touch area, pinned to the bottom edge, its cards drawn a little larger than the shared card;
     /// the trick slots and the opponents' fans, placed as mockup 08 and mockup 07 draw them; a
@@ -290,11 +290,10 @@ namespace Callbreak.Editor.Screens
         }
 
         /// <summary>
-        /// The backdrop (the owner, 4 Oct 2026), behind everything else as BG_Table was, in its frame
-        /// and place (the layout's background): the equipped background's scenery at the back, the
-        /// equipped table on it, and the scenery's foreground (the Himalayan Vista's red flowers)
-        /// before the table's near edge. The prefab shows the defaults; the presenter puts the player's
-        /// own on when a match opens. The art is TableBackdropBuilder's library.
+        /// The backdrop (the owner, 4 Oct 2026), behind everything else, in the layout background's
+        /// frame and place (the screen plus margins for 21:9 and 4:3): the equipped table, filling it
+        /// (V2, 28 Oct 2026). The prefab shows the default table; the presenter puts the player's own
+        /// on when a match opens. The art is TableBackdropBuilder's library.
         /// </summary>
         private static void BuildBackdrop(ScreenBuildContext ctx)
         {
@@ -305,7 +304,7 @@ namespace Callbreak.Editor.Screens
                 return;
             }
 
-            // The layout's plate gave the frame; the three layers take the place of its picture.
+            // The layout's plate gave the frame; the table takes the place of its picture.
             Image plate = frame.GetComponent<Image>();
             if (plate != null)
             {
@@ -319,19 +318,11 @@ namespace Callbreak.Editor.Screens
             }
 
             TableBackdropLibrary library = TableBackdropBuilder.EnsureLibrary();
-            TableBackdrop defaults = library.Default;
+            var table = Stretched("Table", frame).gameObject.AddComponent<Image>();
+            table.raycastTarget = false;
+            table.sprite = library.TablePicture(library.DefaultTableId, out _);
             ctx.Bound["_backdrops"] = library;
-            ctx.Bound["_backdropBack"] = AddBackdropLayer(frame, "Back", defaults.Back, defaults.Frame);
-            ctx.Bound["_backdropTable"] = AddBackdropLayer(frame, "Table", defaults.Table, defaults.Frame);
-            ctx.Bound["_backdropFront"] = AddBackdropLayer(frame, "Front", defaults.Front, defaults.Frame);
-        }
-
-        private static Image AddBackdropLayer(RectTransform frame, string name, BackdropLayer layer, Vector2 frameSize)
-        {
-            var image = Stretched(name, frame).gameObject.AddComponent<Image>();
-            image.raycastTarget = false;
-            TableView.ShowLayer(image, layer, frameSize);
-            return image;
+            ctx.Bound["_backdropTable"] = table;
         }
 
         private static CardViewPool BuildPool(ScreenBuildContext ctx)

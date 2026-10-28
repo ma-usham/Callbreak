@@ -59,7 +59,6 @@ namespace Callbreak.Editor
 
             // The panels, the buttons and their shadows are the V2 kit's: ArtSource/Kit/V2.json
             // (KitImporter) sets them.
-            Set("Backgrounds/BG_Menu_Wide.png", 100f, Vector4.zero);
             AssetDatabase.SaveAssets();
             Debug.Log("[CommonKit] import settings applied");
         }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Callbreak.Application.Cosmetics;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -24,6 +25,9 @@ namespace Callbreak.Tests.EditMode.Unity
         private const string ManifestPath = "ArtSource/Kit/V2.json";
         private const string KitFolder = "ArtSource/Kit";
         private const string ArtRoot = "Assets/_Project/Art/";
+
+        // A layout background that is the player's equipped one (ScreenLayout.EquippedBackground), not a file.
+        private const string EquippedBackground = "equipped";
         private static readonly string[] PrefabFolders = { "Assets/_Project/Prefabs/UI/Screens", "Assets/_Project/Prefabs/UI/Overlays" };
 
         [Test]
@@ -72,7 +76,7 @@ namespace Callbreak.Tests.EditMode.Unity
             foreach (string layout in Directory.GetFiles("ArtSource/Screens", "layout.json", SearchOption.AllDirectories))
             {
                 Layout parsed = JsonUtility.FromJson<Layout>(File.ReadAllText(layout));
-                var paths = new List<string> { parsed.background };
+                var paths = new List<string> { parsed.background == EquippedBackground ? null : parsed.background };
                 // What the layout builder loads; "use" only records which kit piece a sprite is.
                 foreach (LayoutNode node in parsed.nodes ?? Array.Empty<LayoutNode>())
                 {
@@ -85,6 +89,22 @@ namespace Callbreak.Tests.EditMode.Unity
             }
 
             Assert.That(missing, Is.Empty);
+        }
+
+        [Test]
+        public void EveryBackgroundAndTableTheShopSells_HasItsV2Picture()
+        {
+            // "pokhara-lakeside" → "PokharaLakeside", as TableBackdropBuilder names the files.
+            string Name(string id) => string.Concat(id.Split('-').Select(w => char.ToUpperInvariant(w[0]) + w.Substring(1)));
+            foreach (CosmeticItem item in CosmeticCatalog.Of(CosmeticKind.Background))
+            {
+                Assert.IsTrue(File.Exists($"{ArtRoot}Backgrounds/BG_{Name(item.Id)}.png"), item.Id);
+            }
+
+            foreach (CosmeticItem item in CosmeticCatalog.Of(CosmeticKind.Table))
+            {
+                Assert.IsTrue(File.Exists($"{ArtRoot}Tables/Table_{Name(item.Id)}.png"), item.Id);
+            }
         }
 
         [Test]

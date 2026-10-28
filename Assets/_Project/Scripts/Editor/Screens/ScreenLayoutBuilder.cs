@@ -147,12 +147,34 @@ namespace Callbreak.Editor.Screens
                 return;
             }
 
-            Sprite plate = UiBuildKit.LoadSpriteAt(l.background, l.backgroundPpu);
             float[] r = l.backgroundRect != null && l.backgroundRect.Length == 4 ? l.backgroundRect : new[] { 0f, 0f, l.mockW, l.mockH };
             RectTransform bg = UiBuildKit.CreateAt(
                 "Background", ctx.Root, new Vector2(r[0] + r[2] / 2f, r[1] + r[3] / 2f), UiBuildKit.ScreenCentre, UiBuildKit.FromMock(r[2], r[3]));
-            UiBuildKit.AddImage(bg, plate, false);
+            if (l.background == ScreenLayout.EquippedBackground)
+            {
+                AddEquippedBackground(bg);
+            }
+            else
+            {
+                UiBuildKit.AddImage(bg, UiBuildKit.LoadSpriteAt(l.background, l.backgroundPpu), false);
+            }
+
             ctx.Background = bg;
+        }
+
+        /// <summary>
+        /// The player's equipped background over the rect (the backdrop frame: the screen plus margins
+        /// for 21:9 and 4:3), from TableBackdropBuilder's library. The prefab shows the default one.
+        /// </summary>
+        public static void AddEquippedBackground(RectTransform rect)
+        {
+            Presentation.Table.TableBackdropLibrary library = TableBackdropBuilder.EnsureLibrary();
+            Image image = UiBuildKit.AddImage(rect, library.BackgroundPicture(library.DefaultBackgroundId, out _), false);
+            var equipped = rect.gameObject.AddComponent<EquippedBackground>();
+            var so = new SerializedObject(equipped);
+            so.FindProperty("_image").objectReferenceValue = image;
+            so.FindProperty("_library").objectReferenceValue = library;
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void BuildNode(ScreenBuildContext ctx, LayoutNode node)

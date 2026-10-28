@@ -327,11 +327,9 @@ namespace Callbreak.Editor
 
         /// <summary>
         /// The loading curtain: an instance of the SceneLoading screen (mockup 17), which brings its
-        /// own canvas on the curtain layer. Its background is the shared menu background (ADR 010),
-        /// framed exactly as the menu screens frame it, so it opens onto them without a jump. The
-        /// main menu still draws its own 16:9 plate (BG_Menu_Clean, scaled to cover the screen):
-        /// that one has other flowers in the bottom corners and is zoomed on wider or taller screens.
-        /// The prefab is built from its layout first when it is missing.
+        /// own canvas on the curtain layer. Its background is the menus' background, the one the player
+        /// equipped (V2), framed exactly as the menu screens frame it, so it opens onto them without a
+        /// jump. The prefab is built from its layout first when it is missing.
         /// </summary>
         private static LoadingCurtain CreateCurtain(Scene scene, Transform parent)
         {

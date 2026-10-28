@@ -55,6 +55,32 @@ top, right, bottom). It also lists the V2 effects each shadow is rendered from.
 4. **Import and rebuild** as above. Then also run `SceneSetup.EnsureAvatarLibrary()` (the presets)
    and `SuitSpriteBuilder.Build` (the suits in text use the suit icons' outlines).
 
+## Scenes, tables and shop pictures
+
+V2 draws its three scenes and three tables at 1920 × 1080. The game shows them in a 2560 × 1440
+frame, so that 21:9 phones and 4:3 tablets are covered too. The equipped background shows behind the
+menus; the equipped table fills the screen at the table.
+
+1. **Sheets.** Run `figma-scenes-sheet.js` with `use_figma` and save the JSON it returns as
+   `scenes-sheet.json`. It builds section "Unity Export · Scenes": each scene and table widened to
+   2560 × 1440 by rule (see the script's header; only the sky, the ground and the felt are continued),
+   in rows for the scenes' backs, the tables, and the scenes' fronts on black and on white.
+2. **Export.** Export every picture in the rows at 1x, one at a time (Figma caps an export at 4096 px
+   a side), as `back_<i>.png`, `table_<i>.png`, `front_black_<i>.png` and `front_white_<i>.png`.
+3. **Cut.** Run:
+
+   ```
+   python Tools/ArtPipeline/V2/scenes.py --folder <exports>
+   ```
+
+   It lays each front on its back, so each scene is one opaque picture, and writes:
+   - `Art/Backgrounds/BG_<Name>.png` and `Art/Tables/Table_<Name>.png` at 2230 × 1255 (the backdrop
+     frame);
+   - the shop's `Thumb_<Name>.png` and `Preview_<Name>.png`, cut from the middle of the picture as
+     V2's shop tiles crop them.
+4. **Library.** In the Editor run `TableBackdropBuilder.Build()` (menu *Callbreak/Table/Build Table
+   Backdrops*). Then rebuild the screens.
+
 Rebuild the screens only while the Editor is **not** in Play mode. In Play mode a view's `Awake`
 runs as its builder adds it, and its runtime state (a hidden canvas, for one) is saved into the
 prefab.

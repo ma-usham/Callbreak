@@ -31,7 +31,6 @@ namespace Callbreak.Editor
 
         private const string TextMeshProSettingsPath = "Assets/TextMesh Pro/Resources/TMP Settings.asset";
         private const float UiPixelsPerUnit = 200f;
-        private const float BackgroundPixelsPerUnit = 100f;
 
         private static readonly Vector2 Screen = UiBuildKit.ScreenCentre;
 
@@ -332,18 +331,16 @@ namespace Callbreak.Editor
             return rootObject;
         }
 
+        /// <summary>
+        /// The player's equipped background (V2), framed as every menu screen frames it: the screen
+        /// plus margins for 21:9 and 4:3, so it bleeds to the screen edge on every aspect ratio
+        /// (GDD §12) and the screens open onto each other without a jump.
+        /// </summary>
         private static void BuildBackground(RectTransform root)
         {
-            var go = new GameObject("Background", typeof(RectTransform));
-            var rect = (RectTransform)go.transform;
-            rect.SetParent(root, false);
-            Stretch(rect);
-            UiBuildKit.AddImage(rect, UiBuildKit.LoadSprite("Backgrounds/BG_Menu_Clean.png", BackgroundPixelsPerUnit), false);
-
-            // Backgrounds bleed to the screen edge on every aspect ratio (GDD §12).
-            var fitter = go.AddComponent<UnityEngine.UI.AspectRatioFitter>();
-            fitter.aspectMode = UnityEngine.UI.AspectRatioFitter.AspectMode.EnvelopeParent;
-            fitter.aspectRatio = UiBuildKit.CanvasWidth / UiBuildKit.CanvasHeight;
+            RectTransform rect = UiBuildKit.CreateAt(
+                "Background", root, Screen, Screen, UiBuildKit.FromMock(TableBackdropBuilder.FrameWidth, TableBackdropBuilder.FrameHeight));
+            Screens.ScreenLayoutBuilder.AddEquippedBackground(rect);
         }
 
         private static RectTransform BuildFooter(RectTransform centre, TMP_FontAsset font)
