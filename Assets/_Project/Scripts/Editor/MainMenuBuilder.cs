@@ -502,6 +502,52 @@ namespace Callbreak.Editor
         }
 
         /// <summary>
+        /// Gives the aces of the saved main menu's fan the shared faces of the default deck and their
+        /// premultiplied material (ADR 054); everything else in the prefab stays as it is. The
+        /// presenter puts in the equipped deck's aces when the menu opens.
+        /// </summary>
+        public static string UseSharedFanFaces()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+            try
+            {
+                CardSpriteProvider cards = TableCardBuilder.EnsureLibrary();
+                Material material = TableCardBuilder.EnsureFaceMaterial();
+                SerializedProperty faces = new SerializedObject(root.GetComponent<MainMenuView>()).FindProperty("_fanFaces");
+                int changed = 0;
+                for (int i = 0; i < faces.arraySize; i++)
+                {
+                    var face = faces.GetArrayElementAtIndex(i).objectReferenceValue as UnityEngine.UI.Image;
+                    if (face == null)
+                    {
+                        return $"FAILED: the fan has no face {i}";
+                    }
+
+                    // The fan's faces are indexed by suit (BuildFanCards).
+                    Sprite ace = cards.Face(cards.DefaultDeckId, new Card((Suit)i, Rank.Ace));
+                    if (face.sprite != ace || face.material != material)
+                    {
+                        face.sprite = ace;
+                        face.material = material;
+                        changed++;
+                    }
+                }
+
+                if (changed == 0)
+                {
+                    return "the main menu's fan already shows the shared faces";
+                }
+
+                PrefabUtility.SaveAsPrefabAsset(root, PrefabPath, out bool saved);
+                return saved ? $"saved {PrefabPath}: {changed} fan faces shared and premultiplied" : $"FAILED to save {PrefabPath}";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        /// <summary>
         /// Adds the deck's base under each ace of the saved main menu's fan and binds them to the view
         /// (ADR 053); everything else in the prefab stays as it is. A fan that has its bases is left alone.
         /// </summary>
@@ -693,7 +739,7 @@ namespace Callbreak.Editor
 
         /// <summary>
         /// The four aces, each a card with its own soft shadow, its deck's base and its face (ADR
-        /// 053). The prefab shows the default deck's; the presenter puts in the equipped deck's.
+        /// 053), the face with the premultiplied material of the shared faces (ADR 054). The prefab shows the default deck's; the presenter puts in the equipped deck's.
         /// Returns the face images, and the bases under them, indexed by suit.
         /// </summary>
         private static UnityEngine.UI.Image[] BuildFanCards(RectTransform fan, out UnityEngine.UI.Image[] bases)
@@ -726,6 +772,7 @@ namespace Callbreak.Editor
 
                 RectTransform faceRect = StretchedChild("Face", rect);
                 faces[(int)card.Suit] = UiBuildKit.AddImage(faceRect, face, false);
+                faces[(int)card.Suit].material = TableCardBuilder.EnsureFaceMaterial();
             }
 
             return faces;

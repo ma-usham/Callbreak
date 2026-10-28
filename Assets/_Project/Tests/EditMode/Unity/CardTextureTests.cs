@@ -9,7 +9,7 @@ namespace Callbreak.Tests.EditMode.Unity
     /// The decks' card textures (TableCardBuilder): a card thrown on the table lies flat, drawn at 64%
     /// of its height, and a phone's quality level (Mobile) filters anisotropically only the textures
     /// that ask for it. Without it the GPU picks the face's mip level from that squash and the trick
-    /// cards blur, so every face and back asks for it.
+    /// cards blur, so every face, base and back asks for it.
     /// </summary>
     public sealed class CardTextureTests
     {
@@ -23,7 +23,7 @@ namespace Callbreak.Tests.EditMode.Unity
                 .Select(AssetDatabase.GUIDToAssetPath)
                 .Where(p => p.EndsWith(".png"))
                 .ToList();
-            Assert.GreaterOrEqual(paths.Count, 3 * 53, "three decks of 52 faces and a back");
+            Assert.GreaterOrEqual(paths.Count, 52 + 3 * 2, "52 shared faces, and a base and a back for each of the three decks (ADR 054)");
 
             var flat = new List<string>();
             foreach (string path in paths)

@@ -643,3 +643,111 @@ public static class Composer
         return o;
     }
 }
+
+// ------------------------------------------------------------------------------------ layers
+
+// The decks as the game draws them (ADR 054): a base per deck (its Frame: band, lines, corners,
+// paper, at the export size) and one face per card shared by every deck, laid over the base.
+// A face is the reference deck's card less that deck's base, in premultiplied alpha and linear
+// light: Unity blends UI in linear light (the project's colour space) and averages an sRGB
+// texture's mip maps in linear light, so with premultiplied alpha the reference card comes back
+// to the 8-bit value, and stays right in every mip map and under texture filtering. Straight
+// alpha can't: it averages a fringe's colour without its coverage and the small mip maps drift.
+public static class Layers
+{
+    static readonly double[] Luma = { 0.2126, 0.7152, 0.0722 };
+
+    public static double Lin(double v)
+    {
+        v /= 255.0;
+        return v <= 0.04045 ? v / 12.92 : Math.Pow((v + 0.055) / 1.055, 2.4);
+    }
+
+    public static double Srgb(double l)
+    {
+        l = Math.Max(0, Math.Min(1, l));
+        return 255.0 * (l <= 0.0031308 ? l * 12.92 : 1.055 * Math.Pow(l, 1 / 2.4) - 0.055);
+    }
+
+    // The face of 'card' over 'cardBase' (both 8-bit, the same size): at each pixel the coverage
+    // of the ink that explains it best ('inks', the reference deck's), raised where a darker
+    // channel needs it, then the premultiplied colour that puts the card back exactly.
+    public static Img Lift(Img card, Img cardBase, Color[] inks)
+    {
+        int n = card.W * card.H;
+        double[][] ink = new double[inks.Length][];
+        for (int k = 0; k < inks.Length; k++) ink[k] = new double[] { Lin(inks[k].R), Lin(inks[k].G), Lin(inks[k].B) };
+        Img o = new Img(card.W, card.H);
+        double[] p = new double[3], d = new double[3];
+        for (int i = 0; i < n; i++)
+        {
+            if (cardBase.A[i] <= 0) continue;
+            if (Img.Q(card.R[i]) == Img.Q(cardBase.R[i]) && Img.Q(card.G[i]) == Img.Q(cardBase.G[i]) && Img.Q(card.B[i]) == Img.Q(cardBase.B[i])) continue;
+            p[0] = Lin(cardBase.R[i]); p[1] = Lin(cardBase.G[i]); p[2] = Lin(cardBase.B[i]);
+            d[0] = Lin(card.R[i]) - p[0]; d[1] = Lin(card.G[i]) - p[1]; d[2] = Lin(card.B[i]) - p[2];
+
+            // Least squares per ink: d = a (ink - paper), weighted by luminance.
+            double best = double.MaxValue, a = 0;
+            for (int k = 0; k < ink.Length; k++)
+            {
+                double de = 0, ee = 0;
+                for (int c = 0; c < 3; c++) { double e = ink[k][c] - p[c]; de += Luma[c] * d[c] * e; ee += Luma[c] * e * e; }
+                double ak = ee > 1e-12 ? Math.Max(0, Math.Min(1, de / ee)) : 0, r = 0;
+                for (int c = 0; c < 3; c++) { double e = ink[k][c] - p[c], q = d[c] - ak * e; r += Luma[c] * q * q; }
+                if (r < best) { best = r; a = ak; }
+            }
+            if (a > 0.996) a = 1;
+
+            // The least coverage that keeps every darker channel's colour above 0. A channel lighter
+            // than the paper (the re-sampling's faint ring beside dark ink) does not raise it: on
+            // near-white paper that would take most of the coverage and show the reference deck's
+            // paper on the other decks. Premultiplied alpha adds that light instead (a colour above
+            // the coverage), so the ring lightens whichever base is under it.
+            double need = 0;
+            for (int c = 0; c < 3; c++)
+                if (d[c] < 0) need = Math.Max(need, -d[c] / Math.Max(p[c], 1e-6));
+            int a8 = (int)Math.Round(a * 255);
+            if (a8 < 1) a8 = 1;
+            if (a8 / 255.0 < need) a8 = Math.Min(255, (int)Math.Ceiling(need * 255 - 1e-9));
+            double al = a8 / 255.0;
+
+            o.A[i] = a8;
+            o.R[i] = (float)Srgb(Math.Max(0, p[0] + d[0] - (1 - al) * p[0]));
+            o.G[i] = (float)Srgb(Math.Max(0, p[1] + d[1] - (1 - al) * p[1]));
+            o.B[i] = (float)Srgb(Math.Max(0, p[2] + d[2] - (1 - al) * p[2]));
+        }
+        return o;
+    }
+
+    // A face over a base as the GPU blends them (8-bit textures, linear light): base (1 - a) + face.
+    public static Img Over(Img cardBase, Img face)
+    {
+        Img o = new Img(face.W, face.H);
+        for (int i = 0; i < face.W * face.H; i++)
+        {
+            double al = Img.Q(face.A[i]) / 255.0;
+            o.R[i] = Img.Q((float)Srgb(Lin(Img.Q(cardBase.R[i])) * (1 - al) + Lin(Img.Q(face.R[i]))));
+            o.G[i] = Img.Q((float)Srgb(Lin(Img.Q(cardBase.G[i])) * (1 - al) + Lin(Img.Q(face.G[i]))));
+            o.B[i] = Img.Q((float)Srgb(Lin(Img.Q(cardBase.B[i])) * (1 - al) + Lin(Img.Q(face.B[i]))));
+            o.A[i] = cardBase.A[i];
+        }
+        return o;
+    }
+
+    // { largest channel difference (0-255), PSNR (dB), % of pixels more than 3 apart } over the
+    // pixels 'b' draws (alpha above 0).
+    public static double[] Compare(Img a, Img b)
+    {
+        double max = 0, sq = 0; int count = 0, off = 0;
+        for (int i = 0; i < a.W * a.H; i++)
+        {
+            if (b.A[i] <= 0) continue;
+            double dr = Math.Abs(Img.Q(a.R[i]) - Img.Q(b.R[i])), dg = Math.Abs(Img.Q(a.G[i]) - Img.Q(b.G[i])), db = Math.Abs(Img.Q(a.B[i]) - Img.Q(b.B[i]));
+            double m = Math.Max(dr, Math.Max(dg, db));
+            max = Math.Max(max, m); sq += dr * dr + dg * dg + db * db; count++;
+            if (m > 3) off++;
+        }
+        double mse = count > 0 ? sq / (3.0 * count) : 0;
+        return new double[] { max, mse > 0 ? 10 * Math.Log10(255.0 * 255.0 / mse) : 99, count > 0 ? 100.0 * off / count : 0 };
+    }
+}

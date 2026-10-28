@@ -125,19 +125,21 @@ namespace Callbreak.Tests.PlayMode
             return tile.Face;
         }
 
-        /// <summary>The ace of spades, on its deck's base (ADR 053).</summary>
+        /// <summary>The ace of spades, on its deck's base (ADR 053), drawn premultiplied (ADR 054).</summary>
         private bool ShowsFace(int deck)
         {
             Image under = Screen.Tiles(0).Tile(deck).Base;
             return Picture(deck).sprite == Sprites().Face(DeckId(deck), new Card(Suit.Spades, Rank.Ace))
-                && under != null && under.enabled && under.sprite == Sprites().Base(DeckId(deck));
+                && under != null && under.enabled && under.sprite == Sprites().Base(DeckId(deck))
+                && Picture(deck).material.shader.name == "Callbreak/UI/Premultiplied";
         }
 
-        /// <summary>The back, with no base showing under it.</summary>
+        /// <summary>The back, with no base showing under it, drawn with the default UI material.</summary>
         private bool ShowsBack(int deck)
         {
             Image under = Screen.Tiles(0).Tile(deck).Base;
-            return Picture(deck).sprite == Sprites().Back(DeckId(deck)) && (under == null || !under.enabled);
+            return Picture(deck).sprite == Sprites().Back(DeckId(deck)) && (under == null || !under.enabled)
+                && Picture(deck).material == Picture(deck).defaultMaterial;
         }
 
         /// <summary>The card (the picture with its shadow) is not turning: its full width.</summary>

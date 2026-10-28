@@ -7,6 +7,10 @@
 #   & Tools\ArtPipeline\compose-decks.ps1            # all 156 faces, checks, review sheets, handoff rows
 #   & Tools\ArtPipeline\compose-decks.ps1 -Install   # the same, then copy into Assets/ if QA passes
 #
+# The game draws the decks in layers (ADR 054): each deck's base (its frame on its paper) under one
+# set of 52 faces shared by every deck, lifted off Classic Crimson's cards. -Install copies those
+# (Art/Cards/Faces, Art/Cards/<Deck>/Base_<Deck>.png); the whole cards stay in ArtSource/Exports for
+# review and as the check the layers are measured against.
 # The backs stay as export-decks.ps1 cut them. Method and numbers: ArtSource/Prompts/Decks_Vintage.md.
 # Do not pipe into Select-Object -First.
 param(
@@ -15,7 +19,7 @@ param(
     # the three decks, ADR 050).
     [int] $Width = 246,
     [int] $Height = 386,
-    [switch] $Install,           # copy the faces into Assets/_Project/Art/Cards/<Deck> (QA must pass)
+    [switch] $Install,           # copy the shared faces and the bases into Assets/_Project/Art/Cards (QA must pass)
     [switch] $Sample,            # only the sample cards, into ArtSource/Working/Decks/sample
     [string[]] $SampleCards = @('Spades A', 'Spades 5', 'Hearts 10', 'Clubs J', 'Diamonds Q', 'Hearts K')
 )
@@ -208,6 +212,29 @@ foreach ($d in $styles.Keys) {
     $exported[$d] = $list
 }
 
+# ------------------------------------------------------------------------------ 4b. layers
+# Each deck's base, and the shared faces lifted off the reference deck's cards (ADR 054). Read back
+# from the saved files, so the faces are measured against the 8-bit cards the game would show.
+Write-Host 'Lifting the shared faces...'
+$reference = 'ClassicCrimson'
+$facesDir = Join-Path $exportRoot 'Faces'
+New-Item -ItemType Directory -Force $facesDir | Out-Null
+$bases = @{}
+foreach ($d in $styles.Keys) {
+    $file = Join-Path $exportRoot "$d\Base_$d.png"
+    ([Composer]::Export([Composer]::Frame($styles[$d]), $Width, $Height, $mask)).SavePng($file, $true)
+    $bases[$d] = [pscustomobject]@{ file = $file; img = [Img]::Load($file) }
+}
+$r = $styles[$reference]
+$inks = [System.Drawing.Color[]] @($r.Black, $r.BlackLow, $r.Red, $r.CourtBlack, $r.CourtRed, $r.Seam)
+$shared = New-Object System.Collections.Generic.List[object]
+foreach ($x in $exported[$reference]) {
+    $face = [Layers]::Lift([Img]::Load($x.file), $bases[$reference].img, $inks)
+    $file = Join-Path $facesDir ([IO.Path]::GetFileName($x.file))
+    $face.SavePng($file, $true)
+    $shared.Add([pscustomobject]@{ file = $file; img = [Img]::Load($file); label = $x.label })
+}
+
 # ------------------------------------------------------------------------------ 5. checks
 Write-Host 'Checking...'
 $qa = New-Object System.Collections.Generic.List[string]
@@ -227,6 +254,20 @@ $qa.Add("all files $Width x $Height, 8-bit RGBA, corners clear, centre opaque, a
 # Pip counts: the number cards carry exactly their rank in pips (the pack's 5 of spades had nine).
 foreach ($n in 2..10) { if ([Composer]::Pips($n).Count -ne $n) { $failed++; $qa.Add("FAIL layout of $n has $([Composer]::Pips($n).Count) pips") } }
 $qa.Add('pip layouts 2-10: one pip per rank point')
+# The layers against the whole cards: the reference deck must come back to within one level; the
+# other decks show the reference deck's inks (their frames and paper are their own bases).
+foreach ($d in $styles.Keys) {
+    $worst = 0.0; $psnr = 99.0; $off = 0.0; $at = ''
+    for ($i = 0; $i -lt $shared.Count; $i++) {
+        $whole = [Img]::Load($exported[$d][$i].file)
+        $m = [Layers]::Compare([Layers]::Over($bases[$d].img, $shared[$i].img), $whole)
+        if ($m[0] -gt $worst) { $worst = $m[0]; $at = $shared[$i].label }
+        $psnr = [Math]::Min($psnr, $m[1]); $off = [Math]::Max($off, $m[2])
+    }
+    $line = ('{0} base + shared faces vs its whole cards: largest difference {1} levels ({2}), PSNR at least {3:0.0} dB, at most {4:0.00} % of pixels more than 3 apart' -f $d, $worst, $at, $psnr, $off)
+    if ($d -eq $reference -and $worst -gt 1) { $line += '  FAIL'; $failed++ }
+    $qa.Add($line)
+}
 
 # ------------------------------------------------------------------------------ 6. review sheets
 $dark = [System.Drawing.Color]::FromArgb(24, 24, 24); $light = [System.Drawing.Color]::White
@@ -259,20 +300,24 @@ $report | Set-Content -Encoding UTF8 (Join-Path $work 'compose-report.txt')
 Copy-Item (Join-Path $work 'compose-report.txt') (Join-Path $verifyDir 'compose-report.txt') -Force
 $report | ForEach-Object { Write-Host $_ }
 
-# handoff.csv: the faces' rows are replaced (UTF-8 with BOM, CRLF); the backs' rows stay.
+# handoff.csv: the rows of the faces and bases are replaced (UTF-8 with BOM, CRLF); the backs' rows stay.
+# The game no longer carries the whole cards of each deck, so their rows go.
 $lines = [IO.File]::ReadAllLines($handoff, [Text.Encoding]::UTF8)
 $keep = @($lines | Where-Object { $line = $_; -not ($styles.Keys | Where-Object { $line -like "Cards/$_/Card_*" }) })
-foreach ($d in $styles.Keys) {
-    foreach ($x in $exported[$d]) { $keep += "Cards/$d/$([IO.Path]::GetFileName($x.file)),card,${Width}x$Height,,all,composed from the vintage pack,review,$($x.notes)" }
-}
+$keep = @($keep | Where-Object { $_ -notlike 'Cards/Faces/*' -and $_ -notlike 'Cards/*/Base_*' })
+foreach ($x in $shared) { $keep += "Cards/Faces/$([IO.Path]::GetFileName($x.file)),card,${Width}x$Height,,all,lifted off $reference's card (ADR 054),review,premultiplied alpha in linear light; drawn over the deck's base" }
+foreach ($d in $styles.Keys) { $keep += "Cards/$d/Base_$d.png,card,${Width}x$Height,,all,composed from the vintage pack,review,$d frame on its paper; under the shared faces (ADR 054)" }
 [IO.File]::WriteAllText($handoff, (($keep -join "`r`n") + "`r`n"), (New-Object Text.UTF8Encoding $true))
 
 # ------------------------------------------------------------------------------ 8. install
 if ($Install) {
     if ($failed) { throw "QA failed ($failed); not copying into Assets." }
+    $dst = Join-Path $cardsRoot 'Faces'
+    New-Item -ItemType Directory -Force $dst | Out-Null
+    foreach ($x in $shared) { Copy-Item $x.file (Join-Path $dst ([IO.Path]::GetFileName($x.file))) -Force }
+    Write-Host "installed $($shared.Count) shared faces into $dst"
     foreach ($d in $styles.Keys) {
-        $dst = Join-Path $cardsRoot $d
-        foreach ($x in $exported[$d]) { Copy-Item $x.file (Join-Path $dst ([IO.Path]::GetFileName($x.file))) -Force }
-        Write-Host "installed $($exported[$d].Count) faces into $dst"
+        Copy-Item $bases[$d].file (Join-Path $cardsRoot "$d\Base_$d.png") -Force
+        Write-Host "installed Base_$d.png"
     }
 }
