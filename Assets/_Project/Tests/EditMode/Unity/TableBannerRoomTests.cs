@@ -63,18 +63,15 @@ namespace Callbreak.Tests.EditMode.Unity
             Rect home = Box(Find("HomeButton"));
             Rect scores = Box(Find("ScoresButton"));
             Rect settings = Box(Find("SettingsButton"));
-            Rect scoresLabel = InkBox(Find("ScoresLabel"));
-            Rect settingsLabel = InkBox(Find("SettingsLabel"));
-
             Assert.AreEqual(home.center.x, scores.center.x, 1f, "Scores in Home's column");
             Assert.AreEqual(home.center.x, settings.center.x, 1f, "Settings too");
             Assert.Less(scores.yMax, home.yMin, "Scores below Home");
-            Assert.LessOrEqual(scoresLabel.yMax, scores.yMin + 1f, "its label under it (as the mockup draws it, just under the button)");
-            Assert.Less(settings.yMax, scoresLabel.yMin, "Settings below Scores and its label");
-            Assert.LessOrEqual(settingsLabel.yMax, settings.yMin + 1f, "its label under it");
+            Assert.Less(settings.yMax, scores.yMin, "Settings below Scores");
+            Assert.IsNull(FindOrNull("ScoresLabel"), "icons only: no \"Scores\" under the button");
+            Assert.IsNull(FindOrNull("SettingsLabel"), "nor \"Settings\"");
             Assert.IsNull(FindOrNull("HeaderDivider"), "no divider between buttons that are one above the other");
 
-            Rect column = Rect.MinMaxRect(Mathf.Min(home.xMin, scores.xMin, settings.xMin), settingsLabel.yMin, Mathf.Max(home.xMax, scores.xMax, settings.xMax), home.yMax);
+            Rect column = Rect.MinMaxRect(Mathf.Min(home.xMin, scores.xMin, settings.xMin), settings.yMin, Mathf.Max(home.xMax, scores.xMax, settings.xMax), home.yMax);
             foreach (string piece in new[] { "SeatPlate3", "SeatPill3", "SeatRing3", "SeatFan3", "SeatPlate2", "SeatRing2" })
             {
                 Assert.IsFalse(column.Overlaps(Box(Find(piece))), piece + " clear of the left column");
