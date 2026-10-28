@@ -61,23 +61,29 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private UnityEngine.UI.Image _backdropTable;
         [SerializeField] private UnityEngine.UI.Image _backdropFront;
 
-        // The banner ad at the top of the table (the owner, 14 and 26 Oct 2026, ADR 051). While a banner
-        // may come, the table makes room for it: the logo goes, the round line moves beside the Scores
-        // button without its ornaments, and the top seat and the trick come down a little (canvas
-        // units), so the banner covers nothing of the game. The slot is an empty rectangle across the
-        // top of the HUD, from right of Home to left of the round line, that the ad network's own view
-        // is placed over; it is off while the table makes no room. The banner keeps the gap from the
-        // round line's words, however long they are, and sits in the slot's top-right corner (ADR 052).
+        // The banner ad at the top of the table (the owner, 14 and 26 Oct 2026, ADR 051; 28 Oct 2026,
+        // ADR 057). While a banner may come, the table makes room for it: the logo goes, the round line
+        // moves to the left beside Home without its ornaments, and the top seat and the trick come down
+        // a little (canvas units), so the banner covers nothing of the game. The slot is an empty
+        // rectangle across the top of the HUD, from right of the round line's words to the right edge,
+        // that the ad network's own view is placed over; it is off while the table makes no room. The
+        // banner keeps the gap from the round line's words, however long they are, and sits in the
+        // slot's top-right corner, where no button is (Scores and Settings stand under Home).
         [SerializeField] private RectTransform _bannerSlot;
         [SerializeField] private GameObject _logo;
         [SerializeField] private GameObject _roundOrnamentLeft;
         [SerializeField] private GameObject _roundOrnamentRight;
         [SerializeField] private TMP_Text _roundBeside;
+
+        // The status pill behind those words, as wide as they are and this much more (ADR 057).
+        [SerializeField] private RectTransform _roundBesidePill;
+        [SerializeField] private float _roundPillPadding = 30f;
         [SerializeField] private float _bannerSeatDrop = 52f;
         [SerializeField] private float _bannerTrickDrop = 25f;
         [SerializeField] private float _bannerGap = 48f;
 
         private readonly Vector3[] _bannerCorners = new Vector3[4];
+        private readonly Vector3[] _pillCorners = new Vector3[4];
         private bool _bannerRoom;
         private Vector2 _topSeatHome;
         private Vector2 _trickHome;
@@ -222,6 +228,7 @@ namespace Callbreak.Presentation.Table
             if (_roundBeside != null && _roundBeside.text != text)
             {
                 _roundBeside.text = text;
+                FitRoundPill();
             }
         }
 
@@ -298,6 +305,12 @@ namespace Callbreak.Presentation.Table
             _bannerRoom = room;
             _bannerSlot.gameObject.SetActive(room);
             _roundBeside.gameObject.SetActive(room);
+            if (_roundBesidePill != null)
+            {
+                _roundBesidePill.gameObject.SetActive(room);
+                FitRoundPill();
+            }
+
             _roundLabel.gameObject.SetActive(!room);
             _logo.SetActive(!room);
             _roundOrnamentLeft.SetActive(!room);
@@ -322,10 +335,9 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>
         /// Where the banner ad may show, at the top of the table: the banner slot's rectangle in screen
-        /// pixels from the screen's top-left corner, rounded inwards, ending the gap short of the round
+        /// pixels from the screen's top-left corner, rounded inwards, starting the gap past the round
         /// line's words, with its right edge as the line to centre the banner on, which puts the banner in
-        /// the slot's top-right corner, by the round line and furthest from Home (the owner, 27 Oct 2026:
-        /// "top right or left"; ADR 052). False when the
+        /// the top-right corner, away from every button (the owner, 28 Oct 2026, ADR 057). False when the
         /// table has no slot (a prefab built before it), or makes no room for a banner, or the slot is
         /// empty.
         /// </summary>
@@ -344,13 +356,18 @@ namespace Callbreak.Presentation.Table
             int y = Mathf.CeilToInt(Screen.height - _bannerCorners[2].y);
             int right = Mathf.FloorToInt(_bannerCorners[2].x);
 
-            // "ROUND 10 / 10", or longer words in another language, reach further left than the slot
-            // was built for.
-            if (_roundBeside != null && _roundBeside.gameObject.activeInHierarchy && _roundBeside.textInfo != null && _roundBeside.textInfo.characterCount > 0)
+            // "ROUND 10 / 10", or longer words in another language, reach further right than the slot
+            // was built for: the slot starts the gap past their pill (or the words, without one).
+            if (_roundBesidePill != null && _roundBesidePill.gameObject.activeInHierarchy)
+            {
+                _roundBesidePill.GetWorldCorners(_pillCorners);
+                x = Mathf.Max(x, Mathf.CeilToInt(_pillCorners[2].x + (_bannerGap * _roundBesidePill.lossyScale.x)));
+            }
+            else if (_roundBeside != null && _roundBeside.gameObject.activeInHierarchy && _roundBeside.textInfo != null && _roundBeside.textInfo.characterCount > 0)
             {
                 RectTransform words = _roundBeside.rectTransform;
-                float wordsLeft = words.TransformPoint(_roundBeside.textBounds.min).x;
-                right = Mathf.Min(right, Mathf.FloorToInt(wordsLeft - (_bannerGap * words.lossyScale.x)));
+                float wordsRight = words.TransformPoint(_roundBeside.textBounds.max).x;
+                x = Mathf.Max(x, Mathf.CeilToInt(wordsRight + (_bannerGap * words.lossyScale.x)));
             }
 
             int width = right - x;
@@ -362,6 +379,18 @@ namespace Callbreak.Presentation.Table
 
             slot = new BannerSlot(x, y, width, height, right);
             return true;
+        }
+
+        /// <summary>The round line's pill keeps the width of its words (ADR 057).</summary>
+        private void FitRoundPill()
+        {
+            if (_roundBesidePill == null || _roundBeside == null)
+            {
+                return;
+            }
+
+            float width = _roundBeside.GetPreferredValues(_roundBeside.text).x + _roundPillPadding;
+            _roundBesidePill.sizeDelta = new Vector2(width, _roundBesidePill.sizeDelta.y);
         }
 
         /// <summary>

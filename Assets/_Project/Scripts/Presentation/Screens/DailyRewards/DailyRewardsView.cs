@@ -12,7 +12,8 @@ namespace Callbreak.Presentation.Screens
     /// Today's tile, while its reward is ready, wears the crimson frame and the light behind its
     /// coins and its name in crimson (the others' names are brown; Day 7's, the weekly bonus, is
     /// always crimson, as the mockup draws them); a claimed day carries the gold check. Renders what
-    /// its presenter gives it and reports Back and Claim. A Claim button that is not interactable
+    /// its presenter gives it and reports Back, Claim and a tap on a day's tile (the owner, 28 Oct
+    /// 2026: tapping today's coins collects them too). A Claim button that is not interactable
     /// shows its disabled look with its label dimmed. A claim's coins fly from today's pile into the
     /// wallet, which counts up as they land (<see cref="CollectCoins"/>).
     /// </summary>
@@ -26,6 +27,9 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private TMP_Text _dayHeading;
         [SerializeField] private TMP_Text[] _dayLabel;
         [SerializeField] private TMP_Text[] _amount;
+
+        // Each day's whole tile is a button: a tap on today's collects its coins (the presenter decides).
+        [SerializeField] private UnityEngine.UI.Button[] _dayButton;
 
         // Each tile's looks: today's frame and light, and the claimed check.
         [SerializeField] private GameObject[] _todayFrame;
@@ -41,6 +45,9 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private RectTransform _walletCoin;
         [SerializeField] private RectTransform[] _coins;
 
+        // Each tile's listener, kept so it can be removed.
+        private UnityEngine.Events.UnityAction[] _dayTapped;
+
         // The wallet's count-up while the coins land.
         private int _countFrom;
         private int _countTo;
@@ -53,6 +60,9 @@ namespace Callbreak.Presentation.Screens
 
         public event Action BackClicked;
         public event Action ClaimClicked;
+
+        /// <summary>A day's tile was tapped (its index, Day 1 = 0).</summary>
+        public event Action<int> DayClicked;
 
         /// <summary>The first collected coin reached the wallet: the coin sound.</summary>
         public event Action CoinsLanding;
@@ -160,12 +170,33 @@ namespace Callbreak.Presentation.Screens
         {
             _backButton.onClick.AddListener(OnBack);
             _claimButton.onClick.AddListener(OnClaim);
+            if (_dayButton == null)
+            {
+                return;
+            }
+
+            _dayTapped ??= new UnityEngine.Events.UnityAction[_dayButton.Length];
+            for (int i = 0; i < _dayButton.Length; i++)
+            {
+                int day = i;
+                _dayTapped[i] ??= () => DayClicked?.Invoke(day);
+                _dayButton[i].onClick.AddListener(_dayTapped[i]);
+            }
         }
 
         private void OnDisable()
         {
             _backButton.onClick.RemoveListener(OnBack);
             _claimButton.onClick.RemoveListener(OnClaim);
+            if (_dayButton == null || _dayTapped == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _dayButton.Length; i++)
+            {
+                _dayButton[i].onClick.RemoveListener(_dayTapped[i]);
+            }
         }
 
         private static void SetText(TMP_Text label, string text)

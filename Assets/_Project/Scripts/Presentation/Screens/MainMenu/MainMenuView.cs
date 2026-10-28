@@ -48,7 +48,6 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private UnityEngine.UI.Button _playOnlineButton;
         [SerializeField] private UnityEngine.UI.Button _playWithFriendsButton;
         [SerializeField] private UnityEngine.UI.Button _playOfflineButton;
-        [SerializeField] private UnityEngine.UI.Button _resumeButton;
         [SerializeField] private GameObject _footer;
         [SerializeField] private UnityEngine.UI.Image _avatar;
         [SerializeField] private TMP_Text _playerNameText;
@@ -64,21 +63,19 @@ namespace Callbreak.Presentation.Screens
         // The banner ad in the bottom-left corner of the main menu (the owner, 27 Oct 2026, ADR 052).
         // While a banner may come, the menu makes room for it: the centre column (logo, card fan, play
         // buttons) is drawn a little smaller from its top, so the play buttons clear the banner's band
-        // at the bottom of a phone's screen; the footer line goes; and the "Resume match" banner moves
-        // under Play Offline, clear of the left corner. The slot is an empty rectangle in the safe area's
-        // bottom-left corner that the ad network's own view is placed over; it is off while the menu
-        // makes no room. The banner keeps the gap from the Resume banner when that shows.
+        // at the bottom of a phone's screen; and the footer line goes. The slot is an empty rectangle in
+        // the safe area's bottom-left corner that the ad network's own view is placed over; it is off
+        // while the menu makes no room. (The "Resume match" banner it kept clear of is gone: the owner,
+        // 28 Oct 2026, ADR 057; an unfinished match is offered back by the resume dialog.)
         [SerializeField] private RectTransform _centre;
         [SerializeField] private RectTransform _bannerSlot;
         [SerializeField] private float _bannerColumnScale = 0.94f;
         [SerializeField] private float _bannerColumnTop = 48f;
-        [SerializeField] private float _bannerGap = 24f;
 
         private readonly Vector3[] _bannerCorners = new Vector3[4];
         private bool _bannerRoom;
         private bool _bannerHomesKnown;
         private Vector2 _centreHome;
-        private Vector2 _resumeHome;
 
         private readonly MotionHandle[] _intro = new MotionHandle[4];
 
@@ -111,9 +108,6 @@ namespace Callbreak.Presentation.Screens
         public event Action PlayOnlineClicked;
         public event Action PlayWithFriendsClicked;
         public event Action PlayOfflineClicked;
-
-        /// <summary>The "Resume match" banner was tapped.</summary>
-        public event Action ResumeClicked;
 
         public void SetPlayerName(string playerName)
         {
@@ -191,25 +185,12 @@ namespace Callbreak.Presentation.Screens
             _playWithFriendsGroup.alpha = alpha;
         }
 
-        /// <summary>
-        /// While an unfinished offline match exists, the "Resume match" banner takes the footer
-        /// line's place (GDD §11 screen 00).
-        /// </summary>
-        public void SetResumeAvailable(bool available)
-        {
-            if (_resumeButton.gameObject.activeSelf != available)
-            {
-                _resumeButton.gameObject.SetActive(available);
-                _footer.SetActive(!available && !_bannerRoom);
-            }
-        }
-
         /// <summary>The menu has made room for the banner ad in its bottom-left corner (<see cref="SetBannerRoom"/>).</summary>
         public bool HasBannerRoom => _bannerRoom;
 
         /// <summary>
         /// Makes room in the bottom-left corner of the menu for the banner ad, or gives it back (ADR 052):
-        /// the centre column, the footer line and the Resume banner as the fields above describe. Called
+        /// the centre column and the footer line as the fields above describe. Called
         /// before the menu first shows, so its buttons rise into their new places. A prefab built before
         /// the slot keeps its look.
         /// </summary>
@@ -220,12 +201,10 @@ namespace Callbreak.Presentation.Screens
                 return;
             }
 
-            var resume = (RectTransform)_resumeButton.transform;
             if (!_bannerHomesKnown)
             {
                 _bannerHomesKnown = true;
                 _centreHome = _centre.anchoredPosition;
-                _resumeHome = resume.anchoredPosition;
             }
 
             _bannerRoom = room;
@@ -236,16 +215,13 @@ namespace Callbreak.Presentation.Screens
             float top = (_centre.rect.height / 2f) - _bannerColumnTop;
             _centre.localScale = new Vector3(scale, scale, 1f);
             _centre.anchoredPosition = _centreHome + new Vector2(0f, top * (1f - scale));
-
-            float underPlayOffline = ((RectTransform)_playOfflineButton.transform).anchoredPosition.x;
-            resume.anchoredPosition = room ? new Vector2(underPlayOffline, _resumeHome.y) : _resumeHome;
-            _footer.SetActive(!room && !_resumeButton.gameObject.activeSelf);
+            _footer.SetActive(!room);
         }
 
         /// <summary>
         /// Where the banner ad may show, in the bottom-left corner of the menu: the banner slot's
-        /// rectangle in screen pixels from the screen's top-left corner, rounded inwards, ending the gap
-        /// short of the Resume banner while that shows, with its left edge as the line to centre the
+        /// rectangle in screen pixels from the screen's top-left corner, rounded inwards, with its left
+        /// edge as the line to centre the
         /// banner on and its bottom edge to sit on. False when the menu has no slot (a prefab built before
         /// it), or makes no room for a banner, or the slot is empty.
         /// </summary>
@@ -262,13 +238,6 @@ namespace Callbreak.Presentation.Screens
             int x = Mathf.CeilToInt(_bannerCorners[0].x);
             int y = Mathf.CeilToInt(Screen.height - _bannerCorners[2].y);
             int right = Mathf.FloorToInt(_bannerCorners[2].x);
-            if (_resumeButton.gameObject.activeInHierarchy)
-            {
-                var resume = (RectTransform)_resumeButton.transform;
-                resume.GetWorldCorners(_bannerCorners);
-                right = Mathf.Min(right, Mathf.FloorToInt(_bannerCorners[0].x - (_bannerGap * resume.lossyScale.x)));
-                _bannerSlot.GetWorldCorners(_bannerCorners);
-            }
 
             int width = right - x;
             int height = Mathf.FloorToInt(Screen.height - _bannerCorners[0].y) - y;
@@ -326,11 +295,10 @@ namespace Callbreak.Presentation.Screens
                 return;
             }
 
-            GameObject last = _resumeButton.gameObject.activeSelf ? _resumeButton.gameObject : _footer;
             Rise(0, _playOnlineButton.transform);
             Rise(1, _playWithFriendsButton.transform);
             Rise(2, _playOfflineButton.transform);
-            Rise(3, last.transform);
+            Rise(3, _footer.transform);
         }
 
         private void Rise(int index, Transform target)
@@ -362,7 +330,6 @@ namespace Callbreak.Presentation.Screens
             _playOnlineButton.onClick.AddListener(OnPlayOnlineClicked);
             _playWithFriendsButton.onClick.AddListener(OnPlayWithFriendsClicked);
             _playOfflineButton.onClick.AddListener(OnPlayOfflineClicked);
-            _resumeButton.onClick.AddListener(OnResumeClicked);
         }
 
         private void OnDisable()
@@ -388,7 +355,6 @@ namespace Callbreak.Presentation.Screens
             _playOnlineButton.onClick.RemoveListener(OnPlayOnlineClicked);
             _playWithFriendsButton.onClick.RemoveListener(OnPlayWithFriendsClicked);
             _playOfflineButton.onClick.RemoveListener(OnPlayOfflineClicked);
-            _resumeButton.onClick.RemoveListener(OnResumeClicked);
 
             // A rise cut short puts its button in its place.
             for (int i = 0; i < _intro.Length; i++)
@@ -431,6 +397,5 @@ namespace Callbreak.Presentation.Screens
 
         private void OnPlayOfflineClicked() => PlayOfflineClicked?.Invoke();
 
-        private void OnResumeClicked() => ResumeClicked?.Invoke();
     }
 }

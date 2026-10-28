@@ -64,6 +64,7 @@ namespace Callbreak.Presentation.Screens
             _view.BackClicked += OnBack;
             _view.BackRequested += OnBack;
             _view.ClaimClicked += OnClaim;
+            _view.DayClicked += OnDay;
             _view.CoinsLanding += OnCoinsLanding;
             _view.CoinsCollected += OnCoinsCollected;
             _wallet.Changed += RenderBalance;
@@ -78,6 +79,7 @@ namespace Callbreak.Presentation.Screens
             _view.BackClicked -= OnBack;
             _view.BackRequested -= OnBack;
             _view.ClaimClicked -= OnClaim;
+            _view.DayClicked -= OnDay;
             _view.CoinsLanding -= OnCoinsLanding;
             _view.CoinsCollected -= OnCoinsCollected;
             _wallet.Changed -= RenderBalance;
@@ -172,6 +174,18 @@ namespace Callbreak.Presentation.Screens
             }
 
             _view.CollectCoins(day, before, before + paid, _settings.ReduceMotion);
+        }
+
+        /// <summary>
+        /// A tap on today's tile collects its coins, as Claim does (the owner, 28 Oct 2026); a tap on
+        /// any other day, or on today's once it is collected, does nothing.
+        /// </summary>
+        private void OnDay(int index)
+        {
+            if (index == _rewards.Day && _rewards.CanClaim && !_collecting)
+            {
+                OnClaim();
+            }
         }
 
         private void OnCoinsLanding() => _audio.Play(SoundCue.CoinCollect);
