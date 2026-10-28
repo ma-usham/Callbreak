@@ -24,6 +24,7 @@ namespace Callbreak.Editor
     public static class TableCardBuilder
     {
         public const string CardsFolder = "Assets/_Project/Art/Cards";
+        public const string FacesFolder = CardsFolder + "/Faces";
         public const string LibraryPath = "Assets/_Project/Config/Cards/CardSprites.asset";
         public const string CardPrefabPath = "Assets/_Project/Prefabs/Table/Card.prefab";
         public const string GameplayScreenPrefabPath = "Assets/_Project/Prefabs/Table/GameplayScreen.prefab";
@@ -76,6 +77,17 @@ namespace Callbreak.Editor
             Debug.Log(BuildAll());
         }
 
+        /// <summary>
+        /// ADR 053 in one go, for a batch run (-executeMethod): the card assets with the shared faces
+        /// and the deck bases, then the bases added under the main menu's fan and the shop's decks.
+        /// </summary>
+        public static void BuildDeckBases()
+        {
+            Debug.Log(BuildAll());
+            Debug.Log("[MainMenuBuilder] " + MainMenuBuilder.AddFanBases());
+            Debug.Log("[ShopCustomizer] " + Screens.ShopCustomizer.AddDeckBases());
+        }
+
         /// <summary>Builds the sprite library, the effect sprites and the Card prefab; returns a report.</summary>
         public static string BuildAll()
         {
@@ -109,31 +121,32 @@ namespace Callbreak.Editor
             return prefab.GetComponent<CardView>();
         }
 
+        /// <summary>
+        /// One set of 52 faces for every deck (<see cref="FacesFolder"/>, see-through around the
+        /// marks) and, per deck, the base drawn under them and the back (ADR 053).
+        /// </summary>
         public static CardSpriteProvider BuildLibrary(out string report)
         {
             var decks = new CardSpriteProvider.DeckSprites[Decks.Length];
             int missing = 0;
-            for (int d = 0; d < Decks.Length; d++)
+            var faces = new Sprite[Card.Count];
+            for (int id = 0; id < Card.Count; id++)
             {
-                string folder = $"{CardsFolder}/{Decks[d].folder}";
-                var faces = new Sprite[Card.Count];
-                for (int id = 0; id < Card.Count; id++)
-                {
-                    Card card = Card.FromId(id);
-                    faces[id] = LoadCardSprite($"{folder}/Card_{SuitNames[(int)card.Suit]}_{TurnPrompt.RankLabel(card.Rank)}.png");
-                    if (faces[id] == null)
-                    {
-                        missing++;
-                    }
-                }
-
-                Sprite back = LoadCardSprite($"{folder}/Back_{Decks[d].folder}.png");
-                if (back == null)
+                Card card = Card.FromId(id);
+                faces[id] = LoadCardSprite($"{FacesFolder}/Card_{SuitNames[(int)card.Suit]}_{TurnPrompt.RankLabel(card.Rank)}.png");
+                if (faces[id] == null)
                 {
                     missing++;
                 }
+            }
 
-                decks[d] = new CardSpriteProvider.DeckSprites(Decks[d].id, back, faces);
+            for (int d = 0; d < Decks.Length; d++)
+            {
+                string folder = $"{CardsFolder}/{Decks[d].folder}";
+                Sprite back = LoadCardSprite($"{folder}/Back_{Decks[d].folder}.png");
+                Sprite cardBase = LoadCardSprite($"{folder}/Base_{Decks[d].folder}.png");
+                missing += (back == null ? 1 : 0) + (cardBase == null ? 1 : 0);
+                decks[d] = new CardSpriteProvider.DeckSprites(Decks[d].id, back, cardBase, faces);
             }
 
             var library = AssetDatabase.LoadAssetAtPath<CardSpriteProvider>(LibraryPath);
@@ -147,7 +160,7 @@ namespace Callbreak.Editor
             library.SetDecks(decks, Decks[0].id);
             EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();
-            report = $"{LibraryPath}: {Decks.Length} decks, {Decks.Length * (Card.Count + 1) - missing} sprites, {missing} missing";
+            report = $"{LibraryPath}: {Decks.Length} decks, {Card.Count + Decks.Length * 2 - missing} sprites, {missing} missing";
             return library;
         }
 
@@ -336,8 +349,9 @@ namespace Callbreak.Editor
         }
 
         /// <summary>
-        /// Card.prefab: shadow, glow, face and the subdued overlay under one root the size of a hand
-        /// card. The face shows a back until a card is assigned.
+        /// Card.prefab: shadow, glow, the deck's base, the face and the subdued overlay under one
+        /// root the size of a hand card. The face shows a back until a card is assigned; the base
+        /// shows only under a face (ADR 053).
         /// </summary>
         public static void BuildCardPrefab(CardSpriteProvider library)
         {
@@ -365,6 +379,9 @@ namespace Callbreak.Editor
                 Image glowImage = Layer(rect, "Glow", glow, new Vector2(-margin, -margin), new Vector2(margin, margin));
                 glowImage.enabled = false;
 
+                Image cardBase = Layer(rect, "Base", null, Vector2.zero, Vector2.zero);
+                cardBase.enabled = false;
+
                 Image face = Layer(rect, "Face", back, Vector2.zero, Vector2.zero);
 
                 Image dim = Layer(rect, "Dim", silhouette, Vector2.zero, Vector2.zero);
@@ -377,6 +394,7 @@ namespace Callbreak.Editor
                 {
                     shadowImage.gameObject.AddComponent<CardPerspective>(),
                     glowImage.gameObject.AddComponent<CardPerspective>(),
+                    cardBase.gameObject.AddComponent<CardPerspective>(),
                     face.gameObject.AddComponent<CardPerspective>(),
                     dim.gameObject.AddComponent<CardPerspective>(),
                 };
@@ -387,6 +405,7 @@ namespace Callbreak.Editor
                 so.FindProperty("_group").objectReferenceValue = group;
                 so.FindProperty("_shadow").objectReferenceValue = shadowImage;
                 so.FindProperty("_glow").objectReferenceValue = glowImage;
+                so.FindProperty("_base").objectReferenceValue = cardBase;
                 so.FindProperty("_face").objectReferenceValue = face;
                 so.FindProperty("_dim").objectReferenceValue = dim;
                 SerializedProperty list = so.FindProperty("_perspectives");
