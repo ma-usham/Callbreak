@@ -59,7 +59,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
                         hold = Math.Max(hold, room.Now + BotTiming.Hosted.DealSeconds);
                         break;
                     case TrickCompleted _:
-                        hold = Math.Max(hold, room.Now + BotTiming.Hosted.TrickDisplaySeconds);
+                        hold = Math.Max(hold, room.Now + BotTiming.Hosted.CardFlightSeconds + BotTiming.Hosted.TrickDisplaySeconds);
                         break;
                     case CallTurnStarted call when IsBot(call.Seat):
                         openedAt[call.Seat] = room.Now;
@@ -73,6 +73,12 @@ namespace Callbreak.Tests.EditMode.Application.Online
                     case CardPlayed played when IsBot(played.Seat) && !played.IsForced:
                         Timed(played.Seat);
                         break;
+                }
+
+                // Every played card holds the bots until it has landed on the table (ADR 055).
+                if (e is CardPlayed)
+                {
+                    hold = Math.Max(hold, room.Now + BotTiming.Hosted.CardFlightSeconds);
                 }
 
                 // The first call turn opened before this listener was there: that move is not timed,
@@ -91,7 +97,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 room.Network.Pump();
             }
 
-            // A forced move (0.35 s) draws nothing; every other bot move drew the next think time.
+            // A forced move (0.5 s) draws nothing; every other bot move drew the next think time.
             thinks.RemoveAll(t => t < BotTiming.Hosted.ThinkMinSeconds - tick);
             Assert.Greater(thinks.Count, 30, "two rounds of bot moves were timed");
             foreach (ulong seed in drawn)
