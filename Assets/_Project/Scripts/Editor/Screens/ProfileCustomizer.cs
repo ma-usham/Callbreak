@@ -38,9 +38,9 @@ namespace Callbreak.Editor.Screens
         /// <summary>Warm Sand #DFC8AE (GDD §12 palette) behind selected text.</summary>
         private static readonly Color SelectionColor = new Color(0.875f, 0.784f, 0.682f, 0.75f);
 
-        // The avatar picker's panel, canvas pixels: the dialog's look, wide enough for five
-        // 112-wide portraits 20 apart (640) inside its margins.
-        private const float PickerPanelWidth = 780f;
+        // The avatar picker's panel, canvas pixels: the dialog's look, wide enough for six
+        // 112-wide portraits 20 apart (772) inside its margins.
+        private const float PickerPanelWidth = 912f;
         private const float PickerPaddingTop = 54f;
         private const float PickerPaddingBottom = 58f;
         private const float PickerTitleSize = 56f;
@@ -68,7 +68,7 @@ namespace Callbreak.Editor.Screens
 
         /// <summary>
         /// ADR 041: over the whole screen, the dim (a tap on it closes the picker) and the modal
-        /// panel with the serif title, the five portraits (<see cref="AvatarPickerBuilder"/>) and a
+        /// panel with the serif title, the six portraits (<see cref="AvatarPickerBuilder"/>) and a
         /// crimson Done. Hidden until the pencil or the avatar opens it.
         /// </summary>
         private static void BuildAvatarPicker(ScreenBuildContext ctx)

@@ -1,5 +1,5 @@
 {
-  "comment": "V2 UI kit, written by Tools/ArtPipeline/V2/kit.py: pixels per unit 200 (2x exports); nine is left, top, right, bottom in sprite pixels; shadow is how far (spread) beyond the face it was rendered for (face, w x h) a shadow reaches and how far below it lies (drop), in canvas units.",
+  "comment": "V2 UI kit, written by Tools/ArtPipeline/V2/kit.py and art.py: ppu is pixels per unit; nine is left, top, right, bottom in sprite pixels; mipmaps marks the portraits, which keep theirs; shadow is how far (spread) beyond the face it was rendered for (face, w x h) a shadow reaches and how far below it lies (drop), in canvas units.",
   "sprites": [
     {
       "path": "UI/Panels/UI_Panel_Large.png",
@@ -651,6 +651,412 @@
           84
         ]
       }
+    },
+    {
+      "path": "UI/Icons/Icon_About.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Back.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Cards.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_CardsStacked_Brown.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_CardsStacked_Ivory.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Chevron.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Chevron_Thin.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Common/Icon_Chevron_Light.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Clock.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Close.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Close_Brown.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Copy.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_CreateRoom.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_DailyReward.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_DifficultyEasy.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_DifficultyNormal.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_DifficultyHard.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Emote.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_EnterRoom.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Friends.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Home.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_HowToPlay.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Leave.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Lightning.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Lock.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Mountains_Brown.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Mountains_Ivory.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_NoAds.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Offline.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_OfflineMonitor.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Pencil.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Play.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Rule_Call.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Rule_Follow.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Rule_Score.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Scorecard.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Settings.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Shop.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Sound.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Spade_Gold.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_StatBestScore.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_StatGames.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_StatWinRate.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_StatWins.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Suit_Spade.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Suit_Heart.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Suit_Diamond.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Suit_Club.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_TableOval_Brown.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_TableOval_Ivory.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Icons/Icon_Coin.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Ornaments/Logo_Callbreak.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Logo_Callbreak_NoFlag.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Common/Logo_Callbreak_NoFlag.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_Trophy.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_Laurel.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_Ribbon_Gold.png",
+      "ppu": 200.0,
+      "nine": [
+        72.0,
+        0.0,
+        72.0,
+        0.0
+      ]
+    },
+    {
+      "path": "UI/Decor/Deco_SpadeMedal.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_MountainFooter.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_CoinPile_Small.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_CoinPile_Medium.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_CoinPile_Large.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_DayCoins_1.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_DayCoins_2.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_DayCoins_3.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_DayCoins_4.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_DayCoins_5.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_DayCoins_6.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_DayCoins_7.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_StakeCoins.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_Crown.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_TrophySparkle.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_PillOrnament.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_TitleDivider.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_TitleDivider_Line.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_TitleDivider_Diamond.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_HeadingFlourish.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_FooterArrow.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_LobbyDivider.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_MedalLine.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_ModeTitleDivider_Quick.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_ModeTitleDivider_Stake.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Decor/Deco_ProfileDivider.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Avatars/Avatar_Default.png",
+      "ppu": 200.0,
+      "mipmaps": true
+    },
+    {
+      "path": "UI/Avatars/Avatar_01.png",
+      "ppu": 200.0,
+      "mipmaps": true
+    },
+    {
+      "path": "UI/Avatars/Avatar_02.png",
+      "ppu": 200.0,
+      "mipmaps": true
+    },
+    {
+      "path": "UI/Avatars/Avatar_03.png",
+      "ppu": 200.0,
+      "mipmaps": true
+    },
+    {
+      "path": "UI/Avatars/Avatar_04.png",
+      "ppu": 200.0,
+      "mipmaps": true
+    },
+    {
+      "path": "UI/Avatars/Avatar_05.png",
+      "ppu": 200.0,
+      "mipmaps": true
+    },
+    {
+      "path": "UI/Avatars/Avatar_Framed_00.png",
+      "ppu": 100.0,
+      "mipmaps": true
+    },
+    {
+      "path": "UI/Avatars/Avatar_Framed_01.png",
+      "ppu": 100.0,
+      "mipmaps": true
+    },
+    {
+      "path": "UI/Avatars/Avatar_Framed_02.png",
+      "ppu": 100.0,
+      "mipmaps": true
+    },
+    {
+      "path": "UI/Avatars/Avatar_Framed_03.png",
+      "ppu": 100.0,
+      "mipmaps": true
+    },
+    {
+      "path": "UI/Avatars/Avatar_Framed_04.png",
+      "ppu": 100.0,
+      "mipmaps": true
+    },
+    {
+      "path": "UI/Avatars/Avatar_Framed_05.png",
+      "ppu": 100.0,
+      "mipmaps": true
+    },
+    {
+      "path": "UI/Avatars/UI_AvatarRing.png",
+      "ppu": 200.0
+    },
+    {
+      "path": "UI/Avatars/UI_AvatarRing_Chosen.png",
+      "ppu": 100.0
     }
   ]
 }

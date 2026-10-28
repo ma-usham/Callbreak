@@ -30,6 +30,25 @@ REPO = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
 ART = os.path.join(REPO, 'Assets', '_Project', 'Art')
 
 
+MANIFEST_COMMENT = ('V2 UI kit, written by Tools/ArtPipeline/V2/kit.py and art.py: ppu is pixels per unit; '
+                    'nine is left, top, right, bottom in sprite pixels; mipmaps marks the portraits, which keep '
+                    'theirs; shadow is how far (spread) beyond the face it was rendered for (face, w x h) a '
+                    'shadow reaches and how far below it lies (drop), in canvas units.')
+
+
+def merge_manifest(path, entries):
+    """Writes these entries into the importer manifest: each replaces the entry with its path, in
+    place, new ones go at the end, and the entries the other script wrote stay."""
+    existing = json.load(open(path, encoding='utf-8')).get('sprites', []) if os.path.exists(path) else []
+    new = {e['path']: e for e in entries}
+    merged = [new.pop(e['path'], e) for e in existing]
+    merged += [e for e in entries if e['path'] in new]
+    with open(path, 'w', encoding='utf-8', newline='\n') as f:
+        json.dump({'comment': MANIFEST_COMMENT, 'sprites': merged}, f, indent=2, ensure_ascii=False)
+        f.write('\n')
+    return len(merged)
+
+
 def recover_alpha(black, white):
     """RGBA float [0, 1] from the same pixels rendered over black and over white."""
     b = black[..., :3].astype(np.float64)
@@ -173,11 +192,8 @@ def main():
         manifest.append(entry)
         print(f"{os.path.basename(sh['out']):34s} shape {w}x{h} pad {pad} drop {drop} slice {sh['slice']} nine {nine}")
 
-    with open(args.manifest, 'w', encoding='utf-8', newline='\n') as f:
-        json.dump({'comment': 'V2 UI kit, written by Tools/ArtPipeline/V2/kit.py: pixels per unit 200 (2x exports); nine is left, top, right, bottom in sprite pixels; shadow is how far (spread) beyond the face it was rendered for (face, w x h) a shadow reaches and how far below it lies (drop), in canvas units.',
-                   'sprites': manifest}, f, indent=2, ensure_ascii=False)
-        f.write('\n')
-    print(f'{len(manifest)} sprites -> {os.path.relpath(args.manifest, REPO)}')
+    total = merge_manifest(args.manifest, manifest)
+    print(f'{len(manifest)} sprites -> {os.path.relpath(args.manifest, REPO)} ({total} in all)')
 
     if args.review:
         os.makedirs(args.review, exist_ok=True)

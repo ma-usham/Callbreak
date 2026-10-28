@@ -9,7 +9,7 @@ namespace Callbreak.Editor.Screens
 {
     /// <summary>
     /// The name screen at the start (ADR 022, ADR 043), built from the owner's mockup 22: the Profile
-    /// screen's title, panel, field and Save, with the player's portrait and a grid of the five to
+    /// screen's title, panel, field and Save, with the player's portrait and a grid of the six to
     /// choose from. As the owner asked, the name field sits at the top of the panel, so the keyboard
     /// never hides it. The screen built from the layout becomes the <see cref="NamePromptView"/>, on
     /// a canvas of its own above the menu and its dialogs; a transparent blocker under its content
@@ -177,7 +177,7 @@ namespace Callbreak.Editor.Screens
             ctx.Bound["_field"] = input;
         }
 
-        /// <summary>The big portrait left of the divider, and the grid of the five right of it, both on the panel.</summary>
+        /// <summary>The big portrait left of the divider, and the grid of the six right of it, both on the panel.</summary>
         private static void BuildPortraits(ScreenBuildContext ctx)
         {
             RectTransform panel = ctx.Nodes["Panel"];

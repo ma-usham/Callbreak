@@ -11,7 +11,7 @@ namespace Callbreak.Presentation.Framework
     /// The name screen when the game starts (ADR 022), as the owner's mockup 22 draws it (ADR 043):
     /// the Profile screen's look over the menu background, with the name field at the top of the
     /// panel (the owner: the keyboard must not hide it), the line under it (the note, or why a name
-    /// cannot be used), the player's portrait with the name under it, the five portraits to choose
+    /// cannot be used), the player's portrait with the name under it, the six portraits to choose
     /// from, and Save Changes. It cannot be dismissed. The keyboard comes only when the player taps
     /// the field, and its Done (or Enter) only puts it away: Save Changes answers the question. The
     /// screen fades in and out on a canvas of its own above the menu and its dialogs;

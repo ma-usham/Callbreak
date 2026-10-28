@@ -21,8 +21,11 @@ namespace Callbreak.Application.Profile
         public const int MinNameLength = 3;
         public const int MaxNameLength = 16;
 
-        /// <summary>The avatar presets of the picker, the five portraits of ADR 041.</summary>
-        public const int AvatarPresetCount = 5;
+        /// <summary>
+        /// The avatar presets of the picker: the six V2 portraits (the owner, 28 Oct 2026). Presets
+        /// 0-4 keep their ids from ADR 041's five, so a saved choice still names a portrait.
+        /// </summary>
+        public const int AvatarPresetCount = 6;
 
         /// <summary>How long a name saved on the Profile screen stays before it can be changed (ADR 041).</summary>
         public static readonly TimeSpan NameChangeInterval = TimeSpan.FromDays(7);

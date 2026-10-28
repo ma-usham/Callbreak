@@ -13,7 +13,7 @@ namespace Callbreak.Application.Profile
         /// <summary>"Player" until the player picks a name.</summary>
         string DisplayName { get; }
 
-        /// <summary>Index into the avatar presets, the five portraits of ADR 041 (0 until the player picks one).</summary>
+        /// <summary>Index into the avatar presets, the six V2 portraits (0 until the player picks one).</summary>
         int AvatarId { get; }
 
         int AvatarCount { get; }

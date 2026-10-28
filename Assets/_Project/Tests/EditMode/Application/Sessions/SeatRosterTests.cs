@@ -11,7 +11,7 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
     public sealed class SeatRosterTests
     {
         [Test]
-        public void Offline_EveryFaceAtTheTableIsDifferent([Range(0, 4)] int playerAvatar)
+        public void Offline_EveryFaceAtTheTableIsDifferent([Range(0, SeatRoster.AvatarCount - 1)] int playerAvatar)
         {
             for (ulong seed = 1; seed <= 200; seed++)
             {
@@ -38,7 +38,7 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
                 }
             }
 
-            CollectionAssert.AreEquivalent(new[] { "1", "2", "3", "4" }, seen);
+            CollectionAssert.AreEquivalent(Enumerable.Range(1, SeatRoster.AvatarCount - 1).Select(a => a.ToString()), seen);
         }
 
         [Test]
@@ -47,7 +47,7 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
             var rng = new Pcg32Random(7);
             for (int i = 0; i < 100; i++)
             {
-                Assert.AreEqual(4, SeatRoster.DrawAvatar(rng, new HashSet<int> { 0, 1, 2, 3 }));
+                Assert.AreEqual(5, SeatRoster.DrawAvatar(rng, new HashSet<int> { 0, 1, 2, 3, 4 }));
             }
         }
 
@@ -55,7 +55,7 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
         public void DrawAvatar_EveryPortraitTaken_StillGivesOne()
         {
             var rng = new Pcg32Random(7);
-            var everyone = new HashSet<int> { 0, 1, 2, 3, 4 };
+            var everyone = new HashSet<int>(Enumerable.Range(0, SeatRoster.AvatarCount));
             for (int i = 0; i < 100; i++)
             {
                 Assert.That(SeatRoster.DrawAvatar(rng, everyone), Is.InRange(0, SeatRoster.AvatarCount - 1));

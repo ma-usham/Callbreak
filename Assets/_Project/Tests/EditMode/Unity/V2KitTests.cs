@@ -10,9 +10,10 @@ using UnityEngine.UI;
 namespace Callbreak.Tests.EditMode.Unity
 {
     /// <summary>
-    /// The V2 UI kit (Figma "V2 · Design System", Tools/ArtPipeline/V2): every panel, button and
-    /// control sprite is imported as ArtSource/Kit/V2.json says (pixels per unit 200, its 9-slice
-    /// borders, no mip maps), no older kit manifest still claims one of them, every layout names
+    /// The V2 UI kit (Figma "V2 · Design System", Tools/ArtPipeline/V2): every panel, button,
+    /// control, icon, decor and portrait sprite is imported as ArtSource/Kit/V2.json says (pixels
+    /// per unit, 9-slice borders, mip maps only for the portraits), no older kit manifest still
+    /// claims one of them, every layout names
     /// art that exists, and the built screens draw the V2 shadows at full strength (their colour and
     /// opacity are in the sprites) and the pills sliced only across at the scale of their height, so
     /// their round ends stay round. The prefabs are the built ones, so these live outside the folders
@@ -39,7 +40,7 @@ namespace Callbreak.Tests.EditMode.Unity
                 Assert.AreEqual(TextureImporterType.Sprite, importer.textureType, path);
                 Assert.AreEqual(entry.ppu, importer.spritePixelsPerUnit, 0.001f, $"{path}: pixels per unit");
                 Assert.AreEqual(Border(entry), importer.spriteBorder, $"{path}: 9-slice border (left, bottom, right, top)");
-                Assert.IsFalse(importer.mipmapEnabled, $"{path}: UI art has no mip maps");
+                Assert.AreEqual(entry.mipmaps, importer.mipmapEnabled, $"{path}: only the portraits keep mip maps (ADR 041)");
                 Assert.AreEqual(TextureWrapMode.Clamp, importer.wrapMode, path);
                 Assert.IsTrue(importer.alphaIsTransparency, path);
             }
@@ -191,6 +192,7 @@ namespace Callbreak.Tests.EditMode.Unity
             public string path;
             public float ppu;
             public float[] nine;
+            public bool mipmaps;
             public Shadow shadow;
         }
 

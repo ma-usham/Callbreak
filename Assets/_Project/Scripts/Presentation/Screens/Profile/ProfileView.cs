@@ -9,7 +9,7 @@ namespace Callbreak.Presentation.Screens
 {
     /// <summary>
     /// GDD §11 screen 14: the player's identity and play statistics. The pencil (or the avatar)
-    /// opens the avatar picker (ADR 041): the five portraits on a panel over the dimmed screen, the
+    /// opens the avatar picker (ADR 041): the six portraits on a panel over the dimmed screen, the
     /// chosen one ringed, closed with Done or a tap beside the panel. The display name is edited in
     /// the field and saved with Save Changes; while a saved name has to stay (ADR 041: 7 days) the
     /// field takes no typing, and a tap on it nudges the line under it, which says how long the name

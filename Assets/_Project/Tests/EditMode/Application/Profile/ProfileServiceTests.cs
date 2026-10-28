@@ -27,7 +27,7 @@ namespace Callbreak.Tests.EditMode.Application
         {
             Assert.AreEqual("Player", _profile.DisplayName);
             Assert.AreEqual(0, _profile.AvatarId);
-            Assert.AreEqual(5, _profile.AvatarCount);
+            Assert.AreEqual(6, _profile.AvatarCount);
             Assert.AreEqual(0, _store.SaveCount);
         }
 
@@ -321,8 +321,27 @@ namespace Callbreak.Tests.EditMode.Application
             Assert.AreEqual(0, _store.SaveCount);
         }
 
+        [Test]
+        public void SetAvatar_TheSixthPortrait_IsKeptAcrossARestart()
+        {
+            _profile.SetAvatar(5);
+
+            var reloaded = new ProfileService(_store, new NameFilter());
+
+            Assert.AreEqual(5, reloaded.AvatarId);
+        }
+
+        [Test]
+        public void ASaveFromTheFivePortraits_KeepsItsChoice()
+        {
+            _store.Put(ProfileService.SaveKey, new ProfileData { displayName = "Suman", avatarId = 4 });
+            var profile = new ProfileService(_store, new NameFilter());
+
+            Assert.AreEqual(4, profile.AvatarId);
+        }
+
         [TestCase(-1)]
-        [TestCase(5)]
+        [TestCase(6)]
         [TestCase(99)]
         public void SetAvatar_OutsideThePresets_Throws(int avatarId)
         {

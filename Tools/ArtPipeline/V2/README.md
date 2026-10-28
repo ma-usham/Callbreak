@@ -32,3 +32,29 @@ The game's panels, buttons, controls and pills come from the Figma file "Callbre
 
 `kit.json` lists, for each piece, the files it is written to and its borders (canvas units, left,
 top, right, bottom). It also lists the V2 effects each shadow is rendered from.
+
+## Icons, decor and portraits
+
+1. **Sheets.** Run `figma-art-sheet.js` with `use_figma` and save the JSON it returns as
+   `art-sheet.json`. It builds section "Unity Export · Art" with:
+   - every V2 icon the game uses, the decor art and the six portraits
+   - each portrait in the avatar's gold ring, and the avatar's two rings
+2. **Export.** Export both frames at 3x.
+3. **Fit.** Run:
+
+   ```
+   python Tools/ArtPipeline/V2/art.py --black <black.png> --white <white.png>
+   ```
+
+   For each file in `art.json`:
+   - It keeps the old file's size and import settings, and fits the V2 piece into the old
+     picture's ink box. So every screen shows the new art where, and as large as, the old.
+   - Icons get the colour V2 draws them in on the screens.
+   - Portraits are cut into discs.
+   - Their entries go into `ArtSource/Kit/V2.json` next to the kit's.
+4. **Import and rebuild** as above. Then also run `SceneSetup.EnsureAvatarLibrary()` (the presets)
+   and `SuitSpriteBuilder.Build` (the suits in text use the suit icons' outlines).
+
+Rebuild the screens only while the Editor is **not** in Play mode. In Play mode a view's `Awake`
+runs as its builder adds it, and its runtime state (a hidden canvas, for one) is saved into the
+prefab.
