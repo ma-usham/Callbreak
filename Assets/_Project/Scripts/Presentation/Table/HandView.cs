@@ -109,7 +109,7 @@ namespace Callbreak.Presentation.Table
             _deckId = deckId;
             for (int i = 0; i < _views.Count; i++)
             {
-                _views[i].ShowFace(_views[i].Card, _sprites.Face(deckId, _views[i].Card));
+                _views[i].ShowFace(_views[i].Card, _sprites.Face(deckId, _views[i].Card), _sprites.Base(deckId));
             }
         }
 
@@ -131,7 +131,7 @@ namespace Callbreak.Presentation.Table
                 if (isNew)
                 {
                     view = _pool.Rent(_cardsRoot);
-                    view.ShowFace(card, _sprites.Face(_deckId, card));
+                    view.ShowFace(card, _sprites.Face(_deckId, card), _sprites.Base(_deckId));
                 }
 
                 _views.Add(view);

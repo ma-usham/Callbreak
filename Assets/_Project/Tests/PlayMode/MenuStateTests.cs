@@ -35,6 +35,7 @@ namespace Callbreak.Tests.PlayMode
     public sealed class MenuStateTests
     {
         private const float TurnTimeout = 40f;
+        private const string PremultipliedShader = "Callbreak/UI/Premultiplied";
 
         private GameFixture _game;
 
@@ -319,8 +320,25 @@ namespace Callbreak.Tests.PlayMode
                     Sprite ace = cards.Face(deck, new Card((Suit)suit, Rank.Ace));
                     Assert.IsNotNull(ace, deck + " has its ace of " + (Suit)suit);
                     Assert.IsTrue(Shows(menu, ace), "GDD 13: the fan shows the " + deck + " ace of " + (Suit)suit);
+                    Assert.IsTrue(Shows(menu, ace, PremultipliedShader), "ADR 054: the shared ace of " + (Suit)suit + " draws premultiplied");
+                }
+
+                Assert.IsTrue(Shows(menu, cards.Base(deck)), "ADR 053: the aces lie on the " + deck + " base");
+            }
+        }
+
+        /// <summary>True when an image on the screen draws that sprite with that shader.</summary>
+        private static bool Shows(UIScreen screen, Sprite sprite, string shader)
+        {
+            foreach (Image image in screen.GetComponentsInChildren<Image>(true))
+            {
+                if (image.sprite == sprite && image.material.shader.name == shader)
+                {
+                    return true;
                 }
             }
+
+            return false;
         }
 
         /// <summary>True when an image on the screen draws that sprite.</summary>

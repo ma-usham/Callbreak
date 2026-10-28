@@ -122,7 +122,7 @@ namespace Callbreak.Editor.Screens
         private static void Place(TableView view, TableSkin skin, int relativeSeat, Card card)
         {
             CardView cardView = view.Cards.Rent(view.Trick.Area);
-            cardView.ShowFace(card, skin.Face(Deck, card));
+            cardView.ShowFace(card, skin.Face(Deck, card), skin.Base(Deck));
             view.Trick.Adopt(relativeSeat, cardView);
             view.Trick.Settle(relativeSeat);
         }

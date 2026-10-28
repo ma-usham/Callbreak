@@ -1,5 +1,6 @@
 using System;
 using Callbreak.Application.Cosmetics;
+using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
 using LitMotion;
 using TMPro;
@@ -45,6 +46,7 @@ namespace Callbreak.Presentation.Screens
         private MotionHandle _peekMotion;
         private int _peeking = NoTile;
         private Sprite _peekFace;
+        private Sprite _peekBase;
         private Sprite _peekBack;
         private bool _peekWithoutFlip;
         private float _peekTime;
@@ -164,7 +166,7 @@ namespace Callbreak.Presentation.Screens
         /// (<see cref="DeckPeek.TimeAfterTapAgain"/>). With <paramref name="reduceMotion"/> the
         /// picture changes side without turning.
         /// </summary>
-        public void PeekFace(int index, Sprite face, Sprite back, bool reduceMotion)
+        public void PeekFace(int index, Sprite face, Sprite cardBase, Sprite back, bool reduceMotion)
         {
             ShopItemTile tile = _tiles[Cards].Tile(index);
             if (tile == null || face == null)
@@ -188,6 +190,7 @@ namespace Callbreak.Presentation.Screens
             }
 
             _peekFace = face;
+            _peekBase = cardBase;
             if (back != null)
             {
                 _peekBack = back;
@@ -304,6 +307,8 @@ namespace Callbreak.Presentation.Screens
                 tile.Face.sprite = side;
             }
 
+            ShowBase(tile, showsFace ? _peekBase : null);
+
             tile.Picture.localScale = new Vector3(width, 1f, 1f);
         }
 
@@ -343,6 +348,7 @@ namespace Callbreak.Presentation.Screens
             if (tile != null && tile.Face != null)
             {
                 tile.Face.sprite = _peekBack;
+                ShowBase(tile, null);
             }
 
             if (tile != null && tile.Picture != null)
@@ -352,7 +358,34 @@ namespace Callbreak.Presentation.Screens
 
             _peeking = NoTile;
             _peekFace = null;
+            _peekBase = null;
             _peekBack = null;
+        }
+
+        /// <summary>
+        /// The deck's base under the face it shows (ADR 053), the face drawn with its premultiplied
+        /// material (ADR 054); null hides the base, under a back.
+        /// </summary>
+        private static void ShowBase(ShopItemTile tile, Sprite cardBase)
+        {
+            Image under = tile.Base;
+            if (under == null)
+            {
+                return;
+            }
+
+            CardFaceMaterial.Apply(tile.Face, tile.FaceMaterial, cardBase != null);
+
+            if (under.sprite != cardBase)
+            {
+                under.sprite = cardBase;
+            }
+
+            bool visible = cardBase != null;
+            if (under.enabled != visible)
+            {
+                under.enabled = visible;
+            }
         }
 
         private void OnBack() => BackClicked?.Invoke();

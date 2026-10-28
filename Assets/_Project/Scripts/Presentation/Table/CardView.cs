@@ -1,4 +1,5 @@
 using Callbreak.Core.Cards;
+using Callbreak.Presentation.Feedback;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -50,7 +51,11 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private CanvasGroup _group;
         [SerializeField] private Image _shadow;
         [SerializeField] private Image _glow;
+        [SerializeField] private Image _base;
         [SerializeField] private Image _face;
+
+        // The shared faces are premultiplied and need their own material over a base (ADR 054).
+        [SerializeField] private Material _faceMaterial;
         [SerializeField] private Image _dim;
         [SerializeField] private CardPerspective[] _perspectives;
 
@@ -88,17 +93,24 @@ namespace Callbreak.Presentation.Table
             }
         }
 
-        public void ShowFace(Card card, Sprite face)
+        /// <summary>
+        /// The card face up: its face over its deck's base, the border and paper the shared faces
+        /// leave out (ADR 053, 054), drawn with the premultiplied face material. A null base shows
+        /// the face alone, as a whole card with the default material.
+        /// </summary>
+        public void ShowFace(Card card, Sprite face, Sprite cardBase)
         {
             Card = card;
             IsFaceUp = true;
             SetSprite(face);
+            SetBase(face != null ? cardBase : null);
         }
 
         public void ShowBack(Sprite back)
         {
             IsFaceUp = false;
             SetSprite(back);
+            SetBase(null);
         }
 
         /// <summary>The gold glow of a legal card (and of the card that wins a trick).</summary>
@@ -183,6 +195,27 @@ namespace Callbreak.Presentation.Table
             {
                 _face.enabled = visible;
             }
+        }
+
+        private void SetBase(Sprite cardBase)
+        {
+            if (_base == null)
+            {
+                return;
+            }
+
+            if (_base.sprite != cardBase)
+            {
+                _base.sprite = cardBase;
+            }
+
+            bool visible = cardBase != null;
+            if (_base.enabled != visible)
+            {
+                _base.enabled = visible;
+            }
+
+            CardFaceMaterial.Apply(_face, _faceMaterial, visible);
         }
 
         private void ApplyScale()

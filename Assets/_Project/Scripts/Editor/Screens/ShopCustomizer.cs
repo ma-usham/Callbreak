@@ -231,10 +231,12 @@ namespace Callbreak.Editor.Screens
 
             RectTransform picture;
             Image pictureFace;
+            Image pictureBase = null;
             switch (category)
             {
                 case 0:
                     BuildDeckPicture(layout, index, root, at, out picture, out pictureFace);
+                    pictureBase = AddDeckBase(pictureFace);
                     break;
                 case 1:
                     BuildThumbPicture(layout, model, root, at, FirstPicture(CosmeticKind.Background, index), out picture, out pictureFace);
@@ -272,6 +274,8 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_button").objectReferenceValue = button;
             so.FindProperty("_picture").objectReferenceValue = picture;
             so.FindProperty("_face").objectReferenceValue = pictureFace;
+            so.FindProperty("_base").objectReferenceValue = pictureBase;
+            so.FindProperty("_faceMaterial").objectReferenceValue = pictureBase != null ? TableCardBuilder.EnsureFaceMaterial() : null;
             so.FindProperty("_name").objectReferenceValue = name;
             so.FindProperty("_outline").objectReferenceValue = outlineImage.gameObject;
             so.FindProperty("_statusRow").objectReferenceValue = statusLayout;
@@ -308,6 +312,120 @@ namespace Callbreak.Editor.Screens
             RectTransform faceRect = UiBuildKit.CreateAt("Face", picture, centre, centre, picture.sizeDelta);
             face = UiBuildKit.AddImage(faceRect, back, false);
             face.preserveAspect = true;
+        }
+
+        /// <summary>
+        /// The deck's base under a deck picture's face, the same size, hidden: it shows only under the
+        /// shared face while the deck peeks (ADR 053).
+        /// </summary>
+        private static Image AddDeckBase(Image face)
+        {
+            var rect = (RectTransform)face.transform;
+            var go = new GameObject("Base", typeof(RectTransform));
+            var baseRect = (RectTransform)go.transform;
+            baseRect.SetParent(rect.parent, false);
+            baseRect.SetSiblingIndex(rect.GetSiblingIndex());
+            baseRect.anchorMin = rect.anchorMin;
+            baseRect.anchorMax = rect.anchorMax;
+            baseRect.pivot = rect.pivot;
+            baseRect.anchoredPosition = rect.anchoredPosition;
+            baseRect.sizeDelta = rect.sizeDelta;
+            Image image = UiBuildKit.AddImage(baseRect, null, false);
+            image.preserveAspect = true;
+            image.enabled = false;
+            go.layer = face.gameObject.layer;
+            return image;
+        }
+
+        /// <summary>
+        /// Adds the hidden deck base (<see cref="AddDeckBase"/>) to each deck tile of the saved shop
+        /// prefab and binds it to the tile; everything else in the prefab stays as it is. Tiles that
+        /// have their base are left alone.
+        /// </summary>
+        public static string AddDeckBases()
+        {
+            string path = ScreenLayoutBuilder.PrefabPath("Shop");
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                Transform decks = root.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "Tiles0");
+                if (decks == null)
+                {
+                    return "FAILED: the shop has no Tiles0 (the Cards category)";
+                }
+
+                int added = 0;
+                foreach (ShopItemTile tile in decks.GetComponentsInChildren<ShopItemTile>(true))
+                {
+                    var so = new SerializedObject(tile);
+                    if (so.FindProperty("_base").objectReferenceValue != null || tile.Face == null)
+                    {
+                        continue;
+                    }
+
+                    so.FindProperty("_base").objectReferenceValue = AddDeckBase(tile.Face);
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                    added++;
+                }
+
+                if (added == 0)
+                {
+                    return "the shop's deck tiles already have their bases";
+                }
+
+                PrefabUtility.SaveAsPrefabAsset(root, path, out bool saved);
+                return saved ? $"saved {path} with {added} deck bases" : $"FAILED to save {path}";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        /// <summary>
+        /// Binds the premultiplied material of the shared faces (ADR 054) to each deck tile of the
+        /// saved shop prefab, for its face while it peeks; everything else stays as it is.
+        /// </summary>
+        public static string UseDeckFaceMaterial()
+        {
+            string path = ScreenLayoutBuilder.PrefabPath("Shop");
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                Transform decks = root.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "Tiles0");
+                if (decks == null)
+                {
+                    return "FAILED: the shop has no Tiles0 (the Cards category)";
+                }
+
+                Material material = TableCardBuilder.EnsureFaceMaterial();
+                int bound = 0;
+                foreach (ShopItemTile tile in decks.GetComponentsInChildren<ShopItemTile>(true))
+                {
+                    var so = new SerializedObject(tile);
+                    SerializedProperty property = so.FindProperty("_faceMaterial");
+                    if (tile.Base == null || property.objectReferenceValue == material)
+                    {
+                        continue;
+                    }
+
+                    property.objectReferenceValue = material;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                    bound++;
+                }
+
+                if (bound == 0)
+                {
+                    return "the shop's deck tiles already have the face material";
+                }
+
+                PrefabUtility.SaveAsPrefabAsset(root, path, out bool saved);
+                return saved ? $"saved {path} with the face material on {bound} deck tiles" : $"FAILED to save {path}";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         /// <summary>A background's thumbnail in a rounded frame that it fills (mockup 20's tiles, averaged).</summary>
