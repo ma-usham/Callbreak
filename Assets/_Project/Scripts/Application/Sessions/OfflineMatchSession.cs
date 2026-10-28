@@ -29,6 +29,8 @@ namespace Callbreak.Application.Sessions
     /// the match pauses with the match menu, and a snapshot is saved after every trick, on pause
     /// and on leave, so an interrupted match can be resumed from the main menu. Given a bot
     /// worker (the game passes the thread pool, GDD §20), Hard bots think off the main thread.
+    /// A new match is dealt from the seed, of a few fair draws, that gives the player the strongest
+    /// hands (<see cref="FriendlyDeal"/>, ADR 056), so offline play is friendly at every level.
     /// </summary>
     public sealed class OfflineMatchSession : IMatchSession
     {
@@ -59,7 +61,8 @@ namespace Callbreak.Application.Sessions
             ISettingsService settings,
             IStatsService stats,
             BotTiming timing = null,
-            BotDriver.IWorker botWorker = null)
+            BotDriver.IWorker botWorker = null,
+            Func<ulong> seeds = null)
         {
             _store = store;
             _stats = stats;
@@ -81,7 +84,9 @@ namespace Callbreak.Application.Sessions
             }
             else
             {
-                _seed = new CryptoRandom().NextSeed();
+                // A new match gets the seed, of a few fair draws, that deals the player the
+                // strongest hands; the harder the bots, the more draws (ADR 056).
+                _seed = FriendlyDeal.ChooseSeed(seeds ?? new CryptoRandom().NextSeed, FriendlyDeal.Candidates(_difficulty), rules, LocalSeat);
                 _rng = new Pcg32Random(_seed);
                 SeatProfile[] seats = SeatRoster.Offline(
                     profile.DisplayName, profile.AvatarId, cosmetics.SelectedDeckId,
