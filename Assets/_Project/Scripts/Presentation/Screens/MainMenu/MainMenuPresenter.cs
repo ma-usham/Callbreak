@@ -196,7 +196,7 @@ namespace Callbreak.Presentation.Screens
             string deck = _cosmetics.SelectedDeckId;
             for (int suit = 0; suit < 4; suit++)
             {
-                _view.SetFanFace((Suit)suit, _cards.Face(deck, new Card((Suit)suit, Rank.Ace)));
+                _view.SetFanFace((Suit)suit, _cards.Face(deck, new Card((Suit)suit, Rank.Ace)), _cards.Base(deck));
             }
         }
 

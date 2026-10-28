@@ -44,6 +44,9 @@ namespace Callbreak.Tests.PlayMode
         /// <summary>The card a deck's back stands for in <see cref="_art"/>.</summary>
         private const int BackArt = -1;
 
+        /// <summary>A deck's base in <see cref="_art"/>: the border and paper under the shared faces (ADR 053).</summary>
+        private const int BaseArt = -2;
+
         private readonly Dictionary<Sprite, (string Deck, int Card)> _art = new Dictionary<Sprite, (string Deck, int Card)>();
         private GameFixture _game;
         private FoundTable _search;
@@ -169,7 +172,8 @@ namespace Callbreak.Tests.PlayMode
             CardSpriteProvider sprites = _game.Services.Resolve<CardSpriteProvider>();
             LearnArt(sprites);
             Assert.AreNotSame(sprites.Back(mine), sprites.Back(theirs), "the two decks have backs of their own");
-            Assert.AreNotSame(sprites.Face(mine, new Card(Suit.Spades, Rank.Ace)), sprites.Face(theirs, new Card(Suit.Spades, Rank.Ace)), "and faces of their own");
+            Assert.AreNotSame(sprites.Base(mine), sprites.Base(theirs), "and bases of their own under the faces");
+            Assert.AreSame(sprites.Face(mine, new Card(Suit.Spades, Rank.Ace)), sprites.Face(theirs, new Card(Suit.Spades, Rank.Ace)), "ADR 053: every deck shares the faces");
 
             // Every deck but the first costs coins since 6 Oct 2026: this player bought theirs.
             _game.Services.Resolve<IWallet>().Add(750);
@@ -227,7 +231,10 @@ namespace Callbreak.Tests.PlayMode
             return new TableStatus(turn, clockMs, clockMs, TableStatus.NoClock, new SeatConnection[SeatExtensions.Count]);
         }
 
-        /// <summary>Remembers every deck's art: each back and each face, by its deck.</summary>
+        /// <summary>
+        /// Remembers every deck's art: each back and each base by its deck, and the faces, which every
+        /// deck shares (ADR 053), by card only.
+        /// </summary>
         private void LearnArt(CardSpriteProvider sprites)
         {
             _art.Clear();
@@ -235,12 +242,14 @@ namespace Callbreak.Tests.PlayMode
             {
                 CardSpriteProvider.DeckSprites deck = sprites.DeckAt(d);
                 _art[deck.Back] = (deck.Id, BackArt);
+                Assert.IsNotNull(deck.Base, deck.Id + " has a base under its faces");
+                _art[deck.Base] = (deck.Id, BaseArt);
                 for (int id = 0; id < Card.Count; id++)
                 {
                     Sprite face = deck.Face(id);
                     if (face != null)
                     {
-                        _art[face] = (deck.Id, id);
+                        _art[face] = (null, id);
                     }
                 }
             }
@@ -252,7 +261,7 @@ namespace Callbreak.Tests.PlayMode
             int backs = 0;
             foreach (Image image in table.GetComponentsInChildren<Image>())
             {
-                if (image.enabled && image.sprite != null && _art.TryGetValue(image.sprite, out (string Deck, int Card) art))
+                if (image.enabled && image.sprite != null && _art.TryGetValue(image.sprite, out (string Deck, int Card) art) && art.Deck != null)
                 {
                     Assert.AreEqual(deck, art.Deck, $"{when}: {image.name} shows a card of another deck ({art.Deck}, card {art.Card})");
                     backs += art.Card == BackArt ? 1 : 0;
@@ -262,19 +271,38 @@ namespace Callbreak.Tests.PlayMode
             return backs;
         }
 
-        /// <summary>The card art a card on the table shows: its deck, and its card id or <see cref="BackArt"/>.</summary>
+        /// <summary>
+        /// The card art a card on the table shows: its deck (a back's, or the base under the shared
+        /// face), and its card id or <see cref="BackArt"/>.
+        /// </summary>
         private (string Deck, int Card) ArtOf(CardView card)
         {
+            string deck = null;
+            int shown = int.MinValue;
             foreach (Image image in card.GetComponentsInChildren<Image>())
             {
-                if (image.enabled && image.sprite != null && _art.TryGetValue(image.sprite, out (string Deck, int Card) art))
+                if (!image.enabled || image.sprite == null || !_art.TryGetValue(image.sprite, out (string Deck, int Card) art))
+                {
+                    continue;
+                }
+
+                if (art.Card == BackArt)
                 {
                     return art;
                 }
+
+                if (art.Card == BaseArt)
+                {
+                    deck = art.Deck;
+                }
+                else
+                {
+                    shown = art.Card;
+                }
             }
 
-            Assert.Fail(card.name + " shows no card art");
-            return default;
+            Assert.AreNotEqual(int.MinValue, shown, card.name + " shows no card art");
+            return (deck, shown);
         }
 
         private bool FansHold(TableView table, int cards)

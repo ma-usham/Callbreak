@@ -19,6 +19,9 @@ namespace Callbreak.Presentation.Screens
         // What turns when a deck shows its ace: the picture together with its shadow.
         [SerializeField] private RectTransform _picture;
         [SerializeField] private Image _face;
+
+        // Under a deck's face while it peeks: the deck's base (ADR 053). Only deck tiles have one.
+        [SerializeField] private Image _base;
         [SerializeField] private TMP_Text _name;
         [SerializeField] private GameObject _outline;
         [SerializeField] private ShopRow _statusRow;
@@ -34,6 +37,9 @@ namespace Callbreak.Presentation.Screens
         public RectTransform Picture => _picture;
 
         public Image Face => _face;
+
+        /// <summary>The deck's base under its face while it peeks; null on tiles that are not decks.</summary>
+        public Image Base => _base;
 
         public TMP_Text NameLabel => _name;
 
