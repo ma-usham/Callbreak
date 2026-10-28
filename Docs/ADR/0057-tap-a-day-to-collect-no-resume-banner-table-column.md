@@ -26,34 +26,38 @@ right and then round text to the left side."
     that score and settings text ... just show the icon there"); they had stood on a status pill,
     since on the left they were over the scenery's temple and flags. The divider between the two
     buttons, drawn for buttons side by side, goes.
-  - **While a banner may show:**
-    - The logo still goes (ADR 051).
-    - The round line moves to the left: left-aligned, 36 units right of Home, centred on Home's
-      height, on a status pill that keeps the width of its words. Without a pill it was hard to
-      read over the 21:9 scenery's prayer flags.
-    - The banner's slot runs from 48 units past that pill to the right edge, and the banner sits
-      in the top-right corner, where no button is now.
-    - The top seat and the trick still come down 52 and 25 units, since the banner reaches over
-      the top seat at 16:9.
-  - **No banner** (No Ads, the Editor): the logo and the centred round line with its ornaments stay
-    as they were. Only Scores and Settings move.
-  - **Built by `TableCustomizer`:** `StackUnderHome`, and `BuildBannerRoom` with the round line's
-    pill. The Table prefab was rebuilt. `TableView.TryGetBannerSlot` starts the slot past the
-    round line's pill, and the banner is centred on the slot's right edge.
+  - **The CALLBREAK logo on the left and the round under it** (the owner, 29 Oct 2026: "on the left
+    side show callbreak logo and below that show round"), with or without a banner:
+    - the logo stays where the mockup draws it, right of Home; it no longer makes way for a banner
+      (ADR 051);
+    - "ROUND 1 / 5" moves from the top centre to just under the logo, centred on it, on a status
+      pill that keeps the width of its words, so it reads over the scenery's prayer flags;
+    - the round line's two ornaments, drawn to flank it at the top centre, go.
+  - **While a banner may show:** its slot runs from 48 units past the logo and the round line's
+    pill to the right edge, and the banner sits in the top-right corner, where no button is now.
+    The top seat and the trick still come down 52 and 25 units, since the banner reaches over the
+    top seat at 16:9.
+  - **Built by `TableCustomizer`:** `StackUnderHome`, `PlaceRoundUnderLogo` and `BuildBannerRoom`.
+    The Table prefab was rebuilt. `TableView` has one round line (`_roundLabel`) and its pill
+    (`_roundPill`); `SetBannerRoom` only opens the slot and moves the top seat and the trick.
+    `TryGetBannerSlot` starts the slot past the round line's pill, and the banner is centred on
+    the slot's right edge.
 
 ## Consequences
 
 - **Supersedes:**
-  - ADR 051's "ROUND 1 / 5 beside the Scores button" and its slot from Home to the round line;
+  - ADR 051's logo making way for the banner, "ROUND 1 / 5 beside the Scores button", and its slot
+    from Home to the round line;
   - ADR 052's slot "between the round line and the screen's middle";
   - ADR 052's Resume banner moving under Play Offline;
-  - GDD §11 screen 08's Scores and Settings in the top-right corner, and screen 00's Resume banner.
+  - GDD §11 screen 08's Scores and Settings in the top-right corner and its round line at the top
+    centre, and screen 00's Resume banner.
 - **AdMob:** the banner now has no button beside it (it had Scores 48 units away).
 - **Tests:**
   - `TableBannerRoomTests`:
     - Scores and Settings under Home, icons only, and clear of the left seat at 16:9, 21:9 and 4:3;
-    - the round line on the left on its pill;
-    - the slot from past the pill to the right edge, under no button;
+    - the logo on the left and the round centred under it on its pill, with no ornaments;
+    - the slot from past the logo and the pill to the right edge, under no button;
     - the pill growing with "ROUND 10 / 10".
   - `MenuBannerRoomTests`: no Resume banner.
   - `MenuStateTests`: a saved match shows no banner, and Play Offline offers it back and resumes it.

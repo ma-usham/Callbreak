@@ -6,16 +6,16 @@ using UnityEngine;
 namespace Callbreak.Tests.EditMode.Unity
 {
     /// <summary>
-    /// The table's top bar and its room for the banner ad (the owner, 26 Oct 2026, ADR 051; 28 Oct
+    /// The table's top bar and its room for the banner ad (the owner, 26 Oct 2026, ADR 051; 28-29 Oct
     /// 2026, ADR 057), on the table prefab laid out on a 16:9, 21:9 and 4:3 canvas. Scores and
-    /// Settings stand under Home, in the left column, clear of the left seat. A table opens with the
-    /// logo and the round line at the top. With room made, the logo and the round line's ornaments
-    /// go, the round line stands on the left beside Home, the top seat and the trick come down, and
-    /// the banner's slot spans the top of the safe area from right of the round line's words to the
-    /// right edge, tall enough for the largest standard banner (320 x 50 dp on a 360 dp-tall phone:
-    /// 960 x 150 canvas units), clear of every button and of the top seat; the banner sits in its
-    /// top-right corner. Giving the room back puts everything where it was. The prefab is the built
-    /// one, so these live outside the folders the dotnet harness compiles.
+    /// Settings stand under Home as icons, clear of the left seat. The CALLBREAK logo stands right of
+    /// Home, and "ROUND 1 / 5" under it on a status pill that keeps the width of its words; the top
+    /// centre has neither. With room made, the logo and the round line stay, the top seat and the trick
+    /// come down, and the banner's slot spans the top of the safe area from right of the logo and the
+    /// round line to the right edge, tall enough for the largest standard banner (320 x 50 dp on a 360
+    /// dp-tall phone: 960 x 150 canvas units), clear of every button and of the top seat; the banner
+    /// sits in its top-right corner. Giving the room back puts everything where it was. The prefab is
+    /// the built one, so these live outside the folders the dotnet harness compiles.
     /// </summary>
     public sealed class TableBannerRoomTests
     {
@@ -39,19 +39,42 @@ namespace Callbreak.Tests.EditMode.Unity
         [TestCase(1920f, 1080f)]
         [TestCase(2520f, 1080f)]
         [TestCase(1920f, 1440f)]
-        public void ATable_OpensAsItAlwaysWas(float width, float height)
+        public void ATable_ShowsTheLogoOnTheLeft_AndTheRoundUnderIt(float width, float height)
         {
             Open(width, height);
+            _view.SetRound("ROUND 1 / 5");
+            Canvas.ForceUpdateCanvases();
 
             Assert.IsFalse(_view.HasBannerRoom);
-            Assert.IsTrue(Find("Logo").gameObject.activeSelf);
-            Assert.IsTrue(Find("RoundOrnamentLeft").gameObject.activeSelf);
-            Assert.IsTrue(Find("RoundOrnamentRight").gameObject.activeSelf);
-            Assert.IsTrue(Find("RoundLabel").gameObject.activeSelf);
-            Assert.IsFalse(Find("RoundBeside").gameObject.activeSelf);
-            Assert.IsFalse(Find("RoundBesidePill").gameObject.activeSelf);
+            Rect home = Box(Find("HomeButton"));
+            Rect logo = Box(Find("Logo"));
+            Rect words = InkBox(Find("RoundLabel"));
+            Rect pill = Box(Find("RoundPill"));
+            Assert.IsTrue(Find("Logo").gameObject.activeSelf, "the logo shows");
+            Assert.Greater(logo.xMin, home.xMax, "right of Home, on the left side");
+            Assert.Less(logo.center.x, Box(_canvas.transform).center.x);
+            Assert.IsTrue(Find("RoundLabel").gameObject.activeSelf, "the round shows");
+            // The round's letter spacing sits after its last letter too, so its ink is a few units off
+            // the centre of what TextMeshPro centres.
+            Assert.AreEqual(logo.center.x, words.center.x, 4f, "centred under the logo");
+            Assert.Less(pill.yMax, logo.yMin, "below it");
+            Assert.Greater(pill.yMax, logo.yMin - 20f, "just below it");
+            Assert.Less(pill.xMin, words.xMin, "on a pill that holds the words");
+            Assert.Greater(pill.xMax, words.xMax);
+            Assert.Less(pill.yMin, words.yMin);
+            Assert.Greater(pill.yMax, words.yMax);
+            Assert.IsNull(FindOrNull("RoundOrnamentLeft"), "no ornaments: they flanked the round at the top centre");
+            Assert.IsNull(FindOrNull("RoundOrnamentRight"));
+            Assert.IsNull(FindOrNull("RoundBeside"), "one round line, always in its place");
             Assert.IsFalse(Find("BannerSlot").gameObject.activeSelf);
             Assert.IsFalse(_view.TryGetBannerSlot(out _), "no slot, no banner");
+
+            // Nothing of the game under the logo and the round line.
+            Rect corner = Rect.MinMaxRect(logo.xMin, pill.yMin, Mathf.Max(logo.xMax, pill.xMax), logo.yMax);
+            foreach (string piece in new[] { "SeatPlate2", "SeatPill2", "SeatRing2", "SeatPlate3", "SeatRing3", "ScoresButton", "SettingsButton" })
+            {
+                Assert.IsFalse(corner.Overlaps(Box(Find(piece))), piece + " clear of the logo and the round");
+            }
         }
 
         [TestCase(1920f, 1080f)]
@@ -89,32 +112,19 @@ namespace Callbreak.Tests.EditMode.Unity
             _view.SetBannerRoom(true);
 
             Assert.IsTrue(_view.HasBannerRoom);
-            Assert.IsFalse(Find("Logo").gameObject.activeSelf, "the logo makes way");
-            Assert.IsFalse(Find("RoundOrnamentLeft").gameObject.activeSelf);
-            Assert.IsFalse(Find("RoundOrnamentRight").gameObject.activeSelf);
-            Assert.IsFalse(Find("RoundLabel").gameObject.activeSelf);
-            RectTransform beside = Find("RoundBeside");
-            Assert.IsTrue(beside.gameObject.activeSelf, "the round line stands on the left, beside Home");
-            Assert.AreEqual("ROUND 1 / 5", TextOf(beside));
+            Assert.IsTrue(Find("Logo").gameObject.activeSelf, "the logo stays");
+            Assert.IsTrue(Find("RoundLabel").gameObject.activeSelf, "and so does the round under it");
+            Assert.AreEqual("ROUND 1 / 5", TextOf(Find("RoundLabel")));
 
             Rect canvas = Box(_canvas.transform);
             Rect slot = Box(Find("BannerSlot"));
-            Rect home = Box(Find("HomeButton"));
-            Rect words = InkBox(beside);
-            Assert.Greater(words.xMin, home.xMax, "the words right of Home");
-            Assert.Less(words.xMin, home.xMax + 48f, "beside it");
-            Assert.Greater(words.center.y, home.yMin, "at Home's height");
-            Assert.Less(words.center.y, home.yMax);
+            Rect logo = Box(Find("Logo"));
+            Rect pill = Box(Find("RoundPill"));
             Assert.AreEqual(canvas.yMax, slot.yMax, 0.5f, "the slot starts at the top of the screen");
             Assert.AreEqual(canvas.xMax, slot.xMax, 0.5f, "and reaches its right edge: the banner sits in the top-right corner");
             Assert.AreEqual(155f, slot.height, 0.5f);
-            Rect pill = Box(Find("RoundBesidePill"));
-            Assert.IsTrue(Find("RoundBesidePill").gameObject.activeSelf, "the words sit on a pill, over any scenery");
-            Assert.Less(pill.xMin, words.xMin, "the pill starts before the words");
-            Assert.Greater(pill.xMax, words.xMax, "and ends after them");
-            Assert.Less(pill.yMin, words.yMin, "and holds them top to bottom");
-            Assert.Greater(pill.yMax, words.yMax);
-            Assert.GreaterOrEqual(slot.xMin, pill.xMax + 47.5f, "clear of the round line and its pill");
+            Assert.GreaterOrEqual(slot.xMin, logo.xMax + 47.5f, "clear of the logo");
+            Assert.GreaterOrEqual(slot.xMin, pill.xMax + 47.5f, "and of the round line's pill");
 
             // No button under the slot (AdMob: no ad next to buttons). The table's own tap catchers
             // cover the whole screen and are not buttons a player aims at.
@@ -168,23 +178,21 @@ namespace Callbreak.Tests.EditMode.Unity
             Assert.AreEqual(trick, Anchored("TrickArea"));
             Assert.IsTrue(Find("Logo").gameObject.activeSelf);
             Assert.IsTrue(Find("RoundLabel").gameObject.activeSelf);
-            Assert.IsFalse(Find("RoundBeside").gameObject.activeSelf);
             Assert.IsFalse(Find("BannerSlot").gameObject.activeSelf);
         }
 
         [Test]
-        public void TheRound_IsWrittenInBothPlaces()
+        public void TheRound_IsWritten_AndItsPillGrowsWithTheWords()
         {
             Open(1920f, 1080f);
 
             _view.SetRound("ROUND 10 / 10");
-            Assert.AreEqual("ROUND 10 / 10", TextOf(Find("RoundLabel")));
-            Assert.AreEqual("ROUND 10 / 10", TextOf(Find("RoundBeside")));
-
-            // The pill keeps the width of the longer words.
-            _view.SetBannerRoom(true);
             Canvas.ForceUpdateCanvases();
-            Assert.Greater(Box(Find("RoundBesidePill")).xMax, InkBox(Find("RoundBeside")).xMax, "the pill grows with the words");
+            Assert.AreEqual("ROUND 10 / 10", TextOf(Find("RoundLabel")));
+            Rect words = InkBox(Find("RoundLabel"));
+            Rect pill = Box(Find("RoundPill"));
+            Assert.Less(pill.xMin, words.xMin, "the pill grows with the words");
+            Assert.Greater(pill.xMax, words.xMax);
         }
 
         /// <summary>The table prefab under a world-space canvas of the given size, as the capture tool lays it out.</summary>

@@ -15,9 +15,9 @@ namespace Callbreak.Tests.PlayMode
     /// <summary>
     /// The banner ad at the top of the table (the owner, 26 Oct 2026, ADR 051) in the real Boot, Menu
     /// and Table scenes, over a scripted banner network (as AdMob is on phones) and the game's own No
-    /// Ads, in an offline match. While No Ads isn't owned the table makes room when it opens (the logo
-    /// goes, the round line moves beside Scores, the top seat and the trick come down) and the banner
-    /// shows in the top-right corner of its slot (ADR 052) while the bare table is in front; under the
+    /// Ads, in an offline match. While No Ads isn't owned the table makes room when it opens (the top
+    /// seat and the trick come down; the logo and the round line under it stay on the left, ADR 057)
+    /// and the banner shows in the top-right corner of its slot while the bare table is in front; under the
     /// scorecard, settings and the match menu it is off the screen. Buying No Ads takes it away and the
     /// table keeps its look for the rest of the match; a player who owns No Ads opens the table as it
     /// always was and the table requests nothing. The main menu has its own banner over the same
@@ -53,17 +53,16 @@ namespace Callbreak.Tests.PlayMode
             TableView table = Object.FindFirstObjectByType<TableView>();
 
             Assert.IsTrue(table.HasBannerRoom, "room at the top for the banner");
-            Assert.IsFalse(Find(table, "Logo").activeInHierarchy, "the logo makes way");
-            Assert.IsFalse(Find(table, "RoundLabel").activeInHierarchy);
-            GameObject beside = Find(table, "RoundBeside");
-            Assert.IsTrue(beside.activeInHierarchy, "the round line stands beside Scores");
-            StringAssert.Contains("1", beside.GetComponent<TMPro.TMP_Text>().text, "and says which round it is");
+            Assert.IsTrue(Find(table, "Logo").activeInHierarchy, "the logo stays on the left (ADR 057)");
+            GameObject round = Find(table, "RoundLabel");
+            Assert.IsTrue(round.activeInHierarchy, "the round line stays under it");
+            StringAssert.Contains("1", round.GetComponent<TMPro.TMP_Text>().text, "and says which round it is");
 
             yield return GameFixture.Until(() => _network.Banner != null && _network.Banner.OnScreen, "the banner on the screen");
             Assert.IsTrue(table.TryGetBannerSlot(out BannerSlot slot));
             Assert.AreEqual(slot.Y, _network.Banner.Y, "at the top of its slot");
             Assert.GreaterOrEqual(_network.Banner.X, slot.X);
-            Assert.AreEqual(slot.X + slot.Width, _network.Banner.X + _network.Banner.Width, "in its top-right corner, by the round line");
+            Assert.AreEqual(slot.X + slot.Width, _network.Banner.X + _network.Banner.Width, "in its top-right corner");
             Assert.AreEqual(slot.X + slot.Width, slot.CentreX);
             Assert.IsFalse(slot.AtBottom);
 
@@ -118,9 +117,8 @@ namespace Callbreak.Tests.PlayMode
             yield return null;
 
             Assert.IsFalse(table.HasBannerRoom);
-            Assert.IsTrue(Find(table, "Logo").activeInHierarchy, "the logo stays");
-            Assert.IsTrue(Find(table, "RoundLabel").activeInHierarchy, "the round line stays in the middle");
-            Assert.IsFalse(Find(table, "RoundBeside").activeInHierarchy);
+            Assert.IsTrue(Find(table, "Logo").activeInHierarchy, "the logo stays on the left");
+            Assert.IsTrue(Find(table, "RoundLabel").activeInHierarchy, "the round line under it, as with a banner (ADR 057)");
             Assert.IsFalse(table.TryGetBannerSlot(out _), "no slot");
             Assert.AreEqual(requestedOnTheMenu, _network.Starts + _network.Loads, "the table requests nothing");
         }

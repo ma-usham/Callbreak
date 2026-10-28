@@ -61,23 +61,19 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private UnityEngine.UI.Image _backdropTable;
         [SerializeField] private UnityEngine.UI.Image _backdropFront;
 
-        // The banner ad at the top of the table (the owner, 14 and 26 Oct 2026, ADR 051; 28 Oct 2026,
-        // ADR 057). While a banner may come, the table makes room for it: the logo goes, the round line
-        // moves to the left beside Home without its ornaments, and the top seat and the trick come down
-        // a little (canvas units), so the banner covers nothing of the game. The slot is an empty
-        // rectangle across the top of the HUD, from right of the round line's words to the right edge,
-        // that the ad network's own view is placed over; it is off while the table makes no room. The
-        // banner keeps the gap from the round line's words, however long they are, and sits in the
-        // slot's top-right corner, where no button is (Scores and Settings stand under Home).
-        [SerializeField] private RectTransform _bannerSlot;
-        [SerializeField] private GameObject _logo;
-        [SerializeField] private GameObject _roundOrnamentLeft;
-        [SerializeField] private GameObject _roundOrnamentRight;
-        [SerializeField] private TMP_Text _roundBeside;
-
-        // The status pill behind those words, as wide as they are and this much more (ADR 057).
-        [SerializeField] private RectTransform _roundBesidePill;
+        // The round line stands on the left under the CALLBREAK logo, on a status pill as wide as its
+        // words and this much more (the owner, 29 Oct 2026, ADR 057).
+        [SerializeField] private RectTransform _roundPill;
         [SerializeField] private float _roundPillPadding = 30f;
+
+        // The banner ad at the top of the table (the owner, 14 and 26 Oct 2026, ADR 051; ADR 057).
+        // While a banner may come, the table makes room for it: the top seat and the trick come down
+        // a little (canvas units), so the banner covers nothing of the game. The slot is an empty
+        // rectangle across the top of the HUD, from right of the logo and the round line to the right
+        // edge, that the ad network's own view is placed over; it is off while the table makes no room.
+        // The banner keeps the gap from the round line's pill, however long its words are, and sits in
+        // the slot's top-right corner, where no button is (Scores and Settings stand under Home).
+        [SerializeField] private RectTransform _bannerSlot;
         [SerializeField] private float _bannerSeatDrop = 52f;
         [SerializeField] private float _bannerTrickDrop = 25f;
         [SerializeField] private float _bannerGap = 48f;
@@ -223,11 +219,6 @@ namespace Callbreak.Presentation.Table
             if (_roundLabel.text != text)
             {
                 _roundLabel.text = text;
-            }
-
-            if (_roundBeside != null && _roundBeside.text != text)
-            {
-                _roundBeside.text = text;
                 FitRoundPill();
             }
         }
@@ -291,30 +282,20 @@ namespace Callbreak.Presentation.Table
         public bool HasBannerRoom => _bannerRoom;
 
         /// <summary>
-        /// Makes room at the top of the table for the banner ad, or gives it back (ADR 051): the logo,
-        /// the round line, the top seat and the trick as the fields above describe. Called when the
-        /// table opens, before anything is dealt. A prefab built before the slot keeps its look.
+        /// Makes room at the top of the table for the banner ad, or gives it back (ADR 051, 057): the
+        /// slot, the top seat and the trick as the fields above describe; the logo and the round line
+        /// stay where they are. Called when the table opens, before anything is dealt. A prefab built
+        /// before the slot keeps its look.
         /// </summary>
         public void SetBannerRoom(bool room)
         {
-            if (_bannerSlot == null || _roundBeside == null || room == _bannerRoom)
+            if (_bannerSlot == null || room == _bannerRoom)
             {
                 return;
             }
 
             _bannerRoom = room;
             _bannerSlot.gameObject.SetActive(room);
-            _roundBeside.gameObject.SetActive(room);
-            if (_roundBesidePill != null)
-            {
-                _roundBesidePill.gameObject.SetActive(room);
-                FitRoundPill();
-            }
-
-            _roundLabel.gameObject.SetActive(!room);
-            _logo.SetActive(!room);
-            _roundOrnamentLeft.SetActive(!room);
-            _roundOrnamentRight.SetActive(!room);
 
             // Seat 2 is the top seat (relative positions: 0 bottom, 1 right, 2 top, 3 left).
             var topSeat = (RectTransform)_seat[2].transform;
@@ -357,17 +338,11 @@ namespace Callbreak.Presentation.Table
             int right = Mathf.FloorToInt(_bannerCorners[2].x);
 
             // "ROUND 10 / 10", or longer words in another language, reach further right than the slot
-            // was built for: the slot starts the gap past their pill (or the words, without one).
-            if (_roundBesidePill != null && _roundBesidePill.gameObject.activeInHierarchy)
+            // was built for: the slot starts the gap past their pill.
+            if (_roundPill != null && _roundPill.gameObject.activeInHierarchy)
             {
-                _roundBesidePill.GetWorldCorners(_pillCorners);
-                x = Mathf.Max(x, Mathf.CeilToInt(_pillCorners[2].x + (_bannerGap * _roundBesidePill.lossyScale.x)));
-            }
-            else if (_roundBeside != null && _roundBeside.gameObject.activeInHierarchy && _roundBeside.textInfo != null && _roundBeside.textInfo.characterCount > 0)
-            {
-                RectTransform words = _roundBeside.rectTransform;
-                float wordsRight = words.TransformPoint(_roundBeside.textBounds.max).x;
-                x = Mathf.Max(x, Mathf.CeilToInt(wordsRight + (_bannerGap * words.lossyScale.x)));
+                _roundPill.GetWorldCorners(_pillCorners);
+                x = Mathf.Max(x, Mathf.CeilToInt(_pillCorners[2].x + (_bannerGap * _roundPill.lossyScale.x)));
             }
 
             int width = right - x;
@@ -384,13 +359,13 @@ namespace Callbreak.Presentation.Table
         /// <summary>The round line's pill keeps the width of its words (ADR 057).</summary>
         private void FitRoundPill()
         {
-            if (_roundBesidePill == null || _roundBeside == null)
+            if (_roundPill == null)
             {
                 return;
             }
 
-            float width = _roundBeside.GetPreferredValues(_roundBeside.text).x + _roundPillPadding;
-            _roundBesidePill.sizeDelta = new Vector2(width, _roundBesidePill.sizeDelta.y);
+            float width = _roundLabel.GetPreferredValues(_roundLabel.text).x + _roundPillPadding;
+            _roundPill.sizeDelta = new Vector2(width, _roundPill.sizeDelta.y);
         }
 
         /// <summary>
