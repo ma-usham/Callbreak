@@ -143,7 +143,7 @@ namespace Callbreak.Editor.Screens
             use1.gameObject.SetActive(false);
             ctx.Nodes["UseLabel1"] = use1.rectTransform;
 
-            TextMeshProUGUI use2 = FitOnMockupWording(Node(layouts[0], "UseLabel0"), content, centre, "UseLabel2", "Use Selected Table", "ui.shop.tables.use");
+            TextMeshProUGUI use2 = FitOnMockupWording(Node(layouts[0], "UseLabel0"), content, centre, "UseLabel2", "Use Selected Cloth", "ui.shop.tables.use");
             use2.gameObject.SetActive(false);
             ctx.Nodes["UseLabel2"] = use2.rectTransform;
 

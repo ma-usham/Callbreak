@@ -255,15 +255,15 @@ namespace Callbreak.Tests.PlayMode
             Assert.IsTrue(DialogShows(Format("ui.shop.buy.body", "500", "500")), "and its price");
             _game.PressDialog(confirm: false);
             yield return null;
-            Assert.IsFalse(shop.IsOwned(CosmeticKind.Table, CosmeticCatalog.Tables.RoyalCrimson));
+            Assert.IsFalse(shop.IsOwned(CosmeticKind.Table, CosmeticCatalog.Tables.IndigoDhaka));
             Assert.AreEqual(500, wallet.Coins);
 
             Press("PrimaryButton");
             _game.PressDialog(confirm: true);
             yield return null;
-            Assert.IsTrue(shop.IsOwned(CosmeticKind.Table, CosmeticCatalog.Tables.RoyalCrimson), "bought");
+            Assert.IsTrue(shop.IsOwned(CosmeticKind.Table, CosmeticCatalog.Tables.IndigoDhaka), "bought");
             Assert.AreEqual(0, wallet.Coins, "for 500 coins, the whole starting balance");
-            Assert.AreEqual(CosmeticCatalog.Tables.HimalayanIvory, shop.Equipped(CosmeticKind.Table), "buying does not equip");
+            Assert.AreEqual(CosmeticCatalog.Tables.GreenDhaka, shop.Equipped(CosmeticKind.Table), "buying does not equip");
             Assert.IsFalse(Tile(Tables, 1).ShowsPrice);
             Assert.IsFalse(Tile(Tables, 1).ShowsStatus, "bought and chosen: no words until it is used");
             Assert.IsFalse(View.ShowsBuy, "the button turns to Use Selected Table");
@@ -271,7 +271,7 @@ namespace Callbreak.Tests.PlayMode
 
             Press("PrimaryButton");
             yield return null;
-            Assert.AreEqual(CosmeticCatalog.Tables.RoyalCrimson, shop.Equipped(CosmeticKind.Table), "Use equips it");
+            Assert.AreEqual(CosmeticCatalog.Tables.IndigoDhaka, shop.Equipped(CosmeticKind.Table), "Use equips it");
             Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Tables, 1).StatusLabel.text);
             Assert.IsFalse(Tile(Tables, 0).ShowsStatus, "the table before shows nothing now");
             Assert.IsFalse(View.PrimaryInteractable, "off while it is equipped");
@@ -293,7 +293,7 @@ namespace Callbreak.Tests.PlayMode
             yield return null;
             Assert.IsFalse(_game.Dialogs.IsOpen, "Not now closes it");
             Assert.AreEqual(ScreenId.Shop, Router.Current);
-            Assert.IsFalse(shop.IsOwned(CosmeticKind.Table, CosmeticCatalog.Tables.RoyalCrimson));
+            Assert.IsFalse(shop.IsOwned(CosmeticKind.Table, CosmeticCatalog.Tables.IndigoDhaka));
 
             Press("PrimaryButton");
             _game.PressDialog(confirm: true);

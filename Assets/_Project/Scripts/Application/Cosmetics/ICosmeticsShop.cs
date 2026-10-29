@@ -33,10 +33,10 @@ namespace Callbreak.Application.Cosmetics
 
         public CosmeticKind Kind { get; }
 
-        /// <summary>For example "royal-crimson"; a deck's id is its deck theme id.</summary>
+        /// <summary>For example "indigo-dhaka"; a deck's id is its deck theme id.</summary>
         public string Id { get; }
 
-        /// <summary>The localization key of its name, for example "ui.shop.table.royal_crimson".</summary>
+        /// <summary>The localization key of its name, for example "ui.shop.table.indigo_dhaka".</summary>
         public string NameKey { get; }
 
         /// <summary>In coins; 0 for an item every player owns from the start.</summary>

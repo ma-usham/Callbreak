@@ -41,7 +41,6 @@ namespace Callbreak.Editor
             Set("UI/Buttons/UI_ButtonSecondary_Normal.png", PpuMenu, new Vector4(117, 0, 117, 0));
             Set("UI/Buttons/UI_Shadow_Secondary.png", PpuMenu, new Vector4(150, 0, 150, 0));
 
-            Set("Backgrounds/BG_Menu_Wide.png", 100f, Vector4.zero);
             AssetDatabase.SaveAssets();
             Debug.Log("[CommonKit] import settings applied");
         }

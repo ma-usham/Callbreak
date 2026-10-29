@@ -3,131 +3,52 @@ using UnityEngine;
 
 namespace Callbreak.Presentation.Table
 {
-    /// <summary>One picture of the backdrop behind the table, and the part of the backdrop's frame it covers.</summary>
-    [Serializable]
-    public struct BackdropLayer
-    {
-        [SerializeField] private Sprite _sprite;
-        [SerializeField] private Rect _area;
-
-        public BackdropLayer(Sprite sprite, Rect area)
-        {
-            _sprite = sprite;
-            _area = area;
-        }
-
-        /// <summary>The picture; null when the layer shows nothing.</summary>
-        public Sprite Sprite => _sprite;
-
-        /// <summary>
-        /// Where the picture lies in the frame, in frame pixels from the frame's top-left corner. An
-        /// empty area means the whole frame (a layer cut down to its content says where it was cut from).
-        /// </summary>
-        public Rect Area => _area;
-
-        public bool IsEmpty => _sprite == null;
-    }
-
     /// <summary>
-    /// What the table shows behind everything else: the background's scenery, the table on it, and
-    /// the scenery's foreground in front of the table's near edge, in one frame.
-    /// </summary>
-    public readonly struct TableBackdrop
-    {
-        public TableBackdrop(string backgroundId, string tableId, BackdropLayer back, BackdropLayer table, BackdropLayer front, Vector2 frame)
-        {
-            BackgroundId = backgroundId;
-            TableId = tableId;
-            Back = back;
-            Table = table;
-            Front = front;
-            Frame = frame;
-        }
-
-        /// <summary>The background shown (the default one when the asked-for one has no art).</summary>
-        public string BackgroundId { get; }
-
-        /// <summary>The table shown (the default one when the asked-for one has no art).</summary>
-        public string TableId { get; }
-
-        public BackdropLayer Back { get; }
-
-        public BackdropLayer Table { get; }
-
-        /// <summary>Empty for a background without a foreground.</summary>
-        public BackdropLayer Front { get; }
-
-        /// <summary>The frame's size in frame pixels: BG_Table's 2230 × 1255 (the mockup plus margins for 21:9 and 4:3).</summary>
-        public Vector2 Frame { get; }
-    }
-
-    /// <summary>
-    /// The art behind the table (the owner, 4 Oct 2026; mockups 20 and 21): every background the shop
-    /// sells as two layers, its scenery (the back, behind the table) and an optional foreground (the
-    /// front, before the table's near edge), and every table, each by its shop id. All of them share
-    /// one frame, BG_Table's, so any background goes with any table. A background or table without art
-    /// shows the default one. The editor builder (Callbreak/Table/Build Table Backdrops) fills it and the
-    /// Table prefab holds it, so its pictures load with the table and nothing is looked up by name.
+    /// The pictures of the backgrounds and the tables the shop sells (mockups 20 and 21), by shop id,
+    /// each one picture of the whole backdrop frame: the 1920 × 1080 screen plus margins for 21:9 and
+    /// 4:3 (2230 × 1255 frame pixels, 2560 × 1440 canvas units). V2 (the owner, 28 Oct 2026): a table
+    /// fills the screen at the table (<see cref="TableView.SetTable"/>), and the equipped background
+    /// shows behind the menus instead (<see cref="Framework.EquippedBackground"/>). The tables are
+    /// cloths now (the owner, 29 Oct 2026, ADR 058); a cloth may have a border, a picture tiled round
+    /// the screen's edges (<see cref="Picture.Frame"/>). A background or table without a picture shows
+    /// the default one. The editor builder (Callbreak/Table/Build Table
+    /// Backdrops) fills it; the Table prefab and the menu screens hold it, so its pictures load with
+    /// them and nothing is looked up by name.
     /// </summary>
     [CreateAssetMenu(menuName = "Callbreak/Table Backdrop Library", fileName = "TableBackdrops")]
     public sealed class TableBackdropLibrary : ScriptableObject
     {
-        /// <summary>One background: its shop id, its scenery and its foreground (empty when it has none).</summary>
+        /// <summary>One background or table: its shop id and its picture (null while it has none).</summary>
         [Serializable]
-        public sealed class BackgroundArt
+        public sealed class Picture
         {
             [SerializeField] private string _id;
-            [SerializeField] private BackdropLayer _back;
-            [SerializeField] private BackdropLayer _front;
+            [SerializeField] private Sprite _sprite;
+            [SerializeField] private Sprite _frame;
 
-            public BackgroundArt()
+            public Picture()
             {
             }
 
-            public BackgroundArt(string id, BackdropLayer back, BackdropLayer front)
+            public Picture(string id, Sprite sprite, Sprite frame = null)
             {
                 _id = id;
-                _back = back;
-                _front = front;
+                _sprite = sprite;
+                _frame = frame;
             }
 
             public string Id => _id;
 
-            public BackdropLayer Back => _back;
+            public Sprite Sprite => _sprite;
 
-            public BackdropLayer Front => _front;
+            /// <summary>A cloth's border, sliced and tiled round the screen's edges; null for none.</summary>
+            public Sprite Frame => _frame;
         }
 
-        /// <summary>One table: its shop id and its picture.</summary>
-        [Serializable]
-        public sealed class TableArt
-        {
-            [SerializeField] private string _id;
-            [SerializeField] private BackdropLayer _table;
-
-            public TableArt()
-            {
-            }
-
-            public TableArt(string id, BackdropLayer table)
-            {
-                _id = id;
-                _table = table;
-            }
-
-            public string Id => _id;
-
-            public BackdropLayer Table => _table;
-        }
-
-        [SerializeField] private Vector2 _frame = new Vector2(2230f, 1255f);
-        [SerializeField] private BackgroundArt[] _backgrounds = Array.Empty<BackgroundArt>();
-        [SerializeField] private TableArt[] _tables = Array.Empty<TableArt>();
+        [SerializeField] private Picture[] _backgrounds = Array.Empty<Picture>();
+        [SerializeField] private Picture[] _tables = Array.Empty<Picture>();
         [SerializeField] private string _defaultBackgroundId = "himalayan-vista";
-        [SerializeField] private string _defaultTableId = "himalayan-ivory";
-
-        /// <summary>The frame every layer is drawn in, in frame pixels.</summary>
-        public Vector2 Frame => _frame;
+        [SerializeField] private string _defaultTableId = "green-dhaka";
 
         public string DefaultBackgroundId => _defaultBackgroundId;
 
@@ -137,88 +58,70 @@ namespace Callbreak.Presentation.Table
 
         public int TableCount => _tables.Length;
 
-        public BackgroundArt BackgroundAt(int index) => _backgrounds[index];
+        public Picture BackgroundAt(int index) => _backgrounds[index];
 
-        public TableArt TableAt(int index) => _tables[index];
-
-        /// <summary>The default background on the default table.</summary>
-        public TableBackdrop Default => Backdrop(_defaultBackgroundId, _defaultTableId);
+        public Picture TableAt(int index) => _tables[index];
 
         /// <summary>A background by its shop id; null when this library does not list it.</summary>
-        public BackgroundArt Background(string id)
-        {
-            if (string.IsNullOrEmpty(id))
-            {
-                return null;
-            }
-
-            for (int i = 0; i < _backgrounds.Length; i++)
-            {
-                if (_backgrounds[i] != null && string.Equals(_backgrounds[i].Id, id, StringComparison.Ordinal))
-                {
-                    return _backgrounds[i];
-                }
-            }
-
-            return null;
-        }
+        public Picture Background(string id) => Find(_backgrounds, id);
 
         /// <summary>A table by its shop id; null when this library does not list it.</summary>
-        public TableArt Table(string id)
-        {
-            if (string.IsNullOrEmpty(id))
-            {
-                return null;
-            }
-
-            for (int i = 0; i < _tables.Length; i++)
-            {
-                if (_tables[i] != null && string.Equals(_tables[i].Id, id, StringComparison.Ordinal))
-                {
-                    return _tables[i];
-                }
-            }
-
-            return null;
-        }
+        public Picture Table(string id) => Find(_tables, id);
 
         /// <summary>
-        /// The backdrop for a background and a table. One that this library does not list, or lists
-        /// without its picture yet, gives way to the default one; <see cref="TableBackdrop.BackgroundId"/>
-        /// and <see cref="TableBackdrop.TableId"/> say what is shown. The default table may have no
-        /// picture of its own while the default background's picture still has the table in it.
+        /// The picture of a background, behind the menus. One that this library does not list, or
+        /// lists without its picture yet, gives way to the default one; <paramref name="shownId"/>
+        /// says which is shown. Null only when the default has no picture either.
         /// </summary>
-        public TableBackdrop Backdrop(string backgroundId, string tableId)
+        public Sprite BackgroundPicture(string id, out string shownId) => PictureOf(_backgrounds, id, _defaultBackgroundId, out shownId);
+
+        /// <summary>The picture of a table, filling the screen at the table; as <see cref="BackgroundPicture"/>.</summary>
+        public Sprite TablePicture(string id, out string shownId) => PictureOf(_tables, id, _defaultTableId, out shownId);
+
+        /// <summary>The border of the table <see cref="TablePicture"/> shows for that id; null when it has none.</summary>
+        public Sprite TableFrame(string id)
         {
-            BackgroundArt background = Background(backgroundId);
-            if (background == null || background.Back.IsEmpty)
-            {
-                background = Background(_defaultBackgroundId);
-            }
-
-            TableArt table = Table(tableId);
-            if (table == null || table.Table.IsEmpty)
-            {
-                table = Table(_defaultTableId);
-            }
-
-            return new TableBackdrop(
-                background?.Id ?? _defaultBackgroundId,
-                table?.Id ?? _defaultTableId,
-                background?.Back ?? default,
-                table?.Table ?? default,
-                background?.Front ?? default,
-                _frame);
+            TablePicture(id, out string shownId);
+            return Find(_tables, shownId)?.Frame;
         }
 
         /// <summary>Replaces the library (editor builder and tests only).</summary>
-        public void Set(Vector2 frame, BackgroundArt[] backgrounds, TableArt[] tables, string defaultBackgroundId, string defaultTableId)
+        public void Set(Picture[] backgrounds, Picture[] tables, string defaultBackgroundId, string defaultTableId)
         {
-            _frame = frame;
-            _backgrounds = backgrounds ?? Array.Empty<BackgroundArt>();
-            _tables = tables ?? Array.Empty<TableArt>();
+            _backgrounds = backgrounds ?? Array.Empty<Picture>();
+            _tables = tables ?? Array.Empty<Picture>();
             _defaultBackgroundId = defaultBackgroundId;
             _defaultTableId = defaultTableId;
+        }
+
+        private static Sprite PictureOf(Picture[] pictures, string id, string defaultId, out string shownId)
+        {
+            Picture picture = Find(pictures, id);
+            if (picture == null || picture.Sprite == null)
+            {
+                picture = Find(pictures, defaultId);
+            }
+
+            shownId = picture?.Id ?? defaultId;
+            return picture?.Sprite;
+        }
+
+        private static Picture Find(Picture[] pictures, string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return null;
+            }
+
+            for (int i = 0; i < pictures.Length; i++)
+            {
+                if (pictures[i] != null && string.Equals(pictures[i].Id, id, StringComparison.Ordinal))
+                {
+                    return pictures[i];
+                }
+            }
+
+            return null;
         }
     }
 }

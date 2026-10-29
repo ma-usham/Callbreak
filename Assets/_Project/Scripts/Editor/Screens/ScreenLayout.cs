@@ -16,10 +16,17 @@ namespace Callbreak.Editor.Screens
         public string mockup;
         public float mockW = 1672f;
         public float mockH = 941f;
+        /// <summary>
+        /// The background plate's picture, or <see cref="EquippedBackground"/>: the background the player
+        /// equipped in the shop (V2, behind every menu screen).
+        /// </summary>
         public string background;
         public float[] backgroundRect;
         public float backgroundPpu;
         public LayoutNode[] nodes;
+
+        /// <summary>The <see cref="background"/> that shows the player's equipped background.</summary>
+        public const string EquippedBackground = "equipped";
 
         public static string PathFor(string screenName) => $"ArtSource/Screens/{screenName}/layout.json";
 

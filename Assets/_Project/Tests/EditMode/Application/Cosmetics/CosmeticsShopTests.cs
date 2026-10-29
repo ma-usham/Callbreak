@@ -14,14 +14,15 @@ namespace Callbreak.Tests.EditMode.Application
     /// shop-drawer-and-tables-prompts.md): the three catalogues of three items each, in shop order
     /// with their prices (the first free, the second 500 coins, the third 750), names and defaults;
     /// buying with coins, which never equips; equipping what is owned; the equipped deck being the
-    /// selected deck; the cosmetics file, migrated from version 1; and the three backgrounds that
-    /// left the shop falling back to the default.
+    /// selected deck; the cosmetics file, migrated from version 1; the three backgrounds that
+    /// left the shop falling back to the default; and the tables on disk becoming the cloths that
+    /// took their places (ADR 058).
     /// </summary>
     public sealed class CosmeticsShopTests
     {
         private static readonly string[] Decks = { "classic-crimson", "himalayan-ivory", "kathmandu-gold" };
         private static readonly string[] Backgrounds = { "himalayan-vista", "pokhara-lakeside", "monastery-garden" };
-        private static readonly string[] Tables = { "himalayan-ivory", "royal-crimson", "heritage-walnut" };
+        private static readonly string[] Tables = { "green-dhaka", "indigo-dhaka", "dusk-himalaya" };
 
         private InMemorySaveStore _store;
         private Wallet _wallet;
@@ -61,7 +62,7 @@ namespace Callbreak.Tests.EditMode.Application
                 new[] { "ui.shop.background.himalayan_vista", "ui.shop.background.pokhara_lakeside", "ui.shop.background.monastery_garden" },
                 _shop.Catalog(CosmeticKind.Background).Select(i => i.NameKey));
             CollectionAssert.AreEqual(
-                new[] { "ui.shop.table.himalayan_ivory", "ui.shop.table.royal_crimson", "ui.shop.table.heritage_walnut" },
+                new[] { "ui.shop.table.green_dhaka", "ui.shop.table.indigo_dhaka", "ui.shop.table.dusk_himalaya" },
                 _shop.Catalog(CosmeticKind.Table).Select(i => i.NameKey));
         }
 
@@ -77,7 +78,7 @@ namespace Callbreak.Tests.EditMode.Application
                 new[] { "Himalayan Vista", "Pokhara Lakeside", "Monastery Garden" },
                 _shop.Catalog(CosmeticKind.Background).Select(i => strings.Get(i.NameKey)));
             CollectionAssert.AreEqual(
-                new[] { "Himalayan Ivory", "Royal Crimson", "Heritage Walnut" },
+                new[] { "Green Dhaka", "Indigo Dhaka", "Dusk Himalaya" },
                 _shop.Catalog(CosmeticKind.Table).Select(i => strings.Get(i.NameKey)));
         }
 
@@ -109,20 +110,20 @@ namespace Callbreak.Tests.EditMode.Application
         }
 
         [Test]
-        public void ANewPlayer_HasTodaysLook_ClassicCrimson_HimalayanVista_HimalayanIvory()
+        public void ANewPlayer_HasTodaysLook_ClassicCrimson_HimalayanVista_GreenDhaka()
         {
             Assert.AreEqual("classic-crimson", _shop.Equipped(CosmeticKind.Deck));
             Assert.AreEqual("himalayan-vista", _shop.Equipped(CosmeticKind.Background));
-            Assert.AreEqual("himalayan-ivory", _shop.Equipped(CosmeticKind.Table));
+            Assert.AreEqual("green-dhaka", _shop.Equipped(CosmeticKind.Table));
             Assert.AreEqual(0, _store.SaveCount);
         }
 
-        [TestCase(CosmeticKind.Deck, "royal-crimson")]
+        [TestCase(CosmeticKind.Deck, "indigo-dhaka")]
         [TestCase(CosmeticKind.Background, "himalayan-ivory")]
-        [TestCase(CosmeticKind.Table, "Royal-Crimson")]
+        [TestCase(CosmeticKind.Table, "Indigo-Dhaka")]
         [TestCase(CosmeticKind.Table, "")]
         [TestCase(CosmeticKind.Table, null)]
-        [TestCase((CosmeticKind)7, "royal-crimson")]
+        [TestCase((CosmeticKind)7, "indigo-dhaka")]
         public void IdsOfAnotherKindOrNone_AreNotOwned(CosmeticKind kind, string id)
         {
             Assert.IsFalse(_shop.IsOwned(kind, id));
@@ -151,13 +152,13 @@ namespace Callbreak.Tests.EditMode.Application
             int changed = 0;
             _shop.Changed += () => changed++;
 
-            Assert.AreEqual(PurchaseResult.Bought, _shop.Buy(CosmeticKind.Table, "royal-crimson"));
+            Assert.AreEqual(PurchaseResult.Bought, _shop.Buy(CosmeticKind.Table, "indigo-dhaka"));
 
             Assert.AreEqual(0, _wallet.Coins, "the 500 starting coins buy the 500 table");
-            Assert.IsTrue(_shop.IsOwned(CosmeticKind.Table, "royal-crimson"));
-            Assert.AreEqual("himalayan-ivory", _shop.Equipped(CosmeticKind.Table), "buying never equips");
+            Assert.IsTrue(_shop.IsOwned(CosmeticKind.Table, "indigo-dhaka"));
+            Assert.AreEqual("green-dhaka", _shop.Equipped(CosmeticKind.Table), "buying never equips");
             Assert.AreEqual(1, changed);
-            Assert.IsTrue(new CosmeticsService(_store, new Wallet(_store)).IsOwned(CosmeticKind.Table, "royal-crimson"), "the purchase is saved");
+            Assert.IsTrue(new CosmeticsService(_store, new Wallet(_store)).IsOwned(CosmeticKind.Table, "indigo-dhaka"), "the purchase is saved");
         }
 
         [Test]
@@ -166,15 +167,15 @@ namespace Callbreak.Tests.EditMode.Application
             int changed = 0;
             _shop.Changed += () => changed++;
 
-            Assert.AreEqual(PurchaseResult.AlreadyOwned, _shop.Buy(CosmeticKind.Table, "himalayan-ivory"));
+            Assert.AreEqual(PurchaseResult.AlreadyOwned, _shop.Buy(CosmeticKind.Table, "green-dhaka"));
             Assert.AreEqual(PurchaseResult.AlreadyOwned, _shop.Buy(CosmeticKind.Background, "himalayan-vista"));
             Assert.AreEqual(PurchaseResult.AlreadyOwned, _shop.Buy(CosmeticKind.Deck, "classic-crimson"));
             Assert.AreEqual(500, _wallet.Coins);
             Assert.AreEqual(0, changed);
 
             _wallet.Add(500);
-            Assert.AreEqual(PurchaseResult.Bought, _shop.Buy(CosmeticKind.Table, "heritage-walnut"));
-            Assert.AreEqual(PurchaseResult.AlreadyOwned, _shop.Buy(CosmeticKind.Table, "heritage-walnut"));
+            Assert.AreEqual(PurchaseResult.Bought, _shop.Buy(CosmeticKind.Table, "dusk-himalaya"));
+            Assert.AreEqual(PurchaseResult.AlreadyOwned, _shop.Buy(CosmeticKind.Table, "dusk-himalaya"));
             Assert.AreEqual(250, _wallet.Coins, "paid once");
         }
 
@@ -185,14 +186,14 @@ namespace Callbreak.Tests.EditMode.Application
             int changed = 0;
             _shop.Changed += () => changed++;
 
-            Assert.AreEqual(PurchaseResult.NotEnoughCoins, _shop.Buy(CosmeticKind.Table, "heritage-walnut"));
+            Assert.AreEqual(PurchaseResult.NotEnoughCoins, _shop.Buy(CosmeticKind.Table, "dusk-himalaya"));
 
             Assert.AreEqual(749, _wallet.Coins);
-            Assert.IsFalse(_shop.IsOwned(CosmeticKind.Table, "heritage-walnut"));
+            Assert.IsFalse(_shop.IsOwned(CosmeticKind.Table, "dusk-himalaya"));
             Assert.AreEqual(0, changed);
             Assert.AreEqual(0, _store.SavesOf(CosmeticsService.SaveKey));
 
-            Assert.AreEqual(PurchaseResult.Bought, _shop.Buy(CosmeticKind.Table, "royal-crimson"));
+            Assert.AreEqual(PurchaseResult.Bought, _shop.Buy(CosmeticKind.Table, "indigo-dhaka"));
             Assert.AreEqual(249, _wallet.Coins);
         }
 
@@ -201,11 +202,11 @@ namespace Callbreak.Tests.EditMode.Application
         {
             _wallet.Changed += () => throw new InvalidOperationException("a broken view");
 
-            Assert.Throws<InvalidOperationException>(() => _shop.Buy(CosmeticKind.Table, "royal-crimson"), "the listener's exception reaches the caller");
+            Assert.Throws<InvalidOperationException>(() => _shop.Buy(CosmeticKind.Table, "indigo-dhaka"), "the listener's exception reaches the caller");
 
             Assert.AreEqual(0, new Wallet(_store).Coins);
-            Assert.IsTrue(_shop.IsOwned(CosmeticKind.Table, "royal-crimson"), "the coins were taken, so the table is the player's");
-            Assert.IsTrue(new CosmeticsService(_store, new Wallet(_store)).IsOwned(CosmeticKind.Table, "royal-crimson"), "and that is saved");
+            Assert.IsTrue(_shop.IsOwned(CosmeticKind.Table, "indigo-dhaka"), "the coins were taken, so the table is the player's");
+            Assert.IsTrue(new CosmeticsService(_store, new Wallet(_store)).IsOwned(CosmeticKind.Table, "indigo-dhaka"), "and that is saved");
         }
 
         [Test]
@@ -213,10 +214,10 @@ namespace Callbreak.Tests.EditMode.Application
         {
             var shop = new CosmeticsService(_store, new RefusingWallet());
 
-            Assert.AreEqual(PurchaseResult.NotEnoughCoins, shop.Buy(CosmeticKind.Table, "royal-crimson"));
+            Assert.AreEqual(PurchaseResult.NotEnoughCoins, shop.Buy(CosmeticKind.Table, "indigo-dhaka"));
 
-            Assert.IsFalse(shop.IsOwned(CosmeticKind.Table, "royal-crimson"));
-            Assert.IsFalse(new CosmeticsService(_store).IsOwned(CosmeticKind.Table, "royal-crimson"), "nothing bought is left in the file");
+            Assert.IsFalse(shop.IsOwned(CosmeticKind.Table, "indigo-dhaka"));
+            Assert.IsFalse(new CosmeticsService(_store).IsOwned(CosmeticKind.Table, "indigo-dhaka"), "nothing bought is left in the file");
         }
 
         [Test]
@@ -229,12 +230,12 @@ namespace Callbreak.Tests.EditMode.Application
         }
 
         [TestCase(CosmeticKind.Table, "dashain-gold")]
-        [TestCase(CosmeticKind.Table, "Royal-Crimson")]
+        [TestCase(CosmeticKind.Table, "Indigo-Dhaka")]
         [TestCase(CosmeticKind.Table, "")]
         [TestCase(CosmeticKind.Table, null)]
-        [TestCase(CosmeticKind.Deck, "royal-crimson")]
-        [TestCase(CosmeticKind.Background, "heritage-walnut")]
-        [TestCase((CosmeticKind)7, "royal-crimson")]
+        [TestCase(CosmeticKind.Deck, "indigo-dhaka")]
+        [TestCase(CosmeticKind.Background, "dusk-himalaya")]
+        [TestCase((CosmeticKind)7, "indigo-dhaka")]
         public void Buy_SomethingNotInTheCatalog_IsUnknown(CosmeticKind kind, string id)
         {
             Assert.AreEqual(PurchaseResult.UnknownItem, _shop.Buy(kind, id));
@@ -264,7 +265,7 @@ namespace Callbreak.Tests.EditMode.Application
             int changed = 0;
             _shop.Changed += () => changed++;
 
-            _shop.Equip(CosmeticKind.Table, "himalayan-ivory");
+            _shop.Equip(CosmeticKind.Table, "green-dhaka");
             _shop.Equip(CosmeticKind.Background, "himalayan-vista");
             _shop.Equip(CosmeticKind.Deck, "classic-crimson");
 
@@ -275,19 +276,19 @@ namespace Callbreak.Tests.EditMode.Application
         [Test]
         public void Equip_SomethingNotOwned_Throws_UntilItIsBought()
         {
-            Assert.Throws<InvalidOperationException>(() => _shop.Equip(CosmeticKind.Table, "royal-crimson"));
-            Assert.AreEqual("himalayan-ivory", _shop.Equipped(CosmeticKind.Table));
+            Assert.Throws<InvalidOperationException>(() => _shop.Equip(CosmeticKind.Table, "indigo-dhaka"));
+            Assert.AreEqual("green-dhaka", _shop.Equipped(CosmeticKind.Table));
 
-            _shop.Buy(CosmeticKind.Table, "royal-crimson");
-            _shop.Equip(CosmeticKind.Table, "royal-crimson");
+            _shop.Buy(CosmeticKind.Table, "indigo-dhaka");
+            _shop.Equip(CosmeticKind.Table, "indigo-dhaka");
 
-            Assert.AreEqual("royal-crimson", _shop.Equipped(CosmeticKind.Table));
+            Assert.AreEqual("indigo-dhaka", _shop.Equipped(CosmeticKind.Table));
         }
 
         [TestCase(CosmeticKind.Table, "dashain-gold")]
         [TestCase(CosmeticKind.Table, null)]
         [TestCase(CosmeticKind.Background, "")]
-        [TestCase(CosmeticKind.Background, "royal-crimson")]
+        [TestCase(CosmeticKind.Background, "indigo-dhaka")]
         [TestCase(CosmeticKind.Deck, "himalayan-vista")]
         public void Equip_SomethingNotInTheCatalog_Throws(CosmeticKind kind, string id)
         {
@@ -310,23 +311,23 @@ namespace Callbreak.Tests.EditMode.Application
         public void EverythingSurvivesARestart()
         {
             _wallet.Add(1600);
-            _shop.Buy(CosmeticKind.Table, "royal-crimson");
+            _shop.Buy(CosmeticKind.Table, "indigo-dhaka");
             _shop.Buy(CosmeticKind.Background, "monastery-garden");
             _shop.Buy(CosmeticKind.Deck, "kathmandu-gold");
-            _shop.Equip(CosmeticKind.Table, "royal-crimson");
+            _shop.Equip(CosmeticKind.Table, "indigo-dhaka");
             _shop.Equip(CosmeticKind.Background, "monastery-garden");
             _shop.SelectDeck("kathmandu-gold");
 
             var wallet = new Wallet(_store);
             var again = new CosmeticsService(_store, wallet);
 
-            Assert.AreEqual("royal-crimson", again.Equipped(CosmeticKind.Table));
+            Assert.AreEqual("indigo-dhaka", again.Equipped(CosmeticKind.Table));
             Assert.AreEqual("monastery-garden", again.Equipped(CosmeticKind.Background));
             Assert.AreEqual("kathmandu-gold", again.Equipped(CosmeticKind.Deck));
-            Assert.IsTrue(again.IsOwned(CosmeticKind.Table, "royal-crimson"));
+            Assert.IsTrue(again.IsOwned(CosmeticKind.Table, "indigo-dhaka"));
             Assert.IsTrue(again.IsOwned(CosmeticKind.Background, "monastery-garden"));
             Assert.IsTrue(again.IsOwned(CosmeticKind.Deck, "kathmandu-gold"));
-            Assert.IsFalse(again.IsOwned(CosmeticKind.Table, "heritage-walnut"));
+            Assert.IsFalse(again.IsOwned(CosmeticKind.Table, "dusk-himalaya"));
             Assert.IsFalse(again.IsOwned(CosmeticKind.Deck, "himalayan-ivory"));
             Assert.AreEqual(100, wallet.Coins, "2100 less 500, 750 and 750");
             Assert.AreEqual(CosmeticsData.CurrentVersion, _store.Peek<CosmeticsData>(CosmeticsService.SaveKey).schemaVersion);
@@ -339,16 +340,16 @@ namespace Callbreak.Tests.EditMode.Application
             // A version 1 file as JsonUtility reads it (the fields it lacks keep their initializers)...
             var today = new CosmeticsData { schemaVersion = 1, selectedDeckId = "classic-crimson" };
             // ...and, to show nothing is taken from it but the deck, one that names a table it never knew.
-            today.equippedTableId = "royal-crimson";
-            today.boughtTableIds.Add("royal-crimson");
+            today.equippedTableId = "indigo-dhaka";
+            today.boughtTableIds.Add("indigo-dhaka");
             _store.Put(CosmeticsService.SaveKey, today);
 
             var migrated = new CosmeticsService(_store, _wallet);
 
             Assert.AreEqual("classic-crimson", migrated.SelectedDeckId);
             Assert.AreEqual("himalayan-vista", migrated.Equipped(CosmeticKind.Background));
-            Assert.AreEqual("himalayan-ivory", migrated.Equipped(CosmeticKind.Table));
-            Assert.IsFalse(migrated.IsOwned(CosmeticKind.Table, "royal-crimson"));
+            Assert.AreEqual("green-dhaka", migrated.Equipped(CosmeticKind.Table));
+            Assert.IsFalse(migrated.IsOwned(CosmeticKind.Table, "indigo-dhaka"));
 
             Assert.AreEqual(PurchaseResult.Bought, migrated.Buy(CosmeticKind.Background, "pokhara-lakeside"));
             migrated.Equip(CosmeticKind.Background, "pokhara-lakeside");
@@ -391,14 +392,52 @@ namespace Callbreak.Tests.EditMode.Application
             {
                 selectedDeckId = "retired-seasonal",
                 equippedBackgroundId = "diwali-lights",
-                equippedTableId = "royal-crimson",
+                equippedTableId = "indigo-dhaka",
             });
 
             var cosmetics = new CosmeticsService(_store, _wallet);
 
             Assert.AreEqual("classic-crimson", cosmetics.Equipped(CosmeticKind.Deck));
             Assert.AreEqual("himalayan-vista", cosmetics.Equipped(CosmeticKind.Background));
-            Assert.AreEqual("himalayan-ivory", cosmetics.Equipped(CosmeticKind.Table), "an equipped table that isn't owned");
+            Assert.AreEqual("green-dhaka", cosmetics.Equipped(CosmeticKind.Table), "an equipped table that isn't owned");
+        }
+
+        [TestCase("himalayan-ivory", "green-dhaka")]
+        [TestCase("royal-crimson", "indigo-dhaka")]
+        [TestCase("heritage-walnut", "dusk-himalaya")]
+        public void ATableOnDisk_BecomesTheClothInItsPlace_OwnedAndEquipped(string table, string cloth)
+        {
+            // The game has no table any more; the shop sells cloths where it sold tables (ADR 058).
+            var data = new CosmeticsData { equippedTableId = table };
+            if (table != "himalayan-ivory")
+            {
+                data.boughtTableIds.Add(table);
+            }
+
+            _store.Put(CosmeticsService.SaveKey, data);
+            var cosmetics = new CosmeticsService(_store, _wallet);
+
+            Assert.AreEqual(cloth, cosmetics.Equipped(CosmeticKind.Table));
+            Assert.IsTrue(cosmetics.IsOwned(CosmeticKind.Table, cloth));
+            Assert.IsFalse(cosmetics.IsOwned(CosmeticKind.Table, table), "the table's id is gone from the shop");
+            Assert.AreEqual(PurchaseResult.AlreadyOwned, cosmetics.Buy(CosmeticKind.Table, cloth), "nobody pays twice");
+            Assert.AreEqual(500, _wallet.Coins);
+        }
+
+        [Test]
+        public void TheTablesBoughtOnDisk_AreKeptAsCloths_WhenTheFileIsNextSaved()
+        {
+            var data = new CosmeticsData { equippedTableId = "royal-crimson" };
+            data.boughtTableIds.Add("royal-crimson");
+            data.boughtTableIds.Add("heritage-walnut");
+            _store.Put(CosmeticsService.SaveKey, data);
+            var cosmetics = new CosmeticsService(_store, _wallet);
+
+            cosmetics.Equip(CosmeticKind.Table, "dusk-himalaya");
+
+            CosmeticsData saved = _store.Peek<CosmeticsData>(CosmeticsService.SaveKey);
+            CollectionAssert.AreEqual(new[] { "indigo-dhaka", "dusk-himalaya" }, saved.boughtTableIds);
+            Assert.AreEqual("dusk-himalaya", saved.equippedTableId);
         }
 
         /// <summary>
@@ -441,15 +480,15 @@ namespace Callbreak.Tests.EditMode.Application
         {
             var data = new CosmeticsData();
             data.boughtTableIds.Add("festival-gold");
-            data.boughtTableIds.Add("heritage-walnut");
+            data.boughtTableIds.Add("dusk-himalaya");
             _store.Put(CosmeticsService.SaveKey, data);
             var cosmetics = new CosmeticsService(_store, _wallet);
 
-            Assert.IsTrue(cosmetics.IsOwned(CosmeticKind.Table, "heritage-walnut"));
+            Assert.IsTrue(cosmetics.IsOwned(CosmeticKind.Table, "dusk-himalaya"));
 
-            cosmetics.Equip(CosmeticKind.Table, "heritage-walnut");
+            cosmetics.Equip(CosmeticKind.Table, "dusk-himalaya");
 
-            CollectionAssert.AreEqual(new[] { "festival-gold", "heritage-walnut" }, _store.Peek<CosmeticsData>(CosmeticsService.SaveKey).boughtTableIds);
+            CollectionAssert.AreEqual(new[] { "festival-gold", "dusk-himalaya" }, _store.Peek<CosmeticsData>(CosmeticsService.SaveKey).boughtTableIds);
         }
 
         [Test]
@@ -459,7 +498,7 @@ namespace Callbreak.Tests.EditMode.Application
             var cosmetics = new CosmeticsService(_store, _wallet);
 
             Assert.IsTrue(cosmetics.IsReadOnly);
-            Assert.AreEqual(PurchaseResult.UnknownItem, cosmetics.Buy(CosmeticKind.Table, "royal-crimson"), "this build couldn't keep the purchase");
+            Assert.AreEqual(PurchaseResult.UnknownItem, cosmetics.Buy(CosmeticKind.Table, "indigo-dhaka"), "this build couldn't keep the purchase");
             Assert.AreEqual(PurchaseResult.UnknownItem, cosmetics.Buy(CosmeticKind.Background, "pokhara-lakeside"));
             Assert.AreEqual(500, _wallet.Coins);
 
@@ -483,10 +522,10 @@ namespace Callbreak.Tests.EditMode.Application
             decksOnly.SelectDeck("himalayan-ivory");
 
             Assert.AreEqual("himalayan-ivory", decksOnly.SelectedDeckId);
-            Assert.AreEqual(PurchaseResult.AlreadyOwned, decksOnly.Buy(CosmeticKind.Table, "himalayan-ivory"));
-            Assert.Throws<InvalidOperationException>(() => decksOnly.Buy(CosmeticKind.Table, "royal-crimson"));
+            Assert.AreEqual(PurchaseResult.AlreadyOwned, decksOnly.Buy(CosmeticKind.Table, "green-dhaka"));
+            Assert.Throws<InvalidOperationException>(() => decksOnly.Buy(CosmeticKind.Table, "indigo-dhaka"));
             Assert.Throws<InvalidOperationException>(() => decksOnly.Buy(CosmeticKind.Deck, "kathmandu-gold"));
-            Assert.IsFalse(decksOnly.IsOwned(CosmeticKind.Table, "royal-crimson"));
+            Assert.IsFalse(decksOnly.IsOwned(CosmeticKind.Table, "indigo-dhaka"));
             Assert.Throws<InvalidOperationException>(() => decksOnly.SelectDeck("kathmandu-gold"));
         }
 

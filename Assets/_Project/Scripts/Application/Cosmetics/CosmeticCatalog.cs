@@ -12,10 +12,11 @@ namespace Callbreak.Application.Cosmetics
     /// kind the first item is owned from the start (price 0) and the other two cost coins: 500 for
     /// the second and 750 for the third (the owner, 6 Oct 2026). The defaults are the game's look
     /// before the shop: Classic Crimson cards, the Himalayan Vista scenery and the Himalayan Ivory
-    /// table. Names are localization keys: the
+    /// table, now the Green Dhaka cloth (ADR 058). Names are localization keys: the
     /// decks keep theirs, the rest are <c>ui.shop.&lt;kind&gt;.&lt;id with underscores&gt;</c>. An id
     /// that has left the shop (Kathmandu Courtyard, Village Terrace and Vintage Home, 5 Oct 2026) is
-    /// unknown from then on, and a save file that still names it falls back to the default.
+    /// unknown from then on, and a save file that still names it falls back to the default. The
+    /// tables became cloths, each in its table's place (<see cref="Tables.Renamed"/>).
     /// </summary>
     public static class CosmeticCatalog
     {
@@ -47,18 +48,34 @@ namespace Callbreak.Application.Cosmetics
             public const int MonasteryGardenPrice = 750;
         }
 
+        /// <summary>
+        /// What the game is played on. The game has no table any more: it is played on a cloth that
+        /// fills the screen, and the shop sells cloths where it sold tables (the owner, 29 Oct 2026,
+        /// ADR 058). The kind keeps its name, <see cref="CosmeticKind.Table"/>, and its save fields.
+        /// </summary>
         public static class Tables
         {
-            public const string HimalayanIvory = "himalayan-ivory";
-            public const string RoyalCrimson = "royal-crimson";
-            public const string HeritageWalnut = "heritage-walnut";
-            public const string Default = HimalayanIvory;
+            public const string GreenDhaka = "green-dhaka";
+            public const string IndigoDhaka = "indigo-dhaka";
+            public const string DuskHimalaya = "dusk-himalaya";
+            public const string Default = GreenDhaka;
 
-            /// <summary>In coins (the owner, 6 Oct 2026; was 350).</summary>
-            public const int RoyalCrimsonPrice = 500;
+            /// <summary>In coins (the owner, 29 Oct 2026: the price of the table it replaced).</summary>
+            public const int IndigoDhakaPrice = 500;
 
-            /// <summary>In coins (the owner, 6 Oct 2026; was 250).</summary>
-            public const int HeritageWalnutPrice = 750;
+            /// <summary>In coins (the owner, 29 Oct 2026: the price of the table it replaced).</summary>
+            public const int DuskHimalayaPrice = 750;
+
+            /// <summary>
+            /// The tables the shop sold until 29 Oct 2026, each with the cloth in its place: a save file
+            /// that names a table owns and equips its cloth instead (the owner, ADR 058).
+            /// </summary>
+            public static readonly IReadOnlyDictionary<string, string> Renamed = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>
+            {
+                ["himalayan-ivory"] = GreenDhaka,
+                ["royal-crimson"] = IndigoDhaka,
+                ["heritage-walnut"] = DuskHimalaya,
+            });
         }
 
         private static readonly ReadOnlyCollection<CosmeticItem> DeckItems = Items(
@@ -72,9 +89,9 @@ namespace Callbreak.Application.Cosmetics
             new CosmeticItem(CosmeticKind.Background, Backgrounds.MonasteryGarden, "ui.shop.background.monastery_garden", Backgrounds.MonasteryGardenPrice));
 
         private static readonly ReadOnlyCollection<CosmeticItem> TableItems = Items(
-            new CosmeticItem(CosmeticKind.Table, Tables.HimalayanIvory, "ui.shop.table.himalayan_ivory", 0),
-            new CosmeticItem(CosmeticKind.Table, Tables.RoyalCrimson, "ui.shop.table.royal_crimson", Tables.RoyalCrimsonPrice),
-            new CosmeticItem(CosmeticKind.Table, Tables.HeritageWalnut, "ui.shop.table.heritage_walnut", Tables.HeritageWalnutPrice));
+            new CosmeticItem(CosmeticKind.Table, Tables.GreenDhaka, "ui.shop.table.green_dhaka", 0),
+            new CosmeticItem(CosmeticKind.Table, Tables.IndigoDhaka, "ui.shop.table.indigo_dhaka", Tables.IndigoDhakaPrice),
+            new CosmeticItem(CosmeticKind.Table, Tables.DuskHimalaya, "ui.shop.table.dusk_himalaya", Tables.DuskHimalayaPrice));
 
         /// <summary>The items of a kind, in shop order.</summary>
         public static IReadOnlyList<CosmeticItem> Of(CosmeticKind kind)

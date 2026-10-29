@@ -8,11 +8,11 @@ namespace Callbreak.Presentation.Table
 {
     /// <summary>
     /// The art the table looks up by id at runtime: card faces and backs by deck, avatars by preset
-    /// id (GDD §12 "generic monochrome silhouettes in v1, with a preset picker"), and the backdrop by
-    /// the player's equipped background and table (the owner, 4 Oct 2026). It reads the two libraries
-    /// the app shares (the project scope registers both), so the table, the card collection and the
-    /// profile all show the same pictures, and the Table prefab's backdrop library; nothing is loaded
-    /// by name.
+    /// id (GDD §12 "generic monochrome silhouettes in v1, with a preset picker"), and the table the
+    /// player equipped (the owner, 4 Oct 2026; in V2 it fills the screen, 28 Oct 2026). It reads the
+    /// two libraries the app shares (the project scope registers both), so the table, the card
+    /// collection and the profile all show the same pictures, and the Table prefab's backdrop library;
+    /// nothing is loaded by name.
     /// </summary>
     public sealed class TableSkin
     {
@@ -23,7 +23,7 @@ namespace Callbreak.Presentation.Table
 
         /// <param name="cards">Card faces and backs by deck.</param>
         /// <param name="avatars">The avatar presets; without them seats keep the picture on the prefab.</param>
-        /// <param name="backdrops">Every background and table; without it the table keeps the picture on the prefab.</param>
+        /// <param name="backdrops">Every table (and background); without it the table keeps the picture on the prefab.</param>
         public TableSkin(CardSpriteProvider cards, AvatarLibrary avatars, TableBackdropLibrary backdrops = null)
         {
             _cards = cards != null ? cards : throw new ArgumentNullException(nameof(cards));
@@ -33,7 +33,7 @@ namespace Callbreak.Presentation.Table
 
         public CardSpriteProvider Cards => _cards;
 
-        /// <summary>Whether there is a backdrop library to show the equipped background and table from.</summary>
+        /// <summary>Whether there is a backdrop library to show the equipped table from.</summary>
         public bool HasBackdrops => _backdrops != null;
 
         public Sprite Face(string deckId, Card card) => _cards.Face(deckId, card);
@@ -47,21 +47,31 @@ namespace Callbreak.Presentation.Table
         public Sprite Avatar(int avatarId) => _avatars != null ? _avatars.Get(avatarId) : null;
 
         /// <summary>
-        /// The backdrop for the player's equipped background and table (<see cref="HasBackdrops"/>
-        /// first). One that this build has no art for (an unknown id, such as one the game no longer
-        /// has, or art not made yet) shows the default one instead, and the log says so once.
+        /// The picture of the player's equipped table (<see cref="HasBackdrops"/> first). One that this
+        /// build has no art for (an unknown id, such as one the game no longer has, or art not made
+        /// yet) shows the default one instead, and the log says so once.
         /// </summary>
-        public TableBackdrop Backdrop(string backgroundId, string tableId)
+        public Sprite Table(string tableId)
         {
             if (_backdrops == null)
             {
                 throw new InvalidOperationException("This table has no backdrop library.");
             }
 
-            TableBackdrop backdrop = _backdrops.Backdrop(backgroundId, tableId);
-            TellIfMissing("background", backgroundId, backdrop.BackgroundId);
-            TellIfMissing("table", tableId, backdrop.TableId);
-            return backdrop;
+            Sprite picture = _backdrops.TablePicture(tableId, out string shown);
+            TellIfMissing("table", tableId, shown);
+            return picture;
+        }
+
+        /// <summary>The border of the table <see cref="Table"/> shows (a dhaka cloth's, ADR 058); null when it has none.</summary>
+        public Sprite TableFrame(string tableId)
+        {
+            if (_backdrops == null)
+            {
+                throw new InvalidOperationException("This table has no backdrop library.");
+            }
+
+            return _backdrops.TableFrame(tableId);
         }
 
         private void TellIfMissing(string kind, string asked, string shown)

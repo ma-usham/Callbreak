@@ -196,16 +196,17 @@ namespace Callbreak.Presentation.Table
         }
 
         /// <summary>
-        /// Behind everything: the background and the table this player has equipped in the shop, as
-        /// they are when the table opens, so a change in the shop shows from the next match on. Each
-        /// player sees their own, offline and online alike, as with decks (ADR 031); nothing about it
-        /// goes over the network.
+        /// Behind everything: the table this player has equipped in the shop, filling the screen (V2;
+        /// the equipped background shows behind the menus), as it is when the table opens, so a change
+        /// in the shop shows from the next match on. Each player sees their own, offline and online
+        /// alike, as with decks (ADR 031); nothing about it goes over the network.
         /// </summary>
         private void ShowBackdrop()
         {
             if (_skin.HasBackdrops)
             {
-                _view.SetBackdrop(_skin.Backdrop(_shop.Equipped(CosmeticKind.Background), _shop.Equipped(CosmeticKind.Table)));
+                string table = _shop.Equipped(CosmeticKind.Table);
+                _view.SetTable(_skin.Table(table), _skin.TableFrame(table));
             }
         }
 

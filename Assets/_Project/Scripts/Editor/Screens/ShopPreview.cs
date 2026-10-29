@@ -63,9 +63,9 @@ namespace Callbreak.Editor.Screens
                 Prices(CosmeticKind.Background),
                 chosen: 1);
 
-            string[] tables = { CosmeticCatalog.Tables.HimalayanIvory, CosmeticCatalog.Tables.RoyalCrimson, CosmeticCatalog.Tables.HeritageWalnut };
+            string[] tables = { CosmeticCatalog.Tables.GreenDhaka, CosmeticCatalog.Tables.IndigoDhaka, CosmeticCatalog.Tables.DuskHimalaya };
             Fill(view, Tables,
-                new[] { "Himalayan Ivory", "Royal Crimson", "Heritage Walnut" },
+                new[] { "Green Dhaka", "Indigo Dhaka", "Dusk Himalaya" },
                 System.Array.ConvertAll(tables, id => view.Picture(CosmeticKind.Table, id)),
                 firstOwned,
                 Prices(CosmeticKind.Table),

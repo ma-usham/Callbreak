@@ -227,7 +227,10 @@ namespace Callbreak.Application.Cosmetics
             data.schemaVersion = CosmeticsData.CurrentVersion;
             data.boughtDeckIds = Clean(data.boughtDeckIds);
             data.boughtBackgroundIds = Clean(data.boughtBackgroundIds);
-            data.boughtTableIds = Clean(data.boughtTableIds);
+
+            // The tables became cloths (ADR 058): a file that names a table owns and equips its cloth.
+            data.equippedTableId = AsCloth(data.equippedTableId);
+            data.boughtTableIds = Clean(data.boughtTableIds?.Select(AsCloth).ToList());
             foreach (CosmeticKind kind in new[] { CosmeticKind.Deck, CosmeticKind.Background, CosmeticKind.Table })
             {
                 if (!IsOwned(data, CosmeticCatalog.Find(kind, EquippedIn(data, kind))))
@@ -236,6 +239,9 @@ namespace Callbreak.Application.Cosmetics
                 }
             }
         }
+
+        private static string AsCloth(string id) =>
+            id != null && CosmeticCatalog.Tables.Renamed.TryGetValue(id, out string cloth) ? cloth : id;
 
         /// <summary>The purchases as read, without empty entries; ids this build doesn't know are kept for a later one.</summary>
         private static List<string> Clean(List<string> ids)

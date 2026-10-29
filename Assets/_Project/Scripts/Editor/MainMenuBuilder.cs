@@ -31,7 +31,6 @@ namespace Callbreak.Editor
 
         private const string TextMeshProSettingsPath = "Assets/TextMesh Pro/Resources/TMP Settings.asset";
         private const float UiPixelsPerUnit = 200f;
-        private const float BackgroundPixelsPerUnit = 100f;
 
         private static readonly Vector2 Screen = UiBuildKit.ScreenCentre;
 
@@ -314,18 +313,16 @@ namespace Callbreak.Editor
             return rootObject;
         }
 
+        /// <summary>
+        /// The player's equipped background (ADR 058), framed as every menu screen frames it: the screen
+        /// plus margins for 21:9 and 4:3, so it bleeds to the screen edge on every aspect ratio
+        /// (GDD §12) and the screens open onto each other without a jump.
+        /// </summary>
         private static void BuildBackground(RectTransform root)
         {
-            var go = new GameObject("Background", typeof(RectTransform));
-            var rect = (RectTransform)go.transform;
-            rect.SetParent(root, false);
-            Stretch(rect);
-            UiBuildKit.AddImage(rect, UiBuildKit.LoadSprite("Backgrounds/BG_Menu_Clean.png", BackgroundPixelsPerUnit), false);
-
-            // Backgrounds bleed to the screen edge on every aspect ratio (GDD §12).
-            var fitter = go.AddComponent<UnityEngine.UI.AspectRatioFitter>();
-            fitter.aspectMode = UnityEngine.UI.AspectRatioFitter.AspectMode.EnvelopeParent;
-            fitter.aspectRatio = UiBuildKit.CanvasWidth / UiBuildKit.CanvasHeight;
+            RectTransform rect = UiBuildKit.CreateAt(
+                "Background", root, Screen, Screen, UiBuildKit.FromMock(TableBackdropBuilder.FrameWidth, TableBackdropBuilder.FrameHeight));
+            Screens.ScreenLayoutBuilder.AddEquippedBackground(rect);
         }
 
         private static RectTransform BuildFooter(RectTransform centre, TMP_FontAsset font)
@@ -444,6 +441,41 @@ namespace Callbreak.Editor
             RectTransform slot = UiBuildKit.CreateAt("BannerSlot", corner, centre, Screen, BannerSlotSize);
             slot.gameObject.SetActive(false);
             return slot;
+        }
+
+        /// <summary>
+        /// Puts the player's equipped background behind the saved main menu, framed as every menu
+        /// screen frames it (ADR 058; <see cref="BuildBackground"/> builds it so): the painted menu
+        /// picture and its fitter go; everything else in the prefab stays as it is.
+        /// </summary>
+        public static string UseEquippedBackground()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+            try
+            {
+                Transform old = root.transform.Find("Background");
+                if (old == null)
+                {
+                    return "the main menu has no Background";
+                }
+
+                if (old.GetComponent<EquippedBackground>() != null)
+                {
+                    return "the main menu already shows the equipped background";
+                }
+
+                int index = old.GetSiblingIndex();
+                Object.DestroyImmediate(old.gameObject);
+                BuildBackground((RectTransform)root.transform);
+                root.transform.Find("Background").SetSiblingIndex(index);
+
+                PrefabUtility.SaveAsPrefabAsset(root, PrefabPath, out bool saved);
+                return saved ? $"saved {PrefabPath} with the equipped background" : $"FAILED to save {PrefabPath}";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         /// <summary>
