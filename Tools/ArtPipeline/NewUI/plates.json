@@ -1,0 +1,249 @@
+{
+  "about": "The kit sprites the V1 rebuild redrew as vector plates (Figma's Plates section 194:79 and the Panel, Radio and Toggle sets on 'V1 Rebuild \u00b7 Design System'), each with the Figma node that replaces it. plates.py measures the sprites and lays the export sheet out; figma-plates.js builds it in Figma; cut_plates.py cuts the sprites from it. Options: size (the pixel size to draw at, kept so the sheet's layout never depends on sprites already cut), nine (a new 9-slice border, as ArtSource/Kit's [left, top, right, bottom]), compose (drawn wide, then cut to its two ends and a plain 16-pixel middle, so the ends' ornaments never stretch), fit: uniform (scaled whole into the sprite instead of resized). The toast (ToastBuilder draws it) and the avatar ring (a white disc behind the portraits) stay as they are. A composed sprite with a shadow gets it redrawn from its new face: the face's alpha padded by pad [x, y] pixels, blurred, in the old shadows' brown, with the face's border plus the padding.",
+  "sprites": [
+    {
+      "path": "UI/Panels/UI_Panel_Large.png",
+      "node": "167:26"
+    },
+    {
+      "path": "UI/Common/UI_Panel_Large.png",
+      "node": "167:26"
+    },
+    {
+      "path": "UI/Panels/UI_Panel_Modal_Menu.png",
+      "node": "167:37",
+      "size": [
+        720,
+        720
+      ],
+      "nine": [
+        340,
+        340,
+        340,
+        340
+      ]
+    },
+    {
+      "path": "UI/Panels/UI_Drawer.png",
+      "node": "167:37",
+      "nine": [
+        0,
+        340,
+        0,
+        340
+      ]
+    },
+    {
+      "path": "UI/Panels/UI_Popover.png",
+      "node": "167:58"
+    },
+    {
+      "path": "UI/Panels/UI_Panel_Card.png",
+      "node": "194:130"
+    },
+    {
+      "path": "UI/Common/UI_Panel_Card.png",
+      "node": "194:130"
+    },
+    {
+      "path": "UI/Panels/UI_Panel_Card_Light.png",
+      "node": "194:131"
+    },
+    {
+      "path": "UI/Panels/UI_DayTile_Normal.png",
+      "node": "194:155"
+    },
+    {
+      "path": "UI/Panels/UI_DayTile_Bonus.png",
+      "node": "194:155"
+    },
+    {
+      "path": "UI/Panels/UI_RewardBlock_Normal.png",
+      "node": "194:155"
+    },
+    {
+      "path": "UI/Panels/UI_DayTile_TodayFrame.png",
+      "node": "194:156"
+    },
+    {
+      "path": "UI/Panels/UI_RewardBlock_Selected.png",
+      "node": "194:156"
+    },
+    {
+      "path": "UI/Buttons/UI_ButtonPrimary_Normal.png",
+      "node": "194:94"
+    },
+    {
+      "path": "UI/Buttons/UI_ButtonSecondary_Normal.png",
+      "node": "194:122"
+    },
+    {
+      "path": "UI/Buttons/UI_ButtonCircle_Normal.png",
+      "node": "194:123"
+    },
+    {
+      "path": "UI/Buttons/UI_ButtonDisc_Normal.png",
+      "node": "194:124"
+    },
+    {
+      "path": "UI/Buttons/UI_ButtonDisc_Selected.png",
+      "node": "194:126"
+    },
+    {
+      "path": "UI/Buttons/UI_ButtonDisc_Emblem.png",
+      "node": "194:128"
+    },
+    {
+      "path": "UI/Controls/UI_Button_Crimson.png",
+      "node": "194:80",
+      "compose": true,
+      "shadow": {
+        "path": "UI/Controls/UI_Button_Crimson_Shadow.png",
+        "pad": [
+          36,
+          36
+        ],
+        "blur": 12
+      },
+      "size": [
+        336,
+        220
+      ]
+    },
+    {
+      "path": "UI/Controls/UI_Button_Crimson_Box.png",
+      "node": "194:108",
+      "compose": true,
+      "shadow": {
+        "path": "UI/Controls/UI_Button_Crimson_Box_Shadow.png",
+        "pad": [
+          30,
+          30
+        ],
+        "blur": 10
+      },
+      "size": [
+        208,
+        180
+      ]
+    },
+    {
+      "path": "UI/Controls/UI_Field.png",
+      "node": "194:133"
+    },
+    {
+      "path": "UI/Controls/UI_Field_Light.png",
+      "node": "194:134"
+    },
+    {
+      "path": "UI/Controls/UI_Outline_Selected.png",
+      "node": "194:132"
+    },
+    {
+      "path": "UI/Controls/UI_Pill_Highlight.png",
+      "node": "194:162"
+    },
+    {
+      "path": "UI/Controls/UI_Pill_RoomCode.png",
+      "node": "194:162"
+    },
+    {
+      "path": "UI/Table/UI_Pill_Tag.png",
+      "node": "194:162"
+    },
+    {
+      "path": "UI/Table/UI_Pill_Elapsed.png",
+      "node": "194:162"
+    },
+    {
+      "path": "UI/Controls/UI_Segment_Track.png",
+      "node": "194:153"
+    },
+    {
+      "path": "UI/Controls/UI_Slider_Track.png",
+      "node": "194:153"
+    },
+    {
+      "path": "UI/Controls/UI_Segment_Selected.png",
+      "node": "194:154"
+    },
+    {
+      "path": "UI/Controls/UI_Slider_Fill.png",
+      "node": "194:154"
+    },
+    {
+      "path": "UI/Controls/UI_StakeChip_Normal.png",
+      "node": "194:138"
+    },
+    {
+      "path": "UI/Controls/UI_StakeChip_Selected.png",
+      "node": "194:139"
+    },
+    {
+      "path": "UI/Controls/UI_Seat_Filled.png",
+      "node": "194:136"
+    },
+    {
+      "path": "UI/Controls/UI_Seat_Searching.png",
+      "node": "194:137"
+    },
+    {
+      "path": "UI/Controls/UI_Radio_On.png",
+      "node": "167:83",
+      "fit": "uniform"
+    },
+    {
+      "path": "UI/Controls/UI_Radio_Off.png",
+      "node": "167:86",
+      "fit": "uniform"
+    },
+    {
+      "path": "UI/Controls/UI_Toggle_On.png",
+      "node": "167:71"
+    },
+    {
+      "path": "UI/Controls/UI_Toggle_Off.png",
+      "node": "167:73"
+    },
+    {
+      "path": "UI/Controls/UI_CodeBox_Normal.png",
+      "node": "194:135"
+    },
+    {
+      "path": "UI/Table/UI_TableHeader.png",
+      "node": "194:157"
+    },
+    {
+      "path": "UI/Table/UI_TableBody.png",
+      "node": "194:158"
+    },
+    {
+      "path": "UI/Table/UI_RowHighlight.png",
+      "node": "194:159"
+    },
+    {
+      "path": "UI/Table/UI_NamePlate.png",
+      "node": "194:160"
+    },
+    {
+      "path": "UI/Table/UI_StatusPill.png",
+      "node": "194:161"
+    },
+    {
+      "path": "UI/Table/UI_Chip_Normal.png",
+      "node": "194:165"
+    },
+    {
+      "path": "UI/Table/UI_Chip_Selected.png",
+      "node": "194:166"
+    },
+    {
+      "path": "UI/Table/UI_TimerRing.png",
+      "node": "194:167"
+    },
+    {
+      "path": "UI/Table/UI_TimerDisc.png",
+      "node": "194:168"
+    }
+  ]
+}
