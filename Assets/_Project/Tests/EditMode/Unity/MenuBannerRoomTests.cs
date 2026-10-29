@@ -9,7 +9,7 @@ namespace Callbreak.Tests.EditMode.Unity
     /// The main menu's room for the banner ad in its bottom-left corner (the owner, 27 Oct 2026, ADR
     /// 052), on the main menu prefab laid out on a 16:9, 21:9 and 4:3 canvas. A menu opens as it always
     /// was. With room made, the centre column is drawn a little smaller from its top, the footer line
-    /// goes, the "Resume match" banner stands under Play Offline, and the banner's slot fills the
+    /// goes (there is no "Resume match" banner any more, ADR 057), and the banner's slot fills the
     /// bottom-left corner of the safe area, big enough for the largest standard banner (320 x 50 dp on
     /// a 360 dp-tall phone: 960 x 150 canvas units), with no button over it or over the banner. Giving
     /// the room back puts everything where it was. The prefab is the built one, so these live outside
@@ -79,12 +79,8 @@ namespace Callbreak.Tests.EditMode.Unity
                 Assert.IsFalse(box.Overlaps(slot), button.name + " clear of the banner's slot");
             }
 
-            // The Resume banner, when it shows, stands under Play Offline, clear of the banner.
-            _view.SetResumeAvailable(true);
-            Canvas.ForceUpdateCanvases();
-            Rect resume = Box(Find("ResumeBanner"));
-            Assert.AreEqual(Box(Find("PlayOfflineButton")).center.x, resume.center.x, 0.5f, "under Play Offline");
-            Assert.IsFalse(resume.Overlaps(banner), "clear of the banner");
+            // ADR 057: the menu has no "Resume match" banner to keep clear of it.
+            Assert.IsNull(FindOrNull("ResumeBanner"), "no Resume banner");
             Assert.IsFalse(Find("Footer").gameObject.activeSelf, "the footer line stays away");
         }
 
@@ -93,7 +89,6 @@ namespace Callbreak.Tests.EditMode.Unity
         {
             Open(1920f, 1080f);
             Vector2 centre = Find("Centre").anchoredPosition;
-            Vector2 resume = Find("ResumeBanner").anchoredPosition;
 
             _view.SetBannerRoom(true);
             _view.SetBannerRoom(true);
@@ -101,7 +96,6 @@ namespace Callbreak.Tests.EditMode.Unity
 
             Assert.AreEqual(centre, Find("Centre").anchoredPosition, "the column back where it was");
             Assert.AreEqual(Vector3.one, Find("Centre").localScale, "and its size");
-            Assert.AreEqual(resume, Find("ResumeBanner").anchoredPosition);
             Assert.IsTrue(Find("Footer").gameObject.activeSelf);
             Assert.IsFalse(Find("BannerSlot").gameObject.activeSelf);
         }
@@ -122,6 +116,13 @@ namespace Callbreak.Tests.EditMode.Unity
 
         private RectTransform Find(string name)
         {
+            RectTransform found = FindOrNull(name);
+            Assert.IsNotNull(found, "the main menu has " + name);
+            return found;
+        }
+
+        private RectTransform FindOrNull(string name)
+        {
             foreach (RectTransform t in _canvas.GetComponentsInChildren<RectTransform>(true))
             {
                 if (t.name == name)
@@ -130,7 +131,6 @@ namespace Callbreak.Tests.EditMode.Unity
                 }
             }
 
-            Assert.Fail("the main menu has " + name);
             return null;
         }
 

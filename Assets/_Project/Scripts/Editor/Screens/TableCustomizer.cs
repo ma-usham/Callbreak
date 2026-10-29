@@ -222,15 +222,25 @@ namespace Callbreak.Editor.Screens
         private const float ChipTextScale = 0.8f;
         private const float ChipSpinnerSize = 15f;
 
-        // ---- The banner ad at the top of the table (the owner, 26 Oct 2026, ADR 051), canvas units.
-        // While a banner may come, the round line stands beside the Scores button, its words ending
-        // this far left of the button, and the banner's slot spans the top of the safe area from this
-        // far right of Home to this far left of those words, as tall as the largest standard banner
-        // (320 x 50 dp is 150 units on a 360 dp-tall phone) and a little more. TableView brings the
-        // top seat and the trick down to clear it.
-        private const float BannerRoundGap = 36f;
+        // ---- The round line under the logo (the owner, 28-29 Oct 2026, ADR 057), canvas units: on the
+        // left, centred under the CALLBREAK logo this far below it, on the seats' status pill so it
+        // reads over the scenery; the mockup's place at the top centre and its ornaments go.
+        private const float RoundUnderLogoGap = 6f;
+
+        // ---- The banner ad at the top of the table (the owner, 26 Oct 2026, ADR 051; ADR 057),
+        // canvas units. While a banner may come, its slot spans the top of the safe area from this far
+        // right of the logo and the round line to the right edge, as tall as the largest standard
+        // banner (320 x 50 dp is 150 units on a 360 dp-tall phone) and a little more; the banner sits
+        // in its top-right corner. TableView brings the top seat and the trick down to clear it.
         private const float BannerGap = 48f;
         private const float BannerSlotHeight = 155f;
+
+        // ---- Scores and Settings under Home (the owner, 28 Oct 2026, ADR 057), canvas units: the
+        // left column, each button centred on Home's middle, this far below the button above. The
+        // buttons show their icons only (the owner, the same day: no "Scores" and "Settings" words).
+        // The round line's pill is as wide as its words and this much more.
+        private const float ColumnGap = 22f;
+        private const float LabelPillPadding = 30f;
 
         // ---- The status pill hugs its words (the owner, 3 Oct 2026: the pill drawn for "Bid 3 • Won 1"
         // was too big for "3-7"). It keeps its centre under the name plate and its height. The words
@@ -270,12 +280,6 @@ namespace Callbreak.Editor.Screens
                 }
             }
 
-            // One ornament sprite serves both sides of the round line: the right one is its mirror image.
-            if (ctx.Nodes.TryGetValue("RoundOrnamentRight", out RectTransform ornament) && ornament.Find("Face") is RectTransform ornamentFace)
-            {
-                ornamentFace.localScale = new Vector3(-1f, 1f, 1f);
-            }
-
             RectTransform centre = ctx.Groups["Centre"];
             TMP_Text statusStyle = ctx.Nodes["SeatStatus3"].GetComponent<TMP_Text>();
             TMP_Text nameStyle = ctx.Nodes["SeatName3"].GetComponent<TMP_Text>();
@@ -304,6 +308,8 @@ namespace Callbreak.Editor.Screens
             RectTransform handLayer = BuildHand(ctx, pool, centre);
             BuildPrompt(ctx, handLayer, statusStyle);
             BuildTrickLabel(ctx);
+            StackUnderHome(ctx);
+            PlaceRoundUnderLogo(ctx);
             BuildBannerRoom(ctx);
             BuildEmotePicker(ctx, statusStyle);
             BuildEmoteCooldown(ctx);
@@ -960,44 +966,101 @@ namespace Callbreak.Editor.Screens
         }
 
         /// <summary>
-        /// The table's room for the banner ad (ADR 051), off until TableView makes it: the round line
-        /// beside the Scores button (the same words, right-aligned, at the same height) and the
-        /// banner's empty slot across the top of the safe area between Home and those words. Both
-        /// are pinned to their sides, so they keep their distances on 21:9 and 4:3 screens.
+        /// Scores and Settings under Home (the owner, 28 Oct 2026, ADR 057): the two buttons move from
+        /// the top-right corner into Home's group, one above the other in Home's column
+        /// (<see cref="ColumnGap"/> apart), as icons only: the mockup's "Scores" and "Settings" words
+        /// under them go. So does the divider between them, drawn for buttons side by side.
+        /// </summary>
+        private static void StackUnderHome(ScreenBuildContext ctx)
+        {
+            RectTransform left = ctx.Groups["HeaderLeft"];
+            RectTransform home = ctx.Nodes["HomeButton"];
+            float column = home.anchoredPosition.x;
+            float above = home.anchoredPosition.y - (home.rect.height / 2f);
+            foreach (string id in new[] { "Scores", "Settings" })
+            {
+                RectTransform button = ctx.Nodes[id + "Button"];
+                button.SetParent(left, false);
+                float y = above - ColumnGap - (button.rect.height / 2f);
+                button.anchoredPosition = new Vector2(column, y);
+                above = y - (button.rect.height / 2f);
+
+                RectTransform label = ctx.Nodes[id + "Label"];
+                ctx.Nodes.Remove(id + "Label");
+                Object.DestroyImmediate(label.gameObject);
+            }
+
+            RectTransform divider = ctx.Nodes["HeaderDivider"];
+            ctx.Nodes.Remove("HeaderDivider");
+            Object.DestroyImmediate(divider.gameObject);
+        }
+
+        /// <summary>
+        /// The round line under the logo (the owner, 29 Oct 2026, ADR 057): the mockup's "ROUND 1 / 5"
+        /// moves from the top centre into the logo's group, centred under the CALLBREAK logo
+        /// <see cref="RoundUnderLogoGap"/> below it, on the seats' status pill (TableView keeps the pill
+        /// as wide as the words). Its two ornaments, drawn to flank it at the top, go.
+        /// </summary>
+        private static void PlaceRoundUnderLogo(ScreenBuildContext ctx)
+        {
+            RectTransform left = ctx.Groups["HeaderLeft"];
+            RectTransform logo = ctx.Nodes["Logo"];
+            RectTransform round = ctx.Nodes["RoundLabel"];
+            TMP_Text words = round.GetComponent<TMP_Text>();
+            words.horizontalAlignment = HorizontalAlignmentOptions.Center;
+            words.verticalAlignment = VerticalAlignmentOptions.Middle;
+
+            Vector2 size = words.GetPreferredValues(words.text);
+            float pillHeight = Mathf.Max(UiBuildKit.FromMock(0f, ctx.Node("SeatPill3").rect[3]).y, size.y + 8f);
+            float logoBottom = logo.anchoredPosition.y - (logo.rect.height / 2f);
+            var centre = new Vector2(logo.anchoredPosition.x, logoBottom - RoundUnderLogoGap - (pillHeight / 2f));
+
+            round.SetParent(left, false);
+            round.anchoredPosition = centre;
+
+            var pill = (RectTransform)new GameObject("RoundPill", typeof(RectTransform)).transform;
+            pill.SetParent(left, false);
+            pill.SetSiblingIndex(round.GetSiblingIndex());
+            pill.anchorMin = pill.anchorMax = pill.pivot = new Vector2(0.5f, 0.5f);
+            pill.sizeDelta = new Vector2(size.x + LabelPillPadding, pillHeight);
+            pill.anchoredPosition = centre;
+            Sliced(pill, LoadTableSprite("UI_StatusPill"));
+            ctx.Bound["_roundPill"] = pill;
+
+            foreach (string id in new[] { "RoundOrnamentLeft", "RoundOrnamentRight" })
+            {
+                RectTransform ornament = ctx.Nodes[id];
+                ctx.Nodes.Remove(id);
+                Object.DestroyImmediate(ornament.gameObject);
+            }
+        }
+
+        /// <summary>
+        /// The table's room for the banner ad (ADR 051, 057), off until TableView makes it: an empty slot
+        /// across the top of the safe area from <see cref="BannerGap"/> past the logo and the round line
+        /// under it to the right edge, pinned to the left side so it keeps its distance on 21:9 and 4:3
+        /// screens. The banner sits in its top-right corner.
         /// </summary>
         private static void BuildBannerRoom(ScreenBuildContext ctx)
         {
             RectTransform safe = ctx.SafeArea;
-            RectTransform round = ctx.Nodes["RoundLabel"];
-            RectTransform scores = ctx.Nodes["ScoresButton"];
-            RectTransform home = ctx.Nodes["HomeButton"];
 
-            var beside = (RectTransform)Object.Instantiate(round.gameObject, ctx.Groups["HeaderRight"]).transform;
-            beside.name = "RoundBeside";
-            TMP_Text words = beside.GetComponent<TMP_Text>();
-            words.horizontalAlignment = HorizontalAlignmentOptions.Right;
+            // Measured from the safe area's left side: where the logo, or the round line's pill, ends.
+            float right = 0f;
             var corners = new Vector3[4];
-            scores.GetWorldCorners(corners);
-            float scoresLeft = beside.parent.InverseTransformPoint(corners[0]).x;
-            beside.GetWorldCorners(corners);
-            float besideRight = beside.parent.InverseTransformPoint(corners[2]).x;
-            beside.anchoredPosition += new Vector2(scoresLeft - BannerRoundGap - besideRight, 0f);
-            beside.gameObject.SetActive(false);
-            ctx.Bound["_roundBeside"] = words;
-
-            // Measured from the safe area's sides: Home stays on the left, the words on the right.
-            home.GetWorldCorners(corners);
-            float homeRight = safe.InverseTransformPoint(corners[2]).x - safe.rect.xMin;
-            beside.GetWorldCorners(corners);
-            float wordsLeft = safe.rect.xMax - safe.InverseTransformPoint(corners[2]).x + words.GetPreferredValues(words.text).x;
+            foreach (RectTransform piece in new[] { ctx.Nodes["Logo"], (RectTransform)ctx.Bound["_roundPill"] })
+            {
+                piece.GetWorldCorners(corners);
+                right = Mathf.Max(right, safe.InverseTransformPoint(corners[2]).x - safe.rect.xMin);
+            }
 
             var slot = (RectTransform)new GameObject("BannerSlot", typeof(RectTransform)).transform;
             slot.SetParent(safe, false);
             slot.anchorMin = new Vector2(0f, 1f);
             slot.anchorMax = new Vector2(1f, 1f);
             slot.pivot = new Vector2(0.5f, 1f);
-            slot.offsetMin = new Vector2(homeRight + BannerGap, -BannerSlotHeight);
-            slot.offsetMax = new Vector2(-(wordsLeft + BannerGap), 0f);
+            slot.offsetMin = new Vector2(right + BannerGap, -BannerSlotHeight);
+            slot.offsetMax = Vector2.zero;
             slot.gameObject.SetActive(false);
             ctx.Bound["_bannerSlot"] = slot;
         }

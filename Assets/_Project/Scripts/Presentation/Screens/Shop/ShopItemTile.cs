@@ -20,8 +20,10 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private RectTransform _picture;
         [SerializeField] private Image _face;
 
-        // Under a deck's face while it peeks: the deck's base (ADR 053). Only deck tiles have one.
+        // Under a deck's face while it peeks: the deck's base (ADR 053). Only deck tiles have one,
+        // and the premultiplied material the shared face draws with over it (ADR 054).
         [SerializeField] private Image _base;
+        [SerializeField] private Material _faceMaterial;
         [SerializeField] private TMP_Text _name;
         [SerializeField] private GameObject _outline;
         [SerializeField] private ShopRow _statusRow;
@@ -40,6 +42,9 @@ namespace Callbreak.Presentation.Screens
 
         /// <summary>The deck's base under its face while it peeks; null on tiles that are not decks.</summary>
         public Image Base => _base;
+
+        /// <summary>The material of a shared face over <see cref="Base"/> (ADR 054); null on tiles that are not decks.</summary>
+        public Material FaceMaterial => _faceMaterial;
 
         public TMP_Text NameLabel => _name;
 

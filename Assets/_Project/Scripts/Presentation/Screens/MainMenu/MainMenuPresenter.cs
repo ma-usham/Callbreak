@@ -18,9 +18,10 @@ namespace Callbreak.Presentation.Screens
 {
     /// <summary>
     /// GDD §11 screen 00: one tap to every mode. The card fan shows the four aces of the player's
-    /// deck. Online entry points need a connection; without one a toast points to Play Offline. While an unfinished offline match exists a banner offers
-    /// "Resume match"; the match is also offered back ("Resume your offline match?") once when the app
-    /// opens and whenever Play Offline is tapped. Android back asks "Exit Callbreak?". The coin
+    /// deck. Online entry points need a connection; without one a toast points to Play Offline. An
+    /// unfinished offline match is offered back ("Resume your offline match?") once when the app opens
+    /// and whenever Play Offline is tapped; the menu itself shows no "Resume match" banner (the owner,
+    /// 28 Oct 2026, ADR 057). Android back asks "Exit Callbreak?". The coin
     /// wallet (mockup 23) shows the balance as it changes; its "+" opens Earn Coins. The No Ads
     /// button left of it sells the one-time purchase that removes the ads between matches
     /// (<see cref="NoAdsOffer"/>), with the game under the curtain's black cover while the store's
@@ -122,7 +123,6 @@ namespace Callbreak.Presentation.Screens
             _view.PlayOnlineClicked += OnPlayOnline;
             _view.PlayWithFriendsClicked += OnPlayWithFriends;
             _view.PlayOfflineClicked += OnPlayOffline;
-            _view.ResumeClicked += OnResume;
             _view.BackRequested += OnBack;
             _profile.Changed += Render;
             _settings.Changed += RenderMotion;
@@ -140,7 +140,6 @@ namespace Callbreak.Presentation.Screens
             RenderNoAds();
             RenderDailyRewards();
             RenderMotion();
-            RenderResume();
             OnNetworkChanged(_network.IsOnline);
 
             // GDD §8: the next launch offers the unfinished offline match.
@@ -163,7 +162,6 @@ namespace Callbreak.Presentation.Screens
             _view.PlayOnlineClicked -= OnPlayOnline;
             _view.PlayWithFriendsClicked -= OnPlayWithFriends;
             _view.PlayOfflineClicked -= OnPlayOffline;
-            _view.ResumeClicked -= OnResume;
             _view.BackRequested -= OnBack;
             _profile.Changed -= Render;
             _settings.Changed -= RenderMotion;
@@ -235,8 +233,6 @@ namespace Callbreak.Presentation.Screens
 
         private void RenderNoAds() => _view.SetNoAdsVisible(_noAds.Visible);
 
-        private void RenderResume() => _view.SetResumeAvailable(_offlineStore.HasSave);
-
         /// <summary>The red dot on the Daily Rewards button. A new day comes without an event: the menu reads it again whenever it is on top.</summary>
         private void RenderDailyRewards() => _view.SetDailyRewardsReady(_dailyRewards.CanClaim);
 
@@ -244,25 +240,8 @@ namespace Callbreak.Presentation.Screens
         {
             if (id == ScreenId.MainMenu)
             {
-                RenderResume();
                 RenderDailyRewards();
             }
-        }
-
-        private void OnResume()
-        {
-            if (_asking)
-            {
-                return;
-            }
-
-            if (!_offlineStore.HasSave)
-            {
-                RenderResume();
-                return;
-            }
-
-            ResumeSaved();
         }
 
         private void ResumeSaved()

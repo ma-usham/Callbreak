@@ -18,7 +18,8 @@ namespace Callbreak.Presentation.Table.Playback
     /// </para>
     /// <para>
     /// A card the engine plays by itself has no thinking time before it, so the player gives it
-    /// the pause a forced move has everywhere else (GDD §9 "0.35 s if forced").
+    /// the pause a forced move has everywhere else (0.5 s once the card before has landed, ADR 055;
+    /// GDD §9 had 0.35 s), long enough to see each card of the last trick arrive.
     /// </para>
     /// <para>
     /// A resync clears the queue, and the table is rebuilt from the session's view. An event whose
@@ -36,8 +37,8 @@ namespace Callbreak.Presentation.Table.Playback
 
         public const float BacklogSpeed = 2f;
 
-        /// <summary>The pause before a card the engine played by itself.</summary>
-        public const float ForcedBeatSeconds = 0.35f;
+        /// <summary>The pause before a card the engine played by itself (BotTiming's forced pause).</summary>
+        public const float ForcedBeatSeconds = 0.5f;
 
         private readonly IEventPlayback _playback;
         private readonly Queue<MatchEvent> _queue = new Queue<MatchEvent>();

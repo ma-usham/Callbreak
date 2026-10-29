@@ -102,13 +102,20 @@ namespace Callbreak.Application.Sessions
             _holdUntil += seconds;
         }
 
-        /// <summary>Tells the driver what the engine just emitted, so it can pace itself.</summary>
+        /// <summary>
+        /// Tells the driver what the engine just emitted, so it can pace itself as the table shows
+        /// it: a played card flies to the trick first, so the next bot starts thinking once it has
+        /// landed, and a finished trick's pause starts then too (ADR 055).
+        /// </summary>
         public void Observe(MatchEvent e, double now)
         {
             switch (e)
             {
+                case CardPlayed _:
+                    Hold(now + _timing.CardFlightSeconds);
+                    break;
                 case TrickCompleted _:
-                    Hold(now + _timing.TrickDisplaySeconds);
+                    Hold(now + _timing.CardFlightSeconds + _timing.TrickDisplaySeconds);
                     break;
                 case RoundStarted _:
                     Hold(now + _timing.DealSeconds);

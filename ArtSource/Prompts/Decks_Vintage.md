@@ -8,7 +8,7 @@ decks' own look (ADR 014). The backs are still ADR 014's (`export-decks.ps1`, `D
 | Source | `ArtSource/Cards/Vintage/`: the owner's pack, 56 transparent PNGs of 512 × 712 (52 faces, `Joker_Black`, `Joker_Red`, `CardBack_01` black, `CardBack_02` red). Named `Spade_A`, `Heart_07`, `Club_10`, `Diamond_K`. The jokers and the pack's backs are not used. |
 | Mountains | `ArtSource/Cards/HimalayanIvory/Mountains_{Top,Bottom}.png`: Himalayan Ivory's faint mountain wash, lifted once from its ADR 014 ace (228 px card scale) |
 | Script | `Tools/ArtPipeline/compose-decks.ps1` (C# in `CardComposer.cs` and `DeckTools.cs`, C# 5, `Add-Type`; run it in a fresh PowerShell) |
-| Output | `ArtSource/Exports/Cards/{ClassicCrimson,HimalayanIvory,KathmanduGold}/Card_{Suit}_{Rank}.png`, 156 files, copied into `Assets/_Project/Art/Cards/{Deck}/` by `-Install` |
+| Output | `ArtSource/Exports/Cards/{ClassicCrimson,HimalayanIvory,KathmanduGold}/Card_{Suit}_{Rank}.png`, the 156 whole cards (review and the layers' check); the layers the game draws (ADR 054): `ArtSource/Exports/Cards/Faces/Card_{Suit}_{Rank}.png` (52 shared faces) and `ArtSource/Exports/Cards/{Deck}/Base_{Deck}.png`, copied into `Assets/_Project/Art/Cards/` by `-Install` |
 | Review | `ArtSource/Working/Decks/review/` (full size) and `Docs/Verification/Decks/` (half-size contact sheets, corner zooms, hand mocks, `compose-report.txt`) |
 
 ```powershell
@@ -90,3 +90,25 @@ the other decks' (26 Oct 2026): its gold is in the frame.
 - 52 faces per deck, all 246 × 386, 8-bit RGBA, corners clear, centre opaque, every alpha
   channel identical to the shared mask.
 - Pip layouts 2–10: one pip per rank point.
+- The layers (ADR 054): each deck's base under the shared faces, blended as the GPU does (linear
+  light, premultiplied), against that deck's whole cards. Classic Crimson must come back to within
+  one level (it comes back exactly); the other decks show its inks over their own frames and paper.
+
+## Layers (ADR 054)
+
+The game draws a card as its deck's base (the deck's `Frame`: band, lines, cut corners, paper,
+Himalayan Ivory's mountains) under one face shared by every deck. `Layers.Lift` (in
+`CardComposer.cs`) takes each face off Classic Crimson's whole card:
+
+1. A pixel that equals the base stays clear.
+2. Otherwise its coverage is the least-squares fit, in linear light and weighted by luminance, of the
+   ink that explains it best (Classic Crimson's black, red, court black, court red and seam).
+3. The coverage is raised if a darker channel needs more to stay above zero. A channel lighter than
+   the paper (the faint ring the export's Catmull-Rom leaves beside dark ink) doesn't raise it.
+4. The colour is stored premultiplied: the card less the base's share. It may exceed the coverage,
+   adding light where the ring was, so the ring lightens whichever base is under it.
+
+Premultiplied because Unity blends UI and averages an sRGB texture's mip maps in linear light.
+With straight alpha the mip maps average a fringe's colour without its coverage, and trick-size
+cards drift by up to 30 levels. The faces draw with `Callbreak/UI/Premultiplied` and import with
+*Alpha Is Transparency* off.

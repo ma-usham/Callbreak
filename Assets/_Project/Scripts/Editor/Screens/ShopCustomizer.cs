@@ -275,6 +275,7 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_picture").objectReferenceValue = picture;
             so.FindProperty("_face").objectReferenceValue = pictureFace;
             so.FindProperty("_base").objectReferenceValue = pictureBase;
+            so.FindProperty("_faceMaterial").objectReferenceValue = pictureBase != null ? TableCardBuilder.EnsureFaceMaterial() : null;
             so.FindProperty("_name").objectReferenceValue = name;
             so.FindProperty("_outline").objectReferenceValue = outlineImage.gameObject;
             so.FindProperty("_statusRow").objectReferenceValue = statusLayout;
@@ -374,6 +375,52 @@ namespace Callbreak.Editor.Screens
 
                 PrefabUtility.SaveAsPrefabAsset(root, path, out bool saved);
                 return saved ? $"saved {path} with {added} deck bases" : $"FAILED to save {path}";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        /// <summary>
+        /// Binds the premultiplied material of the shared faces (ADR 054) to each deck tile of the
+        /// saved shop prefab, for its face while it peeks; everything else stays as it is.
+        /// </summary>
+        public static string UseDeckFaceMaterial()
+        {
+            string path = ScreenLayoutBuilder.PrefabPath("Shop");
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                Transform decks = root.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "Tiles0");
+                if (decks == null)
+                {
+                    return "FAILED: the shop has no Tiles0 (the Cards category)";
+                }
+
+                Material material = TableCardBuilder.EnsureFaceMaterial();
+                int bound = 0;
+                foreach (ShopItemTile tile in decks.GetComponentsInChildren<ShopItemTile>(true))
+                {
+                    var so = new SerializedObject(tile);
+                    SerializedProperty property = so.FindProperty("_faceMaterial");
+                    if (tile.Base == null || property.objectReferenceValue == material)
+                    {
+                        continue;
+                    }
+
+                    property.objectReferenceValue = material;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                    bound++;
+                }
+
+                if (bound == 0)
+                {
+                    return "the shop's deck tiles already have the face material";
+                }
+
+                PrefabUtility.SaveAsPrefabAsset(root, path, out bool saved);
+                return saved ? $"saved {path} with the face material on {bound} deck tiles" : $"FAILED to save {path}";
             }
             finally
             {

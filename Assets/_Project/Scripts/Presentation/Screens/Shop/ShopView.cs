@@ -1,5 +1,6 @@
 using System;
 using Callbreak.Application.Cosmetics;
+using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
 using LitMotion;
 using TMPro;
@@ -361,7 +362,10 @@ namespace Callbreak.Presentation.Screens
             _peekBack = null;
         }
 
-        /// <summary>The deck's base under the face it shows (ADR 053); null hides it, under a back.</summary>
+        /// <summary>
+        /// The deck's base under the face it shows (ADR 053), the face drawn with its premultiplied
+        /// material (ADR 054); null hides the base, under a back.
+        /// </summary>
         private static void ShowBase(ShopItemTile tile, Sprite cardBase)
         {
             Image under = tile.Base;
@@ -369,6 +373,8 @@ namespace Callbreak.Presentation.Screens
             {
                 return;
             }
+
+            CardFaceMaterial.Apply(tile.Face, tile.FaceMaterial, cardBase != null);
 
             if (under.sprite != cardBase)
             {

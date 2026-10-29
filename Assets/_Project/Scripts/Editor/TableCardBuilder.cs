@@ -12,9 +12,10 @@ namespace Callbreak.Editor
 {
     /// <summary>
     /// Everything the table needs to draw cards (GDD §13, §23):
-    /// the import settings of the three decks (sprites with mip maps, since a fan card is a fifth
-    /// of its texture's size); the <see cref="CardSpriteProvider"/> asset indexing 52 faces and a
-    /// back per deck; the two effect sprites the game draws itself (GDD §13 "glow, dimming and
+    /// the import settings of the cards (sprites with mip maps, since a fan card is a fifth
+    /// of its texture's size, filtered anisotropically, since a thrown card lies flat); the
+    /// <see cref="CardSpriteProvider"/> asset indexing 52 faces shared by every deck, and a base and
+    /// a back per deck; the premultiplied material the shared faces draw with (ADR 054); the two effect sprites the game draws itself (GDD §13 "glow, dimming and
     /// shadows are drawn by the game, never baked"): the card silhouette for the subdued overlay
     /// and the gold glow of a legal card, both derived from the cards' own outline; and the Card
     /// prefab the pool instantiates 52 times. Re-running rebuilds everything; a PNG is only
@@ -24,6 +25,8 @@ namespace Callbreak.Editor
     {
         public const string CardsFolder = "Assets/_Project/Art/Cards";
         public const string FacesFolder = CardsFolder + "/Faces";
+        public const string FaceMaterialPath = CardsFolder + "/CardFace.mat";
+        public const string FaceShaderName = "Callbreak/UI/Premultiplied";
         public const string LibraryPath = "Assets/_Project/Config/Cards/CardSprites.asset";
         public const string CardPrefabPath = "Assets/_Project/Prefabs/Table/Card.prefab";
         public const string GameplayScreenPrefabPath = "Assets/_Project/Prefabs/Table/GameplayScreen.prefab";
@@ -55,6 +58,12 @@ namespace Callbreak.Editor
         private const float ShadowOpacity = 0.55f;
         private const float ShadowSliceScale = 2.6f;
 
+        // A card thrown on the table lies flat, drawn at 64% of its height (CardView): without
+        // anisotropic filtering the GPU picks its mip level from that squash and the face blurs.
+        // Phones use the Mobile quality level, which filters anisotropically only the textures that
+        // ask for it (the Editor's PC level forces it on, so there the cards looked clear).
+        private const int CardAnisoLevel = 8;
+
         private static readonly (string id, string folder)[] Decks =
         {
             ("classic-crimson", "ClassicCrimson"),
@@ -71,14 +80,41 @@ namespace Callbreak.Editor
         }
 
         /// <summary>
-        /// ADR 053 in one go, for a batch run (-executeMethod): the card assets with the shared faces
-        /// and the deck bases, then the bases added under the main menu's fan and the shop's decks.
+        /// ADR 053 and 054 in one go, for a batch run (-executeMethod): the card assets with the
+        /// shared faces and the deck bases, then the bases added under the main menu's fan and the
+        /// shop's decks, and the faces there given their premultiplied material.
         /// </summary>
         public static void BuildDeckBases()
         {
             Debug.Log(BuildAll());
             Debug.Log("[MainMenuBuilder] " + MainMenuBuilder.AddFanBases());
+            Debug.Log("[MainMenuBuilder] " + MainMenuBuilder.UseSharedFanFaces());
             Debug.Log("[ShopCustomizer] " + Screens.ShopCustomizer.AddDeckBases());
+            Debug.Log("[ShopCustomizer] " + Screens.ShopCustomizer.UseDeckFaceMaterial());
+        }
+
+        /// <summary>
+        /// The material of the shared faces (ADR 054): they are premultiplied in linear light, and
+        /// only premultiplied blending keeps their mip maps and filtering true. Created on first use.
+        /// </summary>
+        public static Material EnsureFaceMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(FaceMaterialPath);
+            if (material != null)
+            {
+                return material;
+            }
+
+            Shader shader = Shader.Find(FaceShaderName);
+            if (shader == null)
+            {
+                throw new InvalidOperationException($"The shader {FaceShaderName} is missing (Art/Shaders/UI_Premultiplied.shader).");
+            }
+
+            material = new Material(shader) { name = "CardFace" };
+            AssetDatabase.CreateAsset(material, FaceMaterialPath);
+            AssetDatabase.SaveAssets();
+            return material;
         }
 
         /// <summary>Builds the sprite library, the effect sprites and the Card prefab; returns a report.</summary>
@@ -126,7 +162,7 @@ namespace Callbreak.Editor
             for (int id = 0; id < Card.Count; id++)
             {
                 Card card = Card.FromId(id);
-                faces[id] = LoadCardSprite($"{FacesFolder}/Card_{SuitNames[(int)card.Suit]}_{TurnPrompt.RankLabel(card.Rank)}.png");
+                faces[id] = LoadCardSprite($"{FacesFolder}/Card_{SuitNames[(int)card.Suit]}_{TurnPrompt.RankLabel(card.Rank)}.png", true);
                 if (faces[id] == null)
                 {
                     missing++;
@@ -136,8 +172,8 @@ namespace Callbreak.Editor
             for (int d = 0; d < Decks.Length; d++)
             {
                 string folder = $"{CardsFolder}/{Decks[d].folder}";
-                Sprite back = LoadCardSprite($"{folder}/Back_{Decks[d].folder}.png");
-                Sprite cardBase = LoadCardSprite($"{folder}/Base_{Decks[d].folder}.png");
+                Sprite back = LoadCardSprite($"{folder}/Back_{Decks[d].folder}.png", false);
+                Sprite cardBase = LoadCardSprite($"{folder}/Base_{Decks[d].folder}.png", false);
                 missing += (back == null ? 1 : 0) + (cardBase == null ? 1 : 0);
                 decks[d] = new CardSpriteProvider.DeckSprites(Decks[d].id, back, cardBase, faces);
             }
@@ -159,9 +195,14 @@ namespace Callbreak.Editor
 
         /// <summary>
         /// Card textures are sprites shown far below their own size (a fan card is 46 px wide from a
-        /// 228 px texture), so they keep mip maps; everything else follows the UI recipe.
+        /// 228 px texture), so they keep mip maps, and lying on the table, so they are filtered
+        /// anisotropically (<see cref="CardAnisoLevel"/>); everything else follows the UI recipe.
         /// </summary>
-        private static Sprite LoadCardSprite(string path)
+        /// <param name="premultiplied">
+        /// A shared face (ADR 054): its colour is premultiplied, so Unity must not bleed colour into
+        /// its see-through pixels (Alpha Is Transparency off); the bases and backs have it on.
+        /// </param>
+        private static Sprite LoadCardSprite(string path, bool premultiplied)
         {
             if (!File.Exists(path))
             {
@@ -181,9 +222,11 @@ namespace Callbreak.Editor
             bool changed = importer.textureType != TextureImporterType.Sprite
                 || importer.spriteImportMode != SpriteImportMode.Single
                 || !importer.mipmapEnabled
-                || !importer.alphaIsTransparency
+                || importer.alphaIsTransparency == premultiplied
+                || !importer.sRGBTexture
                 || importer.wrapMode != TextureWrapMode.Clamp
                 || importer.filterMode != FilterMode.Trilinear
+                || importer.anisoLevel != CardAnisoLevel
                 || !Mathf.Approximately(importer.spritePixelsPerUnit, 100f)
                 || settings.spriteMeshType != SpriteMeshType.FullRect;
             if (changed)
@@ -192,9 +235,11 @@ namespace Callbreak.Editor
                 importer.spriteImportMode = SpriteImportMode.Single;
                 importer.spritePixelsPerUnit = 100f;
                 importer.mipmapEnabled = true;
-                importer.alphaIsTransparency = true;
+                importer.alphaIsTransparency = !premultiplied;
+                importer.sRGBTexture = true;
                 importer.wrapMode = TextureWrapMode.Clamp;
                 importer.filterMode = FilterMode.Trilinear;
+                importer.anisoLevel = CardAnisoLevel;
                 importer.ReadTextureSettings(settings);
                 settings.spriteMeshType = SpriteMeshType.FullRect;
                 importer.SetTextureSettings(settings);
@@ -397,6 +442,7 @@ namespace Callbreak.Editor
                 so.FindProperty("_glow").objectReferenceValue = glowImage;
                 so.FindProperty("_base").objectReferenceValue = cardBase;
                 so.FindProperty("_face").objectReferenceValue = face;
+                so.FindProperty("_faceMaterial").objectReferenceValue = EnsureFaceMaterial();
                 so.FindProperty("_dim").objectReferenceValue = dim;
                 SerializedProperty list = so.FindProperty("_perspectives");
                 list.arraySize = perspectives.Length;

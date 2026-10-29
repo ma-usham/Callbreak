@@ -28,13 +28,14 @@ using VContainer;
 namespace Callbreak.Tests.PlayMode
 {
     /// <summary>
-    /// What the menu shows and asks in its less common states, in the real scenes: the Resume
-    /// banner (GDD §11 screen 00), dialogs that are closed rather than answered, a failed Quick
+    /// What the menu shows and asks in its less common states, in the real scenes: a saved match
+    /// offered back by Play Offline (no Resume banner since ADR 057), dialogs that are closed rather than answered, a failed Quick
     /// Match search (screen 05), the volume slider (screen 11) and the UI sound cues (GDD §14).
     /// </summary>
     public sealed class MenuStateTests
     {
         private const float TurnTimeout = 40f;
+        private const string PremultipliedShader = "Callbreak/UI/Premultiplied";
 
         private GameFixture _game;
 
@@ -51,21 +52,22 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator ResumeBanner_TakesTheFooterLinesPlaceWhileAMatchIsSaved_AndResumesIt()
+        public IEnumerator ASavedMatch_ShowsNoResumeBanner_PlayOfflineOffersItBack_AndResumesIt()
         {
             yield return Boot();
-            UIScreen menu = MainMenu();
-            Assert.IsFalse(GameFixture.CanPress(menu, "ResumeBanner"), "nothing to resume yet");
-            Assert.IsTrue(Footer(menu).activeSelf);
-
             yield return StartAndLeaveAnOfflineMatch();
 
-            menu = MainMenu();
-            Assert.IsTrue(GameFixture.CanPress(menu, "ResumeBanner"), "GDD 11 screen 00: a banner offers \"Resume match\"");
-            Assert.IsFalse(Footer(menu).activeSelf, "the banner stands where the footer line was");
+            // ADR 057 (the owner, 28 Oct 2026): no "Resume match" banner at the bottom of the menu.
+            UIScreen menu = MainMenu();
+            Assert.IsFalse(GameFixture.CanPress(menu, "ResumeBanner"), "no Resume banner");
+            Assert.IsTrue(Footer(menu).activeSelf, "the footer line stays");
             Assert.IsFalse(_game.Dialogs.IsOpen, "the question is only asked when the app opens");
 
-            GameFixture.PressIn(menu, "ResumeBanner");
+            // Play Offline asks "Resume your offline match?"; Resume brings the match back.
+            GameFixture.Press(_game.MenuRouter, "PlayOfflineButton");
+            yield return null;
+            Assert.IsTrue(_game.Dialogs.IsOpen, "\"Resume your match?\"");
+            _game.PressDialog(confirm: true);
             yield return _game.UntilTable();
             var resumed = _game.Table.Container.Resolve<IMatchSession>();
             yield return GameFixture.Until(() => resumed.Status == SessionStatus.Running, "the resumed match to run");
@@ -319,10 +321,25 @@ namespace Callbreak.Tests.PlayMode
                     Sprite ace = cards.Face(deck, new Card((Suit)suit, Rank.Ace));
                     Assert.IsNotNull(ace, deck + " has its ace of " + (Suit)suit);
                     Assert.IsTrue(Shows(menu, ace), "GDD 13: the fan shows the " + deck + " ace of " + (Suit)suit);
+                    Assert.IsTrue(Shows(menu, ace, PremultipliedShader), "ADR 054: the shared ace of " + (Suit)suit + " draws premultiplied");
                 }
 
                 Assert.IsTrue(Shows(menu, cards.Base(deck)), "ADR 053: the aces lie on the " + deck + " base");
             }
+        }
+
+        /// <summary>True when an image on the screen draws that sprite with that shader.</summary>
+        private static bool Shows(UIScreen screen, Sprite sprite, string shader)
+        {
+            foreach (Image image in screen.GetComponentsInChildren<Image>(true))
+            {
+                if (image.sprite == sprite && image.material.shader.name == shader)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>True when an image on the screen draws that sprite.</summary>

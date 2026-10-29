@@ -290,12 +290,12 @@ namespace Callbreak.Tests.EditMode.Presentation
             Assert.AreEqual(0.9f + 0.35f, playback.EndedAt[burst[6]] - playback.BeganAt[burst[6]], frames, "so is the last trick");
             for (int i = 2; i <= 5; i++)
             {
-                Assert.AreEqual(0.35f, playback.BeganAt[burst[i]] - playback.EndedAt[burst[i - 1]], frames, "a forced card waits the 0.35 s of a forced move (GDD 9), card " + (i - 1));
+                Assert.AreEqual(0.5f, playback.BeganAt[burst[i]] - playback.EndedAt[burst[i - 1]], frames, "a forced card waits the 0.5 s of a forced move (ADR 055), card " + (i - 1));
                 Assert.AreEqual(0.26f, playback.EndedAt[burst[i]] - playback.BeganAt[burst[i]], frames, "and flies at normal speed");
             }
 
             Assert.AreEqual(playback.EndedAt[burst[6]], playback.BeganAt[burst[7]], 0.0001f, "the round is scored once the last trick has been swept");
-            Assert.AreEqual(0.26f + 1.25f + (4 * (0.35f + 0.26f)) + 1.25f, total, 0.15f, "the whole ending takes its 5.2 s");
+            Assert.AreEqual(0.26f + 1.25f + (4 * (0.5f + 0.26f)) + 1.25f, total, 0.15f, "the whole ending takes its 5.8 s");
         }
 
         [Test]
@@ -371,9 +371,9 @@ namespace Callbreak.Tests.EditMode.Presentation
             player.Tick(0.1f);
             Assert.IsNotNull(player.Current, "the forced card's turn has come");
             Assert.IsFalse(player.IsIdle);
-            CollectionAssert.IsEmpty(playback.Log, "but it waits 0.35 s before it is played");
+            CollectionAssert.IsEmpty(playback.Log, "but it waits 0.5 s before it is played");
 
-            Assert.IsTrue(player.Skip(), "0.35 s is longer than 0.3 s: a tap ends the wait");
+            Assert.IsTrue(player.Skip(), "0.5 s is longer than 0.3 s: a tap ends the wait");
             player.Tick(0f);
             CollectionAssert.AreEqual(new[] { "begin card 9♥" }, playback.Log);
             Assert.IsFalse(player.Skip(), "the flight itself is too short to skip");
@@ -395,8 +395,8 @@ namespace Callbreak.Tests.EditMode.Presentation
             player.Tick(0.1f);
             Assert.AreEqual(2f, player.Speed);
             CollectionAssert.IsEmpty(playback.Log);
-            player.Tick(0.1f);
-            CollectionAssert.AreEqual(new[] { "begin card 9♥" }, playback.Log, "0.2 s at double speed is more than the 0.35 s");
+            player.Tick(0.16f);
+            CollectionAssert.AreEqual(new[] { "begin card 9♥" }, playback.Log, "0.26 s at double speed is more than the 0.5 s");
             Assert.AreEqual(0f, playback.Animations[0].Elapsed, "and the card starts on a clean clock");
         }
 

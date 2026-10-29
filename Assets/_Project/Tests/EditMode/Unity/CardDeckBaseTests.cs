@@ -9,14 +9,16 @@ using UnityEngine.UI;
 namespace Callbreak.Tests.EditMode.Unity
 {
     /// <summary>
-    /// One set of faces for every deck, each deck's base under them (ADR 053): the library gives a
+    /// One set of faces for every deck, each deck's base under them (ADR 053, 054): the library gives a
     /// deck's base and back by its id, falls back to the default deck, and shares the faces; the
-    /// Card prefab draws the base under a face and hides it under a back. They use Unity sprites
-    /// and the Card prefab, so they live outside the folders the dotnet harness compiles.
+    /// Card prefab draws the base under a face, with the premultiplied face material, and hides it
+    /// under a back, which draws with the default UI material. They use Unity sprites and the Card
+    /// prefab, so they live outside the folders the dotnet harness compiles.
     /// </summary>
     public sealed class CardDeckBaseTests
     {
         private const string CardPrefab = "Assets/_Project/Prefabs/Table/Card.prefab";
+        private const string FaceShader = "Callbreak/UI/Premultiplied";
 
         private Texture2D _texture;
         private GameObject _card;
@@ -96,13 +98,16 @@ namespace Callbreak.Tests.EditMode.Unity
             Assert.IsTrue(cardBase.enabled, "face up: the deck's base shows");
             Assert.AreSame(under, cardBase.sprite);
             Assert.AreSame(front, face.sprite);
+            Assert.AreEqual(FaceShader, face.material.shader.name, "a shared face over its base is premultiplied");
 
             view.ShowBack(back);
             Assert.IsFalse(cardBase.enabled, "face down: only the back shows");
             Assert.AreSame(back, face.sprite);
+            Assert.AreSame(face.defaultMaterial, face.material, "a back draws with the default UI material");
 
             view.ShowFace(new Card(Suit.Hearts, Rank.King), front, null);
             Assert.IsFalse(cardBase.enabled, "a face with no base shows alone");
+            Assert.AreSame(face.defaultMaterial, face.material, "a whole card with no base draws with the default UI material");
         }
 
         private Image Child(string name)
