@@ -32,8 +32,9 @@ Then run `Callbreak.Editor.TableBackdropBuilder.Build()` in the Editor to refill
 
 ## Logos and the Cloths tab icon: cut from Figma
 
-The sheet "Unity Export · NewUI" on the design-system page holds Art/Logo, Art/Logo Compact and the
-drawer's folded-cloth icon, each fitted into the ink box of the sprite it replaces. Shoot it with the
+The sheet "Unity Export · NewUI" on the design-system page holds Art/Logo · Temple Crown, Art/Logo
+Compact · Temple Crown (the owner's pick, 30 Oct 2026) and the drawer's folded-cloth icon, each fitted
+into the ink box of the sprite it replaces. Shoot it with the
 Figma MCP's `get_screenshot` on a black and on a white sheet fill, then:
 
 ```bash

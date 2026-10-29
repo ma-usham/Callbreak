@@ -29,7 +29,8 @@ behind every menu.
   - the three backgrounds (Himalayan Vista, Pokhara Lakeside, Monastery Garden) and the three cloths,
     drawn with a margin for 21:9 and 4:3 (the backdrop frame, 2230 × 1255 frame pixels), with the
     shop's thumbnails and previews cut as Figma's tiles show them;
-  - the CALLBREAK logos;
+  - the CALLBREAK logos: the owner chose option E, "Temple Crown", on 30 Oct 2026 (Marcellus SC in
+    crimson and gold under a gilt three-tier pagoda roof; the compact logo drops the roof);
   - the kit's panels, buttons and controls, as the rebuild's plates, each at its sprite's size and
     scale. The crimson buttons keep their dhaka ends whole (drawn wide, cut to ends and a plain
     middle; shadows redrawn), and the menu panel and the shop drawer get borders that hold their
