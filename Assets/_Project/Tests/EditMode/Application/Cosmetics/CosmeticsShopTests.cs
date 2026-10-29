@@ -15,13 +15,14 @@ namespace Callbreak.Tests.EditMode.Application
     /// with their prices (the first free, the second 500 coins, the third 750), names and defaults;
     /// buying with coins, which never equips; equipping what is owned; the equipped deck being the
     /// selected deck; the cosmetics file, migrated from version 1; the three backgrounds that
-    /// left the shop falling back to the default; and the tables on disk becoming the cloths that
-    /// took their places (ADR 058).
+    /// left the shop falling back to the default; the tables on disk becoming the cloths that took
+    /// their places (ADR 058); and the Himalayan Vista on disk becoming Durbar Square, the free
+    /// background in its place (the owner, 30 Oct 2026).
     /// </summary>
     public sealed class CosmeticsShopTests
     {
         private static readonly string[] Decks = { "classic-crimson", "himalayan-ivory", "kathmandu-gold" };
-        private static readonly string[] Backgrounds = { "himalayan-vista", "pokhara-lakeside", "monastery-garden" };
+        private static readonly string[] Backgrounds = { "durbar-square", "pokhara-lakeside", "monastery-garden" };
         private static readonly string[] Tables = { "green-dhaka", "indigo-dhaka", "dusk-himalaya" };
 
         private InMemorySaveStore _store;
@@ -59,7 +60,7 @@ namespace Callbreak.Tests.EditMode.Application
                 new[] { "ui.deck.classic_crimson", "ui.deck.himalayan_ivory", "ui.deck.kathmandu_gold" },
                 _shop.Catalog(CosmeticKind.Deck).Select(i => i.NameKey));
             CollectionAssert.AreEqual(
-                new[] { "ui.shop.background.himalayan_vista", "ui.shop.background.pokhara_lakeside", "ui.shop.background.monastery_garden" },
+                new[] { "ui.shop.background.durbar_square", "ui.shop.background.pokhara_lakeside", "ui.shop.background.monastery_garden" },
                 _shop.Catalog(CosmeticKind.Background).Select(i => i.NameKey));
             CollectionAssert.AreEqual(
                 new[] { "ui.shop.table.green_dhaka", "ui.shop.table.indigo_dhaka", "ui.shop.table.dusk_himalaya" },
@@ -75,7 +76,7 @@ namespace Callbreak.Tests.EditMode.Application
                 new[] { "Classic Crimson", "Himalayan Ivory", "Kathmandu Gold" },
                 _shop.Catalog(CosmeticKind.Deck).Select(i => strings.Get(i.NameKey)));
             CollectionAssert.AreEqual(
-                new[] { "Himalayan Vista", "Pokhara Lakeside", "Monastery Garden" },
+                new[] { "Durbar Square", "Pokhara Lakeside", "Monastery Garden" },
                 _shop.Catalog(CosmeticKind.Background).Select(i => strings.Get(i.NameKey)));
             CollectionAssert.AreEqual(
                 new[] { "Green Dhaka", "Indigo Dhaka", "Dusk Himalaya" },
@@ -110,10 +111,10 @@ namespace Callbreak.Tests.EditMode.Application
         }
 
         [Test]
-        public void ANewPlayer_HasTodaysLook_ClassicCrimson_HimalayanVista_GreenDhaka()
+        public void ANewPlayer_HasTodaysLook_ClassicCrimson_DurbarSquare_GreenDhaka()
         {
             Assert.AreEqual("classic-crimson", _shop.Equipped(CosmeticKind.Deck));
-            Assert.AreEqual("himalayan-vista", _shop.Equipped(CosmeticKind.Background));
+            Assert.AreEqual("durbar-square", _shop.Equipped(CosmeticKind.Background));
             Assert.AreEqual("green-dhaka", _shop.Equipped(CosmeticKind.Table));
             Assert.AreEqual(0, _store.SaveCount);
         }
@@ -168,7 +169,7 @@ namespace Callbreak.Tests.EditMode.Application
             _shop.Changed += () => changed++;
 
             Assert.AreEqual(PurchaseResult.AlreadyOwned, _shop.Buy(CosmeticKind.Table, "green-dhaka"));
-            Assert.AreEqual(PurchaseResult.AlreadyOwned, _shop.Buy(CosmeticKind.Background, "himalayan-vista"));
+            Assert.AreEqual(PurchaseResult.AlreadyOwned, _shop.Buy(CosmeticKind.Background, "durbar-square"));
             Assert.AreEqual(PurchaseResult.AlreadyOwned, _shop.Buy(CosmeticKind.Deck, "classic-crimson"));
             Assert.AreEqual(500, _wallet.Coins);
             Assert.AreEqual(0, changed);
@@ -266,7 +267,7 @@ namespace Callbreak.Tests.EditMode.Application
             _shop.Changed += () => changed++;
 
             _shop.Equip(CosmeticKind.Table, "green-dhaka");
-            _shop.Equip(CosmeticKind.Background, "himalayan-vista");
+            _shop.Equip(CosmeticKind.Background, "durbar-square");
             _shop.Equip(CosmeticKind.Deck, "classic-crimson");
 
             Assert.AreEqual(0, changed);
@@ -289,7 +290,8 @@ namespace Callbreak.Tests.EditMode.Application
         [TestCase(CosmeticKind.Table, null)]
         [TestCase(CosmeticKind.Background, "")]
         [TestCase(CosmeticKind.Background, "indigo-dhaka")]
-        [TestCase(CosmeticKind.Deck, "himalayan-vista")]
+        [TestCase(CosmeticKind.Deck, "durbar-square")]
+        [TestCase(CosmeticKind.Background, "himalayan-vista")]
         public void Equip_SomethingNotInTheCatalog_Throws(CosmeticKind kind, string id)
         {
             Assert.Throws<ArgumentException>(() => _shop.Equip(kind, id));
@@ -347,7 +349,7 @@ namespace Callbreak.Tests.EditMode.Application
             var migrated = new CosmeticsService(_store, _wallet);
 
             Assert.AreEqual("classic-crimson", migrated.SelectedDeckId);
-            Assert.AreEqual("himalayan-vista", migrated.Equipped(CosmeticKind.Background));
+            Assert.AreEqual("durbar-square", migrated.Equipped(CosmeticKind.Background));
             Assert.AreEqual("green-dhaka", migrated.Equipped(CosmeticKind.Table));
             Assert.IsFalse(migrated.IsOwned(CosmeticKind.Table, "indigo-dhaka"));
 
@@ -380,7 +382,7 @@ namespace Callbreak.Tests.EditMode.Application
             var cosmetics = new CosmeticsService(_store, _wallet);
 
             Assert.AreEqual("classic-crimson", cosmetics.SelectedDeckId);
-            Assert.AreEqual("himalayan-vista", cosmetics.Equipped(CosmeticKind.Background));
+            Assert.AreEqual("durbar-square", cosmetics.Equipped(CosmeticKind.Background));
             Assert.IsFalse(cosmetics.IsOwned(CosmeticKind.Deck, "kathmandu-gold"));
             Assert.AreEqual(500, _wallet.Coins);
         }
@@ -398,7 +400,7 @@ namespace Callbreak.Tests.EditMode.Application
             var cosmetics = new CosmeticsService(_store, _wallet);
 
             Assert.AreEqual("classic-crimson", cosmetics.Equipped(CosmeticKind.Deck));
-            Assert.AreEqual("himalayan-vista", cosmetics.Equipped(CosmeticKind.Background));
+            Assert.AreEqual("durbar-square", cosmetics.Equipped(CosmeticKind.Background));
             Assert.AreEqual("green-dhaka", cosmetics.Equipped(CosmeticKind.Table), "an equipped table that isn't owned");
         }
 
@@ -441,15 +443,93 @@ namespace Callbreak.Tests.EditMode.Application
         }
 
         /// <summary>
+        /// Durbar Square took the Himalayan Vista's place as the free background (the owner, 30 Oct
+        /// 2026: "use durbar square as mainmenu bg image"). Every player had the Vista equipped unless
+        /// they chose another: a file that names it owns and equips Durbar Square instead, with the
+        /// rest of the file as it was, and the next save writes Durbar Square.
+        /// </summary>
+        [TestCase(1)]
+        [TestCase(2)]
+        public void TheHimalayanVistaOnDisk_BecomesDurbarSquare_OwnedAndEquipped(int version)
+        {
+            var data = new CosmeticsData { schemaVersion = version, selectedDeckId = "classic-crimson", equippedBackgroundId = "himalayan-vista" };
+            if (version > 1)
+            {
+                data.selectedDeckId = "kathmandu-gold";
+                data.boughtDeckIds.Add("kathmandu-gold");
+                data.boughtBackgroundIds.Add("pokhara-lakeside");
+                data.equippedTableId = "indigo-dhaka";
+                data.boughtTableIds.Add("indigo-dhaka");
+            }
+
+            _store.Put(CosmeticsService.SaveKey, data);
+            var cosmetics = new CosmeticsService(_store, _wallet);
+
+            Assert.AreEqual("durbar-square", cosmetics.Equipped(CosmeticKind.Background), "equipped");
+            Assert.IsTrue(cosmetics.IsOwned(CosmeticKind.Background, "durbar-square"));
+            Assert.IsFalse(cosmetics.IsOwned(CosmeticKind.Background, "himalayan-vista"), "the Vista's id is gone from the shop");
+            CollectionAssert.DoesNotContain(cosmetics.Catalog(CosmeticKind.Background).Select(i => i.Id), "himalayan-vista");
+            Assert.Throws<ArgumentException>(() => cosmetics.Equip(CosmeticKind.Background, "himalayan-vista"));
+            Assert.AreEqual(PurchaseResult.AlreadyOwned, cosmetics.Buy(CosmeticKind.Background, "durbar-square"), "nobody pays for it");
+            Assert.AreEqual(500, _wallet.Coins);
+            if (version > 1)
+            {
+                Assert.AreEqual("kathmandu-gold", cosmetics.Equipped(CosmeticKind.Deck), "the rest of the file is kept");
+                Assert.AreEqual("indigo-dhaka", cosmetics.Equipped(CosmeticKind.Table));
+                Assert.IsTrue(cosmetics.IsOwned(CosmeticKind.Background, "pokhara-lakeside"), "what was bought stays bought");
+            }
+
+            _wallet.Add(250);
+            Assert.AreEqual(PurchaseResult.Bought, cosmetics.Buy(CosmeticKind.Background, "monastery-garden"), "a purchase writes the file");
+
+            CosmeticsData saved = _store.Peek<CosmeticsData>(CosmeticsService.SaveKey);
+            Assert.AreEqual("durbar-square", saved.equippedBackgroundId);
+            Assert.AreEqual(CosmeticsData.CurrentVersion, saved.schemaVersion);
+            Assert.AreEqual("durbar-square", new CosmeticsService(_store, _wallet).Equipped(CosmeticKind.Background), "after a restart too");
+        }
+
+        [Test]
+        public void AnotherBackgroundOnDisk_StaysEquipped_WhereTheVistaWasNot()
+        {
+            var data = new CosmeticsData { equippedBackgroundId = "monastery-garden" };
+            data.boughtBackgroundIds.Add("monastery-garden");
+            _store.Put(CosmeticsService.SaveKey, data);
+
+            var cosmetics = new CosmeticsService(_store, _wallet);
+
+            Assert.AreEqual("monastery-garden", cosmetics.Equipped(CosmeticKind.Background));
+            Assert.IsTrue(cosmetics.IsOwned(CosmeticKind.Background, "durbar-square"), "the free one is owned too");
+            cosmetics.Equip(CosmeticKind.Background, "durbar-square");
+            Assert.AreEqual("durbar-square", _store.Peek<CosmeticsData>(CosmeticsService.SaveKey).equippedBackgroundId);
+        }
+
+        [Test]
+        public void AVistaInTheBoughtList_IsKeptAsDurbarSquare_WhenTheFileIsNextSaved()
+        {
+            var data = new CosmeticsData { equippedBackgroundId = "pokhara-lakeside" };
+            data.boughtBackgroundIds.Add("himalayan-vista");
+            data.boughtBackgroundIds.Add("pokhara-lakeside");
+            _store.Put(CosmeticsService.SaveKey, data);
+            var cosmetics = new CosmeticsService(_store, _wallet);
+
+            Assert.AreEqual("pokhara-lakeside", cosmetics.Equipped(CosmeticKind.Background));
+            cosmetics.Equip(CosmeticKind.Background, "durbar-square");
+
+            CosmeticsData saved = _store.Peek<CosmeticsData>(CosmeticsService.SaveKey);
+            CollectionAssert.AreEqual(new[] { "durbar-square", "pokhara-lakeside" }, saved.boughtBackgroundIds);
+            Assert.AreEqual("durbar-square", saved.equippedBackgroundId);
+        }
+
+        /// <summary>
         /// The owner (5 Oct 2026) kept three backgrounds. A file that still has one of the three that
-        /// left the shop equipped, or listed as bought, gets the Himalayan Vista like any other id the
-        /// build doesn't know: the old one is neither owned, sold nor equippable, and the next save
-        /// writes the Vista (the unknown purchase stays in the file, as every one does).
+        /// left the shop equipped, or listed as bought, gets the default (Durbar Square since 30 Oct 2026)
+        /// like any other id the build doesn't know: the old one is neither owned, sold nor equippable,
+        /// and the next save writes the default (the unknown purchase stays in the file, as every one does).
         /// </summary>
         [TestCase("kathmandu-courtyard")]
         [TestCase("village-terrace")]
         [TestCase("vintage-home")]
-        public void ABackgroundThatLeftTheShop_OnDisk_FallsBackToTheHimalayanVista(string removed)
+        public void ABackgroundThatLeftTheShop_OnDisk_FallsBackToDurbarSquare(string removed)
         {
             var data = new CosmeticsData { selectedDeckId = "kathmandu-gold", equippedBackgroundId = removed };
             data.boughtDeckIds.Add("kathmandu-gold");
@@ -458,7 +538,7 @@ namespace Callbreak.Tests.EditMode.Application
 
             var cosmetics = new CosmeticsService(_store, _wallet);
 
-            Assert.AreEqual("himalayan-vista", cosmetics.Equipped(CosmeticKind.Background), "equipped");
+            Assert.AreEqual("durbar-square", cosmetics.Equipped(CosmeticKind.Background), "equipped");
             Assert.IsFalse(cosmetics.IsOwned(CosmeticKind.Background, removed), "bought");
             CollectionAssert.DoesNotContain(cosmetics.Catalog(CosmeticKind.Background).Select(i => i.Id), removed);
             Assert.AreEqual(PurchaseResult.UnknownItem, cosmetics.Buy(CosmeticKind.Background, removed));
@@ -470,9 +550,9 @@ namespace Callbreak.Tests.EditMode.Application
             cosmetics.Equip(CosmeticKind.Deck, "classic-crimson");
 
             CosmeticsData saved = _store.Peek<CosmeticsData>(CosmeticsService.SaveKey);
-            Assert.AreEqual("himalayan-vista", saved.equippedBackgroundId);
+            Assert.AreEqual("durbar-square", saved.equippedBackgroundId);
             CollectionAssert.AreEqual(new[] { removed }, saved.boughtBackgroundIds);
-            Assert.AreEqual("himalayan-vista", new CosmeticsService(_store, _wallet).Equipped(CosmeticKind.Background), "after a restart too");
+            Assert.AreEqual("durbar-square", new CosmeticsService(_store, _wallet).Equipped(CosmeticKind.Background), "after a restart too");
         }
 
         [Test]
@@ -503,9 +583,9 @@ namespace Callbreak.Tests.EditMode.Application
             Assert.AreEqual(500, _wallet.Coins);
 
             // The session starts at the defaults, the only items owned without buying (6 Oct 2026).
-            Assert.AreEqual("himalayan-vista", cosmetics.Equipped(CosmeticKind.Background));
+            Assert.AreEqual("durbar-square", cosmetics.Equipped(CosmeticKind.Background));
             Assert.Throws<InvalidOperationException>(() => cosmetics.Equip(CosmeticKind.Background, "pokhara-lakeside"));
-            cosmetics.Equip(CosmeticKind.Background, "himalayan-vista");
+            cosmetics.Equip(CosmeticKind.Background, "durbar-square");
 
             Assert.AreEqual(0, _store.SaveCount);
             Assert.AreEqual("monastery-garden", _store.Peek<CosmeticsData>(CosmeticsService.SaveKey).equippedBackgroundId);

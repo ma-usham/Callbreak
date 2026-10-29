@@ -226,11 +226,13 @@ namespace Callbreak.Application.Cosmetics
 
             data.schemaVersion = CosmeticsData.CurrentVersion;
             data.boughtDeckIds = Clean(data.boughtDeckIds);
-            data.boughtBackgroundIds = Clean(data.boughtBackgroundIds);
 
-            // The tables became cloths (ADR 058): a file that names a table owns and equips its cloth.
-            data.equippedTableId = AsCloth(data.equippedTableId);
-            data.boughtTableIds = Clean(data.boughtTableIds?.Select(AsCloth).ToList());
+            // Durbar Square took the Himalayan Vista's place (the owner, 30 Oct 2026), and the tables
+            // became cloths (ADR 058): a file that names an old item owns and equips its successor.
+            data.equippedBackgroundId = Successor(CosmeticCatalog.Backgrounds.Renamed, data.equippedBackgroundId);
+            data.boughtBackgroundIds = Clean(data.boughtBackgroundIds?.Select(id => Successor(CosmeticCatalog.Backgrounds.Renamed, id)).ToList());
+            data.equippedTableId = Successor(CosmeticCatalog.Tables.Renamed, data.equippedTableId);
+            data.boughtTableIds = Clean(data.boughtTableIds?.Select(id => Successor(CosmeticCatalog.Tables.Renamed, id)).ToList());
             foreach (CosmeticKind kind in new[] { CosmeticKind.Deck, CosmeticKind.Background, CosmeticKind.Table })
             {
                 if (!IsOwned(data, CosmeticCatalog.Find(kind, EquippedIn(data, kind))))
@@ -240,8 +242,8 @@ namespace Callbreak.Application.Cosmetics
             }
         }
 
-        private static string AsCloth(string id) =>
-            id != null && CosmeticCatalog.Tables.Renamed.TryGetValue(id, out string cloth) ? cloth : id;
+        private static string Successor(IReadOnlyDictionary<string, string> renamed, string id) =>
+            id != null && renamed.TryGetValue(id, out string successor) ? successor : id;
 
         /// <summary>The purchases as read, without empty entries; ids this build doesn't know are kept for a later one.</summary>
         private static List<string> Clean(List<string> ids)

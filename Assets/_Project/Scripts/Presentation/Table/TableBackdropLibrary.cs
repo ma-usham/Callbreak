@@ -47,7 +47,7 @@ namespace Callbreak.Presentation.Table
 
         [SerializeField] private Picture[] _backgrounds = Array.Empty<Picture>();
         [SerializeField] private Picture[] _tables = Array.Empty<Picture>();
-        [SerializeField] private string _defaultBackgroundId = "himalayan-vista";
+        [SerializeField] private string _defaultBackgroundId = "durbar-square";
         [SerializeField] private string _defaultTableId = "green-dhaka";
 
         public string DefaultBackgroundId => _defaultBackgroundId;

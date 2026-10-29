@@ -24,13 +24,28 @@ behind every menu.
     Nobody pays twice; the file keeps the cloths' ids the next time it is saved.
 - **The equipped background shows behind every menu screen**, the main menu's included, and changes
   as soon as another is equipped (`EquippedBackground`, from the V2 scenes work, agent/T-v2-scenes).
+- **Durbar Square is the free background, in the Himalayan Vista's place.** The owner, on 30 Oct 2026:
+  "use burbar square as mainmenu bg image", then asked how, "replace the default". It is Figma's
+  "Art/Menu Option · Durbar Square" (240:103587): golden hour in a Kathmandu durbar square.
+  - Its id is `durbar-square`. Every player sees it behind the menus unless they equip Pokhara
+    Lakeside or Monastery Garden.
+  - A save that names the Himalayan Vista owns and equips Durbar Square
+    (`CosmeticCatalog.Backgrounds.Renamed`). The file keeps the new id the next time it is saved.
+  - Its picture keeps the Vista's files' GUIDs (renamed to `BG_DurbarSquare` and `Thumb_DurbarSquare`),
+    so every screen that showed the default shows Durbar Square without a rebuild.
+  - Its picture is uncompressed: the owner wants no softening.
+  - Its birds fly right of the logo. Figma's fly where the game's Temple Crown logo stands.
 - **The art is the V1 rebuild's own vector art** (Figma "V1 Rebuild · Design System"), not V1's
   paintings:
-  - the three backgrounds (Himalayan Vista, Pokhara Lakeside, Monastery Garden) and the three cloths,
+  - the three backgrounds (Durbar Square, Pokhara Lakeside, Monastery Garden) and the three cloths,
     drawn with a margin for 21:9 and 4:3 (the backdrop frame, 2230 × 1255 frame pixels), with the
     shop's thumbnails and previews cut as Figma's tiles show them;
   - the CALLBREAK logos: the owner chose option E, "Temple Crown", on 30 Oct 2026 (Marcellus SC in
     crimson and gold under a gilt three-tier pagoda roof; the compact logo drops the roof);
+  - the table's "Reconnecting…" art: the owner chose option A, "Dhaka Ring", on 30 Oct 2026. Twelve
+    stitched gold diamonds turn round an ivory seal with the crimson spade, the bright one running
+    anticlockwise ahead of its fading trail. The ring is centred on the seal (Figma's sits 10 px
+    off), so it turns without a wobble. The loading screen keeps its own ring and spade;
   - the kit's panels, buttons and controls, as the rebuild's plates, each at its sprite's size and
     scale. The crimson buttons keep their dhaka ends whole (drawn wide, cut to ends and a plain
     middle; shadows redrawn), and the menu panel and the shop drawer get borders that hold their
@@ -45,10 +60,12 @@ behind every menu.
 ## Consequences
 
 - The table's three-layer backdrop (BG_*_Back/_Front, BG_Table) and the painted menu pictures
-  (BG_Menu_Wide/Clean) are gone. The six full-screen pictures take 7.15 MB on Android (ASTC 6×6),
-  all loaded with the Menu and Table scenes, as V2's did.
+  (BG_Menu_Wide/Clean) are gone. The six full-screen pictures took 7.15 MB on Android (ASTC 6×6),
+  all loaded with the Menu and Table scenes, as V2's did. Since Durbar Square they take 13.97 MB:
+  its uncompressed picture is 8.01 MB where an ASTC 6×6 one is 1.19 MB.
 - The layouts' `"background": "equipped"` builds the equipped background into a screen.
-  `MainMenuBuilder.UseEquippedBackground` patched it into the saved main menu.
+  `MainMenuBuilder.UseEquippedBackground` patched it into the saved main menu, and
+  `TableCustomizer.UseDhakaRing` the Dhaka Ring into the saved table (its two sprites uncompressed).
 - `TableView.SetTable` takes the cloth's border as well.
 - The Figma file keeps two export sheets on its design-system page, "Unity Export · NewUI" and
   "Unity Export · Plates", for the next export.

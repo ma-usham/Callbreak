@@ -22,7 +22,7 @@ namespace Callbreak.Tests.EditMode.Unity
     /// </summary>
     public sealed class TableBackdropTests
     {
-        private const string Vista = "himalayan-vista";
+        private const string Durbar = "durbar-square";
         private const string Pokhara = "pokhara-lakeside";
         private const string Monastery = "monastery-garden";
         private const string Green = "green-dhaka";
@@ -32,7 +32,7 @@ namespace Callbreak.Tests.EditMode.Unity
         private readonly List<Object> _made = new List<Object>();
         private readonly List<string> _warnings = new List<string>();
         private CardSpriteProvider _cards;
-        private Sprite _vista;
+        private Sprite _durbar;
         private Sprite _pokhara;
         private Sprite _green;
         private Sprite _indigo;
@@ -42,7 +42,7 @@ namespace Callbreak.Tests.EditMode.Unity
         public void SetUp()
         {
             _cards = Make<CardSpriteProvider>();
-            _vista = MakeSprite("vista");
+            _durbar = MakeSprite("durbar");
             _pokhara = MakeSprite("pokhara");
             _green = MakeSprite("green cloth");
             _indigo = MakeSprite("indigo cloth");
@@ -71,14 +71,14 @@ namespace Callbreak.Tests.EditMode.Unity
         }
 
         [Test]
-        public void TheDefaults_AreTheVistaAndTheGreenDhaka()
+        public void TheDefaults_AreDurbarSquareAndTheGreenDhaka()
         {
             TableBackdropLibrary library = Library();
 
-            Assert.AreEqual(Vista, library.DefaultBackgroundId);
+            Assert.AreEqual(Durbar, library.DefaultBackgroundId);
             Assert.AreEqual(Green, library.DefaultTableId);
-            Assert.AreSame(_vista, library.BackgroundPicture(Vista, out string background));
-            Assert.AreEqual(Vista, background);
+            Assert.AreSame(_durbar, library.BackgroundPicture(Durbar, out string background));
+            Assert.AreEqual(Durbar, background);
             Assert.AreSame(_green, library.TablePicture(Green, out string table));
             Assert.AreEqual(Green, table);
         }
@@ -119,25 +119,27 @@ namespace Callbreak.Tests.EditMode.Unity
 
         /// <summary>
         /// The owner (5 Oct 2026): the game keeps three backgrounds. Asked for one of the three that
-        /// left (still equipped), the menus show the Himalayan Vista instead.
+        /// left (still equipped), or the Himalayan Vista that Durbar Square replaced (30 Oct 2026), the
+        /// menus show Durbar Square instead.
         /// </summary>
         [TestCase("kathmandu-courtyard")]
         [TestCase("village-terrace")]
         [TestCase("vintage-home")]
         [TestCase("rooftop-cafe")]
+        [TestCase("himalayan-vista")]
         [TestCase("")]
         [TestCase(null)]
-        public void ABackgroundTheGameDoesNotHave_ShowsTheHimalayanVista(string id)
+        public void ABackgroundTheGameDoesNotHave_ShowsDurbarSquare(string id)
         {
-            Assert.AreSame(_vista, Library().BackgroundPicture(id, out string shown));
-            Assert.AreEqual(Vista, shown);
+            Assert.AreSame(_durbar, Library().BackgroundPicture(id, out string shown));
+            Assert.AreEqual(Durbar, shown);
         }
 
         [Test]
-        public void ABackgroundWithoutArtYet_ShowsTheHimalayanVista()
+        public void ABackgroundWithoutArtYet_ShowsDurbarSquare()
         {
-            Assert.AreSame(_vista, Library().BackgroundPicture(Monastery, out string shown));
-            Assert.AreEqual(Vista, shown);
+            Assert.AreSame(_durbar, Library().BackgroundPicture(Monastery, out string shown));
+            Assert.AreEqual(Durbar, shown);
         }
 
         [Test]
@@ -196,9 +198,9 @@ namespace Callbreak.Tests.EditMode.Unity
 
             Sprite dusk = MakeSprite("dusk");
             library.Set(
-                new[] { new TableBackdropLibrary.Picture(Vista, _vista) },
+                new[] { new TableBackdropLibrary.Picture(Durbar, _durbar) },
                 new[] { new TableBackdropLibrary.Picture(Green, _green, _border), new TableBackdropLibrary.Picture(Dusk, dusk) },
-                Vista,
+                Durbar,
                 Green);
             Assert.AreSame(dusk, library.TablePicture(Dusk, out _));
             Assert.IsNull(library.TableFrame(Dusk), "Dusk Himalaya is a scene: no border");
@@ -241,7 +243,7 @@ namespace Callbreak.Tests.EditMode.Unity
             library.Set(
                 new[]
                 {
-                    new TableBackdropLibrary.Picture(Vista, _vista),
+                    new TableBackdropLibrary.Picture(Durbar, _durbar),
                     new TableBackdropLibrary.Picture(Pokhara, _pokhara),
                     new TableBackdropLibrary.Picture(Monastery, null),
                 },
@@ -251,7 +253,7 @@ namespace Callbreak.Tests.EditMode.Unity
                     new TableBackdropLibrary.Picture(Indigo, _indigo, _border),
                     new TableBackdropLibrary.Picture(Dusk, null),
                 },
-                Vista,
+                Durbar,
                 Green);
             return library;
         }

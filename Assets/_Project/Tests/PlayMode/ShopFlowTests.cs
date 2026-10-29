@@ -20,8 +20,8 @@ namespace Callbreak.Tests.PlayMode
     /// drawer is always open, with its three category buttons stacked in its middle and no
     /// storefront disc of its own; every category shows exactly three tiles side by side and
     /// nothing scrolls; in each the second item costs 500 coins and the third 750; the drawer
-    /// switches categories and each keeps its choice; the backgrounds are the Himalayan Vista,
-    /// Pokhara Lakeside and Monastery Garden, and one that left the shop falls back to the Vista; a
+    /// switches categories and each keeps its choice; the backgrounds are Durbar Square,
+    /// Pokhara Lakeside and Monastery Garden, and one that left the shop falls back to Durbar Square; a
     /// background and a deck that were bought are put to use; a table and a deck are bought after
     /// a confirmation and then put to use; not enough coins offers the Earn Coins page or Not now;
     /// and Back leaves. Saves go to a temporary folder.
@@ -145,13 +145,13 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator TheBackgrounds_AreTheHimalayanVistaPokharaLakesideAndMonasteryGarden_WithTheirPictures()
+        public IEnumerator TheBackgrounds_AreDurbarSquarePokharaLakesideAndMonasteryGarden_WithTheirPictures()
         {
             yield return OpenShop();
             Press("CategoryButton1");
 
-            string[] names = { "ui.shop.background.himalayan_vista", "ui.shop.background.pokhara_lakeside", "ui.shop.background.monastery_garden" };
-            string[] pictures = { "Thumb_HimalayanVista", "Thumb_PokharaLakeside", "Thumb_MonasteryGarden" };
+            string[] names = { "ui.shop.background.durbar_square", "ui.shop.background.pokhara_lakeside", "ui.shop.background.monastery_garden" };
+            string[] pictures = { "Thumb_DurbarSquare", "Thumb_PokharaLakeside", "Thumb_MonasteryGarden" };
             for (int i = 0; i < TilesShown; i++)
             {
                 Assert.AreEqual(Text(names[i]), Tile(Backgrounds, i).NameLabel.text);
@@ -160,7 +160,7 @@ namespace Callbreak.Tests.PlayMode
             }
 
             Assert.IsTrue(Tile(Backgrounds, 0).IsChosen, "the shop opens with each choice on its equipped item");
-            Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Backgrounds, 0).StatusLabel.text, "the Himalayan Vista is the default");
+            Assert.AreEqual(Text("ui.shop.status.equipped"), Tile(Backgrounds, 0).StatusLabel.text, "Durbar Square is the default");
             string[] prices = { null, "500", "750" };
             for (int i = 1; i < TilesShown; i++)
             {
@@ -171,10 +171,10 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator ABackgroundThatLeftTheShop_ShowsTheHimalayanVistaEquipped()
+        public IEnumerator ABackgroundThatLeftTheShop_ShowsDurbarSquareEquipped()
         {
             yield return OpenShop(saves => saves.Save(CosmeticsService.SaveKey, new CosmeticsData { equippedBackgroundId = "vintage-home" }));
-            Assert.AreEqual(CosmeticCatalog.Backgrounds.HimalayanVista, _game.Services.Resolve<ICosmeticsShop>().Equipped(CosmeticKind.Background));
+            Assert.AreEqual(CosmeticCatalog.Backgrounds.DurbarSquare, _game.Services.Resolve<ICosmeticsShop>().Equipped(CosmeticKind.Background));
 
             Press("CategoryButton1");
             Assert.AreEqual(3, View.Tiles(Backgrounds).Count);

@@ -638,6 +638,40 @@ namespace Callbreak.Editor.Screens
 
         private static void BuildPictures(ScreenBuildContext ctx)
         {
+            var pictures = ctx.Root.gameObject.AddComponent<ShopPictures>();
+            FillPictures(pictures, ctx.Warnings);
+            ctx.Bound["_pictures"] = pictures;
+        }
+
+        /// <summary>
+        /// Gives the saved shop prefab's pictures the catalogue's ids as they are now (Durbar Square
+        /// took the Himalayan Vista's place, 30 Oct 2026); everything else in the prefab stays as it is.
+        /// </summary>
+        public static string RefreshPictures()
+        {
+            string path = ScreenLayoutBuilder.PrefabPath("Shop");
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                var pictures = root.GetComponent<ShopPictures>();
+                if (pictures == null)
+                {
+                    return $"FAILED: {path} has no pictures";
+                }
+
+                var warnings = new List<string>();
+                FillPictures(pictures, warnings);
+                PrefabUtility.SaveAsPrefabAsset(root, path, out bool saved);
+                return (saved ? $"saved {path} with the catalogue's pictures" : $"FAILED to save {path}") + string.Concat(warnings.Select(w => "; " + w));
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        private static void FillPictures(ShopPictures pictures, List<string> warnings)
+        {
             var keys = new List<string>();
             var sprites = new List<Object>();
             foreach (CosmeticKind kind in new[] { CosmeticKind.Background, CosmeticKind.Table })
@@ -647,7 +681,7 @@ namespace Callbreak.Editor.Screens
                     Sprite sprite = Load(PictureArt(kind, item.Id));
                     if (sprite == null)
                     {
-                        ctx.Warnings.Add($"no picture for {kind} {item.Id}");
+                        warnings.Add($"no picture for {kind} {item.Id}");
                         continue;
                     }
 
@@ -656,7 +690,6 @@ namespace Callbreak.Editor.Screens
                 }
             }
 
-            var pictures = ctx.Root.gameObject.AddComponent<ShopPictures>();
             var so = new SerializedObject(pictures);
             SerializedProperty keyList = so.FindProperty("_keys");
             keyList.arraySize = keys.Count;
@@ -667,7 +700,6 @@ namespace Callbreak.Editor.Screens
 
             SetArray(so.FindProperty("_sprites"), sprites.ToArray());
             so.ApplyModifiedPropertiesWithoutUndo();
-            ctx.Bound["_pictures"] = pictures;
         }
 
         /// <summary>

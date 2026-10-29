@@ -15,35 +15,35 @@ namespace Callbreak.Tests.PlayMode
     /// The background behind the menus (V2, the owner, 28 Oct 2026): the one the player equipped in
     /// the shop, from the moment the shop is known, and a new one as soon as it is equipped; a screen
     /// that is hidden catches up when it shows again. A background the game has no art for shows the
-    /// Himalayan Vista. Here in PlayMode, where the component's enable and disable run.
+    /// Durbar Square. Here in PlayMode, where the component's enable and disable run.
     /// </summary>
     public sealed class EquippedBackgroundTests
     {
-        private const string Vista = "himalayan-vista";
+        private const string Durbar = "durbar-square";
         private const string Pokhara = "pokhara-lakeside";
         private const string Monastery = "monastery-garden";
 
         private readonly List<Object> _made = new List<Object>();
-        private Sprite _vista;
+        private Sprite _durbar;
         private Sprite _pokhara;
         private TableBackdropLibrary _library;
 
         [SetUp]
         public void SetUp()
         {
-            _vista = MakeSprite("vista");
+            _durbar = MakeSprite("durbar");
             _pokhara = MakeSprite("pokhara");
             _library = ScriptableObject.CreateInstance<TableBackdropLibrary>();
             _made.Add(_library);
             _library.Set(
                 new[]
                 {
-                    new TableBackdropLibrary.Picture(Vista, _vista),
+                    new TableBackdropLibrary.Picture(Durbar, _durbar),
                     new TableBackdropLibrary.Picture(Pokhara, _pokhara),
                     new TableBackdropLibrary.Picture(Monastery, null),
                 },
                 Array.Empty<TableBackdropLibrary.Picture>(),
-                Vista,
+                Durbar,
                 "himalayan-ivory");
         }
 
@@ -63,25 +63,25 @@ namespace Callbreak.Tests.PlayMode
         {
             var shop = new Shop { Background = Pokhara };
             EquippedBackground background = Make(out Image image);
-            Assert.AreSame(_vista, background.Shown, "the prefab's picture until the shop is known");
+            Assert.AreSame(_durbar, background.Shown, "the prefab's picture until the shop is known");
 
             background.Construct(shop);
             Assert.AreSame(_pokhara, image.sprite, "the equipped background, once the shop is known");
 
-            shop.Equip(CosmeticKind.Background, Vista);
-            Assert.AreSame(_vista, image.sprite, "a new background shows at once");
+            shop.Equip(CosmeticKind.Background, Durbar);
+            Assert.AreSame(_durbar, image.sprite, "a new background shows at once");
         }
 
         [Test]
         public void AHiddenScreen_CatchesUpWhenItShowsAgain()
         {
-            var shop = new Shop { Background = Vista };
+            var shop = new Shop { Background = Durbar };
             EquippedBackground background = Make(out Image image);
             background.Construct(shop);
 
             background.gameObject.SetActive(false);
             shop.Equip(CosmeticKind.Background, Pokhara);
-            Assert.AreSame(_vista, image.sprite, "a hidden screen does not follow");
+            Assert.AreSame(_durbar, image.sprite, "a hidden screen does not follow");
             Assert.AreEqual(0, shop.Listeners, "nor listens");
 
             background.gameObject.SetActive(true);
@@ -106,14 +106,14 @@ namespace Callbreak.Tests.PlayMode
         [TestCase("kathmandu-courtyard")]
         [TestCase(Monastery)]
         [TestCase(null)]
-        public void ABackgroundWithoutArt_ShowsTheHimalayanVista(string id)
+        public void ABackgroundWithoutArt_ShowsDurbarSquare(string id)
         {
             EquippedBackground background = Make(out Image image);
             image.sprite = _pokhara;
 
             background.Construct(new Shop { Background = id });
 
-            Assert.AreSame(_vista, image.sprite);
+            Assert.AreSame(_durbar, image.sprite);
         }
 
         private EquippedBackground Make(out Image image)
@@ -121,7 +121,7 @@ namespace Callbreak.Tests.PlayMode
             var go = new GameObject("Background", typeof(RectTransform));
             _made.Add(go);
             image = go.AddComponent<Image>();
-            image.sprite = _vista;
+            image.sprite = _durbar;
             EquippedBackground background = go.AddComponent<EquippedBackground>();
             Bind(background, "_image", image);
             Bind(background, "_library", _library);

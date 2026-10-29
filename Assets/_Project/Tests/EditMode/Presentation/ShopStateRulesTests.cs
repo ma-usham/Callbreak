@@ -29,7 +29,7 @@ namespace Callbreak.Tests.EditMode.Presentation
             _shop.Add(CosmeticKind.Deck, "classic-crimson", 0);
             _shop.Add(CosmeticKind.Deck, "himalayan-ivory", 0);
             _shop.Add(CosmeticKind.Deck, "kathmandu-gold", 0);
-            foreach (string id in new[] { "himalayan-vista", "pokhara-lakeside", "monastery-garden" })
+            foreach (string id in new[] { "durbar-square", "pokhara-lakeside", "monastery-garden" })
             {
                 _shop.Add(CosmeticKind.Background, id, 0);
             }
@@ -38,7 +38,7 @@ namespace Callbreak.Tests.EditMode.Presentation
             _shop.Add(CosmeticKind.Table, "royal-crimson", 350);
             _shop.Add(CosmeticKind.Table, "heritage-walnut", 250);
             _shop.EquippedIds[CosmeticKind.Deck] = "classic-crimson";
-            _shop.EquippedIds[CosmeticKind.Background] = "himalayan-vista";
+            _shop.EquippedIds[CosmeticKind.Background] = "durbar-square";
             _shop.EquippedIds[CosmeticKind.Table] = "himalayan-ivory";
             _wallet = new FakeWallet { Coins = 500 };
             _state = new ShopState(_shop, _wallet);
@@ -49,7 +49,7 @@ namespace Callbreak.Tests.EditMode.Presentation
         {
             Assert.AreEqual(CosmeticKind.Deck, _state.Category);
             Assert.AreEqual(0, _state.ChosenIndex(CosmeticKind.Deck));
-            Assert.AreEqual(0, _state.ChosenIndex(CosmeticKind.Background), "Himalayan Vista, the first");
+            Assert.AreEqual(0, _state.ChosenIndex(CosmeticKind.Background), "Durbar Square, the first");
             Assert.AreEqual(0, _state.ChosenIndex(CosmeticKind.Table));
         }
 

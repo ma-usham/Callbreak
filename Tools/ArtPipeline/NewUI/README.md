@@ -11,8 +11,8 @@ scripts are their source:
 
 | Script | Draws | Figma |
 | --- | --- | --- |
-| `scenes.py` | the drawing kit (peaks, hills, haze, pagoda, flags, houses, rhododendrons...) and the menu backdrop, the Himalayan Vista | Art/Menu Backdrop 180:384 |
-| `shop_scenes.py` | Pokhara Lakeside and Monastery Garden | Art/Scene · Pokhara Lakeside 209:7413, · Monastery Garden 209:7414 |
+| `scenes.py` | the drawing kit (peaks, hills, haze, pagoda, flags, houses, rhododendrons...) and the menu backdrop, the Himalayan Vista (no longer in the game) | Art/Menu Backdrop 180:384 |
+| `shop_scenes.py` | Durbar Square (the default background since 30 Oct 2026), Pokhara Lakeside and Monastery Garden | Art/Menu Option · Durbar Square 240:103587, Art/Scene · Pokhara Lakeside 209:7413, · Monastery Garden 209:7414 |
 | `cloths.py` | the Green and Indigo dhaka cloths, their border, Dusk Himalaya | Art/Dhaka Cloth · Green 191:59, · Indigo 191:61, Art/Cloth Overlay 191:626, Art/Dusk Himalaya 191:649 |
 
 `scenes.set_bleed` widens a scene by the backdrop frame's margin. Whatever fills the margin draws
@@ -22,6 +22,8 @@ on its own random numbers, so the 1920 × 1080 picture inside stays exactly as F
 python -P Tools/ArtPipeline/NewUI/build.py
 ```
 
+Names after a work dir rebuild only those pictures, e.g. `build.py <work-dir> DurbarSquare`.
+
 `build.py` writes:
 - `Art/Backgrounds/BG_<Name>.png` and `Art/Tables/Table_<Name>.png`: 2230 × 1255, the frame with its
   margin, with Figma's grain;
@@ -29,6 +31,19 @@ python -P Tools/ArtPipeline/NewUI/build.py
 - the shop's `Thumb_<Name>.png` and `Preview_<Name>.png`, cropped as Figma's shop tiles show them.
 
 Then run `Callbreak.Editor.TableBackdropBuilder.Build()` in the Editor to refill the library.
+
+## The "Reconnecting…" Dhaka Ring: drawn here
+
+`reconnecting.py` draws the table's Dhaka Ring (Figma "Reconnecting A · Dhaka Ring" 238:3 on
+"V1 Rebuild · Options") from Figma's colours, sizes and effects: `Art/UI/Table/UI_Reconnecting_Ring.png`
+(the ring that turns) and `UI_Reconnecting_Seal.png` (the seal that stays), two pixels to a canvas unit.
+Their translucent pixels are set for the table's linear-light blending over the dimmed cloth.
+
+```bash
+python -P Tools/ArtPipeline/NewUI/reconnecting.py
+```
+
+Then run `Callbreak.Editor.Screens.TableCustomizer.UseDhakaRing()` in the Editor.
 
 ## Logos and the Cloths tab icon: cut from Figma
 

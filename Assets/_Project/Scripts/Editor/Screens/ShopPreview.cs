@@ -55,9 +55,9 @@ namespace Callbreak.Editor.Screens
                 Prices(CosmeticKind.Deck),
                 chosen: 0);
 
-            string[] backgrounds = { CosmeticCatalog.Backgrounds.HimalayanVista, CosmeticCatalog.Backgrounds.PokharaLakeside, CosmeticCatalog.Backgrounds.MonasteryGarden };
+            string[] backgrounds = { CosmeticCatalog.Backgrounds.DurbarSquare, CosmeticCatalog.Backgrounds.PokharaLakeside, CosmeticCatalog.Backgrounds.MonasteryGarden };
             Fill(view, Backgrounds,
-                new[] { "Himalayan Vista", "Pokhara Lakeside", "Monastery Garden" },
+                new[] { "Durbar Square", "Pokhara Lakeside", "Monastery Garden" },
                 System.Array.ConvertAll(backgrounds, id => view.Picture(CosmeticKind.Background, id)),
                 firstOwned,
                 Prices(CosmeticKind.Background),

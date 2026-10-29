@@ -1,10 +1,11 @@
 """Writes the game's scenery, cloths and shop pictures from the vector scenes (ADR 058).
 
-Usage: python -P Tools/ArtPipeline/NewUI/build.py [work-dir]
+Usage: python -P Tools/ArtPipeline/NewUI/build.py [work-dir [Name ...]]
 Needs Python 3 with numpy and Pillow, and Microsoft Edge (render.py). The work dir keeps the SVGs and
-renders (default: a temp folder). Writes, under Assets/_Project/Art:
-  Backgrounds/BG_<Name>.png        the shop's backgrounds, shown behind the menus (scenes.menu,
-                                   shop_scenes.pokhara and .monastery)
+renders (default: a temp folder); names after it (DurbarSquare, GreenDhaka, Frame for the border...) rebuild only those
+pictures. Writes, under Assets/_Project/Art:
+  Backgrounds/BG_<Name>.png        the shop's backgrounds, shown behind the menus (shop_scenes.durbar,
+                                   the default since 30 Oct 2026, .pokhara and .monastery)
   Tables/Table_<Name>.png          the cloths, filling the screen at the table (cloths.dhaka, .dusk)
   Tables/Frame_Dhaka.png           the dhaka cloths' border, tiled round the screen (cloths.frame), 2x
   Shop/Backgrounds/Thumb_<Name>.png  the Background shop's tiles, cropped as Figma's ScenePicture frames
@@ -36,12 +37,13 @@ BLEED_X = (FRAME_W * CANVAS_PER_FRAME - 1920) / 2
 BLEED_Y = (FRAME_H * CANVAS_PER_FRAME - 1080) / 2
 
 # id art name -> (svg maker, folder, grain density)
-BACKGROUNDS = {"HimalayanVista": S.menu, "PokharaLakeside": shop_scenes.pokhara, "MonasteryGarden": shop_scenes.monastery}
+BACKGROUNDS = {"DurbarSquare": shop_scenes.durbar, "PokharaLakeside": shop_scenes.pokhara, "MonasteryGarden": shop_scenes.monastery}
 CLOTHS = {"GreenDhaka": lambda: cloths.dhaka("green"), "IndigoDhaka": lambda: cloths.dhaka("indigo"), "DuskHimalaya": cloths.dusk}
 
 # The shop tiles' crops of the 1920 x 1080 picture, as Figma's ScenePicture / ClothPicture frames show them
-# (x, y, width); the height follows from the game's picture size.
-THUMBS = {"HimalayanVista": (1140, 200, 680), "PokharaLakeside": (1080, 180, 720), "MonasteryGarden": (1140, 220, 720)}
+# (x, y, width; Durbar Square's, which Figma's shop has no tile for, on its right-hand temples); the height
+# follows from the game's picture size.
+THUMBS = {"DurbarSquare": (1240, 220, 680), "PokharaLakeside": (1080, 180, 720), "MonasteryGarden": (1140, 220, 720)}
 THUMB_SIZE = (590, 670)
 PREVIEWS = {"GreenDhaka": (579, 141, 762), "IndigoDhaka": (579, 141, 762), "DuskHimalaya": (579, 141, 762)}
 PREVIEW_SIZE = (603, 633)
@@ -77,13 +79,16 @@ def crop(src, box, size, out, radius=0):
 
 def main():
     work = sys.argv[1] if len(sys.argv) > 1 else tempfile.mkdtemp(prefix="newui-art-")
+    only = set(sys.argv[2:])
     os.makedirs(work, exist_ok=True)
     pictures = [(name, fn, os.path.join(ART, "Backgrounds", f"BG_{name}.png")) for name, fn in BACKGROUNDS.items()]
     pictures += [(name, fn, os.path.join(ART, "Tables", f"Table_{name}.png")) for name, fn in CLOTHS.items()]
+    # Each keeps its own grain seed, whichever are rebuilt.
+    pictures = [(i, name, fn, out) for i, (name, fn, out) in enumerate(pictures) if not only or name in only]
 
     # The whole pictures, with the frame's bleed.
     S.set_bleed(BLEED_X, BLEED_Y)
-    for i, (name, fn, out) in enumerate(pictures):
+    for i, name, fn, out in pictures:
         svg = write_svg(os.path.join(work, f"{name}_frame.svg"), fn())
         render(svg, out, FRAME_W, FRAME_H)
         grain(out, 0.4, 58 + i)
@@ -91,7 +96,7 @@ def main():
 
     # The shop's crops, from the 1920 x 1080 picture alone.
     S.set_bleed(0, 0)
-    for i, (name, fn, _) in enumerate(pictures):
+    for i, name, fn, _ in pictures:
         svg = write_svg(os.path.join(work, f"{name}.svg"), fn())
         flat = os.path.join(work, f"{name}.png")
         render(svg, flat, 1920, 1080)
@@ -105,6 +110,8 @@ def main():
         print("wrote", os.path.relpath(out, ROOT))
 
     # The dhaka cloths' border, at twice the canvas size.
+    if only and "Frame" not in only:
+        return
     svg = write_svg(os.path.join(work, "frame.svg"), cloths.frame())
     out = os.path.join(ART, "Tables", "Frame_Dhaka.png")
     render(svg, out, cloths.FRAME * 2, cloths.FRAME * 2, transparent=True)

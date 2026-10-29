@@ -1,9 +1,11 @@
 """The Background shop's scenes as vector art, in the menu backdrop's style (scenes.py).
 
-Usage: python -P shop_scenes.py <out-dir> [bleed-x bleed-y]   writes pokhara.svg and monastery.svg
-(1920 x 1080, plus the bleed on each side when given: scenes.set_bleed).
-The Himalayan Vista, the default, is the menu backdrop itself (scenes.menu). Like it, each scene keeps
-its subject to one side and the middle calm, where the logo and the menu buttons stand.
+Usage: python -P shop_scenes.py <out-dir> [bleed-x bleed-y]   writes pokhara.svg, monastery.svg and
+durbar.svg (1920 x 1080, plus the bleed on each side when given: scenes.set_bleed).
+Like the menu backdrop (scenes.menu, the Himalayan Vista, the default until 30 Oct 2026), each scene keeps
+its subject to the sides and the middle calm, where the logo and the menu buttons stand.
+- Durbar Square, the default since 30 Oct 2026 (the owner's pick): golden hour in a Kathmandu durbar
+  square, brick temples on both sides, prayer flags, pigeons on the paving.
 - Pokhara Lakeside: Phewa lake under the Annapurnas and Machhapuchhre, their reflection, the Tal Barahi
   temple on its island, painted doonga boats, paragliders off Sarangkot, bougainvillea on the bank.
 - Monastery Garden: a white stupa with the Buddha's eyes and a gilt spire, prayer flags fanning from it,
@@ -483,12 +485,82 @@ def monastery():
     return S.svg("".join(b), defs)
 
 
+# The temples' brick and carved wood at golden hour.
+BRICK = dict(stone="#D2B48F", stone_top="#E6CDA9", stone_dark="#A9845C", wood="#5E2E19", wood_dark="#45200F", trim="#A8402B",
+             roof="#7A3A22", roof_dark="#5E2A17", eave="#33160B", gold="#E0B04E", gold_dark="#A87A2C", door="#2C130A")
+
+
+def lift(defs, gid, colour, alpha, cx=960, cy=520, rx=640, ry=500):
+    defs.append(f'<radialGradient id="{gid}" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="{colour}" stop-opacity="{alpha}"/><stop offset="1" stop-color="{colour}" stop-opacity="0"/></radialGradient>')
+    return f'<ellipse cx="{cx}" cy="{cy}" rx="{rx}" ry="{ry}" fill="url(#{gid})"/>'
+
+
+def durbar():
+    """Durbar Square at golden hour (the owner's main menu background, 30 Oct 2026; Figma "Art/Menu
+    Option · Durbar Square" 240:103587, drawn by the options' menu_variants.py): a tall and a smaller
+    brick temple on each side, the town's brick houses behind them, the snow range in the haze, prayer
+    flags, birds, pigeons on the paved square. The middle stays light under the menu."""
+    rnd = random.Random(61)
+    defs, b = [], []
+    defs.append(grad("dsky", [(0, "#F3D3A8", 1), (0.55, "#F8E6CC", 1), (1, "#FBF0E1", 1)]))
+    b.append(S.full("url(#dsky)"))
+    b.append('<circle cx="960" cy="600" r="420" fill="#FFF3DA" opacity="0.45"/>')
+    b.append(S.hills([(-20, 560), (300, 520), (700, 548), (1100, 515), (1500, 540), (1940, 520)], 0.04, rnd, "#E8CFB4", 700))
+    # The margin's own peaks and houses stand clear of the picture, so it stays as Figma shows it.
+    if S.BX:
+        b.append(S.peak(-230, 450, 240, 200, 620, S.EXT, "#D9B9A6", "#C7A08C", "#FFF4E6", "#F0D6C2", 0.45))
+        b.append(S.peak(2170, 440, 220, 240, 620, S.EXT, "#D9B9A6", "#C7A08C", "#FFF4E6", "#F0D6C2", 0.45))
+    for px, py, wl, wr in [(260, 430, 240, 260), (720, 400, 280, 260), (1250, 410, 260, 280), (1700, 430, 260, 240)]:
+        b.append(S.peak(px, py, wl, wr, 620, rnd, "#D9B9A6", "#C7A08C", "#FFF4E6", "#F0D6C2", 0.45))
+    b.append(S.band(520, 700, "#FBEBD6", 0, 0.85, 0.5, "dhaze", defs))
+    # The town behind the square: brick houses with carved windows, a low line both sides.
+    for i in range(int(S.BX / 52) + 1 if S.BX else 0):
+        for side in (0, 1):
+            w = S.EXT.uniform(44, 64)
+            x = min(-(i + 1) * 52 + S.EXT.uniform(-6, 6), -w * 1.08) if side == 0 else max(1920 + i * 56 + S.EXT.uniform(-6, 6), 1920 + w * 0.08)
+            b.append(S.house(x, 742, w, w * S.EXT.uniform(0.9, 1.3), "#B4553A", "#93432D", "#6E3420", "#4E2416", "#3A1C10"))
+    for side in (0, 1):
+        for i in range(10):
+            x = (20 + i * 52 + rnd.uniform(-6, 6)) if side == 0 else (1360 + i * 56 + rnd.uniform(-6, 6))
+            w = rnd.uniform(44, 64)
+            hgt = w * rnd.uniform(0.9, 1.3)
+            b.append(S.house(x, 742, w, hgt, "#B4553A", "#93432D", "#6E3420", "#4E2416", "#3A1C10"))
+    # The temples: a tall one each side and a smaller one beside it.
+    b.append(S.pagoda(520, 812, 0.4, BRICK))
+    b.append(S.pagoda(1420, 812, 0.38, BRICK))
+    b.append(S.pagoda(220, 900, 0.82, BRICK))
+    b.append(S.pagoda(1710, 900, 0.78, BRICK))
+    # The square: warm paving in rows, light in the middle under the buttons.
+    defs.append(grad("pave", [(0, "#E7CFAE", 1), (1, "#D9BB93", 1)]))
+    b.append(f'<rect x="{f(-20 - S.BX)}" y="840" width="{f(W + 40 + 2 * S.BX)}" height="{f(H - 820 + S.BY)}" fill="url(#pave)"/>')
+    margin = 60 * math.ceil(S.BX / 60)
+    for k, yy in enumerate(range(860, H + 40 + math.ceil(S.BY), 26)):
+        b.append(f'<rect x="{f(-20 - S.BX)}" y="{yy}" width="{f(W + 40 + 2 * S.BX)}" height="1.6" fill="#B89670" opacity="0.45"/>')
+        for x in range(-20 + (k % 2) * 30 - margin, W + 40 + margin, 60):
+            b.append(f'<rect x="{x}" y="{yy}" width="1.4" height="26" fill="#B89670" opacity="0.3"/>')
+    if S.BX:
+        b.append(S.flags(S.string((-20 - S.BX, 200), (-20, 300), 30), S.FLAGS[3:] + S.FLAGS[:3], S.EXT, 0.95))
+        b.append(S.flags(S.string((1940, 300), (1940 + S.BX, 200), 30), S.FLAGS, S.EXT, 0.95))
+    b.append(S.flags(S.string((-20, 300), (520, 470), 60), S.FLAGS, rnd, 0.95))
+    b.append(S.flags(S.string((1940, 300), (1400, 470), 60), S.FLAGS[2:] + S.FLAGS[:2], rnd, 0.95))
+    # Figma flies the birds at x 820-1120, where the game's Temple Crown logo stands: they fly right of it.
+    b.append(birds([(1280, 230), (1320, 205), (1365, 240), (1460, 215), (1500, 190), (1540, 228)], 1.1))
+    # Pigeons on the square, at the sides.
+    for _ in range(14):
+        x = rnd.choice([rnd.uniform(90, 470), rnd.uniform(1450, 1830)])
+        y = rnd.uniform(930, 1050)
+        b.append(f'<ellipse cx="{f(x)}" cy="{f(y)}" rx="9" ry="6" fill="#8E8A92"/><circle cx="{f(x + 7)}" cy="{f(y - 5)}" r="4" fill="#7C7880"/>')
+    b.append(lift(defs, "dlift", "#FFF6E8", 0.7))
+    b.append(lift(defs, "dfoot", "#FBF2E4", 0.8, 960, 1000, 620, 110))
+    return S.svg("".join(b), defs)
+
+
 if __name__ == "__main__":
     out = sys.argv[1]
     if len(sys.argv) > 3:
         S.set_bleed(float(sys.argv[2]), float(sys.argv[3]))
     os.makedirs(out, exist_ok=True)
-    for name, fn in [("pokhara", pokhara), ("monastery", monastery)]:
+    for name, fn in [("pokhara", pokhara), ("monastery", monastery), ("durbar", durbar)]:
         with open(os.path.join(out, name + ".svg"), "w", encoding="utf-8") as fh:
             fh.write(fn())
         print(name, os.path.getsize(os.path.join(out, name + ".svg")))

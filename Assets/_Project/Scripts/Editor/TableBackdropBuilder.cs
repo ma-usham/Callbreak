@@ -58,7 +58,7 @@ namespace Callbreak.Editor
             [CosmeticCatalog.Tables.IndigoDhaka] = DhakaFramePath,
         };
 
-        /// <summary>"himalayan-vista" → "HimalayanVista": the name the id's art files carry.</summary>
+        /// <summary>"durbar-square" → "DurbarSquare": the name the id's art files carry.</summary>
         public static string ArtName(string id)
         {
             var name = new StringBuilder(id.Length);

@@ -12,11 +12,12 @@ namespace Callbreak.Application.Cosmetics
     /// kind the first item is owned from the start (price 0) and the other two cost coins: 500 for
     /// the second and 750 for the third (the owner, 6 Oct 2026). The defaults are the game's look
     /// before the shop: Classic Crimson cards, the Himalayan Vista scenery and the Himalayan Ivory
-    /// table, now the Green Dhaka cloth (ADR 058). Names are localization keys: the
+    /// table; now the Green Dhaka cloth (ADR 058) and Durbar Square (the owner, 30 Oct 2026). Names are localization keys: the
     /// decks keep theirs, the rest are <c>ui.shop.&lt;kind&gt;.&lt;id with underscores&gt;</c>. An id
     /// that has left the shop (Kathmandu Courtyard, Village Terrace and Vintage Home, 5 Oct 2026) is
     /// unknown from then on, and a save file that still names it falls back to the default. The
-    /// tables became cloths, each in its table's place (<see cref="Tables.Renamed"/>).
+    /// tables became cloths, each in its table's place (<see cref="Tables.Renamed"/>), and Durbar
+    /// Square took the Himalayan Vista's (<see cref="Backgrounds.Renamed"/>).
     /// </summary>
     public static class CosmeticCatalog
     {
@@ -36,16 +37,26 @@ namespace Callbreak.Application.Cosmetics
 
         public static class Backgrounds
         {
-            public const string HimalayanVista = "himalayan-vista";
+            public const string DurbarSquare = "durbar-square";
             public const string PokharaLakeside = "pokhara-lakeside";
             public const string MonasteryGarden = "monastery-garden";
-            public const string Default = HimalayanVista;
+            public const string Default = DurbarSquare;
 
             /// <summary>In coins (the owner, 6 Oct 2026).</summary>
             public const int PokharaLakesidePrice = 500;
 
             /// <summary>In coins (the owner, 6 Oct 2026).</summary>
             public const int MonasteryGardenPrice = 750;
+
+            /// <summary>
+            /// The backgrounds the shop gave until 30 Oct 2026, each with the one in its place: the free
+            /// Himalayan Vista became Durbar Square (the owner: "use durbar square as mainmenu bg image"),
+            /// so a save file that names it owns and equips Durbar Square instead.
+            /// </summary>
+            public static readonly IReadOnlyDictionary<string, string> Renamed = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>
+            {
+                ["himalayan-vista"] = DurbarSquare,
+            });
         }
 
         /// <summary>
@@ -84,7 +95,7 @@ namespace Callbreak.Application.Cosmetics
             new CosmeticItem(CosmeticKind.Deck, Decks.KathmanduGold, "ui.deck.kathmandu_gold", Decks.KathmanduGoldPrice));
 
         private static readonly ReadOnlyCollection<CosmeticItem> BackgroundItems = Items(
-            new CosmeticItem(CosmeticKind.Background, Backgrounds.HimalayanVista, "ui.shop.background.himalayan_vista", 0),
+            new CosmeticItem(CosmeticKind.Background, Backgrounds.DurbarSquare, "ui.shop.background.durbar_square", 0),
             new CosmeticItem(CosmeticKind.Background, Backgrounds.PokharaLakeside, "ui.shop.background.pokhara_lakeside", Backgrounds.PokharaLakesidePrice),
             new CosmeticItem(CosmeticKind.Background, Backgrounds.MonasteryGarden, "ui.shop.background.monastery_garden", Backgrounds.MonasteryGardenPrice));
 

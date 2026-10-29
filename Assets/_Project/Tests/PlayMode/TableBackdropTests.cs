@@ -18,7 +18,7 @@ namespace Callbreak.Tests.PlayMode
     /// menus, and changes as soon as another is equipped; the equipped table fills the screen behind
     /// everything at the table, and a change in the shop shows at the next match. A table the build
     /// has no art for shows the default and the log says so once. A background the game has no art
-    /// for, or no longer has (the owner, 5 Oct 2026), equipped or saved, shows the Himalayan Vista.
+    /// for, or no longer has (the owner, 5 Oct 2026), equipped or saved, shows the default, Durbar Square.
     /// What must show for an id comes from the game's own library, so these hold whatever art is in.
     /// Saves go to a temporary folder.
     /// </summary>
@@ -55,7 +55,7 @@ namespace Callbreak.Tests.PlayMode
                 saves.Save(CosmeticsService.SaveKey, bought);
             });
             ICosmeticsShop shop = _game.Services.Resolve<ICosmeticsShop>();
-            AssertMenusShow(CosmeticCatalog.Backgrounds.HimalayanVista, "the default background before anything is equipped");
+            AssertMenusShow(CosmeticCatalog.Backgrounds.DurbarSquare, "the default background before anything is equipped");
 
             shop.Equip(CosmeticKind.Background, CosmeticCatalog.Backgrounds.PokharaLakeside);
             AssertMenusShow(CosmeticCatalog.Backgrounds.PokharaLakeside, "a background shows behind the menus as soon as it is equipped");
@@ -99,18 +99,18 @@ namespace Callbreak.Tests.PlayMode
 
         /// <summary>
         /// The owner (5 Oct 2026): the game keeps three backgrounds. A player who still has one of the
-        /// three that left equipped (Kathmandu Courtyard here) sees the Himalayan Vista behind the menus,
+        /// three that left equipped (Kathmandu Courtyard here) sees Durbar Square behind the menus,
         /// and the table they equipped at the table; the table does not name the background.
         /// </summary>
         [UnityTest]
-        public IEnumerator ARemovedBackground_ShowsTheHimalayanVistaBehindTheMenus()
+        public IEnumerator ARemovedBackground_ShowsDurbarSquareBehindTheMenus()
         {
             const string removed = "kathmandu-courtyard";
             string indigo = CosmeticCatalog.Tables.IndigoDhaka;
             var shop = new EquippedOnly(removed, indigo);
             yield return _game.Boot(extra: builder => builder.RegisterInstance<ICosmeticsShop>(shop));
             Assert.AreSame(shop, _game.Services.Resolve<ICosmeticsShop>());
-            AssertMenusShow(CosmeticCatalog.Backgrounds.HimalayanVista, "the default for a removed background");
+            AssertMenusShow(CosmeticCatalog.Backgrounds.DurbarSquare, "the default for a removed background");
 
             _warnings.Clear();
             GameFixture.Press(_game.MenuRouter, "PlayOfflineButton");
@@ -126,10 +126,10 @@ namespace Callbreak.Tests.PlayMode
 
         /// <summary>
         /// The same from a save file written before 5 Oct 2026, through the game's own shop: the menus
-        /// show the Himalayan Vista and the match shows the table the shop has equipped.
+        /// show Durbar Square and the match shows the table the shop has equipped.
         /// </summary>
         [UnityTest]
-        public IEnumerator ARemovedBackgroundInTheSave_ShowsTheHimalayanVistaBehindTheMenus()
+        public IEnumerator ARemovedBackgroundInTheSave_ShowsDurbarSquareBehindTheMenus()
         {
             const string removed = "village-terrace";
             string indigo = CosmeticCatalog.Tables.IndigoDhaka;
@@ -139,7 +139,7 @@ namespace Callbreak.Tests.PlayMode
                 equippedTableId = indigo,
                 boughtTableIds = new List<string> { indigo },
             }));
-            AssertMenusShow(CosmeticCatalog.Backgrounds.HimalayanVista, "the default for a removed background");
+            AssertMenusShow(CosmeticCatalog.Backgrounds.DurbarSquare, "the default for a removed background");
             string equippedTable = _game.Services.Resolve<ICosmeticsShop>().Equipped(CosmeticKind.Table);
 
             GameFixture.Press(_game.MenuRouter, "PlayOfflineButton");
@@ -154,7 +154,7 @@ namespace Callbreak.Tests.PlayMode
             var shop = new EquippedOnly("rooftop-cafe", "glass-top");
             yield return _game.Boot(extra: builder => builder.RegisterInstance<ICosmeticsShop>(shop));
             Assert.AreSame(shop, _game.Services.Resolve<ICosmeticsShop>());
-            AssertMenusShow(CosmeticCatalog.Backgrounds.HimalayanVista, "the default background");
+            AssertMenusShow(CosmeticCatalog.Backgrounds.DurbarSquare, "the default background");
 
             _warnings.Clear();
             GameFixture.Press(_game.MenuRouter, "PlayOfflineButton");
