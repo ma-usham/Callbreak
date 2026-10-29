@@ -111,6 +111,16 @@ namespace Callbreak.Editor.Screens
         private const float ReconnectingDim = 0.45f;
         private static readonly Color ReconnectingWordsColor = new Color32(0xFD, 0xF5, 0xED, 0xFF);
 
+        // Its art, the Dhaka Ring (the owner's pick, 30 Oct 2026; Figma "Reconnecting A · Dhaka Ring"):
+        // a ring of gold diamonds, a bright one running round, turning round a still ivory seal with
+        // the crimson spade. Tools/ArtPipeline/NewUI/reconnecting.py draws both at two sprite pixels to
+        // a canvas unit; their sizes here are in canvas units. Figma draws the pieces in mockup px: the
+        // bright diamond's tip RingReach above the seal's centre, the words' middle RingToWords below.
+        private const float RingSize = 288f;
+        private const float SealSize = 212f;
+        private const float RingReach = 110.1f;
+        private const float RingToWords = 152.5f;
+
         /// <summary>GDD §16 "Touch targets are ≥ 88 px", in canvas units.</summary>
         public const float MinTouch = 88f;
 
@@ -1177,37 +1187,92 @@ namespace Callbreak.Editor.Screens
 
         /// <summary>
         /// "Reconnecting…" while the session re-joins (GDD §8): a light dim over the whole table, which
-        /// stays visible but takes no input, and the loading screen's emblem (mockup 17, laid out as
-        /// ArtSource/Screens/SceneLoading has it) in the middle of the screen: its ring turning round
-        /// the still spade, on unscaled time (standing still with Reduce motion), and the words below
-        /// in its serif, light on the dim.
+        /// stays visible but takes no input, and the Dhaka Ring in the middle of the screen: its gold
+        /// diamonds turning round the still seal, on unscaled time (standing still with Reduce motion),
+        /// and the words below in the loading screen's serif (mockup 17), light on the dim.
         /// </summary>
         private static void BuildReconnecting(ScreenBuildContext ctx)
         {
-            RectTransform cover = Stretched("Reconnecting", ctx.Content);
+            GameObject cover = BuildReconnectingCover(ctx.Content, out Spinner ring);
+            ctx.Bound["_reconnecting"] = cover;
+            ctx.Bound["_reconnectingRing"] = ring;
+        }
+
+        /// <summary>
+        /// Gives the saved table prefab the "Reconnecting…" cover with the Dhaka Ring (the owner, 30 Oct
+        /// 2026), made anew where the old one was and bound to the view; everything else in the prefab
+        /// stays as it is.
+        /// </summary>
+        public static string UseDhakaRing()
+        {
+            string path = ScreenLayoutBuilder.PrefabPath("Table");
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+
+            // TextMeshPro only lays text out under a Canvas, and the words are fitted by measuring
+            // their layout, so the cover is built inside a temporary one, as ScreenLayoutBuilder does.
+            var canvas = new GameObject("LayoutBuildCanvas", typeof(Canvas));
+            canvas.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(canvas, root.scene);
+            root.transform.SetParent(canvas.transform, false);
+            try
+            {
+                var view = new SerializedObject(root.GetComponent<TableView>());
+                var old = view.FindProperty("_reconnecting").objectReferenceValue as GameObject;
+                if (old == null)
+                {
+                    return $"FAILED: {path} has no Reconnecting cover";
+                }
+
+                var parent = (RectTransform)old.transform.parent;
+                int index = old.transform.GetSiblingIndex();
+                Object.DestroyImmediate(old);
+                GameObject cover = BuildReconnectingCover(parent, out Spinner ring);
+                cover.transform.SetSiblingIndex(index);
+                view.FindProperty("_reconnecting").objectReferenceValue = cover;
+                view.FindProperty("_reconnectingRing").objectReferenceValue = ring;
+                view.ApplyModifiedPropertiesWithoutUndo();
+
+                root.transform.SetParent(null, false);
+                PrefabUtility.SaveAsPrefabAsset(root, path, out bool saved);
+                return saved ? $"saved {path} with the Dhaka Ring" : $"FAILED to save {path}";
+            }
+            finally
+            {
+                root.transform.SetParent(null, false);
+                Object.DestroyImmediate(canvas);
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        private static GameObject BuildReconnectingCover(RectTransform content, out Spinner spinner)
+        {
+            RectTransform cover = Stretched("Reconnecting", content);
             var dim = cover.gameObject.AddComponent<Image>();
             dim.color = new Color(0f, 0f, 0f, ReconnectingDim);
             dim.raycastTarget = true;
 
-            // The loading screen's ring, spade and words, moved together to the middle of the screen.
+            // The ring, its seal and the words, centred together on the screen, as Figma lays them out.
             ScreenLayout loading = ScreenLayout.Load("SceneLoading");
-            LayoutNode ringNode = NodeOf(loading, "Ring"), spadeNode = NodeOf(loading, "Spade"), wordsNode = NodeOf(loading, "Loading");
-            float top = ringNode.rect[1], bottom = wordsNode.inkBox[3];
-            Vector2 shift = UiBuildKit.ScreenCentre - new Vector2(ringNode.Centre.x, (top + bottom) / 2f);
+            LayoutNode wordsNode = NodeOf(loading, "Loading");
+            float[] ink = wordsNode.inkBox;
+            float wordsHalf = (ink[3] - ink[1]) / 2f;
+            var centre = new Vector2(UiBuildKit.ScreenCentre.x, UiBuildKit.ScreenCentre.y - (RingToWords + wordsHalf - RingReach) / 2f);
 
-            RectTransform ring = UiBuildKit.CreateAt("Ring", cover, ringNode.Centre + shift, UiBuildKit.ScreenCentre, UiBuildKit.FromMock(ringNode.rect[2], ringNode.rect[3]));
-            UiBuildKit.AddImage(ring, UiBuildKit.LoadSpriteAt(ringNode.sprite, 0f), false);
-            var spinner = ring.gameObject.AddComponent<Spinner>();
+            RectTransform ring = UiBuildKit.CreateAt("Ring", cover, centre, UiBuildKit.ScreenCentre, Vector2.one * RingSize);
+            UiBuildKit.AddImage(ring, LoadReconnectingSprite("Ring"), false);
+            spinner = ring.gameObject.AddComponent<Spinner>();
             var spinnerSo = new SerializedObject(spinner);
             spinnerSo.FindProperty("_unscaledTime").boolValue = true;
+            spinnerSo.FindProperty("_clockwise").boolValue = false;
             spinnerSo.ApplyModifiedPropertiesWithoutUndo();
 
-            RectTransform spade = UiBuildKit.CreateAt("Spade", cover, spadeNode.Centre + shift, UiBuildKit.ScreenCentre, UiBuildKit.FromMock(spadeNode.rect[2], spadeNode.rect[3]));
-            UiBuildKit.AddImage(spade, UiBuildKit.LoadSpriteAt(spadeNode.sprite, 0f), false);
+            RectTransform seal = UiBuildKit.CreateAt("Seal", cover, centre, UiBuildKit.ScreenCentre, Vector2.one * SealSize);
+            UiBuildKit.AddImage(seal, LoadReconnectingSprite("Seal"), false);
 
             // Fitted to the loading line, so the words come out at its size, then given their own.
-            float[] ink = wordsNode.inkBox;
-            float[] inkHere = { ink[0] + shift.x, ink[1] + shift.y, ink[2] + shift.x, ink[3] + shift.y };
+            float wordsY = centre.y + RingToWords;
+            float wordsX = centre.x - (ink[0] + ink[2]) / 2f;
+            float[] inkHere = { ink[0] + wordsX, wordsY - wordsHalf, ink[2] + wordsX, wordsY + wordsHalf };
             TMP_FontAsset serif = UiBuildKit.LoadFontRole(wordsNode.font);
             TextMeshProUGUI label = UiBuildKit.FitLabel(
                 "Text", cover, UiBuildKit.ScreenCentre, wordsNode.text, serif, inkHere, "centre", false, ReconnectingWordsColor, ReconnectingWordsColor);
@@ -1218,8 +1283,23 @@ namespace Callbreak.Editor.Screens
             so.ApplyModifiedPropertiesWithoutUndo();
 
             cover.gameObject.SetActive(false);
-            ctx.Bound["_reconnecting"] = cover.gameObject;
-            ctx.Bound["_reconnectingRing"] = spinner;
+            return cover.gameObject;
+        }
+
+        /// <summary>The Dhaka Ring's sprites, uncompressed (the owner wants no softening).</summary>
+        private static Sprite LoadReconnectingSprite(string name)
+        {
+            string path = $"{TableArt}/UI_Reconnecting_{name}.png";
+            Sprite sprite = UiBuildKit.LoadSpriteAt(path, 0f);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            if (importer != null && importer.textureCompression != TextureImporterCompression.Uncompressed)
+            {
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.SaveAndReimport();
+                sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            }
+
+            return sprite;
         }
 
         private static LayoutNode NodeOf(ScreenLayout layout, string id)
