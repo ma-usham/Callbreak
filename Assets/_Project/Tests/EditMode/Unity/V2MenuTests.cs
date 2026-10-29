@@ -51,13 +51,16 @@ namespace Callbreak.Tests.EditMode.Unity
         // Labels a customizer moves after the build, as their views do at runtime: the lobby's seat
         // lines share one baseline (PrivateLobbyCustomizer), the reset line is centred with its
         // clock (EarnCoinsView.CentreClockLine), and the table's seats stand where the owner put them
-        // (TableCustomizer, ADR 027), their words centred on their plates and pills.
+        // (TableCustomizer, ADR 027), their words centred on their plates and pills, and the round
+        // line stands under the logo on the left (TableCustomizer.PlaceRoundUnderLogo, ADR 057;
+        // TableBannerRoomTests checks its place).
         private static readonly HashSet<string> Moved = new HashSet<string>
         {
             "PrivateLobby/SeatStatus0", "PrivateLobby/SeatStatus1", "PrivateLobby/SeatStatus2", "PrivateLobby/SeatStatus3",
             "EarnCoins/ResetLabel",
             "Table/SeatName0", "Table/SeatName1", "Table/SeatName2", "Table/SeatName3",
             "Table/SeatStatus0", "Table/SeatStatus1", "Table/SeatStatus2", "Table/SeatStatus3", "Table/SeatTimerText0",
+            "Table/RoundLabel",
         };
 
         // Labels whose words show in another object: the name field is empty until typed, and its
