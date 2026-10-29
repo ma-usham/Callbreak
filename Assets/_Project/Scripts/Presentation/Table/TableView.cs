@@ -69,14 +69,16 @@ namespace Callbreak.Presentation.Table
 
         // The banner ad at the top of the table (the owner, 14 and 26 Oct 2026, ADR 051; ADR 057).
         // While a banner may come, the table makes room for it: the top seat and the trick come down
-        // a little (canvas units), so the banner covers nothing of the game. The slot is an empty
+        // a little (canvas units), so the banner covers nothing of the game. The top seat stands higher
+        // since ADR 060 and comes further down, to below the banner's slot; the trick comes down about
+        // half as far, still clear of the top seat's fan and of the turn prompt. The slot is an empty
         // rectangle across the top of the HUD, from right of the logo and the round line to the right
         // edge, that the ad network's own view is placed over; it is off while the table makes no room.
         // The banner keeps the gap from the round line's pill, however long its words are, and sits in
         // the slot's top-right corner, where no button is (Scores and Settings stand under Home).
         [SerializeField] private RectTransform _bannerSlot;
-        [SerializeField] private float _bannerSeatDrop = 52f;
-        [SerializeField] private float _bannerTrickDrop = 25f;
+        [SerializeField] private float _bannerSeatDrop = 80f;
+        [SerializeField] private float _bannerTrickDrop = 40f;
         [SerializeField] private float _bannerGap = 48f;
 
         private readonly Vector3[] _bannerCorners = new Vector3[4];

@@ -17,7 +17,7 @@ namespace Callbreak.Editor.Screens
     /// V2, 28 Oct 2026);
     /// the layers (table, hand, HUD as nested canvases, GDD §23); the card pool; the hand with its
     /// touch area, pinned to the bottom edge, its cards drawn a little larger than the shared card;
-    /// the trick slots and the opponents' fans, placed as mockup 08 and mockup 07 draw them; a
+    /// the trick's cross of slots (ADR 060) and the opponents' fans, placed as mockup 07 draws them; a
     /// <see cref="SeatView"/> per seat, with the timer ring, seconds disc and call bubble the
     /// opponents' seats need (derived from the local seat's) and the speech box for quick phrases;
     /// the seats' profiles as the owner arranged them (the side seats lower, the top seat's name
@@ -37,8 +37,10 @@ namespace Callbreak.Editor.Screens
 
         // ---- The local hand. Mockup 08 draws its cards unevenly (88 to 114 px apart, 116 to 136 wide);
         // this is the even fan that fits its thirteen card corners best, with the tops of the middle
-        // cards at y 716.
-        private static readonly Vector2 HandCentre = new Vector2(868.6f, 839.05f);
+        // cards at y 716. Since 30 Oct 2026 (ADR 060) it hangs HandDrop lower, and the turn prompt above
+        // it with it, so that the trick fits above them.
+        private const float HandDrop = 17.4f;                   // 20 canvas units
+        private static readonly Vector2 HandCentre = new Vector2(868.6f, 839.05f + HandDrop);
         private const float HandWidthFraction = 0.772f;         // 94.5 px between cards on the mockup; the GDD says 70%
         private const float HandLift = 14.4f;                   // 12.5 mockup px; the GDD says 28
 
@@ -47,23 +49,29 @@ namespace Callbreak.Editor.Screens
         // so they overlap a little more; the tops of the middle cards come up to y 705, and the touch
         // area and the turn prompt (below) went up with them.
         private const float HandCardScale = 1.09f;
-        private const float HandTouchTop = 673f;
+        private const float HandTouchTop = 673f + HandDrop;
 
         // Half the bend mockup 08 draws (a radius of 3740, end cards leaning 10°): the owner asked for
         // a gentler arc, so a full hand's end cards lean 5° and hang 28 px lower (ADR 021).
         private const float HandArcRadius = 7480f;
 
-        // ---- Trick slots by relative seat (0 bottom, 1 right, 2 top, 3 left): centre and turn.
-        private static readonly Vector2[] TrickSlots =
-        {
-            new Vector2(836.2f, 558f), new Vector2(976.3f, 481.3f), new Vector2(836.2f, 404f), new Vector2(697.7f, 480.5f),
-        };
+        // ---- The trick, by relative seat (0 bottom, 1 right, 2 top, 3 left). Mockup 08 drew its cards
+        // 128.4 px wide in the table's perspective, 0.64 of their height, close round the middle. Seen
+        // from straight above (ADR 059) a card is drawn full height, and the top and the bottom card lay
+        // over each other (the owner, 30 Oct 2026: "while playing the card gets overlap. either reduce
+        // the card size or make move the player card quite below and move the top player quite upside
+        // so that the card fits"; ADR 060). So the four cards are smaller and form a cross round the
+        // trick's centre, TrickGap apart and none over another: the top and the bottom card one above
+        // the other, the side cards between them. The cross fits between the top seat's fan and the
+        // turn prompt with the banner's room made too (TableView brings the top seat and the trick down).
+        private static readonly Vector2 TrickCentre = new Vector2(836.2f, 466.5f);
+        private const float TrickCardWidth = 86f;               // 98.75 canvas units, 155 high
+        private const float TrickGap = 9f;
 
         // Mockup 08 turns the side cards 5.5° (the GDD says ±6°). Drawn lying in the table's
         // perspective, a turned card looked skewed and larger than the others, so every trick card
         // lies straight (ADR 024), and since ADR 059 it is seen from straight above, upright.
         private static readonly float[] TrickTurns = { 0f, 0f, 0f, 0f };
-        private const float TrickCardWidth = 128.4f;
 
         // ---- Opponent fans, as the bidding mockup draws them since 2 Oct 2026 (ADR 026; measured on
         // 07-bidding.png). Its card backs are 46 px long; at a real card's shape that is 29 wide.
@@ -85,7 +93,7 @@ namespace Callbreak.Editor.Screens
         private const float TopFanStep = 4.77f;
 
         // ---- Derived pieces (not on the mockup): where they sit.
-        private static readonly Vector2 PromptCentre = new Vector2(869.3f, 652f);
+        private static readonly Vector2 PromptCentre = new Vector2(869.3f, 652f + HandDrop);
         private const float PromptHeight = 38f;
         private static readonly Vector2 TrickLabelCentre = new Vector2(836f, 104f);
         // Six phrases, each an 88 px touch target with 16 px between them (GDD §16): 76.8 and 14 mockup px.
@@ -112,9 +120,11 @@ namespace Callbreak.Editor.Screens
 
         // The top seat's name plate and status pill stand above its avatar, just under the trump
         // line, and its fan hangs below the avatar where nothing covers it (as mockup 19 draws it):
-        // the avatar comes down to make room.
+        // the avatar comes down to make room. The trump line is gone (3 Oct 2026), and since 30 Oct
+        // 2026 the whole seat stands TopSeatRise higher, so that the trick fits under it (ADR 060).
         private const float TopProfileGap = 5f;                 // from the trump line to the name plate
         private const float TopRingGap = 1f;                    // from the status pill to the avatar's ring
+        private const float TopSeatRise = 24.4f;                // 28 canvas units
 
         // The local seat's name plate and status pill are below its avatar, centred under it at the
         // opponents' widths; the pill keeps its place at the bottom and the avatar, its timer ring
@@ -357,23 +367,35 @@ namespace Callbreak.Editor.Screens
             return pool;
         }
 
+        /// <summary>
+        /// The trick (ADR 060): the area is centred on the trick's centre, where the deck also lies
+        /// while a round is dealt, and its four slots form a cross round it, the cards a gap apart.
+        /// </summary>
         private static void BuildTrickArea(ScreenBuildContext ctx)
         {
+            MoveNode(ctx, "TrickArea", TrickCentre);
             RectTransform area = ctx.Nodes["TrickArea"];
-            Vector2 centre = ctx.CentreOf("TrickArea");
             var trick = area.gameObject.AddComponent<TrickAreaView>();
             var so = new SerializedObject(trick);
             so.FindProperty("_area").objectReferenceValue = area;
+
+            // Canvas units: the card as the trick draws it, and the gap.
+            float scale = TrickCardWidth * UiBuildKit.ScaleX / TableCardBuilder.CardWidth;
+            var card = new Vector2(TableCardBuilder.CardWidth, TableCardBuilder.CardHeight) * scale;
+            float gap = TrickGap * UiBuildKit.ScaleX;
+            float across = card.x + gap, down = (card.y + gap) / 2f;
+            Vector2[] slots = { new Vector2(0f, -down), new Vector2(across, 0f), new Vector2(0f, down), new Vector2(-across, 0f) };
+
             SerializedProperty positions = so.FindProperty("_slotPositions");
             SerializedProperty rotations = so.FindProperty("_slotRotations");
             positions.arraySize = rotations.arraySize = TrickAreaView.Slots;
             for (int i = 0; i < TrickAreaView.Slots; i++)
             {
-                positions.GetArrayElementAtIndex(i).vector2Value = FromMock(TrickSlots[i] - centre);
+                positions.GetArrayElementAtIndex(i).vector2Value = slots[i];
                 rotations.GetArrayElementAtIndex(i).floatValue = TrickTurns[i];
             }
 
-            so.FindProperty("_cardScale").floatValue = TrickCardWidth * UiBuildKit.ScaleX / TableCardBuilder.CardWidth;
+            so.FindProperty("_cardScale").floatValue = scale;
             so.ApplyModifiedPropertiesWithoutUndo();
             ctx.Bound["_trick"] = trick;
 
@@ -592,7 +614,7 @@ namespace Callbreak.Editor.Screens
             if (seat == 2)
             {
                 LayoutNode trump = ctx.Node("TrumpLabel"), suit = ctx.Node("TrumpSuit");
-                float top = Mathf.Max(trump.inkBox[3], suit.rect[1] + suit.rect[3]) + TopProfileGap;
+                float top = Mathf.Max(trump.inkBox[3], suit.rect[1] + suit.rect[3]) + TopProfileGap - TopSeatRise;
                 float pillTop = top + plate.rect[3];
                 MoveNode(ctx, "SeatPlate2", new Vector2(plate.Centre.x, top + plate.rect[3] / 2f));
                 MoveNode(ctx, "SeatPill2", new Vector2(pill.Centre.x, pillTop + pill.rect[3] / 2f));

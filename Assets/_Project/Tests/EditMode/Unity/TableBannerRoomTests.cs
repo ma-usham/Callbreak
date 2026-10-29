@@ -163,14 +163,14 @@ namespace Callbreak.Tests.EditMode.Unity
 
             _view.SetBannerRoom(true);
 
-            Assert.AreEqual(top + new Vector2(0f, -52f), Anchored("Seat2"));
-            Assert.AreEqual(trick + new Vector2(0f, -25f), Anchored("TrickArea"));
+            Assert.AreEqual(top + new Vector2(0f, -80f), Anchored("Seat2"));
+            Assert.AreEqual(trick + new Vector2(0f, -40f), Anchored("TrickArea"));
             Assert.AreEqual(left, Anchored("Seat3"));
             Assert.AreEqual(right, Anchored("Seat1"));
             Assert.AreEqual(local, Anchored("Seat0"));
 
             _view.SetBannerRoom(true);
-            Assert.AreEqual(top + new Vector2(0f, -52f), Anchored("Seat2"), "asked twice, it comes down once");
+            Assert.AreEqual(top + new Vector2(0f, -80f), Anchored("Seat2"), "asked twice, it comes down once");
 
             _view.SetBannerRoom(false);
 
