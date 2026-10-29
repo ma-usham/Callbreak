@@ -251,7 +251,7 @@ namespace Callbreak.Tests.PlayMode
             // Cancelled first: nothing changes.
             Press("PrimaryButton");
             Assert.IsTrue(_game.Dialogs.IsOpen, "a confirmation");
-            Assert.IsTrue(DialogShows(Format("ui.shop.buy.title", Text("ui.shop.table.royal_crimson"))), "it names the item");
+            Assert.IsTrue(DialogShows(Format("ui.shop.buy.title", Text("ui.shop.table.indigo_dhaka"))), "it names the item");
             Assert.IsTrue(DialogShows(Format("ui.shop.buy.body", "500", "500")), "and its price");
             _game.PressDialog(confirm: false);
             yield return null;
