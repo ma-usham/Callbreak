@@ -61,9 +61,9 @@ namespace Callbreak.Editor.Screens
 
         // Mockup 08 turns the side cards 5.5° (the GDD says ±6°). Drawn lying in the table's
         // perspective, a turned card looked skewed and larger than the others, so every trick card
-        // lies straight (ADR 024).
+        // lies straight (ADR 024), and since ADR 059 it is seen from straight above, upright.
         private static readonly float[] TrickTurns = { 0f, 0f, 0f, 0f };
-        private const float TrickCardWidth = 128.4f;            // bottom edge; the top edge is 10% narrower
+        private const float TrickCardWidth = 128.4f;
 
         // ---- Opponent fans, as the bidding mockup draws them since 2 Oct 2026 (ADR 026; measured on
         // 07-bidding.png). Its card backs are 46 px long; at a real card's shape that is 29 wide.

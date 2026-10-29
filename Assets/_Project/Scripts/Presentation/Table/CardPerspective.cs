@@ -7,6 +7,7 @@ namespace Callbreak.Presentation.Table
     /// Narrows the top of a card's image so it reads as lying on the table (mockup 08 draws the
     /// trick cards in the table's perspective: shorter, and narrower at the far edge). The quad is
     /// cut into horizontal strips so the artwork bends evenly instead of creasing along a diagonal.
+    /// Since the game is seen from straight above (ADR 059) every card keeps a top scale of 1.
     /// </summary>
     [RequireComponent(typeof(Graphic))]
     public sealed class CardPerspective : BaseMeshEffect

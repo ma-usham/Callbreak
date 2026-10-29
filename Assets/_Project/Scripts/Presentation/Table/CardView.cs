@@ -25,7 +25,7 @@ namespace Callbreak.Presentation.Table
         /// <summary>1 is the hand size (180 wide at 1080p).</summary>
         public float Scale { get; }
 
-        /// <summary>0 upright (hand, fans), 1 lying on the table in its perspective (trick).</summary>
+        /// <summary>0 upright (hand, fans), 1 lying on the table (trick, deck): drawn as seen from above (ADR 059).</summary>
         public float Flat { get; }
 
         public static CardPlacement Lerp(in CardPlacement a, in CardPlacement b, float t)
@@ -59,9 +59,12 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private Image _dim;
         [SerializeField] private CardPerspective[] _perspectives;
 
-        // A card lying on the table is drawn shorter, and narrower at the far edge (mockup 08).
-        [SerializeField] private float _flatHeight = 0.64f;
-        [SerializeField] private float _flatTopScale = 0.9f;
+        // How a card lying on the table is drawn. The game is seen from straight above, on a cloth
+        // (the owner, 29 Oct 2026, ADR 059), so it is drawn as it is: full height, its far edge as
+        // wide as its near one. Mockup 08 drew it in the table's perspective (0.64 high, the far edge
+        // 0.9 wide), which made the side cards of a trick look turned.
+        [SerializeField] private float _flatHeight = 1f;
+        [SerializeField] private float _flatTopScale = 1f;
 
         private float _scale = 1f;
         private float _flat;

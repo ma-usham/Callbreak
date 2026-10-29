@@ -579,13 +579,13 @@ namespace Callbreak.Presentation.Table.Playback
             ShuffleMotion.Square(_pile, _order);
         }
 
-        /// <summary>A card on the felt: round the middle at its angle and radius, in the table's perspective (wider than deep).</summary>
+        /// <summary>A card on the cloth: round the middle at its angle and radius, seen from straight above (ADR 059).</summary>
         private CardPlacement OnFelt(int index, float swirl)
         {
             float angle = _angle[index] + (Swirl * swirl);
             float radius = _radius[index] * (1f + (0.1f * Mathf.Sin(2f * Mathf.PI * (swirl + _phase[index]))));
             CardPlacement rest = _pile.Resting(index);
-            var at = new Vector2(Mathf.Cos(angle) * radius * 1.3f, Mathf.Sin(angle) * radius * 0.75f);
+            var at = new Vector2(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius);
             return new CardPlacement(at, rest.Rotation + _turn[index] + (SwirlTurn * swirl), rest.Scale, rest.Flat);
         }
 
