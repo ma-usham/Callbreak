@@ -3,6 +3,8 @@
 **Status:** proposed (30 Oct 2026). The owner: "for now use the cards from the figma that we created in
 new ui v1". Asked how three decks should share Figma's single card design, they chose "same faces, own
 backs".
+The corner index is 1.25 times larger and the court panel 6% smaller since 30 Oct 2026, when the
+cards at the table got smaller (ADR 062's addendum).
 
 ## Context
 

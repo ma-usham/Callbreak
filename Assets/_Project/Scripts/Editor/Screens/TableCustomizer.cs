@@ -39,17 +39,18 @@ namespace Callbreak.Editor.Screens
         // ---- The local hand. Mockup 08 draws its cards unevenly (88 to 114 px apart, 116 to 136 wide);
         // this is the even fan that fits its thirteen card corners best. Since 30 Oct 2026 (ADR 062) it
         // is centred under the trick and hangs from the bottom edge, HandShows canvas units of its
-        // middle card on the screen (its corner index and its top pips), so that the trick of
-        // full-size cards fits above it.
-        private const float HandShows = 175f;                   // canvas units, of a card 308 high
+        // middle card on the screen (its corner index and its top pips), so that the trick fits above it.
+        private const float HandShows = 0.65f * HandCardHeight; // 147 canvas units
         private const float HandCentreX = 836.2f;               // the trick's centre
         private const float HandWidthFraction = 0.772f;         // 94.5 px between cards on the mockup; the GDD says 70%
         private const float HandLift = 14.4f;                   // 12.5 mockup px; the GDD says 28
 
-        // The owner asked for slightly bigger cards in the hand (2 Oct 2026): they are drawn 9% larger
-        // than the shared card, and since ADR 062 the trick and the deck draw them at that size too.
-        // The touch area reaches HandTouchAbove canvas units above the middle card.
-        private const float HandCardScale = 1.09f;
+        // The hand's, the trick's and the deck's cards are one size (ADR 062), a fifth of the screen's
+        // height: the owner found them "way too big" at 9% larger than the shared card (30 Oct 2026),
+        // so they are drawn at HandCardScale of it, 144 x 226 canvas units (ADR 062's addendum). The
+        // touch area reaches HandTouchAbove canvas units above the middle card.
+        private const float HandCardScale = 0.8f;
+        private const float HandCardHeight = HandCardScale * TableCardBuilder.CardHeight;
         private const float HandTouchAbove = 35f;
 
         // Half the bend mockup 08 draws (a radius of 3740, end cards leaning 10°): the owner asked for
@@ -62,13 +63,12 @@ namespace Callbreak.Editor.Screens
         // "same size even after throwing"; ADR 062, in place of ADR 059's slots and ADR 060): the
         // hand's cards, so a played card keeps its size. The top and the bottom card are upright; the
         // side cards lie sideways, their tops towards the players who played them, their inner ends
-        // meeting at the trick's centre (the owner's pick). The top and the bottom card stand
-        // TrickColumnStep from the centre and lie over each other there, among the side cards: the
-        // cross is as tall as the table has room for between the top seat's fan and a lifted hand card
-        // with the banner's room made (TableView brings the top seat down 80 canvas units and the
-        // trick 40), each a few units clear.
-        private static readonly Vector2 TrickCentre = new Vector2(836.2f, 529.6f);
-        private const float TrickColumnStep = 82f;              // canvas units; the cards are 308 high
+        // meeting at the trick's centre (the owner's pick). The top and the bottom card meet there
+        // too, TrickColumnStep from the centre. The cross stands midway between the top seat's fan and
+        // a lifted hand card with the banner's room made (TableView brings the top seat down 80 canvas
+        // units and the trick 40).
+        private static readonly Vector2 TrickCentre = new Vector2(836.2f, 541.8f);
+        private const float TrickColumnStep = HandCardHeight / 2f;
         private static readonly float[] TrickTurns = { 0f, -90f, 0f, 90f };
 
         // ---- Opponent fans, as the bidding mockup draws them since 2 Oct 2026 (ADR 026; measured on
@@ -92,9 +92,9 @@ namespace Callbreak.Editor.Screens
 
         // ---- Derived pieces (not on the mockup): where they sit. The turn prompt stands right of the
         // trick's bottom card, PromptGap canvas units past it, its middle PromptAboveBottom above the
-        // bottom edge (beside the card's foot), and grows to the right with its words.
+        // bottom edge (beside the card's lower half), and grows to the right with its words.
         private const float PromptGap = 24f;
-        private const float PromptAboveBottom = 290f;
+        private const float PromptAboveBottom = 289f;
         private const float PromptHeight = 38f;
         private static readonly Vector2 TrickLabelCentre = new Vector2(836f, 104f);
         // Six phrases, each an 88 px touch target with 16 px between them (GDD §16): 76.8 and 14 mockup px.

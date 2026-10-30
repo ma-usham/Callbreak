@@ -92,3 +92,54 @@ as it flew from the hand to the trick.
     It also checks that the hand is still a 5° arc, centred under the trick and clear of the local seat
     and the emote button.
   - `TableBannerRoomTests` is unchanged (drops 80 and 40).
+
+## Addendum, 30 Oct 2026: a smaller card, its corner index larger
+
+The owner, on this table: "still not good the game card feels way too big. try to reduce the size of
+card in figma and then use the reduced size here in game", and "play the game and you can fell the cards
+size doesnt suit the game".
+
+Played on our own table, a card 308 units high (28% of the screen's height) was three times an avatar's
+height and crowded the cross between the seats. At 89% of the shared card it still did; at 72% the table
+looked empty. At 80% the cross sits among the seats with cloth around it.
+
+- **The hand's, the trick's and the deck's cards are 144 x 226 canvas units**, 80% of the shared card
+  (`TableCustomizer.HandCardScale` 0.8, was 1.09): a fifth of the screen's height on a 16:9 or wider
+  phone. Hand and trick stay one size, so a played card still keeps its size.
+- **The corner index is 1.25 times larger on every card**, so it reads at the smaller size about as
+  before. The smallest rank, the 10's, stands 19.3 canvas units tall (20.7 before); an A stands 23.
+  - In Figma's card set ("V1 Rebuild · Cards", Card 179:2678), each card's Index and Index Turned
+    frames are 1.25 times larger and tucked 3.5 units further into their corners. The 10's tracking is
+    -5 px, so it stays clear of the pips.
+  - The court panel, its figures and its divider are 6% smaller about the card's centre, clear of the
+    larger index.
+  - The queens' index pip sits 4 units lower, below the Q's tail.
+  - The faces are cut again with `Tools/ArtPipeline/NewUI/cut_cards.py`; the bases and Classic
+    Crimson's back come out unchanged.
+- **The cross meets in the middle**: the top and the bottom card stand half a card from the centre
+  (`TrickColumnStep`), touching there as the side cards do. The cross stands midway between the top
+  seat's fan and a lifted hand card with the banner's room made (`TrickCentre` 541.8 mockup px down).
+- **The hand shows 65% of its middle card** (147 units). It keeps its width (77% of the safe area,
+  ADR 021), so each card shows 111 of its 144 units beside its neighbour. It also keeps its arc: the
+  end cards lean 5° on 16:9.
+- **The turn prompt** stays right of the bottom card, its middle 289 units above the bottom edge.
+- **The opponents' fans are unchanged.** Their backs are already 33 x 52 units (ADR 026), less than a
+  quarter of a card at the table.
+- **Measured on a 16:9 canvas** (units from the top):
+
+  | | Without a banner | With the banner's room |
+  |---|---|---|
+  | Top seat's fan ends | 325 | 405 |
+  | Top trick card | 396 to 622 | 436 to 662 |
+  | Side trick cards | 550 to 694 | 590 to 734 |
+  | Bottom trick card | 622 to 848 | 662 to 888 |
+  | Turn prompt | 769 to 813, right of the bottom card | the same |
+  | Hand, middle card (lifted) | from 933 (918) | from 933 (918) |
+
+  The cross is 452 units wide (734 to 1186). With the banner's room there are 31 units of cloth under
+  the top seat's fan and 30 above a lifted card, where there were 7 and 6.
+- Figma: section "Card Size · 30 Oct" (300:383515) on "V1 Rebuild · Screens". It holds 08 Gameplay with
+  the cards where the game lays them, and today's card beside the smaller one.
+- Tests: `TrickFitTests.TheTablesCards_AreAFifthOfTheScreen_TheirCornerIndexStillReads` keeps a table
+  card between 19% and 22% of the screen's height. It also keeps every face's rank 18 canvas units or
+  taller at that size. The fit tests above hold at the new size.
