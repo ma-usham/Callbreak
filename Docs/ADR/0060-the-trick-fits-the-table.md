@@ -1,6 +1,6 @@
 # ADR 060 - The trick fits the table: four smaller cards apart, the top seat higher, the hand lower
 
-**Status:** proposed (30 Oct 2026). The owner: "while playing the card gets overlap. either reduce the
+**Status:** proposed (30 Oct 2026); superseded by ADR 062 (the trick of full-size cards). The owner: "while playing the card gets overlap. either reduce the
 card size or make move the player card quite below and move the top player quite upside so that the
 card fits."
 

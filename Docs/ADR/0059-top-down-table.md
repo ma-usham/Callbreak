@@ -1,6 +1,6 @@
 # ADR 059 - The table seen from straight above: the trick's cards lie upright and flat
 
-**Status:** proposed (29 Oct 2026). The owner: "can you make the game play in top down view like in
+**Status:** proposed (29 Oct 2026); its trick slots and upright side cards superseded by ADR 062. The owner: "can you make the game play in top down view like in
 other callbreak game. right now the thrown cards are rotated. check that once."
 
 ## Context
