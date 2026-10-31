@@ -291,6 +291,10 @@ namespace Callbreak.Editor.Screens
             BuildPrompt(ctx, handLayer, statusStyle);
             BuildTrickLabel(ctx);
             StackUnderHome(ctx);
+            foreach (string id in new[] { "HomeButton", "ScoresButton", "SettingsButton", "EmoteButton" })
+            {
+                StyleHudButton(ctx.Nodes[id].GetComponent<Button>());
+            }
             PlaceRoundUnderLogo(ctx);
             BuildBannerRoom(ctx);
             BuildEmotePicker(ctx, statusStyle);
@@ -973,6 +977,44 @@ namespace Callbreak.Editor.Screens
             RectTransform divider = ctx.Nodes["HeaderDivider"];
             ctx.Nodes.Remove("HeaderDivider");
             Object.DestroyImmediate(divider.gameObject);
+        }
+
+        /// <summary>The ivory table controls need a visible lower edge against a dark cloth.</summary>
+        public static void StyleHudButton(Button button)
+        {
+            var root = (RectTransform)button.transform;
+            var face = button.targetGraphic as Image;
+            if (face == null)
+            {
+                return;
+            }
+
+            foreach (Transform child in root)
+            {
+                if (child.name == "Shadow" && child.TryGetComponent(out Image shadow))
+                {
+                    shadow.color = new Color(1f, 1f, 1f, 0.55f);
+                    ((RectTransform)child).anchoredPosition = new Vector2(0f, -6f);
+                }
+
+                if (child.name == "LowerRim")
+                {
+                    return;
+                }
+            }
+
+            var rimObject = new GameObject("LowerRim", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            var rim = (RectTransform)rimObject.transform;
+            rim.SetParent(root, false);
+            rim.SetSiblingIndex(face.transform.GetSiblingIndex());
+            rim.anchorMin = rim.anchorMax = rim.pivot = new Vector2(0.5f, 0.5f);
+            rim.sizeDelta = root.rect.size + new Vector2(2f, 2f);
+            rim.anchoredPosition = new Vector2(0f, -3f);
+
+            var rimImage = rimObject.GetComponent<Image>();
+            rimImage.sprite = face.sprite;
+            rimImage.color = new Color(0.72f, 0.62f, 0.52f);
+            rimImage.raycastTarget = false;
         }
 
         /// <summary>
