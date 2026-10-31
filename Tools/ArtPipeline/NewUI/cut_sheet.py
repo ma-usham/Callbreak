@@ -1,11 +1,12 @@
 """Cuts the game's logos and the Cloths tab icon out of Figma's "Unity Export · NewUI" sheet (ADR 058).
 
-Usage: python -P Tools/ArtPipeline/NewUI/cut_sheet.py <sheet-on-black.png> <sheet-on-white.png>
-The sheet (on the V1 Rebuild · Design System page) holds the logo the owner chose on 30 Oct 2026, Art/Logo ·
-Temple Crown (Logo_Callbreak) and Art/Logo Compact · Temple Crown (the two Logo_Callbreak_NoFlag), and the
-folded-cloth icon of the shop's drawer, each fitted into the ink box of the game sprite it replaces, at
-that sprite's pixel size. Figma's screenshots have no alpha, so the sheet is shot on black and on white and the alpha
-is recovered from the difference.
+Usage: python -P Tools/ArtPipeline/NewUI/cut_sheet.py <sheet-on-black.png> <sheet-on-white.png> [out-dir]
+The sheet (on the V1 Rebuild · Design System page) holds the logo the owner chose on 31 Oct 2026, Art/Logo ·
+Rozha Royal (Logo_Callbreak) and Art/Logo Compact · Rozha Royal (the two Logo_Callbreak_NoFlag), and the
+folded-cloth icon of the shop's drawer, each at the pixel size of the game sprite it replaces: the logos
+fill their sprite's width, centred, and the icon its ink box. Figma's screenshots have no alpha, so the
+sheet is shot on black and on white and the alpha is recovered from the difference. Give an out-dir to
+look first.
 """
 import os
 import sys
@@ -26,17 +27,18 @@ CELLS = [
 ]
 
 
-def main(black_path, white_path):
+def main(black_path, white_path, out_dir=None):
     black = np.asarray(Image.open(black_path).convert("RGB"), dtype=np.float32) / 255.0
     white = np.asarray(Image.open(white_path).convert("RGB"), dtype=np.float32) / 255.0
     alpha = np.clip(1.0 - (white - black).mean(axis=2), 0.0, 1.0)
     colour = np.where(alpha[..., None] > 1e-3, black / np.maximum(alpha[..., None], 1e-3), 0.0)
     rgba = (np.dstack([np.clip(colour, 0, 1), alpha]) * 255 + 0.5).astype(np.uint8)
     for (x, y, w, h), sprite in CELLS:
-        out = os.path.join(UI, sprite)
+        out = os.path.join(out_dir or UI, sprite)
+        os.makedirs(os.path.dirname(out), exist_ok=True)
         Image.fromarray(rgba[y:y + h, x:x + w], "RGBA").save(out, optimize=True)
-        print("wrote", os.path.relpath(out, ROOT))
+        print("wrote", out if out_dir else os.path.relpath(out, ROOT))
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    main(*sys.argv[1:4])

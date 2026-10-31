@@ -34,14 +34,15 @@ behind every menu.
   - Its picture keeps the Vista's files' GUIDs (renamed to `BG_DurbarSquare` and `Thumb_DurbarSquare`),
     so every screen that showed the default shows Durbar Square without a rebuild.
   - Its picture is uncompressed: the owner wants no softening.
-  - Its birds fly right of the logo. Figma's fly where the game's Temple Crown logo stands.
+  - Its birds fly right of the logo (ADR 066). Figma's fly where the game's logo stands.
 - **The art is the V1 rebuild's own vector art** (Figma "V1 Rebuild · Design System"), not V1's
   paintings:
   - the three backgrounds (Durbar Square, Pokhara Lakeside, Monastery Garden) and the three cloths,
     drawn with a margin for 21:9 and 4:3 (the backdrop frame, 2230 × 1255 frame pixels), with the
     shop's thumbnails and previews cut as Figma's tiles show them;
   - the CALLBREAK logos: the owner chose option E, "Temple Crown", on 30 Oct 2026 (Marcellus SC in
-    crimson and gold under a gilt three-tier pagoda roof; the compact logo drops the roof);
+    crimson and gold under a gilt three-tier pagoda roof; the compact logo drops the roof), then on
+    31 Oct option A, "Rozha Royal", without its Nepali line (ADR 066);
   - the table's "Reconnecting…" art: the owner chose option A, "Dhaka Ring", on 30 Oct 2026. Twelve
     stitched gold diamonds turn round an ivory seal with the crimson spade, the bright one running
     anticlockwise ahead of its fading trail. The ring is centred on the seal (Figma's sits 10 px

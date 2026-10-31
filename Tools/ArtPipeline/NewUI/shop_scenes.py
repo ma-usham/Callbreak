@@ -543,8 +543,9 @@ def durbar():
         b.append(S.flags(S.string((1940, 300), (1940 + S.BX, 200), 30), S.FLAGS, S.EXT, 0.95))
     b.append(S.flags(S.string((-20, 300), (520, 470), 60), S.FLAGS, rnd, 0.95))
     b.append(S.flags(S.string((1940, 300), (1400, 470), 60), S.FLAGS[2:] + S.FLAGS[:2], rnd, 0.95))
-    # Figma flies the birds at x 820-1120, where the game's Temple Crown logo stands: they fly right of it.
-    b.append(birds([(1280, 230), (1320, 205), (1365, 240), (1460, 215), (1500, 190), (1540, 228)], 1.1))
+    # Figma flies the birds at x 820-1120, where the game's logo stands: they fly right of it, clear of
+    # Rozha Royal's lettering (x 575-1350 on the main menu) and under the settings button.
+    b.append(birds([(1400, 230), (1440, 205), (1485, 240), (1560, 215), (1600, 192), (1640, 228)], 1.1))
     # Pigeons on the square, at the sides.
     for _ in range(14):
         x = rnd.choice([rnd.uniform(90, 470), rnd.uniform(1450, 1830)])

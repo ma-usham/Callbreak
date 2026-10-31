@@ -69,14 +69,18 @@ menu's ivory and the table's green) and `svg/` (each design as an SVG, as upload
 
 ## Logos and the Cloths tab icon: cut from Figma
 
-The sheet "Unity Export · NewUI" on the design-system page holds Art/Logo · Temple Crown, Art/Logo
-Compact · Temple Crown (the owner's pick, 30 Oct 2026) and the drawer's folded-cloth icon, each fitted
-into the ink box of the sprite it replaces. Shoot it with the
-Figma MCP's `get_screenshot` on a black and on a white sheet fill, then:
+The sheet "Unity Export · NewUI" on the design-system page holds Art/Logo · Rozha Royal and Art/Logo
+Compact · Rozha Royal (the owner's pick, 31 Oct 2026, ADR 066), each filling the width of the sprite it
+replaces, centred, and the drawer's folded-cloth icon, fitted into the ink box of its sprite. Shoot it
+with the Figma MCP's `get_screenshot` (maxDimension 1602, contentsOnly) on a black and on a white
+sheet fill, then:
 
 ```bash
-python -P Tools/ArtPipeline/NewUI/cut_sheet.py <black.png> <white.png>
+python -P Tools/ArtPipeline/NewUI/cut_sheet.py <black.png> <white.png> [out-dir]
 ```
+
+Give an out-dir to look first. Durbar Square's birds (`shop_scenes.durbar`) fly right of the main
+menu's logo: move them too if the logo grows.
 
 ## The kit's plates: cut from Figma
 
