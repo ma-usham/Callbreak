@@ -23,6 +23,10 @@ namespace Callbreak.Bootstrap
 
         protected override void Awake()
         {
+            // One background behind all the screens, not a copy in each that changes with them (the
+            // owner, 31 Oct 2026). Before the scope is built, so the picture is injected where it stands.
+            MenuBackdrop.StandBehind(_screens);
+
             base.Awake();
             if (Container != null)
             {

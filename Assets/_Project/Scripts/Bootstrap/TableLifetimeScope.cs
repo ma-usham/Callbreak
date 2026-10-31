@@ -45,6 +45,15 @@ namespace Callbreak.Bootstrap
                 return;
             }
 
+            // The pages over the match show the game behind them through a dim (the owner, 31 Oct 2026).
+            foreach (UIScreen screen in _screens)
+            {
+                if (screen != null && screen.TryGetComponent(out OverTheTable page))
+                {
+                    page.Show();
+                }
+            }
+
             base.Awake();
             if (Container != null)
             {

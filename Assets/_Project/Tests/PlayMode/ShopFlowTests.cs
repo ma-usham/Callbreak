@@ -264,8 +264,8 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(ThemeAction.Equipped, View.Preview.Action);
             Assert.IsTrue(Theme(0).RadioFilled && Theme(0).ShowsOutline, "its tile says Equipped");
             Assert.AreEqual(Text("ui.shop.status.owned"), Theme(1).StatusText.text, "Durbar Square is owned, not on");
-            EquippedBackground shown = View.GetComponentInChildren<EquippedBackground>(true);
-            Assert.AreEqual(new TableBackdropLibraryCheck(View).Background(CosmeticCatalog.Themes.HimalayanSunrise), shown.Shown, "the shop itself shows the new background");
+            EquippedBackground shown = View.transform.parent.GetComponentInChildren<EquippedBackground>(true);
+            Assert.AreEqual(new TableBackdropLibraryCheck(View).Background(CosmeticCatalog.Themes.HimalayanSunrise), shown.Shown, "the background behind the shop shows the new one");
         }
 
         [UnityTest]
