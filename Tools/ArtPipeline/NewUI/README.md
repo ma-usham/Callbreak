@@ -99,20 +99,34 @@ screen size the way the game does, for a look at other aspect ratios.
 ## The Dhaka Ring: drawn here
 
 `dhaka_ring.py` draws the Dhaka Ring (Figma "Reconnecting A · Dhaka Ring" 238:3 on "V1 Rebuild ·
-Options") from Figma's colours, sizes and effects, for two places:
-- the table's "Reconnecting…" cover: `Art/UI/Table/UI_Reconnecting_Ring.png` (the ring that turns) and
-  `UI_Reconnecting_Seal.png` (the seal that stays), two pixels to a canvas unit;
-- the loading screen: `Art/UI/Decor/Deco_LoadingRing.png` and `Deco_LoadingSeal.png`, three quarters
-  that size.
-Each pair's translucent pixels are set for linear-light blending over what lies under it: the dimmed
-cloth, or the loading screen's light Durbar Square.
+Options") from Figma's colours, sizes and effects, for the table's "Reconnecting…" cover:
+`Art/UI/Table/UI_Reconnecting_Ring.png` (the ring that turns) and `UI_Reconnecting_Seal.png` (the seal
+that stays), two pixels to a canvas unit. Their translucent pixels are set for linear-light blending over
+the dimmed cloth. (The loading screen had it too until 31 Oct 2026; it has the Gold Arc now, below.)
 
 ```bash
-python -P Tools/ArtPipeline/NewUI/dhaka_ring.py [work-dir [Reconnecting|Loading]]
+python -P Tools/ArtPipeline/NewUI/dhaka_ring.py [work-dir [Reconnecting]]
 ```
 
-Then run `Callbreak.Editor.Screens.TableCustomizer.UseDhakaRing()` and
-`Callbreak.Editor.Screens.SceneLoadingCustomizer.UseDhakaRing()` in the Editor.
+Then run `Callbreak.Editor.Screens.TableCustomizer.UseDhakaRing()` in the Editor.
+
+## The Gold Arc: drawn here
+
+`gold_arc.py` draws the Gold Arc (Figma "Reconnecting C · Gold Arc" 238:56383; the owner, 31 Oct 2026:
+"use golder arc for every loading screen") for the loading screen: a faint cream track with the gold arc
+on it and its glow (the ring that turns), and the logo's crimson seal in its gold rim with the cream spade
+(the seal that stays). It uses the Dhaka Ring's scale and sprite sizes, three quarters of the cover's, so
+the two stand as Figma draws them side by side:
+- the curtain: `Art/UI/Decor/Deco_LoadingRing.png` and `Deco_LoadingSeal.png` (the files the Dhaka Ring
+  had there), set for linear-light blending over Durbar Square's light middle;
+- its black look over the store's sheet (ADR 042): `Deco_LoadingRing_Dark.png` and
+  `Deco_LoadingSeal_Dark.png`, set for black.
+
+```bash
+python -P Tools/ArtPipeline/NewUI/gold_arc.py [work-dir [Loading|Dark]]
+```
+
+Then run `Callbreak.Editor.Screens.SceneLoadingCustomizer.UseGoldArc()` in the Editor.
 
 ## The icons and the avatars: drawn here (ADR 065)
 

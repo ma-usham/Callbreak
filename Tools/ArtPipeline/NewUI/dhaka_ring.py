@@ -1,23 +1,20 @@
-"""Writes the Dhaka Ring (the owner's pick, 30 Oct 2026) for the "Reconnecting..." cover and the loading
-screen ("use the same dhaka rotating image for loading as well"): the ring that turns and the seal that stays.
+"""Writes the Dhaka Ring (the owner's pick, 30 Oct 2026) for the "Reconnecting..." cover: the ring that turns
+and the seal that stays. The loading screen had it too until 31 Oct 2026; it has the Gold Arc now (gold_arc.py).
 
-Usage: python -P Tools/ArtPipeline/NewUI/dhaka_ring.py [work-dir [Reconnecting|Loading ...]]
+Usage: python -P Tools/ArtPipeline/NewUI/dhaka_ring.py [work-dir [Reconnecting ...]]
 Needs Python 3 with numpy and Pillow, and Microsoft Edge (render.py). Names after the work dir write only
 those sets. Writes, under Assets/_Project/Art/UI:
   Table/UI_Reconnecting_Ring.png   twelve stitched gold diamonds round the seal, a bright one at the top
                                    with its glow, the eleven others fading clockwise from it (its trail,
                                    so it runs anticlockwise)
   Table/UI_Reconnecting_Seal.png   the ivory seal in its gold rim, with the crimson spade and its shadow
-  Decor/Deco_LoadingRing.png, Deco_LoadingSeal.png   the same, three quarters the size, in the loading
-                                   screen's ring's place between the logo and "Loading..."
 Figma: "Reconnecting A · Dhaka Ring" 238:3 on "V1 Rebuild · Options". Its pieces are drawn in mockup
 pixels (the loading screen's ring is 150 of them across). Figma's generator rotated each diamond about its
 corner, which put the ring 2.9 px right of and 9.8 px above the seal; here the ring is centred on the seal,
 as the generator meant, so that it turns round it without a wobble.
 The game blends its UI in linear light, so a translucent pixel looks different there than in Figma's sRGB
 blend: each one's opacity is set so that over what lies under it (the green cloth under the cover's 45%
-dim; the middle of the loading screen's Durbar Square) it looks as Figma draws it, which keeps the trail
-fading as it does there. So each place has its own pair.
+dim) it looks as Figma draws it, which keeps the trail fading as it does there. gold_arc.py does the same.
 """
 import math
 import os
@@ -41,9 +38,6 @@ RING_PX, SEAL_PX = 576, 424             # the cover's sprites (TableCustomizer s
 SETS = {
     # The green dhaka cloth's middle, under TableCustomizer.ReconnectingDim.
     "Reconnecting": (("Table/UI_Reconnecting_Ring.png", "Table/UI_Reconnecting_Seal.png"), 1.0, (64, 105, 76), 0.45),
-    # Three quarters the size, so the ring's lowest diamond sits where the old ring's bottom did
-    # (SceneLoadingCustomizer); over Durbar Square's light middle, with no dim.
-    "Loading": (("Decor/Deco_LoadingRing.png", "Decor/Deco_LoadingSeal.png"), 0.75, (245, 232, 214), 0.0),
 }
 
 GOLD = '<stop offset="0" stop-color="#F7DE8E"/><stop offset="0.45" stop-color="#D9A646"/><stop offset="1" stop-color="#9C6A1E"/>'

@@ -19,7 +19,8 @@ namespace Callbreak.Tests.EditMode.Unity
     /// turns while the curtain covers. The settings can reach the curtain after it has covered.
     /// These tests need the engine, so they live outside the folders the dotnet harness compiles.
     /// The prefab is opened in a preview scene, which leaves the Editor's open scenes untouched.
-    /// Its ring is the Dhaka Ring (the owner, 30 Oct 2026), turning round its still seal.
+    /// Its ring is the Gold Arc (the owner, 31 Oct 2026), turning round its still seal, on the curtain and
+    /// on its black look.
     /// </summary>
     public sealed class LoadingCurtainTests
     {
@@ -60,29 +61,73 @@ namespace Callbreak.Tests.EditMode.Unity
         }
 
         /// <summary>
-        /// The owner, 30 Oct 2026: "use the same dhaka rotating image for loading as well". The gold
-        /// diamonds turn anticlockwise, the bright one ahead of its trail, round the still seal and
-        /// about its centre, so the ring never wobbles; the art is uncompressed (no softening).
+        /// The owner, 31 Oct 2026: "use golder arc for every loading screen" (Figma "Reconnecting C · Gold
+        /// Arc", in the Dhaka Ring's place). The gold arc turns anticlockwise, its bright end leading,
+        /// round the still crimson seal and about its centre, so it never wobbles; the art is
+        /// uncompressed (no softening).
         /// </summary>
         [Test]
-        public void TheRing_IsTheDhakaRing_TurningRoundItsStillSeal()
+        public void TheRing_IsTheGoldArc_TurningRoundItsStillSeal()
         {
             Image ring = _ring.transform.Find("Face").GetComponent<Image>();
             Transform sealNode = _ring.transform.parent.Find("Seal");
             Assert.IsNotNull(sealNode, "the seal beside the ring");
             Image seal = sealNode.Find("Face").GetComponent<Image>();
 
-            Assert.AreEqual("Deco_LoadingRing", ring.sprite.name, "the Dhaka Ring");
+            Assert.AreEqual("Deco_LoadingRing", ring.sprite.name, "the Gold Arc");
             Assert.AreEqual("Deco_LoadingSeal", seal.sprite.name, "its seal with the spade");
+            AssertTurnsRoundItsStillSeal(_ring, ring, seal);
+        }
+
+        /// <summary>The black look over the store's sheet (ADR 042) shows the same Gold Arc, drawn for black.</summary>
+        [Test]
+        public void TheBlackLook_ShowsTheGoldArc_TurningRoundItsStillSeal()
+        {
+            var dark = (GameObject)new SerializedObject(_curtain).FindProperty("_dark").objectReferenceValue;
+            Assert.IsNotNull(dark, "the curtain has its black look");
+            Image ring = dark.transform.Find("Ring").GetComponent<Image>();
+            Transform sealNode = dark.transform.Find("Seal");
+            Assert.IsNotNull(sealNode, "the seal in the ring's middle");
+            Image seal = sealNode.GetComponent<Image>();
+
+            Assert.AreEqual("Deco_LoadingRing_Dark", ring.sprite.name, "the Gold Arc, drawn for black");
+            Assert.AreEqual("Deco_LoadingSeal_Dark", seal.sprite.name, "its seal, drawn for black");
+            AssertTurnsRoundItsStillSeal(ring.GetComponent<Spinner>(), ring, seal);
+        }
+
+        private static void AssertTurnsRoundItsStillSeal(Spinner spinner, Image ring, Image seal)
+        {
+            Assert.IsNotNull(spinner, "the arc turns");
             Assert.IsNull(seal.GetComponentInParent<Spinner>(true), "the seal stays still");
             Vector3 ringCentre = ring.rectTransform.TransformPoint(ring.rectTransform.rect.center);
             Vector3 sealCentre = seal.rectTransform.TransformPoint(seal.rectTransform.rect.center);
-            Assert.That(Vector3.Distance(ringCentre, sealCentre), Is.LessThan(0.01f), "the ring turns about the seal's centre");
-            Assert.IsFalse(new SerializedObject(_ring).FindProperty("_clockwise").boolValue, "the bright diamond runs anticlockwise, ahead of its trail");
+            Assert.That(Vector3.Distance(ringCentre, sealCentre), Is.LessThan(0.01f), "the arc turns about the seal's centre");
+            Assert.IsFalse(new SerializedObject(spinner).FindProperty("_clockwise").boolValue, "the arc runs anticlockwise, its bright end leading");
             foreach (Image art in new[] { ring, seal })
             {
                 var importer = (TextureImporter)AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(art.sprite));
                 Assert.AreEqual(TextureImporterCompression.Uncompressed, importer.textureCompression, art.sprite.name + " is not softened");
+            }
+
+            // Under the spade the seal is the logo's crimson (the Dhaka Ring's seal was ivory there).
+            Color32 under = SealPixelUnderTheSpade(seal.sprite);
+            Assert.That(under.r > 2 * under.g && under.r > 2 * under.b, Is.True, seal.sprite.name + " is crimson under its spade, not " + under);
+        }
+
+        private static Color32 SealPixelUnderTheSpade(Sprite sprite)
+        {
+            var picture = new Texture2D(2, 2);
+            try
+            {
+                picture.LoadImage(System.IO.File.ReadAllBytes(AssetDatabase.GetAssetPath(sprite)));
+
+                // 45 of Figma's pixels below the middle: under the spade, inside the rim (gold_arc.py).
+                float perFigmaPixel = picture.width / (2f * 92.3f);
+                return picture.GetPixel(picture.width / 2, Mathf.RoundToInt(picture.height / 2f - 45f * perFigmaPixel));
+            }
+            finally
+            {
+                Object.DestroyImmediate(picture);
             }
         }
 
