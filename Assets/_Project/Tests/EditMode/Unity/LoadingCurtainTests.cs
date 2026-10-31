@@ -8,6 +8,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using AppSettings = Callbreak.Application.Settings.SettingsService;     // UnityEditor has a SettingsService too
 
 namespace Callbreak.Tests.EditMode.Unity
@@ -18,6 +19,7 @@ namespace Callbreak.Tests.EditMode.Unity
     /// turns while the curtain covers. The settings can reach the curtain after it has covered.
     /// These tests need the engine, so they live outside the folders the dotnet harness compiles.
     /// The prefab is opened in a preview scene, which leaves the Editor's open scenes untouched.
+    /// Its ring is the Dhaka Ring (the owner, 30 Oct 2026), turning round its still seal.
     /// </summary>
     public sealed class LoadingCurtainTests
     {
@@ -54,6 +56,33 @@ namespace Callbreak.Tests.EditMode.Unity
             if (_scene.IsValid())
             {
                 EditorSceneManager.ClosePreviewScene(_scene);
+            }
+        }
+
+        /// <summary>
+        /// The owner, 30 Oct 2026: "use the same dhaka rotating image for loading as well". The gold
+        /// diamonds turn anticlockwise, the bright one ahead of its trail, round the still seal and
+        /// about its centre, so the ring never wobbles; the art is uncompressed (no softening).
+        /// </summary>
+        [Test]
+        public void TheRing_IsTheDhakaRing_TurningRoundItsStillSeal()
+        {
+            Image ring = _ring.transform.Find("Face").GetComponent<Image>();
+            Transform sealNode = _ring.transform.parent.Find("Seal");
+            Assert.IsNotNull(sealNode, "the seal beside the ring");
+            Image seal = sealNode.Find("Face").GetComponent<Image>();
+
+            Assert.AreEqual("Deco_LoadingRing", ring.sprite.name, "the Dhaka Ring");
+            Assert.AreEqual("Deco_LoadingSeal", seal.sprite.name, "its seal with the spade");
+            Assert.IsNull(seal.GetComponentInParent<Spinner>(true), "the seal stays still");
+            Vector3 ringCentre = ring.rectTransform.TransformPoint(ring.rectTransform.rect.center);
+            Vector3 sealCentre = seal.rectTransform.TransformPoint(seal.rectTransform.rect.center);
+            Assert.That(Vector3.Distance(ringCentre, sealCentre), Is.LessThan(0.01f), "the ring turns about the seal's centre");
+            Assert.IsFalse(new SerializedObject(_ring).FindProperty("_clockwise").boolValue, "the bright diamond runs anticlockwise, ahead of its trail");
+            foreach (Image art in new[] { ring, seal })
+            {
+                var importer = (TextureImporter)AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(art.sprite));
+                Assert.AreEqual(TextureImporterCompression.Uncompressed, importer.textureCompression, art.sprite.name + " is not softened");
             }
         }
 

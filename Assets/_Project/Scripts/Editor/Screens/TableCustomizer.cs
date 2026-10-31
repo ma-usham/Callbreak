@@ -1290,20 +1290,7 @@ namespace Callbreak.Editor.Screens
         }
 
         /// <summary>The Dhaka Ring's sprites, uncompressed (the owner wants no softening).</summary>
-        private static Sprite LoadReconnectingSprite(string name)
-        {
-            string path = $"{TableArt}/UI_Reconnecting_{name}.png";
-            Sprite sprite = UiBuildKit.LoadSpriteAt(path, 0f);
-            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
-            if (importer != null && importer.textureCompression != TextureImporterCompression.Uncompressed)
-            {
-                importer.textureCompression = TextureImporterCompression.Uncompressed;
-                importer.SaveAndReimport();
-                sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
-            }
-
-            return sprite;
-        }
+        private static Sprite LoadReconnectingSprite(string name) => UiBuildKit.LoadUncompressedSpriteAt($"{TableArt}/UI_Reconnecting_{name}.png");
 
         private static LayoutNode NodeOf(ScreenLayout layout, string id)
         {

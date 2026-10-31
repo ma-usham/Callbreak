@@ -179,6 +179,24 @@ namespace Callbreak.Editor
         }
 
         /// <summary>
+        /// <see cref="LoadSpriteAt"/> at the sprite's own size, imported uncompressed: for art that
+        /// must stay sharp (the Dhaka Ring; the owner wants no softening).
+        /// </summary>
+        public static Sprite LoadUncompressedSpriteAt(string path)
+        {
+            Sprite sprite = LoadSpriteAt(path, 0f);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            if (importer != null && importer.textureCompression != TextureImporterCompression.Uncompressed)
+            {
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.SaveAndReimport();
+                sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            }
+
+            return sprite;
+        }
+
+        /// <summary>
         /// Loads a sprite by asset path, applying the recipe E import settings. A pixels-per-unit
         /// of zero or less leaves the texture's existing size settings alone (shared sprites that
         /// are stretched to a rectangle).

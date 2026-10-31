@@ -32,18 +32,23 @@ Names after a work dir rebuild only those pictures, e.g. `build.py <work-dir> Du
 
 Then run `Callbreak.Editor.TableBackdropBuilder.Build()` in the Editor to refill the library.
 
-## The "Reconnecting…" Dhaka Ring: drawn here
+## The Dhaka Ring: drawn here
 
-`reconnecting.py` draws the table's Dhaka Ring (Figma "Reconnecting A · Dhaka Ring" 238:3 on
-"V1 Rebuild · Options") from Figma's colours, sizes and effects: `Art/UI/Table/UI_Reconnecting_Ring.png`
-(the ring that turns) and `UI_Reconnecting_Seal.png` (the seal that stays), two pixels to a canvas unit.
-Their translucent pixels are set for the table's linear-light blending over the dimmed cloth.
+`dhaka_ring.py` draws the Dhaka Ring (Figma "Reconnecting A · Dhaka Ring" 238:3 on "V1 Rebuild ·
+Options") from Figma's colours, sizes and effects, for two places:
+- the table's "Reconnecting…" cover: `Art/UI/Table/UI_Reconnecting_Ring.png` (the ring that turns) and
+  `UI_Reconnecting_Seal.png` (the seal that stays), two pixels to a canvas unit;
+- the loading screen: `Art/UI/Decor/Deco_LoadingRing.png` and `Deco_LoadingSeal.png`, three quarters
+  that size.
+Each pair's translucent pixels are set for linear-light blending over what lies under it: the dimmed
+cloth, or the loading screen's light Durbar Square.
 
 ```bash
-python -P Tools/ArtPipeline/NewUI/reconnecting.py
+python -P Tools/ArtPipeline/NewUI/dhaka_ring.py [work-dir [Reconnecting|Loading]]
 ```
 
-Then run `Callbreak.Editor.Screens.TableCustomizer.UseDhakaRing()` in the Editor.
+Then run `Callbreak.Editor.Screens.TableCustomizer.UseDhakaRing()` and
+`Callbreak.Editor.Screens.SceneLoadingCustomizer.UseDhakaRing()` in the Editor.
 
 ## Logos and the Cloths tab icon: cut from Figma
 

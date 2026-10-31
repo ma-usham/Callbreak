@@ -45,7 +45,9 @@ behind every menu.
   - the table's "Reconnecting…" art: the owner chose option A, "Dhaka Ring", on 30 Oct 2026. Twelve
     stitched gold diamonds turn round an ivory seal with the crimson spade, the bright one running
     anticlockwise ahead of its fading trail. The ring is centred on the seal (Figma's sits 10 px
-    off), so it turns without a wobble. The loading screen keeps its own ring and spade;
+    off), so it turns without a wobble. The same day the owner asked for it on the loading screen too
+    ("use the same dhaka rotating image for loading as well"): it takes the old ring's place there,
+    three quarters the size, and the black cover over the store's purchase sheet (ADR 042) keeps its ring;
   - the kit's panels, buttons and controls, as the rebuild's plates, each at its sprite's size and
     scale. The crimson buttons keep their dhaka ends whole (drawn wide, cut to ends and a plain
     middle; shadows redrawn), and the menu panel and the shop drawer get borders that hold their
@@ -65,7 +67,8 @@ behind every menu.
   its uncompressed picture is 8.01 MB where an ASTC 6×6 one is 1.19 MB.
 - The layouts' `"background": "equipped"` builds the equipped background into a screen.
   `MainMenuBuilder.UseEquippedBackground` patched it into the saved main menu, and
-  `TableCustomizer.UseDhakaRing` the Dhaka Ring into the saved table (its two sprites uncompressed).
+  `TableCustomizer.UseDhakaRing` and `SceneLoadingCustomizer.UseDhakaRing` the Dhaka Ring into the saved
+  table and loading curtain (their sprites uncompressed).
 - `TableView.SetTable` takes the cloth's border as well.
 - The Figma file keeps two export sheets on its design-system page, "Unity Export · NewUI" and
   "Unity Export · Plates", for the next export.
