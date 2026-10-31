@@ -50,6 +50,23 @@ python -P Tools/ArtPipeline/NewUI/dhaka_ring.py [work-dir [Reconnecting|Loading]
 Then run `Callbreak.Editor.Screens.TableCustomizer.UseDhakaRing()` and
 `Callbreak.Editor.Screens.SceneLoadingCustomizer.UseDhakaRing()` in the Editor.
 
+## The icons and the avatars: drawn here (ADR 065)
+
+`icons.py` draws every icon the game shows as vector art in the rebuild's palette (ink #131211,
+crimson, browns, ivory, the logo's gold), keeping each V1 icon's meaning and silhouette. Each is
+fitted into the box the old icon's ink filled, at the sprite's own size, so the file, its GUID and
+every screen stay as they were. `avatars.py` draws the five player portraits (512 px) and their
+framed copies for the name prompt (384 px) the same way.
+
+```bash
+python -P Tools/ArtPipeline/NewUI/icons.py <work-dir> [--write] [Icon_Name ...]
+python -P Tools/ArtPipeline/NewUI/avatars.py <work-dir>
+```
+
+Without `--write`, `icons.py` only draws the work dir's sheets: `compare.png` (old beside new, on the
+menu's ivory and the table's green) and `svg/` (each design as an SVG, as uploaded to Figma's
+"V1 Rebuild · Icons & Avatars" page).
+
 ## Logos and the Cloths tab icon: cut from Figma
 
 The sheet "Unity Export · NewUI" on the design-system page holds Art/Logo · Temple Crown, Art/Logo
