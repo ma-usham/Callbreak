@@ -45,7 +45,8 @@ implement what are remained in the game. except cards for now."
     panel's corner, and its "+" opens Earn Coins.
   - Tapping a tile opens the theme's preview: its name, "One purchase, both looks", the main menu on
     its background and a game on its cloth side by side with a "+", its description, and Buy for
-    (coin) N, Equip theme, or Equipped. Arrows step through the themes. The cross closes it.
+    (coin) N, Equip theme, or Equipped. The cross closes it. It has no arrows to step through the
+    themes: the owner asked for them to go on 31 Oct 2026 ("remove this left and right side arrow").
   - Buy asks first ("You get its menu background and its cloth for N coins. You have M."). A purchase
     says "Tihar Lights is yours!" in a toast and doesn't equip. Not enough coins offers Earn Coins as
     before. The preview is still open on return from Earn Coins.

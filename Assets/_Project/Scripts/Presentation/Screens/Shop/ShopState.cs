@@ -150,18 +150,6 @@ namespace Callbreak.Presentation.Screens
 
         public void ClosePreview() => Previewing = NoPreview;
 
-        /// <summary>The preview's arrows: the next or the previous theme, round from the last to the first.</summary>
-        public void Step(int delta)
-        {
-            int count = _shop.Catalog(CosmeticKind.Theme).Count;
-            if (Previewing == NoPreview || count == 0)
-            {
-                return;
-            }
-
-            Previewing = ((Previewing + delta) % count + count) % count;
-        }
-
         /// <summary>The theme open in the preview, or null.</summary>
         public CosmeticItem PreviewTheme
         {

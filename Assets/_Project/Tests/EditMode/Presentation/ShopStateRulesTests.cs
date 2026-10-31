@@ -12,7 +12,7 @@ namespace Callbreak.Tests.EditMode.Presentation
     /// The shop page (designer's spec shop-drawer-and-tables-prompts.md; the themes, ADR 064): it opens
     /// on Themes; a theme's tile says Equipped with a filled radio, Owned with an empty one, or shows its
     /// price, red when the wallet can't pay it; tapping a theme opens its preview, whose button buys it,
-    /// equips it, or says it is equipped, and whose arrows go round the themes; on Cards a deck's tile
+    /// equips it, or says it is equipped; on Cards a deck's tile
     /// says Equipped or shows its price, and the chosen deck is the one the primary button acts on, Use
     /// for an owned deck (not while it is equipped) and Buy for one that is not; Cards keeps its choice
     /// while the player switches, and a shop that opens afresh shows Themes with no preview open and
@@ -83,27 +83,6 @@ namespace Callbreak.Tests.EditMode.Presentation
 
             _state.OpenPreview(0);
             Assert.AreEqual(ThemeAction.Equip, _state.PreviewAction, "Durbar Square, free and owned, can be put back on");
-        }
-
-        [Test]
-        public void ThePreviewsArrows_GoRoundTheThemes()
-        {
-            _state.OpenPreview(3);
-
-            _state.Step(1);
-            Assert.AreEqual(0, _state.Previewing, "from the last to the first");
-            _state.Step(-1);
-            Assert.AreEqual(3, _state.Previewing, "and back");
-            _state.Step(-2);
-            Assert.AreEqual(1, _state.Previewing);
-        }
-
-        [Test]
-        public void ArrowsWithNoPreview_DoNothing()
-        {
-            _state.Step(1);
-
-            Assert.AreEqual(ShopState.NoPreview, _state.Previewing);
         }
 
         [Test]

@@ -20,8 +20,8 @@ namespace Callbreak.Tests.PlayMode
     /// storefront opens it on Themes; the drawer is always open and flush with the screen's right
     /// edge, Themes and Cards stacked in its middle with No Ads under them while the store sells it;
     /// the themes lie in a row that scrolls sideways, each saying Equipped, Owned or its price; a
-    /// theme tapped opens its preview, its menu background and its cloth side by side, whose arrows
-    /// go round the themes; a theme is bought after a confirmation and its preview then equips it,
+    /// theme tapped opens its preview, its menu background and its cloth side by side, with no
+    /// arrows; a theme is bought after a confirmation and its preview then equips it,
     /// background and cloth together, and the shop itself changes to it; a background bought before
     /// the themes owns its theme; not enough coins offers the Earn Coins page or Not now, and the shop
     /// waits for the return; the wallet's "+" opens Earn Coins; on Cards a deck is bought and put to
@@ -202,21 +202,19 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(ThemeAction.Buy, View.Preview.Action);
             Assert.AreEqual("1,000", View.Preview.BuyPrice);
 
-            Press("NextButton");
-            Assert.AreEqual(Text("ui.shop.theme.prayer_flag_pass"), View.Preview.Title, "the arrows go to the next theme");
-            Press("PreviousButton");
-            Press("PreviousButton");
-            Assert.AreEqual(Text("ui.shop.theme.golden_terraces"), View.Preview.Title, "and back");
-
-            PressTheme(0);
-            Assert.AreEqual(ThemeAction.Equipped, View.Preview.Action, "Durbar Square is on: Equipped, off");
-            Press("PreviousButton");
-            Assert.AreEqual(Text("ui.shop.theme.monastery_garden"), View.Preview.Title, "round from the first to the last");
-            Assert.IsNull(View.Preview.ClothFrame, "Dusk Himalaya has no border");
+            Assert.IsNull(FindOrNull("PreviousButton"), "no arrows (the owner, 31 Oct 2026)");
+            Assert.IsNull(FindOrNull("NextButton"), "no arrows (the owner, 31 Oct 2026)");
 
             Press("CloseButton");
             Assert.IsFalse(View.Preview.IsOpen, "the cross closes it");
             Assert.AreEqual(ScreenId.Shop, Router.Current);
+
+            PressTheme(0);
+            Assert.AreEqual(ThemeAction.Equipped, View.Preview.Action, "Durbar Square is on: Equipped, off");
+            Press("CloseButton");
+            PressTheme(ThemeCount - 1);
+            Assert.AreEqual(Text("ui.shop.theme.monastery_garden"), View.Preview.Title);
+            Assert.IsNull(View.Preview.ClothFrame, "Dusk Himalaya has no border");
         }
 
         [UnityTest]

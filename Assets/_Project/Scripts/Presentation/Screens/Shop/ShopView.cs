@@ -81,9 +81,6 @@ namespace Callbreak.Presentation.Screens
 
         public event Action PreviewClosed;
 
-        /// <summary>The preview's arrows: -1 the previous theme, +1 the next.</summary>
-        public event Action<int> PreviewStepped;
-
         public event Action PreviewBuyClicked;
 
         public event Action PreviewEquipClicked;
@@ -254,7 +251,7 @@ namespace Callbreak.Presentation.Screens
 
         public void ClosePreview() => _preview.Close();
 
-        /// <summary>Brings a theme's tile into view (after the preview's arrows have moved on).</summary>
+        /// <summary>Brings a theme's tile into view (the one whose preview just closed).</summary>
         public void ScrollToTheme(int index) => _shelf.ScrollTo(index);
 
         /// <summary>
@@ -314,8 +311,6 @@ namespace Callbreak.Presentation.Screens
             _shelf.TileClicked += OnTheme;
             _decks.TileClicked += OnDeck;
             _preview.CloseButton.onClick.AddListener(OnPreviewClose);
-            _preview.PreviousButton.onClick.AddListener(OnPreviewPrevious);
-            _preview.NextButton.onClick.AddListener(OnPreviewNext);
             _preview.BuyButton.onClick.AddListener(OnPreviewBuy);
             _preview.EquipButton.onClick.AddListener(OnPreviewEquip);
             _preview.EarnCoinsButton.onClick.AddListener(OnEarnCoins);
@@ -331,8 +326,6 @@ namespace Callbreak.Presentation.Screens
             _shelf.TileClicked -= OnTheme;
             _decks.TileClicked -= OnDeck;
             _preview.CloseButton.onClick.RemoveListener(OnPreviewClose);
-            _preview.PreviousButton.onClick.RemoveListener(OnPreviewPrevious);
-            _preview.NextButton.onClick.RemoveListener(OnPreviewNext);
             _preview.BuyButton.onClick.RemoveListener(OnPreviewBuy);
             _preview.EquipButton.onClick.RemoveListener(OnPreviewEquip);
             _preview.EarnCoinsButton.onClick.RemoveListener(OnEarnCoins);
@@ -493,9 +486,6 @@ namespace Callbreak.Presentation.Screens
 
         private void OnPreviewClose() => PreviewClosed?.Invoke();
 
-        private void OnPreviewPrevious() => PreviewStepped?.Invoke(-1);
-
-        private void OnPreviewNext() => PreviewStepped?.Invoke(1);
 
         private void OnPreviewBuy() => PreviewBuyClicked?.Invoke();
 

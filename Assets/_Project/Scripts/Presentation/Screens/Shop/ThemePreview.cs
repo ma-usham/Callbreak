@@ -11,7 +11,7 @@ namespace Callbreak.Presentation.Screens
     /// half is a small screen, a 1920 × 1080 group scaled down: the real background or cloth (with
     /// the cloth's border tiled round its edges) under a picture of the menu or the table taken from
     /// the game. Under them the theme's description and its button: Buy for (coin) N, Equip theme,
-    /// or Equipped. Arrows step to the other themes, the cross closes it, and the wallet shows in
+    /// or Equipped. The cross closes it (no arrows: the owner, 31 Oct 2026), and the wallet shows in
     /// its corner, its "+" opening Earn Coins.
     /// </summary>
     public sealed class ThemePreview : MonoBehaviour
@@ -27,8 +27,6 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private Image _cloth;
         [SerializeField] private Image _clothFrame;
         [SerializeField] private Button _closeButton;
-        [SerializeField] private Button _previousButton;
-        [SerializeField] private Button _nextButton;
         [SerializeField] private Button _buyButton;
         [SerializeField] private CanvasGroup _buyContent;
         [SerializeField] private ShopRow _buyRow;
@@ -40,10 +38,6 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private Button _earnCoinsButton;
 
         public Button CloseButton => _closeButton;
-
-        public Button PreviousButton => _previousButton;
-
-        public Button NextButton => _nextButton;
 
         public Button BuyButton => _buyButton;
 

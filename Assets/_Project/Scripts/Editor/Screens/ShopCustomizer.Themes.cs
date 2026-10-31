@@ -23,7 +23,7 @@ namespace Callbreak.Editor.Screens
     /// <item>the theme preview over everything (<see cref="ThemePreview"/>), hidden: a dim, a panel
     /// with the theme's name, its two halves side by side (each a small 1920 × 1080 screen: the real
     /// background under a picture of the menu, the real cloth and its border under a picture of the
-    /// table), the description, the button, the arrows, the cross and the wallet.</item>
+    /// table), the description, the button, the cross and the wallet.</item>
     /// </list>
     /// </summary>
     public static partial class ShopCustomizer
@@ -328,7 +328,7 @@ namespace Callbreak.Editor.Screens
             face.type = Image.Type.Sliced;
 
             TextMeshProUGUI walletBalance = BuildWallet(panel, new Vector2(0f, 1f), new Vector2(WalletInset + WalletSize.x / 2f, -WalletInset - WalletSize.y / 2f), out Button earn);
-            Button close = RoundButton("CloseButton", panel, new Vector2(1f, 1f), new Vector2(-44f - 49f, -40f - 49f), $"{UiBuildKit.ArtRoot}/UI/Common/Icon_Close.png", 40f, false);
+            Button close = RoundButton("CloseButton", panel, new Vector2(1f, 1f), new Vector2(-44f - 49f, -40f - 49f), $"{UiBuildKit.ArtRoot}/UI/Common/Icon_Close.png", 40f);
 
             TextMeshProUGUI title = NewLabel("Title", panel, "Tihar Lights", "SerifBold", 72f, TitleCrimson, TextAlignmentOptions.Center);
             PinTop(title.rectTransform, panel, 84f, new Vector2(1000f, 96f));
@@ -394,10 +394,6 @@ namespace Callbreak.Editor.Screens
             Row(equippedRow, equippedRadio, equippedWords.rectTransform).Refresh();
             equipped.gameObject.SetActive(false);
 
-            float arrowY = screenCentreY;
-            Button previous = RoundButton("PreviousButton", panel, new Vector2(0f, 1f), new Vector2(30f + 49f, arrowY), $"{UiBuildKit.ArtRoot}/UI/Icons/Icon_Chevron.png", 34f, true);
-            Button next = RoundButton("NextButton", panel, new Vector2(1f, 1f), new Vector2(-30f - 49f, arrowY), $"{UiBuildKit.ArtRoot}/UI/Icons/Icon_Chevron.png", 34f, false);
-
             var preview = root.gameObject.AddComponent<ThemePreview>();
             var so = new SerializedObject(preview);
             so.FindProperty("_title").objectReferenceValue = title;
@@ -409,8 +405,6 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_cloth").objectReferenceValue = cloth;
             so.FindProperty("_clothFrame").objectReferenceValue = clothFrame;
             so.FindProperty("_closeButton").objectReferenceValue = close;
-            so.FindProperty("_previousButton").objectReferenceValue = previous;
-            so.FindProperty("_nextButton").objectReferenceValue = next;
             so.FindProperty("_buyButton").objectReferenceValue = buy;
             so.FindProperty("_buyContent").objectReferenceValue = buyContent;
             so.FindProperty("_buyRow").objectReferenceValue = buyRow;
@@ -484,8 +478,8 @@ namespace Callbreak.Editor.Screens
             return AddButton(root.gameObject, face);
         }
 
-        /// <summary>A round button (Back's disc) with an icon; a mirrored icon for the arrow that points left.</summary>
-        private static Button RoundButton(string name, RectTransform parent, Vector2 anchor, Vector2 centre, string iconPath, float iconHeight, bool mirrored)
+        /// <summary>A round button (Back's disc) with an icon.</summary>
+        private static Button RoundButton(string name, RectTransform parent, Vector2 anchor, Vector2 centre, string iconPath, float iconHeight)
         {
             RectTransform root = Pinned(name, parent, anchor, centre, new Vector2(98f, 98f));
             Image shadow = UiBuildKit.AddImage(Pinned("Shadow", root, new Vector2(0.5f, 0.5f), new Vector2(0f, -4f), new Vector2(118f, 118f)), Load($"{UiBuildKit.ArtRoot}/UI/Buttons/UI_Shadow_Circle.png"), false);
@@ -495,11 +489,6 @@ namespace Callbreak.Editor.Screens
             float aspect = icon != null && icon.rect.height > 0f ? icon.rect.width / icon.rect.height : 1f;
             RectTransform iconRect = Pinned("Icon", root, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(iconHeight * aspect, iconHeight));
             UiBuildKit.AddImage(iconRect, icon, false).preserveAspect = true;
-            if (mirrored)
-            {
-                iconRect.localScale = new Vector3(-1f, 1f, 1f);
-            }
-
             return AddButton(root.gameObject, face);
         }
 
