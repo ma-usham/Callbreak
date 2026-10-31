@@ -979,7 +979,7 @@ namespace Callbreak.Editor.Screens
             Object.DestroyImmediate(divider.gameObject);
         }
 
-        /// <summary>The ivory table controls need a visible lower edge against a dark cloth.</summary>
+        /// <summary>Use the bidding chip's face and shadow for the four round table controls.</summary>
         public static void StyleHudButton(Button button)
         {
             var root = (RectTransform)button.transform;
@@ -989,32 +989,30 @@ namespace Callbreak.Editor.Screens
                 return;
             }
 
+            Sprite chipFace = LoadTableSprite("UI_Chip_Normal");
+            face.sprite = chipFace;
+            RectTransform lowerRim = null;
             foreach (Transform child in root)
             {
                 if (child.name == "Shadow" && child.TryGetComponent(out Image shadow))
                 {
-                    shadow.color = new Color(1f, 1f, 1f, 0.55f);
-                    ((RectTransform)child).anchoredPosition = new Vector2(0f, -6f);
+                    shadow.color = new Color(1f, 1f, 1f, 0.6f);
+                    ((RectTransform)child).anchoredPosition = new Vector2(0f, -2.869253f);
                 }
-
-                if (child.name == "LowerRim")
+                else if (child.name == "LowerRim")
                 {
-                    return;
+                    lowerRim = (RectTransform)child;
+                }
+                else if (child.name == "Cooldown" && child.TryGetComponent(out Image cooldown))
+                {
+                    cooldown.sprite = chipFace;
                 }
             }
 
-            var rimObject = new GameObject("LowerRim", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            var rim = (RectTransform)rimObject.transform;
-            rim.SetParent(root, false);
-            rim.SetSiblingIndex(face.transform.GetSiblingIndex());
-            rim.anchorMin = rim.anchorMax = rim.pivot = new Vector2(0.5f, 0.5f);
-            rim.sizeDelta = root.rect.size + new Vector2(2f, 2f);
-            rim.anchoredPosition = new Vector2(0f, -3f);
-
-            var rimImage = rimObject.GetComponent<Image>();
-            rimImage.sprite = face.sprite;
-            rimImage.color = new Color(0.72f, 0.62f, 0.52f);
-            rimImage.raycastTarget = false;
+            if (lowerRim != null)
+            {
+                Object.DestroyImmediate(lowerRim.gameObject);
+            }
         }
 
         /// <summary>
