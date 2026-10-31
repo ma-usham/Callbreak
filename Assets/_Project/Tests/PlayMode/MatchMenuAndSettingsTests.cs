@@ -22,7 +22,9 @@ namespace Callbreak.Tests.PlayMode
     /// to Game": an online game cannot pause. Offline it says the match is paused and offers "Restart
     /// Game", which deals a new match at the table without going back to the main menu (the owner,
     /// 8 Oct 2026; the × resumes). Either way the tag's pill hugs its words. Settings covers the screen it opens from, the gear that opened it included, and has no
-    /// gear of its own, wherever it opens from. Saves go to a temporary folder.
+    /// gear of its own, wherever it opens from. Over a match the pages have no picture of their own: the
+    /// game shows through a dim (the owner, 31 Oct 2026: "the score board should be open with no bg there
+    /// the game play scene will be the background"). Saves go to a temporary folder.
     /// </summary>
     public sealed class MatchMenuAndSettingsTests
     {
@@ -144,11 +146,42 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Scorecard_OverTheTable_ShowsTheGameBehindIt_ThroughADim()
+        {
+            yield return StartOfflineMatch();
+            ScreenRouter router = _game.TableRouter;
+            TableView table = Object.FindFirstObjectByType<TableView>();
+
+            GameFixture.PressIn(table, "ScoresButton");
+            Assert.AreEqual(ScreenId.Scorecard, router.Current);
+            UIScreen scorecard = router.Get<UIScreen>(ScreenId.Scorecard);
+            yield return Settled(scorecard);
+
+            Assert.IsNull(scorecard.GetComponentInChildren<EquippedBackground>(true), "the scorecard has no picture of its own");
+            Assert.IsTrue(table.isActiveAndEnabled, "the table stays under it");
+            var over = scorecard.GetComponent<OverTheTable>();
+            Assert.IsTrue(over != null && over.Shown, "a dim between the table and the panel");
+            Assert.Less(over.Dim.color.a * scorecard.CanvasGroup.alpha, 1f, "that the game shows through");
+
+            // The other pages that open over a match stand over it the same way, their words drawn light on the dim.
+            foreach (ScreenId id in new[] { ScreenId.RoundResults, ScreenId.MatchResults, ScreenId.Settings, ScreenId.HowToPlay })
+            {
+                UIScreen page = router.Get<UIScreen>(id);
+                Assert.IsNull(page.GetComponentInChildren<EquippedBackground>(true), id + " has no picture of its own");
+                var pageOver = page.GetComponent<OverTheTable>();
+                Assert.IsTrue(pageOver != null && pageOver.Shown, id + " dims the table instead");
+                var ink = page.GetComponent<BackgroundInk>();
+                Assert.IsTrue(ink == null || ink.ShowsNight, id + "'s words on the dim are light");
+            }
+        }
+
+        [UnityTest]
         public IEnumerator Settings_FromTheMenuScreens_HasNoGearOfItsOwn()
         {
             yield return _game.Boot(extra: builder => builder.RegisterInstance<INetworkStatus>(new FixedNetwork(online: true)));
             ScreenRouter router = _game.MenuRouter;
             Assert.AreEqual(ScreenId.MainMenu, router.Current);
+            Assert.IsFalse(router.Get<UIScreen>(ScreenId.Settings).GetComponent<OverTheTable>().Shown, "no dim over the menus' background");
             yield return Settled(router.Get<UIScreen>(ScreenId.MainMenu));
             yield return OpenSettingsFrom(router, router.Get<UIScreen>(ScreenId.MainMenu), "the main menu");
 
@@ -209,14 +242,15 @@ namespace Callbreak.Tests.PlayMode
 
             if (!routed)
             {
-                // The table stays on the screen under the page: the page's own picture has to hide it.
+                // The table stays on the screen under the page, seen through the page's dim (the owner,
+                // 31 Oct 2026): the dim lies over the table's gear and takes the touches there.
                 Assert.IsTrue(gear.gameObject.activeInHierarchy, "the table's gear is still there, under the page");
-                Image background = Named(page, "Background").GetComponent<Image>();
-                Assert.IsTrue(background != null && background.isActiveAndEnabled, "Settings has a background");
-                Assert.GreaterOrEqual(background.color.a * page.CanvasGroup.alpha, 0.999f, "an opaque one");
-                Assert.IsTrue(Covers(background.rectTransform, gear), "it lies over " + where + "'s gear");
+                Assert.IsNull(page.GetComponentInChildren<EquippedBackground>(true), "Settings has no picture over the table");
+                var over = page.GetComponent<OverTheTable>();
+                Assert.IsTrue(over != null && over.Shown, "Settings dims the table");
+                Assert.IsTrue(Covers(over.Dim.rectTransform, gear), "the dim lies over " + where + "'s gear");
                 Graphic look = gear.GetComponentInChildren<Graphic>();
-                Assert.Greater(SortingOrderOf(background), SortingOrderOf(look), "and is drawn after it");
+                Assert.Greater(SortingOrderOf(over.Dim), SortingOrderOf(look), "and is drawn after it");
             }
 
             Assert.IsTrue(router.Back());

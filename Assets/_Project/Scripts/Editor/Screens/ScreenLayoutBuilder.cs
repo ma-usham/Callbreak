@@ -47,6 +47,7 @@ namespace Callbreak.Editor.Screens
 
                 AttachView(ctx);
                 BackgroundInkBuilder.Add(ctx.Root.gameObject);
+                ScreenBackdropBuilder.AddOverTheTable(ctx.Root.gameObject);
                 UiBuildKit.EnsureFolder(PrefabFolder);
                 PrefabUtility.SaveAsPrefabAsset(ctx.Root.gameObject, path);
             }
@@ -148,9 +149,25 @@ namespace Callbreak.Editor.Screens
                 return;
             }
 
+            // A screen the routers swap has no picture of its own (the owner, 31 Oct 2026; ADR 058's
+            // addendum): it stands on the menus' one background or, over a match, on the table.
+            if (l.background == ScreenLayout.EquippedBackground && !ScreenBackdropBuilder.HasOwnPicture(l.name))
+            {
+                return;
+            }
+
+            ctx.Background = AddPicture(ctx.Root, l);
+        }
+
+        /// <summary>
+        /// The layout's background picture over its rect, under <paramref name="parent"/> (a screen's root,
+        /// or a capture's canvas, which draws a menu screen over the menus' one background).
+        /// </summary>
+        public static RectTransform AddPicture(Transform parent, ScreenLayout l)
+        {
             float[] r = l.backgroundRect != null && l.backgroundRect.Length == 4 ? l.backgroundRect : new[] { 0f, 0f, l.mockW, l.mockH };
             RectTransform bg = UiBuildKit.CreateAt(
-                "Background", ctx.Root, new Vector2(r[0] + r[2] / 2f, r[1] + r[3] / 2f), UiBuildKit.ScreenCentre, UiBuildKit.FromMock(r[2], r[3]));
+                "Background", parent, new Vector2(r[0] + r[2] / 2f, r[1] + r[3] / 2f), UiBuildKit.ScreenCentre, UiBuildKit.FromMock(r[2], r[3]));
             if (l.background == ScreenLayout.EquippedBackground)
             {
                 AddEquippedBackground(bg);
@@ -160,7 +177,7 @@ namespace Callbreak.Editor.Screens
                 UiBuildKit.AddImage(bg, UiBuildKit.LoadSpriteAt(l.background, l.backgroundPpu), false);
             }
 
-            ctx.Background = bg;
+            return bg;
         }
 
         /// <summary>

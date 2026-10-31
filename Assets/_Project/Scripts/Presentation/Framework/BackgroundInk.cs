@@ -1,5 +1,6 @@
 using Callbreak.Application.Cosmetics;
 using Callbreak.Presentation.Table;
+using Callbreak.Presentation.Widgets;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -24,6 +25,7 @@ namespace Callbreak.Presentation.Framework
         [SerializeField] private bool[] _dayGradient = new bool[0];
 
         private ICosmeticsShop _shop;
+        private bool _keepLight;
 
         /// <summary>Whether the words show their night colours.</summary>
         public bool ShowsNight { get; private set; }
@@ -51,6 +53,16 @@ namespace Callbreak.Presentation.Framework
             _dayGradient = dayGradient;
         }
 
+        /// <summary>
+        /// Keeps the light colours whatever is equipped: the page stands over the dimmed table, not over
+        /// the background (<see cref="OverTheTable"/>).
+        /// </summary>
+        public void KeepLight()
+        {
+            _keepLight = true;
+            Show(true);
+        }
+
         /// <summary>Shows the day or the night colours (the shop's preview pictures and tests show either at will).</summary>
         public void Show(bool night)
         {
@@ -64,9 +76,18 @@ namespace Callbreak.Presentation.Framework
                     continue;
                 }
 
-                if (i < _dayGradient.Length && _dayGradient[i] && target is TMP_Text text && text.enableVertexGradient == night)
+                if (i < _dayGradient.Length && _dayGradient[i] && target is TMP_Text text)
                 {
-                    text.enableVertexGradient = !night;
+                    if (text.enableVertexGradient == night)
+                    {
+                        text.enableVertexGradient = !night;
+                    }
+
+                    // A screen title paints its gradient line by line on top of TextMeshPro's.
+                    if (text.TryGetComponent(out TextLineGradient line) && line.enabled == night)
+                    {
+                        line.enabled = !night;
+                    }
                 }
 
                 if (target.color != colours[i])
@@ -99,6 +120,6 @@ namespace Callbreak.Presentation.Framework
             Refresh();
         }
 
-        private void Refresh() => Show(_library != null && _library.IsNightScene(_shop.Equipped(CosmeticKind.Background)));
+        private void Refresh() => Show(_keepLight || (_library != null && _library.IsNightScene(_shop.Equipped(CosmeticKind.Background))));
     }
 }

@@ -35,8 +35,9 @@ namespace Callbreak.Editor
         /// <summary>Adds (or replaces) the screen's ink; returns how many words and lines it colours.</summary>
         public static int Add(GameObject screen)
         {
+            // A screen on a picture: its own, the menus' one, or the table under its dim (ADR 058's addendum).
             var background = screen.GetComponentInChildren<EquippedBackground>(true);
-            if (background == null || screen.GetComponent<ShopView>() != null)
+            if ((background == null && !ScreenBackdropBuilder.LaidOnPicture(screen.name)) || screen.GetComponent<ShopView>() != null)
             {
                 return 0;
             }
@@ -120,7 +121,7 @@ namespace Callbreak.Editor
             }
 
             var ink = screen.AddComponent<BackgroundInk>();
-            ink.Set(background.Library, targets.ToArray(), day.ToArray(), night.ToArray(), gradient.ToArray());
+            ink.Set(background != null ? background.Library : TableBackdropBuilder.EnsureLibrary(), targets.ToArray(), day.ToArray(), night.ToArray(), gradient.ToArray());
             EditorUtility.SetDirty(ink);
             return targets.Count;
         }
@@ -147,7 +148,7 @@ namespace Callbreak.Editor
             for (int i = 0; i < index; i++)
             {
                 if (!(graphics[i] is Image image) || image.sprite == null || image.color.a < 0.5f
-                    || image.GetComponentInParent<EquippedBackground>(true) != null)
+                    || image.GetComponentInParent<EquippedBackground>(true) != null || image.name == ScreenBackdropBuilder.DimName)
                 {
                     continue;
                 }
@@ -181,7 +182,7 @@ namespace Callbreak.Editor
                 GameObject root = PrefabUtility.LoadPrefabContents(path);
                 try
                 {
-                    if (root.GetComponentInChildren<EquippedBackground>(true) == null)
+                    if (root.GetComponentInChildren<EquippedBackground>(true) == null && !ScreenBackdropBuilder.LaidOnPicture(root.name))
                     {
                         continue;
                     }

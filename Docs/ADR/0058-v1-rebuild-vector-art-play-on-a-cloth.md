@@ -90,3 +90,33 @@ the cream spade, which stays still.
 - The curtain's black look over the store's sheet (ADR 042) shows it too, drawn for black, in place of the
   old ring and the gold spade.
 - `dhaka_ring.py` now draws the Dhaka Ring into a work dir only.
+
+## Addendum (31 Oct 2026): one background for the menus; the game behind the pages over a match
+
+The owner: "in mainmenu and in every panel they have the same bg and while swapping the panels. I can see
+it properly the panels being swapped because the whole images are being replace. cant we like use the one
+bg for all so that it wont be noticed. fix that issue. in while playing game if i click scoreboard then
+also it has the bg, the score board should be open with no bg there the game play scene will be the
+background."
+
+- **One background behind the menu screens.** Every menu screen had a copy of the equipped background,
+  so a screen change faded and slid the picture along with the screen. Now the main menu's picture is
+  the only one. When the Menu scene starts, `MenuBackdrop` lifts it out of the main menu to stand behind
+  all the screens, and the router fades and slides only the screens over it. It still shows the equipped
+  theme, at the backdrop frame's size, so it fills 16:9, 20:9, 21:9 and 4:3. The screens' words keep
+  their ink (light on the night themes).
+- **The pages over a match show the game.** The scorecard, the round and match results, and Settings and
+  How to Play opened from the match menu have no picture of their own. The table stays in sight behind
+  them under the match menu's own dim (black at 83%), which keeps the pages' headers readable over the
+  seats and cards and the taps off the table, and keeps the table's look between the match menu and the
+  pages it opens (`OverTheTable`). The Table scene's scope turns the dim on, so Settings and How to Play
+  show none over the menus. Words drawn straight on the ground there (Settings' title and greeting, the
+  results' headline) are drawn light; a screen title's line-by-line gradient now turns off with its
+  light ink too, which also mends the titles on the night themes (ADR 064).
+- **Kept:** the loading curtain and the name prompt, each on a canvas of its own over whatever is under
+  it, keep their pictures, and so do the shop's theme preview pictures. The banner rules at the table
+  are unchanged.
+- `ScreenLayoutBuilder` builds the screens without a picture of their own, `ScreenBackdropBuilder.PatchAll`
+  took the pictures off the saved prefabs and gave the five pages their dims, and `ScreenCaptureTool`
+  draws a menu screen over the default background, as the game shows it. The Menu and Table scenes are
+  unchanged.

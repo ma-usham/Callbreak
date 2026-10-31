@@ -1,4 +1,5 @@
 using System.IO;
+using Callbreak.Presentation.Framework;
 using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -106,6 +107,12 @@ namespace Callbreak.Editor
 
                 var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
                 instance.transform.SetParent(canvasRect, false);
+
+                // A menu screen stands on the menus' one background (ADR 058's addendum): drawn over it, as in the game.
+                if (instance.GetComponentInChildren<EquippedBackground>(true) == null && ScreenBackdropBuilder.OnTheMenusPicture(prefab.name))
+                {
+                    Screens.ScreenLayoutBuilder.AddPicture(canvasRect, Screens.ScreenLayout.Load(prefab.name)).SetAsFirstSibling();
+                }
 
                 // A prefab that is a screen-overlay canvas of its own (the loading curtain) is laid
                 // out by that canvas while it stands alone, which leaves it at the size of whatever
