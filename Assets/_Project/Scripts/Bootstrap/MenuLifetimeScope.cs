@@ -44,6 +44,9 @@ namespace Callbreak.Bootstrap
             builder.Register<ScreenRouter>(Lifetime.Scoped);
             builder.Register<MatchLauncher>(Lifetime.Scoped);
 
+            // How the shop opens next: as itself, or on a festival offer (ADR 067).
+            builder.Register<ShopOpening>(Lifetime.Scoped);
+
             RegisterPresenter<MainMenuView, MainMenuPresenter>(builder);
             RegisterPresenter<PlayWithFriendsView, PlayWithFriendsPresenter>(builder);
             RegisterPresenter<CreateRoomView, CreateRoomPresenter>(builder);
@@ -86,6 +89,9 @@ namespace Callbreak.Bootstrap
 
             // Daily Rewards opens by itself on the bare main menu once a day (ADR 046).
             RegisterPresenter<DailyRewardsView, DailyRewardsMoment>(builder);
+
+            // A festival offer opens by itself once on the bare main menu, after Daily Rewards (ADR 067).
+            RegisterPresenter<ShopView, FestivalOfferMoment>(builder);
 
             // An app open ad may greet the player back on the bare main menu (ADR 047).
             builder.RegisterEntryPoint<ReturnToGameAdMoment>();

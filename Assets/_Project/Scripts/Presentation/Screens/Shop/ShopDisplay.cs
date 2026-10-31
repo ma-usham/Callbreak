@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Globalization;
+using Callbreak.Application.Cosmetics;
 
 namespace Callbreak.Presentation.Screens
 {
@@ -20,6 +22,9 @@ namespace Callbreak.Presentation.Screens
 
         /// <summary>A theme owned and not equipped: "Owned" with an empty radio.</summary>
         Owned,
+
+        /// <summary>A theme a festival offer gives (ADR 067): "Free", under a Festival tag.</summary>
+        Offer,
     }
 
     /// <summary>What the primary button under the decks does for the chosen deck.</summary>
@@ -43,6 +48,9 @@ namespace Callbreak.Presentation.Screens
 
         /// <summary>"Equipped", off: the theme the player has on.</summary>
         Equipped,
+
+        /// <summary>A festival offer's theme (ADR 067): "Watch ad • Free" claims it; it then says Equip theme.</summary>
+        Claim,
     }
 
     /// <summary>
@@ -87,6 +95,8 @@ namespace Callbreak.Presentation.Screens
                     return "ui.shop.status.equipped";
                 case ShopTileStatus.Owned:
                     return "ui.shop.status.owned";
+                case ShopTileStatus.Offer:
+                    return "ui.shop.status.free";
                 default:
                     return null;
             }
@@ -104,6 +114,43 @@ namespace Callbreak.Presentation.Screens
             }
 
             return equipped ? ThemeAction.Equipped : ThemeAction.Equip;
+        }
+
+        /// <summary>
+        /// The themes in the shop's order (the owner, 31 Oct 2026): the one bought last first, then the
+        /// rest from the cheapest to the dearest, in catalogue order where prices tie. A last purchase
+        /// the catalogue no longer has changes nothing.
+        /// </summary>
+        public static IReadOnlyList<CosmeticItem> ThemeOrder(IReadOnlyList<CosmeticItem> catalog, string lastBought)
+        {
+            var order = new List<CosmeticItem>(catalog.Count);
+            CosmeticItem first = null;
+            foreach (CosmeticItem theme in catalog)
+            {
+                if (first == null && lastBought != null && theme.Id == lastBought)
+                {
+                    first = theme;
+                }
+                else
+                {
+                    order.Add(theme);
+                }
+            }
+
+            // A stable sort: List.Sort isn't, so the catalogue's place breaks ties.
+            var place = new Dictionary<CosmeticItem, int>(order.Count);
+            for (int i = 0; i < order.Count; i++)
+            {
+                place[order[i]] = i;
+            }
+
+            order.Sort((a, b) => a.Price != b.Price ? a.Price.CompareTo(b.Price) : place[a].CompareTo(place[b]));
+            if (first != null)
+            {
+                order.Insert(0, first);
+            }
+
+            return order;
         }
 
         /// <summary>A price as the tiles and the Buy buttons show it: the number of coins, grouped as the wallet groups them ("1,000").</summary>

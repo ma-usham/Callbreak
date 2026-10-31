@@ -812,6 +812,85 @@ namespace Callbreak.Tests.EditMode.Application
             Assert.Throws<InvalidOperationException>(() => decksOnly.SelectDeck("kathmandu-gold"));
         }
 
+        [Test]
+        public void BuyingAtAnOffersPrice_IsThePurchase_ForThoseCoins()
+        {
+            _wallet.Add(1000);
+            int coins = _wallet.Coins;
+            int changes = 0;
+            _shop.Changed += () => changes++;
+
+            Assert.AreEqual(PurchaseResult.Bought, _shop.BuyAt(CosmeticKind.Theme, "tihar-lights", 400));
+
+            Assert.IsTrue(_shop.IsOwned(CosmeticKind.Theme, "tihar-lights"));
+            Assert.AreEqual(coins - 400, _wallet.Coins);
+            Assert.AreEqual("durbar-square", _shop.Equipped(CosmeticKind.Theme), "bought, not equipped");
+            Assert.AreEqual(1, changes);
+            Assert.AreEqual(PurchaseResult.AlreadyOwned, _shop.BuyAt(CosmeticKind.Theme, "tihar-lights", 0));
+            CollectionAssert.Contains(_store.Peek<CosmeticsData>(CosmeticsService.SaveKey).boughtThemeIds, "tihar-lights");
+        }
+
+        [Test]
+        public void AGift_CostsNothing_AndNeedsNoWallet()
+        {
+            var noWallet = new CosmeticsService(_store);
+
+            Assert.AreEqual(PurchaseResult.Bought, noWallet.BuyAt(CosmeticKind.Theme, "tihar-lights", 0));
+
+            Assert.IsTrue(noWallet.IsOwned(CosmeticKind.Theme, "tihar-lights"));
+            Assert.IsTrue(new CosmeticsService(_store).IsOwned(CosmeticKind.Theme, "tihar-lights"), "kept in the file");
+        }
+
+        [Test]
+        public void AnOffersPrice_IsNeverAboveTheCatalogues_NorBelowNothing()
+        {
+            _wallet.Add(5000);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => _shop.BuyAt(CosmeticKind.Theme, "tihar-lights", 1001));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _shop.BuyAt(CosmeticKind.Theme, "tihar-lights", -1));
+            Assert.IsFalse(_shop.IsOwned(CosmeticKind.Theme, "tihar-lights"));
+            Assert.AreEqual(PurchaseResult.UnknownItem, _shop.BuyAt(CosmeticKind.Background, "tihar-lights", 0), "a part comes only with its theme");
+            Assert.AreEqual(PurchaseResult.UnknownItem, _shop.BuyAt(CosmeticKind.Theme, "tihar", 0));
+        }
+
+        [Test]
+        public void AnOffersPrice_TheWalletCantPay_BuysNothing()
+        {
+            _wallet.TrySpend(_wallet.Coins - 399);
+
+            Assert.AreEqual(PurchaseResult.NotEnoughCoins, _shop.BuyAt(CosmeticKind.Theme, "tihar-lights", 400));
+
+            Assert.IsFalse(_shop.IsOwned(CosmeticKind.Theme, "tihar-lights"));
+            Assert.AreEqual(399, _wallet.Coins);
+        }
+
+        [Test]
+        public void TheLastBought_FollowsThePurchases_InTheOrderTheyWereMade()
+        {
+            Assert.IsNull(_shop.LastBought(CosmeticKind.Theme), "nothing bought: Durbar Square is everyone's");
+            _wallet.Add(5000);
+
+            _shop.Buy(CosmeticKind.Theme, "mithila-garden");
+            _shop.BuyAt(CosmeticKind.Theme, "tihar-lights", 0);
+            Assert.AreEqual("tihar-lights", _shop.LastBought(CosmeticKind.Theme), "an offer's gift is a purchase too");
+
+            _shop.Buy(CosmeticKind.Theme, "himalayan-sunrise");
+            Assert.AreEqual("himalayan-sunrise", _shop.LastBought(CosmeticKind.Theme));
+            Assert.AreEqual("himalayan-sunrise", new CosmeticsService(_store, _wallet).LastBought(CosmeticKind.Theme), "kept in the file");
+            Assert.IsNull(_shop.LastBought(CosmeticKind.Deck));
+        }
+
+        [Test]
+        public void TheLastBought_SkipsAPurchaseThisBuildDoesntKnow()
+        {
+            var data = new CosmeticsData { schemaVersion = CosmeticsData.CurrentVersion };
+            data.boughtThemeIds.Add("phewa-moonlight");
+            data.boughtThemeIds.Add("a-seasonal-theme");
+            _store.Put(CosmeticsService.SaveKey, data);
+
+            Assert.AreEqual("phewa-moonlight", new CosmeticsService(_store, _wallet).LastBought(CosmeticKind.Theme));
+        }
+
         private static void AssertOwned(ICosmeticsShop shop, CosmeticKind kind, string[] ids, params bool[] owned)
         {
             for (int i = 0; i < ids.Length; i++)

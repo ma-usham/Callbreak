@@ -9,8 +9,9 @@ namespace Callbreak.Presentation.Screens
     /// One theme in the shop's Themes row (Figma "V1 Rebuild · Shop", ADR 064): the theme's background
     /// over a strip of its cloth (one picture), a NEW tag on the new themes, its name, "Background +
     /// cloth", and then "Equipped" with a filled radio and a crimson outline, "Owned" with an empty
-    /// radio, or a coin and its price, in red while the wallet can't pay it. Tapping it opens the
-    /// theme's preview.
+    /// radio, or a coin and its price, in red while the wallet can't pay it. While a festival offer
+    /// gives the theme (ADR 067), a Festival tag takes the NEW tag's place and "Free" the price's.
+    /// Tapping it opens the theme's preview.
     /// </summary>
     public sealed class ThemeTile : MonoBehaviour
     {
@@ -20,6 +21,7 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private Button _button;
         [SerializeField] private Image _picture;
         [SerializeField] private GameObject _newTag;
+        [SerializeField] private GameObject _festivalTag;
         [SerializeField] private TMP_Text _name;
         [SerializeField] private GameObject _outline;
         [SerializeField] private ShopRow _statusRow;
@@ -28,6 +30,7 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private TMP_Text _status;
         [SerializeField] private ShopRow _priceRow;
         [SerializeField] private TMP_Text _price;
+        [SerializeField] private TMP_Text _offerText;
 
         public event Action Clicked;
 
@@ -43,14 +46,24 @@ namespace Callbreak.Presentation.Screens
 
         public bool ShowsNew => _newTag != null && _newTag.activeSelf;
 
+        public bool ShowsFestival => _festivalTag != null && _festivalTag.activeSelf;
+
+        public bool ShowsOffer => _offerText != null && _offerText.gameObject.activeSelf;
+
+        public TMP_Text OfferText => _offerText;
+
         public bool ShowsPrice => _priceRow != null && _priceRow.gameObject.activeSelf;
 
         public bool ShowsStatus => _statusRow != null && _statusRow.gameObject.activeSelf;
 
         public bool RadioFilled => _radioOn != null && _radioOn.activeSelf;
 
-        /// <summary>Puts a theme on the tile; a null picture keeps the one it has.</summary>
-        public void Show(string themeName, Sprite picture, bool isNew, ShopTileStatus status, string statusText, string priceText, bool affordable)
+        /// <summary>
+        /// Puts a theme on the tile; a null picture keeps the one it has. A festival theme shows its
+        /// Festival tag instead of NEW, and <see cref="ShopTileStatus.Offer"/> shows <paramref name="statusText"/>
+        /// ("Free") where the price goes.
+        /// </summary>
+        public void Show(string themeName, Sprite picture, bool isNew, bool isFestival, ShopTileStatus status, string statusText, string priceText, bool affordable)
         {
             if (picture != null && _picture.sprite != picture)
             {
@@ -63,13 +76,24 @@ namespace Callbreak.Presentation.Screens
             }
 
             SetText(_name, themeName);
-            SetActive(_newTag, isNew);
+            SetActive(_newTag, isNew && !(isFestival && _festivalTag != null));
+            SetActive(_festivalTag, isFestival);
             SetActive(_outline, status == ShopTileStatus.Equipped);
 
+            bool offer = status == ShopTileStatus.Offer && _offerText != null;
             bool price = status == ShopTileStatus.Price;
             SetActive(_priceRow.gameObject, price);
-            SetActive(_statusRow.gameObject, !price);
-            if (price)
+            SetActive(_statusRow.gameObject, !price && !offer);
+            if (_offerText != null)
+            {
+                SetActive(_offerText.gameObject, offer);
+            }
+
+            if (offer)
+            {
+                SetText(_offerText, statusText);
+            }
+            else if (price)
             {
                 SetText(_price, priceText);
                 Color ink = affordable ? AffordableInk : UnaffordableInk;

@@ -265,6 +265,7 @@ namespace Callbreak.Editor
             UnityEngine.UI.Button shop = CreateButton(
                 "ShopButton", headerRight, shopCentre, UiBuildKit.NativeSize(circle), circle, circleShadow, 1f, 0f, 4f, 0.2f);
             Place("Icon", shop.transform, new Vector2(1548.75f, 96f), shopCentre, Ui("Icons/Icon_Shop.png"));
+            GameObject shopDot = BuildShopDot(shop.transform, shopCentre, UiBuildKit.NativeSize(circle).y / UiBuildKit.ScaleY / 2f);
 
             UnityEngine.UI.Button dailyRewards = BuildDailyRewardsButton(
                 headerRight, UnderShop(shopCentre, 1), circle, circleShadow, out GameObject dailyRewardsDot);
@@ -301,6 +302,7 @@ namespace Callbreak.Editor
             serialized.FindProperty("_noAdsButton").objectReferenceValue = noAds;
             serialized.FindProperty("_dailyRewardsButton").objectReferenceValue = dailyRewards;
             serialized.FindProperty("_dailyRewardsDot").objectReferenceValue = dailyRewardsDot;
+            serialized.FindProperty("_shopDot").objectReferenceValue = shopDot;
             serialized.FindProperty("_centre").objectReferenceValue = centre;
             serialized.FindProperty("_bannerSlot").objectReferenceValue = bannerSlot;
             BindCoinFlight(serialized, root, content, coins.transform.parent.Find("Coin"));
@@ -428,6 +430,55 @@ namespace Callbreak.Editor
             dot = dotRect.gameObject;
             dot.SetActive(false);
             return button;
+        }
+
+        /// <summary>
+        /// The Shop button's red dot (the owner, 31 Oct 2026; ADR 067): Daily Rewards' dot, on the
+        /// shop disc's rim in the same place, built hidden: the presenter shows it while a festival
+        /// offer waits to be claimed. <paramref name="radius"/> is the disc's, in mockup pixels.
+        /// </summary>
+        private static GameObject BuildShopDot(Transform shop, Vector2 centre, float radius)
+        {
+            float offset = radius * 0.72f;
+            RectTransform dotRect = UiBuildKit.CreateAt(
+                "Dot", shop, centre + new Vector2(offset, -offset), centre, UiBuildKit.FromMock(DailyRewardsDotSize, DailyRewardsDotSize));
+            UiBuildKit.AddImage(dotRect, Ui(DailyRewardsDotPath), false);
+            dotRect.gameObject.SetActive(false);
+            return dotRect.gameObject;
+        }
+
+        /// <summary>
+        /// Gives the saved main menu prefab's Shop button its red dot (<see cref="BuildShopDot"/>), bound
+        /// to the view; everything else in the prefab stays as it is. A button that has its dot is left alone.
+        /// </summary>
+        public static string AddShopDot()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+            try
+            {
+                var serialized = new SerializedObject(root.GetComponent<MainMenuView>());
+                var shop = serialized.FindProperty("_shopButton").objectReferenceValue as UnityEngine.UI.Button;
+                if (shop == null)
+                {
+                    return "FAILED: the main menu has no shop button";
+                }
+
+                if (serialized.FindProperty("_shopDot").objectReferenceValue != null)
+                {
+                    return "the shop button already has its dot";
+                }
+
+                // Placed against the disc's own centre, so where the column stands doesn't matter.
+                float radius = ((RectTransform)shop.transform).sizeDelta.y / UiBuildKit.ScaleY / 2f;
+                serialized.FindProperty("_shopDot").objectReferenceValue = BuildShopDot(shop.transform, Screen, radius);
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, PrefabPath, out bool saved);
+                return saved ? $"saved {PrefabPath} with the Shop button's dot" : $"FAILED to save {PrefabPath}";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         /// <summary>

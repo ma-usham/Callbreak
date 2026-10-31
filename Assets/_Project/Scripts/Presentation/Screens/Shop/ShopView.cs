@@ -1,4 +1,5 @@
 using System;
+using Callbreak.Application.Offers;
 using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Table;
@@ -85,6 +86,9 @@ namespace Callbreak.Presentation.Screens
 
         public event Action PreviewEquipClicked;
 
+        /// <summary>The preview's claim button for a festival offer's theme (ADR 067).</summary>
+        public event Action PreviewClaimClicked;
+
         /// <summary>The tab that shows: 0 Themes, 1 Cards.</summary>
         public int Category => _category;
 
@@ -165,12 +169,12 @@ namespace Callbreak.Presentation.Screens
         public void SetNoAdsVisible(bool visible) => _drawer.SetNoAdsVisible(visible);
 
         /// <summary>One theme's tile; a null picture keeps the one the tile has.</summary>
-        public void SetTheme(int index, string themeName, Sprite picture, bool isNew, ShopTileStatus status, string statusText, string priceText, bool affordable)
+        public void SetTheme(int index, string themeName, Sprite picture, bool isNew, bool isFestival, ShopTileStatus status, string statusText, string priceText, bool affordable)
         {
             ThemeTile tile = _shelf.Tile(index);
             if (tile != null)
             {
-                tile.Show(themeName, picture, isNew, status, statusText, priceText, affordable);
+                tile.Show(themeName, picture, isNew, isFestival, status, statusText, priceText, affordable);
             }
         }
 
@@ -243,10 +247,10 @@ namespace Callbreak.Presentation.Screens
             return _library != null ? _library.TablePicture(id, out _) : null;
         }
 
-        public void ShowPreview(string themeName, string description, Sprite background, bool nightScene, Sprite cloth, Sprite frame, ThemeAction action, string price, bool interactable)
+        public void ShowPreview(string themeName, string description, Sprite background, bool nightScene, Sprite cloth, Sprite frame, ThemeAction action, string price, string claimLabel, FestivalOfferKind claimKind, bool interactable)
         {
             _preview.Open();
-            _preview.Show(themeName, description, background, nightScene, cloth, frame, action, price, interactable);
+            _preview.Show(themeName, description, background, nightScene, cloth, frame, action, price, claimLabel, claimKind, interactable);
         }
 
         public void ClosePreview() => _preview.Close();
@@ -313,6 +317,7 @@ namespace Callbreak.Presentation.Screens
             _preview.CloseButton.onClick.AddListener(OnPreviewClose);
             _preview.BuyButton.onClick.AddListener(OnPreviewBuy);
             _preview.EquipButton.onClick.AddListener(OnPreviewEquip);
+            _preview.ClaimButton.onClick.AddListener(OnPreviewClaim);
             _preview.EarnCoinsButton.onClick.AddListener(OnEarnCoins);
         }
 
@@ -328,6 +333,7 @@ namespace Callbreak.Presentation.Screens
             _preview.CloseButton.onClick.RemoveListener(OnPreviewClose);
             _preview.BuyButton.onClick.RemoveListener(OnPreviewBuy);
             _preview.EquipButton.onClick.RemoveListener(OnPreviewEquip);
+            _preview.ClaimButton.onClick.RemoveListener(OnPreviewClaim);
             _preview.EarnCoinsButton.onClick.RemoveListener(OnEarnCoins);
 
             // A screen that opens again shows every deck by its back.
@@ -490,5 +496,7 @@ namespace Callbreak.Presentation.Screens
         private void OnPreviewBuy() => PreviewBuyClicked?.Invoke();
 
         private void OnPreviewEquip() => PreviewEquipClicked?.Invoke();
+
+        private void OnPreviewClaim() => PreviewClaimClicked?.Invoke();
     }
 }

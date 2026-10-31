@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Callbreak.Application.Cosmetics;
 using Callbreak.Application.Economy;
+using Callbreak.Application.Offers;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
@@ -26,7 +27,8 @@ namespace Callbreak.Presentation.Screens
     /// button left of it sells the one-time purchase that removes the ads between matches
     /// (<see cref="NoAdsOffer"/>), with the game under the curtain's black cover while the store's
     /// sheet is up (ADR 042). The small button below No Ads opens Daily Rewards (the owner, 8 Oct
-    /// 2026; ADR 046), with a red dot while today's reward is ready. Prize coins won at the table (a
+    /// 2026; ADR 046), with a red dot while today's reward is ready; the Shop button has one while a
+    /// festival offer waits to be claimed (the owner, 31 Oct 2026; ADR 067). Prize coins won at the table (a
     /// Stake Match, <see cref="IUnseenCoins"/>) arrive here (the owner, 9 Oct 2026): the wallet first
     /// shows the balance without them, and once the menu is on screen with no dialog over it they fly
     /// from its middle into the wallet, which counts up, with the coin sound at the first landing; with
@@ -52,6 +54,7 @@ namespace Callbreak.Presentation.Screens
         private readonly IWallet _wallet;
         private readonly NoAdsOffer _noAds;
         private readonly IDailyRewards _dailyRewards;
+        private readonly IFestivalOffers _offers;
         private readonly IUnseenCoins _unseen;
         private readonly IAudioService _audio;
         private readonly ILoadingCurtain _curtain;
@@ -85,7 +88,8 @@ namespace Callbreak.Presentation.Screens
             ILoadingCurtain curtain,
             IDailyRewards dailyRewards,
             IUnseenCoins unseen,
-            IAudioService audio)
+            IAudioService audio,
+            IFestivalOffers offers)
         {
             _view = view;
             _router = router;
@@ -105,6 +109,7 @@ namespace Callbreak.Presentation.Screens
             _wallet = wallet;
             _noAds = new NoAdsOffer(noAds, toast, localization, curtain);
             _dailyRewards = dailyRewards;
+            _offers = offers;
             _unseen = unseen;
             _audio = audio;
             _curtain = curtain;
@@ -131,6 +136,7 @@ namespace Callbreak.Presentation.Screens
             _noAds.Changed += RenderNoAds;
             _noAds.Start();
             _dailyRewards.Changed += RenderDailyRewards;
+            _offers.Changed += RenderShopOffer;
             _network.Changed += OnNetworkChanged;
             _router.Changed += OnScreenChanged;
             _heldCoins = _unseen.Amount;
@@ -139,6 +145,7 @@ namespace Callbreak.Presentation.Screens
             RenderCoins();
             RenderNoAds();
             RenderDailyRewards();
+            RenderShopOffer();
             RenderMotion();
             OnNetworkChanged(_network.IsOnline);
 
@@ -170,6 +177,7 @@ namespace Callbreak.Presentation.Screens
             _noAds.Changed -= RenderNoAds;
             _noAds.Dispose();
             _dailyRewards.Changed -= RenderDailyRewards;
+            _offers.Changed -= RenderShopOffer;
             _network.Changed -= OnNetworkChanged;
             _router.Changed -= OnScreenChanged;
 
@@ -236,11 +244,15 @@ namespace Callbreak.Presentation.Screens
         /// <summary>The red dot on the Daily Rewards button. A new day comes without an event: the menu reads it again whenever it is on top.</summary>
         private void RenderDailyRewards() => _view.SetDailyRewardsReady(_dailyRewards.CanClaim);
 
+        /// <summary>The red dot on the Shop button. An offer starts and ends without an event: the menu reads it again whenever it is on top.</summary>
+        private void RenderShopOffer() => _view.SetShopOffer(_offers.Claimable != null);
+
         private void OnScreenChanged(ScreenId id)
         {
             if (id == ScreenId.MainMenu)
             {
                 RenderDailyRewards();
+                RenderShopOffer();
             }
         }
 

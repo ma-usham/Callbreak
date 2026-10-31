@@ -32,9 +32,12 @@ namespace Callbreak.Tests.PlayMode
         private const int Themes = ShopView.Themes;
         private const int Cards = ShopView.Cards;
         private const int ThemeCount = 10;
+        // Places in the shop's order for a player who has bought nothing (the owner, 31 Oct 2026): from
+        // the cheapest to the dearest, in catalogue order where prices tie.
         private const int Sunrise = 1;
-        private const int Tihar = 4;
-        private const int Pokhara = 8;
+        private const int Pokhara = 3;
+        private const int Monastery = 6;
+        private const int Tihar = 7;
 
         private GameFixture _game;
 
@@ -212,7 +215,7 @@ namespace Callbreak.Tests.PlayMode
             PressTheme(0);
             Assert.AreEqual(ThemeAction.Equipped, View.Preview.Action, "Durbar Square is on: Equipped, off");
             Press("CloseButton");
-            PressTheme(ThemeCount - 1);
+            PressTheme(Monastery);
             Assert.AreEqual(Text("ui.shop.theme.monastery_garden"), View.Preview.Title);
             Assert.IsNull(View.Preview.ClothFrame, "Dusk Himalaya has no border");
         }
@@ -247,8 +250,11 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(CosmeticCatalog.Themes.DurbarSquare, shop.Equipped(CosmeticKind.Theme), "buying does not equip");
             Assert.AreEqual(ThemeAction.Equip, View.Preview.Action, "the button turns to Equip theme");
             Assert.IsTrue(ToastShows(Format("ui.shop.theme.bought", Text("ui.shop.theme.himalayan_sunrise"))), "a toast says it is the player's");
-            Assert.AreEqual(Text("ui.shop.status.owned"), Theme(Sunrise).StatusText.text);
-            Assert.IsFalse(Theme(Sunrise).RadioFilled);
+            Assert.AreEqual(Text("ui.shop.theme.himalayan_sunrise"), Theme(0).Name.text, "the theme bought last comes first (the owner, 31 Oct 2026)");
+            Assert.AreEqual(Text("ui.shop.theme.durbar_square"), Theme(1).Name.text);
+            Assert.AreEqual(Text("ui.shop.status.owned"), Theme(0).StatusText.text);
+            Assert.IsFalse(Theme(0).RadioFilled);
+            Assert.AreEqual(Text("ui.shop.theme.himalayan_sunrise"), View.Preview.Title, "the preview stays on the theme it shows");
 
             Press("EquipButton");
             yield return null;
@@ -256,8 +262,8 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(CosmeticCatalog.Themes.HimalayanSunrise, shop.Equipped(CosmeticKind.Background), "its background");
             Assert.AreEqual(CosmeticCatalog.Themes.HimalayanSunrise, shop.Equipped(CosmeticKind.Table), "and its cloth");
             Assert.AreEqual(ThemeAction.Equipped, View.Preview.Action);
-            Assert.IsTrue(Theme(Sunrise).RadioFilled && Theme(Sunrise).ShowsOutline, "its tile says Equipped");
-            Assert.AreEqual(Text("ui.shop.status.owned"), Theme(0).StatusText.text, "Durbar Square is owned, not on");
+            Assert.IsTrue(Theme(0).RadioFilled && Theme(0).ShowsOutline, "its tile says Equipped");
+            Assert.AreEqual(Text("ui.shop.status.owned"), Theme(1).StatusText.text, "Durbar Square is owned, not on");
             EquippedBackground shown = View.GetComponentInChildren<EquippedBackground>(true);
             Assert.AreEqual(new TableBackdropLibraryCheck(View).Background(CosmeticCatalog.Themes.HimalayanSunrise), shown.Shown, "the shop itself shows the new background");
         }
