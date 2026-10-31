@@ -20,8 +20,8 @@ the game:
   - the brown and ivory variants in brown/800 #572E12 and surface ivory #F9F0E6;
   - Leave, the Create Room badge and the Follow rule's diamonds in crimson #9A0815;
   - the people behind on Friends and Create Room in brown/400 and /600 instead of grey;
-  - the coin, the gold spade, the bolt and Play as crafted vector art with the logo's and the Dhaka
-    Ring's golds and crimsons.
+  - the gold spade, the bolt and Play as crafted vector art with the logo's and the Dhaka Ring's golds
+    and crimsons (the coin was too, until the owner asked for the old one back; see below).
 - **The five portraits are drawn again as flat vector portraits** of the same people, in the same
   clothes and framing, and framed the same way for the name prompt.
 - **Each sprite keeps its file, size, GUID and import settings.** Each icon is fitted into the box the
@@ -31,7 +31,12 @@ the game:
   - the suit icons (card pieces; the owner: "except cards");
   - the cloth tab icon (Icon_TableOval_*, vector since ADR 058);
   - three icons nothing shows (Icon_CardStack, Icon_Sort, Icon_Storefront_Brown);
-  - the avatar ring (a white disc) and the chosen ring.
+  - the avatar ring (a white disc) and the chosen ring;
+  - the coin (Icon_Coin), since 31 Oct 2026: it stays the V1 painting, the same gold spade coin as the
+    coin bundles and the daily rewards. The owner: "in coin we have old images right for bundles and
+    daily reward. but in top where we show coina dn in shop we have used vector coin to show use the
+    same old coin only in terms of coins." The wallet, the shop's prices, the coin flight, Earn Coins,
+    Daily Rewards, Play Online and the results all show it.
 - **Figma:** the page "V1 Rebuild · Icons & Avatars" shows each V1 icon and portrait beside its redraw,
   as editable vectors uploaded from the scripts' SVGs.
 

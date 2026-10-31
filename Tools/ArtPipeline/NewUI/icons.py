@@ -11,7 +11,9 @@ The owner, 31 Oct 2026: "implement what are remained in the game. except cards f
 were flat glyphs (black, a few brown or ivory) and a few paintings (the coin, the gold spade, the bolt,
 Play). Each keeps its meaning and silhouette, drawn with the rebuild's palette (Figma's "Callbreak
 Colors"): ink #131211, crimson #9A0815, browns, ivory, and the gold of the logo and the Dhaka Ring. The
-suit icons are card pieces and stay; the cloth tab icon (Icon_TableOval_*) is vector already.
+suit icons are card pieces and stay; the cloth tab icon (Icon_TableOval_*) is vector already. The coin
+(Icon_Coin) stays the V1 painting, as the coin bundles and the daily rewards draw it (the owner, 31 Oct
+2026: "use the same old coin only in terms of coins").
 """
 import math
 import os
@@ -382,20 +384,6 @@ def mountains(colour):
     return i.holes(f'<path d="{shape}" stroke="{colour}" stroke-width="4" stroke-linejoin="round"/>', snow, fill(colour))
 
 
-def coin():
-    i = Icon(132, 132)
-    i.defs.append('<linearGradient id="{p}rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD978"/>'
-                  '<stop offset="0.5" stop-color="#F0A522"/><stop offset="1" stop-color="#C46E0C"/></linearGradient>')
-    i.defs.append('<linearGradient id="{p}face" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFCB45"/>'
-                  '<stop offset="1" stop-color="#EE9A16"/></linearGradient>')
-    i.defs.append('<linearGradient id="{p}sp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C5730E"/>'
-                  '<stop offset="1" stop-color="#8E4A08"/></linearGradient>')
-    i.add('<circle cx="66" cy="66" r="64" fill="#7A3A0A"/><circle cx="66" cy="65" r="61" fill="url(#{p}rim)"/>')
-    i.add('<circle cx="66" cy="66" r="49" fill="#B4630C"/><circle cx="66" cy="67" r="47" fill="url(#{p}face)"/>')
-    i.add('<g fill="#FFE7A0" opacity="0.9">' + spade(66, 69, 62) + '</g><g fill="url(#{p}sp)">' + spade(66, 67.5, 62) + '</g>')
-    return i.add('<path d="M28 42 A44 44 0 0 1 60 22" fill="none" stroke="#FFF4CF" stroke-width="5" stroke-linecap="round" opacity="0.8"/>')
-
-
 def spade_gold():
     i = Icon(166, 180)
     i.defs.append(f'<linearGradient id="{{p}}g" x1="0" y1="0" x2="0" y2="1">{GOLD}</linearGradient>')
@@ -432,7 +420,7 @@ ICONS = {
     "Icon_Chevron": lambda: chevron(INK, 9, 34, 56), "Icon_Chevron_Thin": lambda: chevron(WHITE, 6.5, 38, 64),
     "Common/Icon_Chevron_Light": lambda: chevron(WHITE, 9, 34, 56),
     "Icon_Clock": clock, "Icon_Close": lambda: close(INK, 13), "Icon_Close_Brown": lambda: close(BROWN, 12),
-    "Icon_Coin": coin, "Icon_Copy": copy, "Icon_CreateRoom": create_room, "Icon_DailyReward": gift,
+    "Icon_Copy": copy, "Icon_CreateRoom": create_room, "Icon_DailyReward": gift,
     "Icon_DifficultyEasy": lambda: difficulty(1), "Icon_DifficultyNormal": lambda: difficulty(2), "Icon_DifficultyHard": lambda: difficulty(3),
     "Icon_Emote": emote, "Icon_EnterRoom": enter_room, "Icon_Friends": friends, "Icon_Home": home, "Icon_HowToPlay": how_to_play,
     "Icon_Leave": leave, "Icon_Lightning": lightning, "Icon_Lock": lock,
