@@ -643,16 +643,7 @@ namespace Callbreak.Editor
                 RunUntil(() => _finished, 3600.0, "match 1 finishes");
                 StopMatch();
 
-                // Match 2: left in the middle, then resumed from its save. The first-match tips are
-                // over (three matches finished), so the prompt names cards and suits.
-                Check(TurnTips.AreOn(_settings.CompletedMatches), "tips are still on after one finished match", "completed " + _settings.CompletedMatches);
-                while (TurnTips.AreOn(_settings.CompletedMatches))
-                {
-                    _settings.IncrementCompletedMatches();
-                }
-
-                Equal(TurnTips.MatchesWithTips, _settings.CompletedMatches, "tips switch off with three finished matches");
-
+                // Match 2: left in the middle, then resumed from its save.
                 _stage = "match 2";
                 _finished = false;
                 _leaveMidway = true;
@@ -1464,11 +1455,6 @@ namespace Callbreak.Editor
                 if (_captures && Once("capture turn"))
                 {
                     Snapshot("Table_your_turn");
-                }
-
-                if (_captures && _table.Prompt.Text.StartsWith("Tip", StringComparison.Ordinal))
-                {
-                    Snapshot("Table_tip");
                 }
 
                 // The last five seconds of a turn clock (online only; staged through the session).
@@ -2747,33 +2733,19 @@ namespace Callbreak.Editor
                         {
                             TMP_Text promptLabel = Field<TMP_Text>(_table.Prompt, "_label");
                             state.TryGetObligation(out PlayObligation asked);
-                            string tip = TurnTips.AreOn(_settings.CompletedMatches) ? TurnTips.ForObligation(asked, state.Trick, _text) : null;
-                            if (tip != null)
-                            {
-                                // The first three matches: the rule is explained, suits spelled out.
-                                Equal(tip, _table.Prompt.Text, "in the first matches the prompt is the tip for the turn");
-                                Check(tip.StartsWith("Tip", StringComparison.Ordinal), "a tip reads as a tip", tip);
-                                Drawable(promptLabel, "a tip has no character its label cannot draw");
-                            }
-                            else
-                            {
-                                if (!TurnTips.AreOn(_settings.CompletedMatches))
-                                {
-                                    Check(!_table.Prompt.Text.StartsWith("Tip", StringComparison.Ordinal), "after three finished matches the prompt shows no tip", _table.Prompt.Text);
-                                }
 
-                                Check(_table.Prompt.Text.StartsWith("Your turn", StringComparison.Ordinal), "the prompt says it is your turn", _table.Prompt.Text);
-                                Equal(TurnPrompt.ForObligation(asked, _text), _table.Prompt.Text, "the prompt states the obligation");
-                                if (asked.Kind == ObligationKind.BeatCard)
-                                {
-                                    Drawable(promptLabel, "a \"beat\" prompt in play has no character its label cannot draw");
-                                    Equal(1, SpritesDrawn(promptLabel), "a \"beat\" prompt in play draws its suit from the suit sprites");
-                                }
-                                else if (asked.Kind == ObligationKind.FollowSuit)
-                                {
-                                    Drawable(promptLabel, "a \"follow\" prompt in play has no character its label cannot draw");
-                                    Equal(1, SpritesDrawn(promptLabel), "a \"follow\" prompt in play draws its suit from the suit sprites");
-                                }
+                            // No tips, the first match too (the owner, 30 Oct 2026, ADR 063): the prompt names the turn.
+                            Check(_table.Prompt.Text.StartsWith("Your turn", StringComparison.Ordinal), "the prompt says it is your turn", _table.Prompt.Text);
+                            Equal(TurnPrompt.ForObligation(asked, _text), _table.Prompt.Text, "the prompt states the obligation");
+                            if (asked.Kind == ObligationKind.BeatCard)
+                            {
+                                Drawable(promptLabel, "a \"beat\" prompt in play has no character its label cannot draw");
+                                Equal(1, SpritesDrawn(promptLabel), "a \"beat\" prompt in play draws its suit from the suit sprites");
+                            }
+                            else if (asked.Kind == ObligationKind.FollowSuit)
+                            {
+                                Drawable(promptLabel, "a \"follow\" prompt in play has no character its label cannot draw");
+                                Equal(1, SpritesDrawn(promptLabel), "a \"follow\" prompt in play draws its suit from the suit sprites");
                             }
 
                             Check(_table.Hand.Interactable, "the hand takes input on the local turn");

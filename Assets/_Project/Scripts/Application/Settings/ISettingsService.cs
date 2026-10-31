@@ -36,7 +36,7 @@ namespace Callbreak.Application.Settings
         /// <summary>How to Play is shown once before the first match (GDD §11 screen 12).</summary>
         bool HowToPlaySeen { get; }
 
-        /// <summary>Completed matches, for first-match tips that switch off after 3 (GDD §15).</summary>
+        /// <summary>Completed matches; the first one offline deals friendlier hands (ADR 056).</summary>
         int CompletedMatches { get; }
 
         /// <summary>Optional beginner assist on the call panel (off by default, GDD §11 screen 07).</summary>

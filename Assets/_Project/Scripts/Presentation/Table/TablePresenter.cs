@@ -735,10 +735,10 @@ namespace Callbreak.Presentation.Table
         }
 
         /// <summary>
-        /// The prompt above the hand (GDD screen 08 "TURN PROMPT COPY"). During play it names or
-        /// explains the turn. While another seat calls it says "Asha is calling…", where the tips
-        /// show (the owner, 6 Oct 2026, ADR 040: it stood in the middle of the table); on the local
-        /// call turn the call panel speaks instead.
+        /// The prompt above the hand (GDD screen 08 "TURN PROMPT COPY"). During play it names the
+        /// turn. While another seat calls it says "Asha is calling…", where the prompt shows (the
+        /// owner, 6 Oct 2026, ADR 040: it stood in the middle of the table); on the local call turn
+        /// the call panel speaks instead.
         /// </summary>
         private void RenderPrompt()
         {
@@ -765,7 +765,7 @@ namespace Callbreak.Presentation.Table
 
             if (state.TryGetObligation(out PlayObligation obligation))
             {
-                ShowPrompt(PromptFor(obligation, state));
+                ShowPrompt(TurnPrompt.ForObligation(obligation, _localization));
             }
             else if (state.HasTurn)
             {
@@ -773,25 +773,6 @@ namespace Callbreak.Presentation.Table
             }
 
             // Between turns the last line stays (the trick winner, or the lead beat).
-        }
-
-        /// <summary>
-        /// What the pill says on the local turn. In a player's first three matches it explains the
-        /// rule behind the turn ("Tip: you must beat the highest heart if you can.") where there is
-        /// one to explain (GDD §15); after that, and when leading, it names the turn.
-        /// </summary>
-        private string PromptFor(in PlayObligation obligation, TableState state)
-        {
-            if (TurnTips.AreOn(_settings.CompletedMatches))
-            {
-                string tip = TurnTips.ForObligation(obligation, state.Trick, _localization);
-                if (tip != null)
-                {
-                    return tip;
-                }
-            }
-
-            return TurnPrompt.ForObligation(obligation, _localization);
         }
 
         private void ShowPrompt(string text)

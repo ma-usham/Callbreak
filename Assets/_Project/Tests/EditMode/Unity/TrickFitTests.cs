@@ -39,8 +39,8 @@ namespace Callbreak.Tests.EditMode.Unity
         /// <summary>Canvas units of cloth that show between a trick card and what is next to it.</summary>
         private const float Clear = 5f;
 
-        /// <summary>The longest prompt in English (ui.tip.any_card).</summary>
-        private const string LongestPrompt = "Tip: you can't follow or win this trick, so any card will do.";
+        /// <summary>The widest prompt in English: a name as long as a profile takes, of the widest letter, wins the trick.</summary>
+        private const string LongestPrompt = "WWWWWWWWWWWWWWWW wins the trick";
 
         private static readonly string[] Trick = { "J♥", "9♥", "Q♥", "10♥" };
 
