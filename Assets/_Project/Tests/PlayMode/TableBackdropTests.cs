@@ -46,7 +46,8 @@ namespace Callbreak.Tests.PlayMode
         [UnityTest]
         public IEnumerator TheEquippedBackgroundShowsBehindTheMenus_AndTheEquippedTableFillsTheTable()
         {
-            // The two backgrounds were bought before (500 and 750 coins since 6 Oct 2026).
+            // The two backgrounds were bought before the themes (500 and 750 coins since 6 Oct 2026): each
+            // owns its theme, its cloth with it (ADR 064).
             yield return _game.Boot(seed: saves =>
             {
                 var bought = new CosmeticsData();
@@ -57,10 +58,8 @@ namespace Callbreak.Tests.PlayMode
             ICosmeticsShop shop = _game.Services.Resolve<ICosmeticsShop>();
             AssertMenusShow(CosmeticCatalog.Backgrounds.DurbarSquare, "the default background before anything is equipped");
 
-            shop.Equip(CosmeticKind.Background, CosmeticCatalog.Backgrounds.PokharaLakeside);
-            AssertMenusShow(CosmeticCatalog.Backgrounds.PokharaLakeside, "a background shows behind the menus as soon as it is equipped");
-            Assert.AreEqual(PurchaseResult.Bought, shop.Buy(CosmeticKind.Table, CosmeticCatalog.Tables.IndigoDhaka), "the starting coins buy the Indigo Dhaka cloth");
-            shop.Equip(CosmeticKind.Table, CosmeticCatalog.Tables.IndigoDhaka);
+            shop.Equip(CosmeticKind.Theme, CosmeticCatalog.Themes.PokharaLakeside);
+            AssertMenusShow(CosmeticCatalog.Backgrounds.PokharaLakeside, "a theme's background shows behind the menus as soon as it is equipped");
 
             _warnings.Clear();
             GameFixture.Press(_game.MenuRouter, "PlayOfflineButton");
@@ -70,6 +69,7 @@ namespace Callbreak.Tests.PlayMode
             TableView table = UnityEngine.Object.FindFirstObjectByType<TableView>();
             AssertShows(table, CosmeticCatalog.Tables.IndigoDhaka);
             AssertBehindEverything(table);
+            Assert.IsNotNull(table.ClothFrame.sprite, "the indigo dhaka's border round the screen");
 
             // Back to the menu (the match is kept), a new choice in the shop, and a new match.
             GameFixture.PressIn(table, "HomeButton");
@@ -78,9 +78,8 @@ namespace Callbreak.Tests.PlayMode
             _game.PressDialog(confirm: true);
             yield return _game.UntilMenu();
             AssertMenusShow(CosmeticCatalog.Backgrounds.PokharaLakeside, "the menus after the table");
-            shop.Equip(CosmeticKind.Background, CosmeticCatalog.Backgrounds.MonasteryGarden);
-            shop.Equip(CosmeticKind.Table, CosmeticCatalog.Tables.GreenDhaka);
-            AssertMenusShow(CosmeticCatalog.Backgrounds.MonasteryGarden, "a new background shows at once");
+            shop.Equip(CosmeticKind.Theme, CosmeticCatalog.Themes.MonasteryGarden);
+            AssertMenusShow(CosmeticCatalog.Backgrounds.MonasteryGarden, "a new theme's background shows at once");
 
             _warnings.Clear();
             GameFixture.Press(_game.MenuRouter, "PlayOfflineButton");
@@ -94,7 +93,8 @@ namespace Callbreak.Tests.PlayMode
             _game.PressDialog(confirm: true);
             yield return UntilTableOpens("the next match's table to open");
             table = UnityEngine.Object.FindFirstObjectByType<TableView>();
-            AssertShows(table, CosmeticCatalog.Tables.GreenDhaka);
+            AssertShows(table, CosmeticCatalog.Tables.DuskHimalaya);
+            Assert.IsFalse(table.ClothFrame.enabled, "Dusk Himalaya has no border");
         }
 
         /// <summary>

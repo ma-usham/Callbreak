@@ -25,16 +25,18 @@ namespace Callbreak.Presentation.Table
             [SerializeField] private string _id;
             [SerializeField] private Sprite _sprite;
             [SerializeField] private Sprite _frame;
+            [SerializeField] private bool _nightScene;
 
             public Picture()
             {
             }
 
-            public Picture(string id, Sprite sprite, Sprite frame = null)
+            public Picture(string id, Sprite sprite, Sprite frame = null, bool nightScene = false)
             {
                 _id = id;
                 _sprite = sprite;
                 _frame = frame;
+                _nightScene = nightScene;
             }
 
             public string Id => _id;
@@ -43,6 +45,12 @@ namespace Callbreak.Presentation.Table
 
             /// <summary>A cloth's border, sliced and tiled round the screen's edges; null for none.</summary>
             public Sprite Frame => _frame;
+
+            /// <summary>
+            /// A background that is a night scene (Tihar Lights, Phewa Moonlight; ADR 064): the words
+            /// a menu draws straight on it are drawn light (<see cref="Framework.BackgroundInk"/>).
+            /// </summary>
+            public bool NightScene => _nightScene;
         }
 
         [SerializeField] private Picture[] _backgrounds = Array.Empty<Picture>();
@@ -77,6 +85,13 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>The picture of a table, filling the screen at the table; as <see cref="BackgroundPicture"/>.</summary>
         public Sprite TablePicture(string id, out string shownId) => PictureOf(_tables, id, _defaultTableId, out shownId);
+
+        /// <summary>Whether the background <see cref="BackgroundPicture"/> shows for that id is a night scene.</summary>
+        public bool IsNightScene(string id)
+        {
+            BackgroundPicture(id, out string shownId);
+            return Find(_backgrounds, shownId)?.NightScene ?? false;
+        }
 
         /// <summary>The border of the table <see cref="TablePicture"/> shows for that id; null when it has none.</summary>
         public Sprite TableFrame(string id)

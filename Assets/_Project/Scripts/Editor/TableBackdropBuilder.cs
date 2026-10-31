@@ -51,12 +51,31 @@ namespace Callbreak.Editor
         private const float FramePpu = 200f;
         private const float FrameBorder = 336f;
 
-        /// <summary>The cloths with a border round the screen, and which.</summary>
-        private static readonly Dictionary<string, string> FramePaths = new Dictionary<string, string>
+        /// <summary>The dhaka cloths share one border; every theme's own cloth has its own (ADR 064), Frame_&lt;Name&gt;.png.</summary>
+        private static readonly Dictionary<string, string> SharedFramePaths = new Dictionary<string, string>
         {
             [CosmeticCatalog.Tables.GreenDhaka] = DhakaFramePath,
             [CosmeticCatalog.Tables.IndigoDhaka] = DhakaFramePath,
         };
+
+        /// <summary>The night scenes (ADR 064): a menu draws its words light on them.</summary>
+        public static readonly HashSet<string> NightScenes = new HashSet<string>
+        {
+            CosmeticCatalog.Themes.TiharLights,
+            CosmeticCatalog.Themes.PhewaMoonlight,
+        };
+
+        /// <summary>A cloth's border: the dhaka one, or its own when its art is in the project; null for none (Dusk Himalaya).</summary>
+        public static string FramePath(string tableId)
+        {
+            if (SharedFramePaths.TryGetValue(tableId, out string shared))
+            {
+                return shared;
+            }
+
+            string own = $"{TablesFolder}/Frame_{ArtName(tableId)}.png";
+            return File.Exists(own) ? own : null;
+        }
 
         /// <summary>"durbar-square" → "DurbarSquare": the name the id's art files carry.</summary>
         public static string ArtName(string id)
@@ -104,14 +123,15 @@ namespace Callbreak.Editor
             var backgrounds = new List<TableBackdropLibrary.Picture>(BackgroundIds.Length);
             foreach (string id in BackgroundIds)
             {
-                backgrounds.Add(new TableBackdropLibrary.Picture(id, Picture(BackgroundPath(id), report)));
+                backgrounds.Add(new TableBackdropLibrary.Picture(id, Picture(BackgroundPath(id), report), null, NightScenes.Contains(id)));
                 report.AppendLine($"background {id}: {Describe(backgrounds[backgrounds.Count - 1])}");
             }
 
             var tables = new List<TableBackdropLibrary.Picture>(TableIds.Length);
             foreach (string id in TableIds)
             {
-                Sprite frame = FramePaths.TryGetValue(id, out string framePath)
+                string framePath = FramePath(id);
+                Sprite frame = framePath != null
                     ? UiBuildKit.LoadSpriteAt(framePath, FramePpu, new Vector4(FrameBorder, FrameBorder, FrameBorder, FrameBorder))
                     : null;
                 tables.Add(new TableBackdropLibrary.Picture(id, Picture(TablePath(id), report), frame));

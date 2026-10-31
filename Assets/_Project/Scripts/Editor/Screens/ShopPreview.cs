@@ -1,4 +1,4 @@
-using System.Linq;
+using System.Collections.Generic;
 using Callbreak.Application.Cosmetics;
 using Callbreak.Presentation.Screens;
 using UnityEditor;
@@ -7,26 +7,28 @@ using UnityEngine;
 namespace Callbreak.Editor.Screens
 {
     /// <summary>
-    /// The shop in a state of each category, for the screen captures (the tiles are filled at run
-    /// time by the presenter). In each the first item is equipped and the other two are for sale
-    /// at the catalogue's prices (500 and 750 since 6 Oct 2026): Cards with Classic Crimson chosen,
-    /// as mockup 15; Backgrounds with Pokhara Lakeside chosen ("Buy for 500"); Tables as 21, with
-    /// Royal Crimson chosen ("Buy for 500").
+    /// The shop in a state of each tab, and the theme preview, for the screen captures (the tiles are
+    /// filled at run time by the presenter): Themes with Durbar Square equipped and every other theme
+    /// at its price, as Figma's "V1 Rebuild · Shop" A shows it (1,200 coins, so the 1,000 themes are
+    /// within reach); Cards with Classic Crimson equipped, as mockup 15; and Tihar Lights' preview,
+    /// not owned ("Buy for 1,000").
     /// </summary>
     public static class ShopPreview
     {
-        public const int Cards = 0;
-        public const int Backgrounds = 1;
-        public const int Tables = 2;
+        public const int Themes = ShopView.Themes;
+        public const int Cards = ShopView.Cards;
+        public const int Preview = 2;
 
-        public static void Prepare(GameObject instance) => PrepareCategory(instance, Cards);
+        private const int Coins = 1200;
 
-        /// <summary>Captures every category at 16:9, 21:9 and 4:3 into Temp/Captures (Shop_Cards_..., Shop_Backgrounds_..., Shop_Tables_...).</summary>
+        public static void Prepare(GameObject instance) => PrepareCategory(instance, Themes);
+
+        /// <summary>Captures each tab and the preview at 16:9, 21:9 and 4:3 into Temp/Captures (Shop_Themes_..., Shop_Cards_..., Shop_Preview_...).</summary>
         public static string CaptureAll()
         {
             string prefab = ScreenLayoutBuilder.PrefabPath("Shop");
-            string[] names = { "Cards", "Backgrounds", "Tables" };
-            foreach (int category in new[] { Cards, Backgrounds, Tables })
+            string[] names = { "Themes", "Cards", "Preview" };
+            foreach (int category in new[] { Themes, Cards, Preview })
             {
                 int c = category;
                 foreach (Vector2Int size in new[] { new Vector2Int(1920, 1080), new Vector2Int(2520, 1080), new Vector2Int(1920, 1440) })
@@ -35,7 +37,7 @@ namespace Callbreak.Editor.Screens
                 }
             }
 
-            return "captured Shop_{Cards,Backgrounds,Tables}_{1920x1080,2520x1080,1920x1440}.png";
+            return "captured Shop_{Themes,Cards,Preview}_{1920x1080,2520x1080,1920x1440}.png";
         }
 
         public static void PrepareCategory(GameObject instance, int category)
@@ -46,59 +48,47 @@ namespace Callbreak.Editor.Screens
                 return;
             }
 
-            ShopTileStatus[] firstOwned = { ShopTileStatus.Equipped, ShopTileStatus.Price, ShopTileStatus.Price };
-
-            Fill(view, Cards,
-                new[] { "Classic Crimson", "Himalayan Ivory", "Kathmandu Gold" },
-                new[] { Back("ClassicCrimson"), Back("HimalayanIvory"), Back("KathmanduGold") },
-                firstOwned,
-                Prices(CosmeticKind.Deck),
-                chosen: 0);
-
-            string[] backgrounds = { CosmeticCatalog.Backgrounds.DurbarSquare, CosmeticCatalog.Backgrounds.PokharaLakeside, CosmeticCatalog.Backgrounds.MonasteryGarden };
-            Fill(view, Backgrounds,
-                new[] { "Durbar Square", "Pokhara Lakeside", "Monastery Garden" },
-                System.Array.ConvertAll(backgrounds, id => view.Picture(CosmeticKind.Background, id)),
-                firstOwned,
-                Prices(CosmeticKind.Background),
-                chosen: 1);
-
-            string[] tables = { CosmeticCatalog.Tables.GreenDhaka, CosmeticCatalog.Tables.IndigoDhaka, CosmeticCatalog.Tables.DuskHimalaya };
-            Fill(view, Tables,
-                new[] { "Green Dhaka", "Indigo Dhaka", "Dusk Himalaya" },
-                System.Array.ConvertAll(tables, id => view.Picture(CosmeticKind.Table, id)),
-                firstOwned,
-                Prices(CosmeticKind.Table),
-                chosen: 1);
-
-            view.ShowCategory(category);
-            if (category == Cards)
+            var strings = new Dictionary<string, string>
             {
-                view.SetPrimaryUse(true);
+                ["durbar-square"] = "Durbar Square", ["himalayan-sunrise"] = "Himalayan Sunrise", ["laligurans-forest"] = "Laligurans Forest",
+                ["golden-terraces"] = "Golden Terraces", ["tihar-lights"] = "Tihar Lights", ["prayer-flag-pass"] = "Prayer Flag Pass",
+                ["mithila-garden"] = "Mithila Garden", ["phewa-moonlight"] = "Phewa Moonlight", ["pokhara-lakeside"] = "Pokhara Lakeside",
+                ["monastery-garden"] = "Monastery Garden",
+            };
+
+            view.SetCoins(ShopDisplay.Price(Coins));
+            view.SetNoAdsVisible(true);
+            IReadOnlyList<CosmeticItem> themes = CosmeticCatalog.Of(CosmeticKind.Theme);
+            for (int i = 0; i < themes.Count; i++)
+            {
+                CosmeticItem theme = themes[i];
+                ShopTileStatus status = i == 0 ? ShopTileStatus.Equipped : ShopTileStatus.Price;
+                view.SetTheme(i, strings[theme.Id], view.ThemePicture(theme.Id), i >= 1 && i <= 7, status, status == ShopTileStatus.Equipped ? "Equipped" : null, ShopDisplay.Price(theme.Price), theme.Price <= Coins);
             }
-            else
+
+            string[] decks = { "Classic Crimson", "Himalayan Ivory", "Kathmandu Gold" };
+            string[] backs = { "ClassicCrimson", "HimalayanIvory", "KathmanduGold" };
+            view.SetDeckCount(decks.Length);
+            for (int i = 0; i < decks.Length; i++)
             {
-                view.SetPrimaryBuy(Prices(category == Tables ? CosmeticKind.Table : CosmeticKind.Background)[1], true);
+                ShopTileStatus status = i == 0 ? ShopTileStatus.Equipped : ShopTileStatus.Price;
+                int price = CosmeticCatalog.Of(CosmeticKind.Deck)[i].Price;
+                view.SetDeck(i, decks[i], Back(backs[i]), status, status == ShopTileStatus.Equipped ? "Equipped" : null, ShopDisplay.Price(price), i == 0);
             }
-        }
 
-        /// <summary>Each item's price as its tile shows it, from the catalogue; null for the free first one.</summary>
-        private static string[] Prices(CosmeticKind kind)
-        {
-            return CosmeticCatalog.Of(kind).Select(item => item.Price > 0 ? ShopDisplay.Price(item.Price) : null).ToArray();
-        }
-
-        private static void Fill(ShopView view, int category, string[] names, Sprite[] pictures, ShopTileStatus[] statuses, string[] prices, int chosen)
-        {
-            view.SetTileCount(category, names.Length);
-            for (int i = 0; i < names.Length; i++)
+            view.ShowCategory(category == Cards ? Cards : Themes);
+            view.SetPrimaryUse(false);
+            if (category == Preview)
             {
-                ShopTileStatus status = statuses[i];
-                view.SetTile(category, i, names[i], pictures[i], status, StatusText(status), prices != null ? prices[i] : null, i == chosen);
+                CosmeticItem tihar = CosmeticCatalog.Find(CosmeticKind.Theme, CosmeticCatalog.Themes.TiharLights);
+                Sprite background = view.BackgroundPicture(tihar.BackgroundId, out bool night);
+                Sprite cloth = view.ClothPicture(tihar.TableId, out Sprite frame);
+                view.ShowPreview(
+                    "Tihar Lights",
+                    "Tihar night at home: a glowing carved window, marigold garlands, diyo on every step, a rangoli and fireworks. The cloth is plum, with marigold swags.",
+                    background, night, cloth, frame, ThemeAction.Buy, ShopDisplay.Price(tihar.Price), true);
             }
         }
-
-        private static string StatusText(ShopTileStatus status) => status == ShopTileStatus.Equipped ? "Equipped" : null;
 
         private static Sprite Back(string deck) => AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/_Project/Art/Cards/{deck}/Back_{deck}.png");
     }

@@ -46,6 +46,7 @@ namespace Callbreak.Editor.Screens
                 customizer?.GetMethod("Customize", BindingFlags.Public | BindingFlags.Static)?.Invoke(null, new object[] { ctx });
 
                 AttachView(ctx);
+                BackgroundInkBuilder.Add(ctx.Root.gameObject);
                 UiBuildKit.EnsureFolder(PrefabFolder);
                 PrefabUtility.SaveAsPrefabAsset(ctx.Root.gameObject, path);
             }

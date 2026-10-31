@@ -133,6 +133,7 @@ namespace Callbreak.Editor
             }
 
             GameObject root = BuildHierarchy();
+            BackgroundInkBuilder.Add(root);
             UiBuildKit.EnsureFolder(Path.GetDirectoryName(PrefabPath).Replace('\\', '/'));
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             Object.DestroyImmediate(root);

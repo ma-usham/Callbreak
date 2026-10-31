@@ -107,7 +107,9 @@ namespace Callbreak.Tests.PlayMode
             ScreenRouter router = _game.MenuRouter;
             GameFixture.Press(router, "ShopButton");
             yield return GameFixture.Until(() => router.Current == ScreenId.Shop && !_game.Curtain.IsCovering, "the shop to open");
-            Assert.AreEqual(0, Screen.Category, "the shop opens on Cards (Card Collection)");
+            Assert.AreEqual(ShopView.Themes, Screen.Category, "the shop opens on Themes (ADR 064)");
+            GameFixture.PressIn(Screen, "CategoryButton1");
+            Assert.AreEqual(ShopView.Cards, Screen.Category, "the Card Collection");
         }
 
         private ShopView Screen => _game.MenuRouter.Get<ShopView>(ScreenId.Shop);
@@ -120,7 +122,7 @@ namespace Callbreak.Tests.PlayMode
         /// <summary>The deck tile's picture (its "Face" image; its parent turns with the shadow).</summary>
         private Image Picture(int deck)
         {
-            ShopItemTile tile = Screen.Tiles(0).Tile(deck);
+            ShopItemTile tile = Screen.Decks.Tile(deck);
             Assert.IsNotNull(tile, "Cards has a tile " + deck);
             return tile.Face;
         }
@@ -128,7 +130,7 @@ namespace Callbreak.Tests.PlayMode
         /// <summary>The ace of spades, on its deck's base (ADR 053), drawn premultiplied (ADR 054).</summary>
         private bool ShowsFace(int deck)
         {
-            Image under = Screen.Tiles(0).Tile(deck).Base;
+            Image under = Screen.Decks.Tile(deck).Base;
             return Picture(deck).sprite == Sprites().Face(DeckId(deck), new Card(Suit.Spades, Rank.Ace))
                 && under != null && under.enabled && under.sprite == Sprites().Base(DeckId(deck))
                 && Picture(deck).material.shader.name == "Callbreak/UI/Premultiplied";
@@ -137,7 +139,7 @@ namespace Callbreak.Tests.PlayMode
         /// <summary>The back, with no base showing under it, drawn with the default UI material.</summary>
         private bool ShowsBack(int deck)
         {
-            Image under = Screen.Tiles(0).Tile(deck).Base;
+            Image under = Screen.Decks.Tile(deck).Base;
             return Picture(deck).sprite == Sprites().Back(DeckId(deck)) && (under == null || !under.enabled)
                 && Picture(deck).material == Picture(deck).defaultMaterial;
         }

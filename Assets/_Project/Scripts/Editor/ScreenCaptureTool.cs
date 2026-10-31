@@ -61,7 +61,9 @@ namespace Callbreak.Editor
         }
 
         /// <param name="prepare">Puts a state of the caller's on the instance before it is rendered.</param>
-        public static string Capture(string prefabPath, int width, int height, string outputPath, System.Action<GameObject> prepare = null)
+        /// <param name="clear">What shows where nothing is drawn (the menus' cream by default); black and white
+        /// for a picture whose see-through parts are recovered from the two (ADR 064).</param>
+        public static string Capture(string prefabPath, int width, int height, string outputPath, System.Action<GameObject> prepare = null, Color? clear = null)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             if (prefab == null)
@@ -90,7 +92,7 @@ namespace Callbreak.Editor
                 camera.farClipPlane = 100f;
                 camera.transform.position = new Vector3(0f, 0f, -10f);
                 camera.clearFlags = CameraClearFlags.SolidColor;
-                camera.backgroundColor = UiBuildKit.Hex("#F7EFE5");
+                camera.backgroundColor = clear ?? UiBuildKit.Hex("#F7EFE5");
                 camera.targetTexture = target;
 
                 var canvasObject = new GameObject("CaptureCanvas", typeof(Canvas));

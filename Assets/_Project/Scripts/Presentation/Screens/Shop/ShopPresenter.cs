@@ -15,30 +15,45 @@ using VContainer.Unity;
 namespace Callbreak.Presentation.Screens
 {
     /// <summary>
-    /// The shop (GDD §11 screen 15; mockups 15, 20 and 21; designer's spec
-    /// shop-drawer-and-tables-prompts.md; the owner, 5 Oct 2026). It opens on Cards with each
-    /// category's choice on its equipped item. The drawer is always open; its buttons switch
-    /// categories, each keeping its choice. Every category shows its three items at once. Tapping
-    /// a tile chooses it (a preview: a deck also shows its ace for a moment). The primary button
-    /// equips an owned choice ("Use Selected ...", off while it is
-    /// equipped) or buys one that is not owned: with enough coins a confirmation names the item and
-    /// its price, and a bought item is owned (not equipped), so the button turns to Use; without
-    /// enough, a dialog offers the Earn Coins page or Not now. Coming back from Earn Coins keeps
-    /// the shop as it was. Back leaves the shop.
+    /// The shop (GDD §11 screen 15; Figma "V1 Rebuild · Shop", ADR 064; mockup 15's decks and the
+    /// designer's spec shop-drawer-and-tables-prompts.md). It opens on Themes. The drawer is always
+    /// open; its tabs switch between Themes and Cards, and No Ads under them starts the store's
+    /// purchase, as on the main menu, while the store sells it. The wallet shows the balance as it
+    /// changes; its "+" opens Earn Coins.
+    /// <para>Themes: every theme's tile says Equipped, Owned, or its price (red while the wallet can't
+    /// pay it). Tapping a tile opens its preview, the theme's menu background and its cloth side by
+    /// side; its arrows go round the themes and its button buys the theme, equips it (its background
+    /// and its cloth together), or says it is equipped. Buying asks once, naming the theme and its
+    /// price; a bought theme is owned, not equipped, so the button turns to Equip theme and a toast
+    /// says it is the player's. Without enough coins a dialog offers the Earn Coins page or Not now.</para>
+    /// <para>Cards, as before: tapping a deck chooses it and shows its ace for a moment; the primary
+    /// button equips an owned choice ("Use Selected Style", off while it is equipped) or buys one that
+    /// is not owned, with the same questions.</para>
+    /// Coming back from Earn Coins keeps the shop as it was, preview and all. Back leaves the shop.
     /// </summary>
     public sealed class ShopPresenter : IStartable, IDisposable
     {
         private static readonly Card AceOfSpades = new Card(Suit.Spades, Rank.Ace);
+
+        // The themes that came with the shop's themes (ADR 064): their tiles carry a NEW tag.
+        private static readonly HashSet<string> NewThemes = new HashSet<string>
+        {
+            CosmeticCatalog.Themes.HimalayanSunrise, CosmeticCatalog.Themes.LaliguransForest, CosmeticCatalog.Themes.GoldenTerraces,
+            CosmeticCatalog.Themes.TiharLights, CosmeticCatalog.Themes.PrayerFlagPass, CosmeticCatalog.Themes.MithilaGarden,
+            CosmeticCatalog.Themes.PhewaMoonlight,
+        };
 
         private readonly ShopView _view;
         private readonly ScreenRouter _router;
         private readonly ICosmeticsShop _shop;
         private readonly IWallet _wallet;
         private readonly IDialogs _dialogs;
+        private readonly IToast _toast;
         private readonly ILocalization _localization;
         private readonly CardSpriteProvider _cards;
         private readonly ISettingsService _settings;
         private readonly IAudioService _audio;
+        private readonly NoAdsOffer _noAds;
         private readonly ShopState _state;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
@@ -54,20 +69,25 @@ namespace Callbreak.Presentation.Screens
             ICosmeticsShop shop,
             IWallet wallet,
             IDialogs dialogs,
+            IToast toast,
             ILocalization localization,
             CardSpriteProvider cards,
             ISettingsService settings,
-            IAudioService audio)
+            IAudioService audio,
+            INoAds noAds,
+            ILoadingCurtain curtain)
         {
             _view = view;
             _router = router;
             _shop = shop;
             _wallet = wallet;
             _dialogs = dialogs;
+            _toast = toast;
             _localization = localization;
             _cards = cards;
             _settings = settings;
             _audio = audio;
+            _noAds = new NoAdsOffer(noAds, toast, localization, curtain);
             _state = new ShopState(shop, wallet);
         }
 
@@ -75,25 +95,44 @@ namespace Callbreak.Presentation.Screens
         {
             _view.BackClicked += OnBack;
             _view.CategoryClicked += OnCategory;
-            _view.TileClicked += OnTile;
+            _view.NoAdsClicked += OnNoAds;
+            _view.ThemeClicked += OnTheme;
+            _view.DeckClicked += OnDeck;
             _view.PrimaryClicked += OnPrimary;
+            _view.EarnCoinsClicked += OnEarnCoins;
+            _view.PreviewClosed += OnPreviewClosed;
+            _view.PreviewStepped += OnPreviewStepped;
+            _view.PreviewBuyClicked += OnPreviewBuy;
+            _view.PreviewEquipClicked += OnPreviewEquip;
             _router.Changed += OnScreenChanged;
             _shop.Changed += Render;
             _wallet.Changed += Render;
             _localization.LanguageChanged += Render;
+            _noAds.Changed += RenderNoAds;
+            _noAds.Start();
             OpenAfresh();
+            RenderNoAds();
         }
 
         public void Dispose()
         {
             _view.BackClicked -= OnBack;
             _view.CategoryClicked -= OnCategory;
-            _view.TileClicked -= OnTile;
+            _view.NoAdsClicked -= OnNoAds;
+            _view.ThemeClicked -= OnTheme;
+            _view.DeckClicked -= OnDeck;
             _view.PrimaryClicked -= OnPrimary;
+            _view.EarnCoinsClicked -= OnEarnCoins;
+            _view.PreviewClosed -= OnPreviewClosed;
+            _view.PreviewStepped -= OnPreviewStepped;
+            _view.PreviewBuyClicked -= OnPreviewBuy;
+            _view.PreviewEquipClicked -= OnPreviewEquip;
             _router.Changed -= OnScreenChanged;
             _shop.Changed -= Render;
             _wallet.Changed -= Render;
             _localization.LanguageChanged -= Render;
+            _noAds.Changed -= RenderNoAds;
+            _noAds.Dispose();
 
             // A question still open is answered "no" and closes with the screen.
             _disposed = true;
@@ -135,6 +174,7 @@ namespace Callbreak.Presentation.Screens
         {
             _state.Reset();
             Render();
+            _view.ScrollToTheme(0);
         }
 
         private void Render()
@@ -144,51 +184,88 @@ namespace Callbreak.Presentation.Screens
                 return;
             }
 
-            foreach (CosmeticKind kind in ShopState.Kinds)
-            {
-                RenderCategory(kind);
-            }
+            _view.SetCoins(ShopDisplay.Price(_wallet.Coins));
+            RenderThemes();
+            RenderDecks();
+            _view.ShowCategory(_state.Category == CosmeticKind.Deck ? ShopView.Cards : ShopView.Themes);
+            RenderPreview();
 
-            CosmeticKind shown = _state.Category;
-            _view.ShowCategory(Index(shown));
-            CosmeticItem chosen = _state.Chosen(shown);
-            if (chosen != null && _state.ActionFor(shown) == ShopAction.Buy)
+            CosmeticItem chosen = _state.Chosen(CosmeticKind.Deck);
+            if (chosen != null && _state.ActionFor(CosmeticKind.Deck) == ShopAction.Buy)
             {
                 _view.SetPrimaryBuy(ShopDisplay.Price(chosen.Price), !_busy);
             }
             else
             {
-                _view.SetPrimaryUse(!_busy && _state.CanUse(shown));
+                _view.SetPrimaryUse(!_busy && _state.CanUse(CosmeticKind.Deck));
             }
         }
 
-        private void RenderCategory(CosmeticKind kind)
+        private void RenderThemes()
         {
-            IReadOnlyList<CosmeticItem> items = _shop.Catalog(kind);
-            int category = Index(kind);
-            int chosen = _state.ChosenIndex(kind);
-            _view.SetTileCount(category, items.Count);
-            for (int i = 0; i < items.Count; i++)
+            IReadOnlyList<CosmeticItem> themes = _shop.Catalog(CosmeticKind.Theme);
+            for (int i = 0; i < themes.Count; i++)
             {
-                CosmeticItem item = items[i];
-                ShopTileStatus status = _state.StatusOf(kind, i);
+                CosmeticItem theme = themes[i];
+                ShopTileStatus status = _state.StatusOf(CosmeticKind.Theme, i);
                 string statusKey = ShopDisplay.StatusKey(status);
-                _view.SetTile(
-                    category,
+                _view.SetTheme(
                     i,
-                    _localization.Get(item.NameKey),
-                    PictureOf(item),
+                    _localization.Get(theme.NameKey),
+                    _view.ThemePicture(theme.Id),
+                    NewThemes.Contains(theme.Id),
                     status,
                     statusKey != null ? _localization.Get(statusKey) : null,
-                    ShopDisplay.Price(item.Price),
+                    ShopDisplay.Price(theme.Price),
+                    _state.CanAffordTheme(i));
+            }
+        }
+
+        private void RenderDecks()
+        {
+            IReadOnlyList<CosmeticItem> decks = _shop.Catalog(CosmeticKind.Deck);
+            int chosen = _state.ChosenIndex(CosmeticKind.Deck);
+            _view.SetDeckCount(decks.Count);
+            for (int i = 0; i < decks.Count; i++)
+            {
+                CosmeticItem deck = decks[i];
+                ShopTileStatus status = _state.StatusOf(CosmeticKind.Deck, i);
+                string statusKey = ShopDisplay.StatusKey(status);
+                _view.SetDeck(
+                    i,
+                    _localization.Get(deck.NameKey),
+                    _cards.Back(deck.Id),
+                    status,
+                    statusKey != null ? _localization.Get(statusKey) : null,
+                    ShopDisplay.Price(deck.Price),
                     i == chosen);
             }
         }
 
-        private Sprite PictureOf(CosmeticItem item)
+        private void RenderPreview()
         {
-            return item.Kind == CosmeticKind.Deck ? _cards.Back(item.Id) : _view.Picture(item.Kind, item.Id);
+            CosmeticItem theme = _state.PreviewTheme;
+            if (theme == null)
+            {
+                _view.ClosePreview();
+                return;
+            }
+
+            Sprite background = _view.BackgroundPicture(theme.BackgroundId, out bool nightScene);
+            Sprite cloth = _view.ClothPicture(theme.TableId, out Sprite frame);
+            _view.ShowPreview(
+                _localization.Get(theme.NameKey),
+                _localization.Get(theme.NameKey + ".about"),
+                background,
+                nightScene,
+                cloth,
+                frame,
+                _state.PreviewAction,
+                ShopDisplay.Price(theme.Price),
+                !_busy);
         }
+
+        private void RenderNoAds() => _view.SetNoAdsVisible(_noAds.Visible);
 
         private void OnBack() => _router.Pop();
 
@@ -203,27 +280,89 @@ namespace Callbreak.Presentation.Screens
             Render();
         }
 
-        private void OnTile(int category, int index)
+        private void OnNoAds() => _ = BuyNoAdsAsync();
+
+        private async Task BuyNoAdsAsync()
         {
-            if (category < 0 || category >= ShopState.Kinds.Count)
+            try
+            {
+                await _noAds.TapAsync(_lifetime.Token);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
+
+        private void OnTheme(int index)
+        {
+            // Template-made tiles have no injected tap sound of their own (one UI cue a frame at most).
+            _audio.Play(SoundCue.UiTap);
+            if (_state.OpenPreview(index))
+            {
+                Render();
+            }
+        }
+
+        private void OnPreviewClosed()
+        {
+            int shown = _state.Previewing;
+            _state.ClosePreview();
+            Render();
+            _view.ScrollToTheme(shown);
+        }
+
+        private void OnPreviewStepped(int delta)
+        {
+            _state.Step(delta);
+            Render();
+        }
+
+        private void OnPreviewEquip()
+        {
+            CosmeticItem theme = _state.PreviewTheme;
+            if (_busy || theme == null || _state.PreviewAction != ThemeAction.Equip)
             {
                 return;
             }
 
-            // Template-made tiles have no injected tap sound of their own (one UI cue a frame at most).
+            _shop.Equip(CosmeticKind.Theme, theme.Id);
+            Render();
+        }
+
+        private void OnPreviewBuy()
+        {
+            CosmeticItem theme = _state.PreviewTheme;
+            if (_busy || theme == null || _state.PreviewAction != ThemeAction.Buy)
+            {
+                return;
+            }
+
+            _ = BuyAsync(CosmeticKind.Theme, theme);
+        }
+
+        private void OnEarnCoins()
+        {
+            if (_router.Current == ScreenId.Shop && _router.Has(ScreenId.EarnCoins))
+            {
+                _router.Push(ScreenId.EarnCoins);
+            }
+        }
+
+        private void OnDeck(int index)
+        {
             _audio.Play(SoundCue.UiTap);
-            CosmeticKind kind = ShopState.Kinds[category];
-            if (!_state.Choose(kind, index))
+            if (!_state.Choose(CosmeticKind.Deck, index))
             {
                 return;
             }
 
             Render();
-            if (kind == CosmeticKind.Deck)
-            {
-                string deck = _shop.Catalog(kind)[index].Id;
-                _view.PeekFace(index, _cards.Face(deck, AceOfSpades), _cards.Base(deck), _cards.Back(deck), _settings.ReduceMotion);
-            }
+            string deck = _shop.Catalog(CosmeticKind.Deck)[index].Id;
+            _view.PeekFace(index, _cards.Face(deck, AceOfSpades), _cards.Base(deck), _cards.Back(deck), _settings.ReduceMotion);
         }
 
         private void OnPrimary()
@@ -233,30 +372,29 @@ namespace Callbreak.Presentation.Screens
                 return;
             }
 
-            CosmeticKind kind = _state.Category;
-            CosmeticItem item = _state.Chosen(kind);
-            if (item == null)
+            CosmeticItem deck = _state.Chosen(CosmeticKind.Deck);
+            if (deck == null)
             {
                 return;
             }
 
-            if (_state.ActionFor(kind) == ShopAction.Use)
+            if (_state.ActionFor(CosmeticKind.Deck) == ShopAction.Use)
             {
-                if (_state.CanUse(kind))
+                if (_state.CanUse(CosmeticKind.Deck))
                 {
-                    _shop.Equip(kind, item.Id);
+                    _shop.Equip(CosmeticKind.Deck, deck.Id);
                 }
 
                 Render();
                 return;
             }
 
-            _ = BuyAsync(kind, item);
+            _ = BuyAsync(CosmeticKind.Deck, deck);
         }
 
         /// <summary>
         /// The purchase (designer's spec: a confirmation with the item and its price; success,
-        /// cancellation and not-enough-coins states). Buying never equips.
+        /// cancellation and not-enough-coins states). Buying never equips: a bought theme says so in a toast.
         /// </summary>
         private async Task BuyAsync(CosmeticKind kind, CosmeticItem item)
         {
@@ -271,10 +409,13 @@ namespace Callbreak.Presentation.Screens
                     return;
                 }
 
+                string body = kind == CosmeticKind.Theme
+                    ? _localization.Format("ui.shop.theme.buy.body", ShopDisplay.Price(item.Price), ShopDisplay.Price(_wallet.Coins))
+                    : _localization.Format("ui.shop.buy.body", ShopDisplay.Price(item.Price), ShopDisplay.Price(_wallet.Coins));
                 bool buy = await _dialogs.ConfirmAsync(
                     new DialogRequest(
                         _localization.Format("ui.shop.buy.title", itemName),
-                        _localization.Format("ui.shop.buy.body", ShopDisplay.Price(item.Price), ShopDisplay.Price(_wallet.Coins)),
+                        body,
                         _localization.Get("ui.shop.buy.confirm"),
                         _localization.Get("ui.shop.buy.cancel")),
                     _lifetime.Token);
@@ -283,9 +424,14 @@ namespace Callbreak.Presentation.Screens
                     return;
                 }
 
-                if (_shop.Buy(kind, item.Id) == PurchaseResult.NotEnoughCoins)
+                PurchaseResult result = _shop.Buy(kind, item.Id);
+                if (result == PurchaseResult.NotEnoughCoins)
                 {
                     await OfferEarnCoinsAsync(itemName, item.Price);
+                }
+                else if (result == PurchaseResult.Bought && kind == CosmeticKind.Theme)
+                {
+                    _toast.Show(_localization.Format("ui.shop.theme.bought", itemName));
                 }
             }
             catch (Exception e)
@@ -313,19 +459,6 @@ namespace Callbreak.Presentation.Screens
             {
                 _router.Push(ScreenId.EarnCoins);
             }
-        }
-
-        private static int Index(CosmeticKind kind)
-        {
-            for (int i = 0; i < ShopState.Kinds.Count; i++)
-            {
-                if (ShopState.Kinds[i] == kind)
-                {
-                    return i;
-                }
-            }
-
-            return 0;
         }
     }
 }

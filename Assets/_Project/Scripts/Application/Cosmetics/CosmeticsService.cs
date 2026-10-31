@@ -10,10 +10,14 @@ namespace Callbreak.Application.Cosmetics
 {
     /// <summary>
     /// The player's cosmetics over the <c>cosmetics</c> save file (GDD §13, screen 15; the shop of
-    /// 4 Oct 2026, mockups 15, 20 and 21): what the player owns and has equipped of each
+    /// 4 Oct 2026, mockup 15; the themes, ADR 064): what the player owns and has equipped of each
     /// <see cref="CosmeticKind"/> in the <see cref="CosmeticCatalog"/>, and buying with coins from the
     /// <see cref="IWallet"/>. It is both <see cref="ICosmeticsService"/> and <see cref="ICosmeticsShop"/>,
     /// so the equipped deck is the selected deck, and <see cref="Changed"/> is raised for any change.
+    /// Decks and themes are bought and equipped; a theme brings its background and its cloth, which
+    /// are owned and equipped with it and never on their own. A background or a cloth bought on its
+    /// own before the themes (until 31 Oct 2026) owns its whole theme, and in a file from before the
+    /// themes the equipped background decides the equipped theme, so its cloth comes with it.
     /// An unknown id is rejected; a stored id this build doesn't know (a removed seasonal item), or an
     /// equipped one no longer owned, falls back to the default. A purchase this build doesn't know
     /// stays in the file. A version 1 file keeps its deck while it is still owned (every deck was
@@ -30,6 +34,7 @@ namespace Callbreak.Application.Cosmetics
         public const string DefaultDeckId = CosmeticCatalog.Decks.Default;
 
         private const int FirstShopVersion = 2;
+        private const int FirstThemesVersion = 3;
 
         private readonly ISaveStore _store;
         private readonly IWallet _wallet;
@@ -72,8 +77,10 @@ namespace Callbreak.Application.Cosmetics
         public string Equipped(CosmeticKind kind) => EquippedIn(_data, kind);
 
         /// <summary>
-        /// Equips an owned item from the next match on. Throws <see cref="ArgumentException"/> for an
-        /// id not in the kind's catalogue and <see cref="InvalidOperationException"/> for one not owned.
+        /// Equips an owned deck or theme from the next match on: a theme equips its background and its
+        /// cloth. Throws <see cref="ArgumentException"/> for an id not in the kind's catalogue, and
+        /// <see cref="InvalidOperationException"/> for one not owned and for a background or a cloth,
+        /// which come only with their theme.
         /// </summary>
         public void Equip(CosmeticKind kind, string id)
         {
@@ -81,6 +88,11 @@ namespace Callbreak.Application.Cosmetics
             if (item == null)
             {
                 throw new ArgumentException($"Unknown {kind} id '{id}'.", nameof(id));
+            }
+
+            if (IsPart(kind))
+            {
+                throw new InvalidOperationException($"The {kind} '{id}' comes with its theme: equip the theme.");
             }
 
             if (!IsOwned(_data, item))
@@ -98,15 +110,16 @@ namespace Callbreak.Application.Cosmetics
         }
 
         /// <summary>
-        /// Buys an item with coins from the wallet: owned, not equipped. The purchase is saved before
-        /// the coins are taken, so a wallet listener that throws (its exception reaches the caller)
-        /// can't take the coins without the item. While the file comes from a newer app version
-        /// nothing is sold (<see cref="PurchaseResult.UnknownItem"/>) and no coins are taken.
+        /// Buys a deck or a theme with coins from the wallet: owned, not equipped. The purchase is
+        /// saved before the coins are taken, so a wallet listener that throws (its exception reaches
+        /// the caller) can't take the coins without the item. A background or a cloth is not sold on
+        /// its own, and while the file comes from a newer app version nothing is sold
+        /// (<see cref="PurchaseResult.UnknownItem"/> for both); no coins are taken.
         /// </summary>
         public PurchaseResult Buy(CosmeticKind kind, string id)
         {
             CosmeticItem item = CosmeticCatalog.Find(kind, id);
-            if (item == null)
+            if (item == null || IsPart(kind))
             {
                 return PurchaseResult.UnknownItem;
             }
@@ -157,9 +170,32 @@ namespace Callbreak.Application.Cosmetics
             Changed?.Invoke();
         }
 
+        private static bool IsPart(CosmeticKind kind) => kind == CosmeticKind.Background || kind == CosmeticKind.Table;
+
+        /// <summary>
+        /// A deck or a theme the player has from the start or bought; a theme also when its background
+        /// or its cloth was bought on its own, before the themes (ADR 064); a background or a cloth
+        /// when its theme is owned.
+        /// </summary>
         private static bool IsOwned(CosmeticsData data, CosmeticItem item)
         {
-            return item != null && (item.Price <= 0 || Bought(data, item.Kind).Contains(item.Id));
+            if (item == null)
+            {
+                return false;
+            }
+
+            if (IsPart(item.Kind))
+            {
+                return IsOwned(data, CosmeticCatalog.ThemeOf(item.Kind, item.Id));
+            }
+
+            if (item.Price <= 0 || Bought(data, item.Kind).Contains(item.Id))
+            {
+                return true;
+            }
+
+            return item.Kind == CosmeticKind.Theme
+                && (data.boughtBackgroundIds.Contains(item.BackgroundId) || data.boughtTableIds.Contains(item.TableId));
         }
 
         private static List<string> Bought(CosmeticsData data, CosmeticKind kind)
@@ -168,12 +204,10 @@ namespace Callbreak.Application.Cosmetics
             {
                 case CosmeticKind.Deck:
                     return data.boughtDeckIds;
-                case CosmeticKind.Background:
-                    return data.boughtBackgroundIds;
-                case CosmeticKind.Table:
-                    return data.boughtTableIds;
+                case CosmeticKind.Theme:
+                    return data.boughtThemeIds;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown cosmetic kind.");
+                    throw new ArgumentOutOfRangeException(nameof(kind), kind, "Only decks and themes are bought.");
             }
         }
 
@@ -187,11 +221,14 @@ namespace Callbreak.Application.Cosmetics
                     return data.equippedBackgroundId;
                 case CosmeticKind.Table:
                     return data.equippedTableId;
+                case CosmeticKind.Theme:
+                    return data.equippedThemeId;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown cosmetic kind.");
             }
         }
 
+        /// <summary>Equips a deck, or a theme with its background and its cloth.</summary>
         private static void SetEquipped(CosmeticsData data, CosmeticKind kind, string id)
         {
             switch (kind)
@@ -199,21 +236,22 @@ namespace Callbreak.Application.Cosmetics
                 case CosmeticKind.Deck:
                     data.selectedDeckId = id;
                     break;
-                case CosmeticKind.Background:
-                    data.equippedBackgroundId = id;
-                    break;
-                case CosmeticKind.Table:
-                    data.equippedTableId = id;
+                case CosmeticKind.Theme:
+                    CosmeticItem theme = CosmeticCatalog.Find(CosmeticKind.Theme, id);
+                    data.equippedThemeId = id;
+                    data.equippedBackgroundId = theme.BackgroundId;
+                    data.equippedTableId = theme.TableId;
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown cosmetic kind.");
+                    throw new ArgumentOutOfRangeException(nameof(kind), kind, "Only decks and themes are equipped.");
             }
         }
 
         /// <summary>Brings a loaded file up to the current schema and replaces anything unusable with its default.</summary>
         private static void Repair(CosmeticsData data)
         {
-            if (data.schemaVersion < FirstShopVersion)
+            int version = data.schemaVersion;
+            if (version < FirstShopVersion)
             {
                 // Version 1 knew only the deck, when every deck was free: it stays if it is still owned
                 // (checked below with the rest), and the rest starts at the defaults.
@@ -226,6 +264,7 @@ namespace Callbreak.Application.Cosmetics
 
             data.schemaVersion = CosmeticsData.CurrentVersion;
             data.boughtDeckIds = Clean(data.boughtDeckIds);
+            data.boughtThemeIds = Clean(data.boughtThemeIds);
 
             // Durbar Square took the Himalayan Vista's place (the owner, 30 Oct 2026), and the tables
             // became cloths (ADR 058): a file that names an old item owns and equips its successor.
@@ -233,13 +272,24 @@ namespace Callbreak.Application.Cosmetics
             data.boughtBackgroundIds = Clean(data.boughtBackgroundIds?.Select(id => Successor(CosmeticCatalog.Backgrounds.Renamed, id)).ToList());
             data.equippedTableId = Successor(CosmeticCatalog.Tables.Renamed, data.equippedTableId);
             data.boughtTableIds = Clean(data.boughtTableIds?.Select(id => Successor(CosmeticCatalog.Tables.Renamed, id)).ToList());
-            foreach (CosmeticKind kind in new[] { CosmeticKind.Deck, CosmeticKind.Background, CosmeticKind.Table })
+
+            // Before the themes (ADR 064) the background and the cloth were chosen apart: the equipped
+            // background decides the theme, and the theme's cloth comes with it.
+            if (version < FirstThemesVersion)
+            {
+                data.equippedThemeId = CosmeticCatalog.ThemeOf(CosmeticKind.Background, data.equippedBackgroundId)?.Id ?? CosmeticCatalog.Themes.Default;
+            }
+
+            foreach (CosmeticKind kind in new[] { CosmeticKind.Deck, CosmeticKind.Theme })
             {
                 if (!IsOwned(data, CosmeticCatalog.Find(kind, EquippedIn(data, kind))))
                 {
                     SetEquipped(data, kind, CosmeticCatalog.DefaultOf(kind));
                 }
             }
+
+            // The background and the cloth are always the equipped theme's.
+            SetEquipped(data, CosmeticKind.Theme, data.equippedThemeId);
         }
 
         private static string Successor(IReadOnlyDictionary<string, string> renamed, string id) =>
