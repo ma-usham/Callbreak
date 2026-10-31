@@ -112,14 +112,15 @@ namespace Callbreak.Editor.Screens
         private const float ReconnectingDim = 0.45f;
         private static readonly Color ReconnectingWordsColor = new Color32(0xFD, 0xF5, 0xED, 0xFF);
 
-        // Its art, the Dhaka Ring (the owner's pick, 30 Oct 2026; Figma "Reconnecting A · Dhaka Ring"):
-        // a ring of gold diamonds, a bright one running round, turning round a still ivory seal with
-        // the crimson spade. Tools/ArtPipeline/NewUI/reconnecting.py draws both at two sprite pixels to
-        // a canvas unit; their sizes here are in canvas units. Figma draws the pieces in mockup px: the
-        // bright diamond's tip RingReach above the seal's centre, the words' middle RingToWords below.
+        // Its art, the Gold Arc (the owner, 31 Oct 2026, after the Dhaka Ring since 30 Oct; Figma
+        // "Reconnecting C · Gold Arc"): a gold arc on a faint track, turning round the logo's still
+        // crimson seal with the cream spade. Tools/ArtPipeline/NewUI/gold_arc.py draws both at two
+        // sprite pixels to a canvas unit, in the Dhaka Ring's sprites and sizes; the sizes here are in
+        // canvas units. Figma draws the pieces in mockup px: the arc's outer edge RingReach above the
+        // seal's centre, the words' middle RingToWords below.
         private const float RingSize = 288f;
         private const float SealSize = 212f;
-        private const float RingReach = 110.1f;
+        private const float RingReach = 85f;
         private const float RingToWords = 152.5f;
 
         /// <summary>GDD §16 "Touch targets are ≥ 88 px", in canvas units.</summary>
@@ -1190,8 +1191,8 @@ namespace Callbreak.Editor.Screens
 
         /// <summary>
         /// "Reconnecting…" while the session re-joins (GDD §8): a light dim over the whole table, which
-        /// stays visible but takes no input, and the Dhaka Ring in the middle of the screen: its gold
-        /// diamonds turning round the still seal, on unscaled time (standing still with Reduce motion),
+        /// stays visible but takes no input, and the Gold Arc in the middle of the screen: its gold
+        /// arc turning round the still seal, on unscaled time (standing still with Reduce motion),
         /// and the words below in the loading screen's serif (mockup 17), light on the dim.
         /// </summary>
         private static void BuildReconnecting(ScreenBuildContext ctx)
@@ -1202,11 +1203,11 @@ namespace Callbreak.Editor.Screens
         }
 
         /// <summary>
-        /// Gives the saved table prefab the "Reconnecting…" cover with the Dhaka Ring (the owner, 30 Oct
+        /// Gives the saved table prefab the "Reconnecting…" cover with the Gold Arc (the owner, 31 Oct
         /// 2026), made anew where the old one was and bound to the view; everything else in the prefab
         /// stays as it is.
         /// </summary>
-        public static string UseDhakaRing()
+        public static string UseGoldArc()
         {
             string path = ScreenLayoutBuilder.PrefabPath("Table");
             GameObject root = PrefabUtility.LoadPrefabContents(path);
@@ -1237,7 +1238,7 @@ namespace Callbreak.Editor.Screens
 
                 root.transform.SetParent(null, false);
                 PrefabUtility.SaveAsPrefabAsset(root, path, out bool saved);
-                return saved ? $"saved {path} with the Dhaka Ring" : $"FAILED to save {path}";
+                return saved ? $"saved {path} with the Gold Arc" : $"FAILED to save {path}";
             }
             finally
             {
@@ -1289,7 +1290,7 @@ namespace Callbreak.Editor.Screens
             return cover.gameObject;
         }
 
-        /// <summary>The Dhaka Ring's sprites, uncompressed (the owner wants no softening).</summary>
+        /// <summary>The Gold Arc's sprites, uncompressed (the owner wants no softening).</summary>
         private static Sprite LoadReconnectingSprite(string name) => UiBuildKit.LoadUncompressedSpriteAt($"{TableArt}/UI_Reconnecting_{name}.png");
 
         private static LayoutNode NodeOf(ScreenLayout layout, string id)

@@ -70,20 +70,23 @@ behind every menu.
   `MainMenuBuilder.UseEquippedBackground` patched it into the saved main menu, and
   `TableCustomizer.UseDhakaRing` and `SceneLoadingCustomizer.UseDhakaRing` the Dhaka Ring into the saved
   table and loading curtain (their sprites uncompressed). Since the addendum below,
-  `SceneLoadingCustomizer.UseGoldArc` patches the Gold Arc into the curtain.
+  `TableCustomizer.UseGoldArc` and `SceneLoadingCustomizer.UseGoldArc` patch the Gold Arc into both.
 - `TableView.SetTable` takes the cloth's border as well.
 - The Figma file keeps two export sheets on its design-system page, "Unity Export · NewUI" and
   "Unity Export · Plates", for the next export.
 
-## Addendum (31 Oct 2026): the Gold Arc on the loading screens
+## Addendum (31 Oct 2026): the Gold Arc in the Dhaka Ring's place
 
-The owner: "also use golder arc for every loading screen right now we have used dhaka ring". The loading
-screen shows Reconnecting option C, "Gold Arc" (Figma 238:56383), in the Dhaka Ring's place: a thin gold
-arc with its glow on a faint cream track turns anticlockwise, its bright end leading, round the logo's
-crimson seal with the cream spade, which stays still.
-- It is drawn by `Tools/ArtPipeline/NewUI/gold_arc.py` into the loading pair's files
-  (`Deco_LoadingRing`, `Deco_LoadingSeal`) at the Dhaka Ring's scale. So it is as much smaller than the
-  Dhaka Ring as Figma draws it: the arc is 146 canvas units across.
+The owner: "also use golder arc for every loading screen right now we have used dhaka ring", then, asked
+about the table's "Reconnecting…" cover, "Gold Arc there too". The loading screen and the cover show
+Reconnecting option C, "Gold Arc" (Figma 238:56383), in the Dhaka Ring's place: a thin gold arc with its
+glow on a faint cream track turns anticlockwise, its bright end leading, round the logo's crimson seal with
+the cream spade, which stays still.
+- It is drawn by `Tools/ArtPipeline/NewUI/gold_arc.py` into the Dhaka Ring's files at its scale. So it is
+  as much smaller than the Dhaka Ring as Figma draws it: the arc is 195 canvas units across on the cover
+  and 146 on the loading screen.
+- The cover's ring, seal and words stay centred together, as Figma lays them out: with the arc reaching 85
+  mockup px above the seal (the Dhaka Ring's top diamond reached 110), they stand 14 units higher.
 - The curtain's black look over the store's sheet (ADR 042) shows it too, drawn for black, in place of the
   old ring and the gold spade.
-- The table's "Reconnecting…" cover keeps the Dhaka Ring, the owner's pick for it on 30 Oct.
+- `dhaka_ring.py` now draws the Dhaka Ring into a work dir only.

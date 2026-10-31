@@ -1,20 +1,20 @@
-"""Writes the Dhaka Ring (the owner's pick, 30 Oct 2026) for the "Reconnecting..." cover: the ring that turns
-and the seal that stays. The loading screen had it too until 31 Oct 2026; it has the Gold Arc now (gold_arc.py).
+"""Draws the Dhaka Ring (the owner's pick for the "Reconnecting..." cover and the loading screen on 30 Oct
+2026), the ring that turns and the seal that stays, into the work dir. The game shows the Gold Arc in its
+place since 31 Oct 2026 (gold_arc.py, which uses the pieces and the scale defined here).
 
-Usage: python -P Tools/ArtPipeline/NewUI/dhaka_ring.py [work-dir [Reconnecting ...]]
-Needs Python 3 with numpy and Pillow, and Microsoft Edge (render.py). Names after the work dir write only
-those sets. Writes, under Assets/_Project/Art/UI:
-  Table/UI_Reconnecting_Ring.png   twelve stitched gold diamonds round the seal, a bright one at the top
-                                   with its glow, the eleven others fading clockwise from it (its trail,
-                                   so it runs anticlockwise)
-  Table/UI_Reconnecting_Seal.png   the ivory seal in its gold rim, with the crimson spade and its shadow
+Usage: python -P Tools/ArtPipeline/NewUI/dhaka_ring.py [work-dir]
+Needs Python 3 with numpy and Pillow, and Microsoft Edge (render.py). Writes, in the work dir:
+  Ring.png   twelve stitched gold diamonds round the seal, a bright one at the top with its glow, the
+             eleven others fading clockwise from it (its trail, so it runs anticlockwise)
+  Seal.png   the ivory seal in its gold rim, with the crimson spade and its shadow
+both at the cover's size (UI_Reconnecting_Ring and _Seal had them until 31 Oct).
 Figma: "Reconnecting A · Dhaka Ring" 238:3 on "V1 Rebuild · Options". Its pieces are drawn in mockup
 pixels (the loading screen's ring is 150 of them across). Figma's generator rotated each diamond about its
 corner, which put the ring 2.9 px right of and 9.8 px above the seal; here the ring is centred on the seal,
 as the generator meant, so that it turns round it without a wobble.
 The game blends its UI in linear light, so a translucent pixel looks different there than in Figma's sRGB
-blend: each one's opacity is set so that over what lies under it (the green cloth under the cover's 45%
-dim) it looks as Figma draws it, which keeps the trail fading as it does there. gold_arc.py does the same.
+blend: linear_light sets each one's opacity so that over what lies under it (the green cloth under the
+cover's 45% dim) it looks as Figma draws it, which kept the trail fading as it does there.
 """
 import math
 import os
@@ -34,11 +34,8 @@ UI = os.path.join(ROOT, "Assets", "_Project", "Art", "UI")
 PX = 2 * 1920 / 1672                    # sprite pixels per mockup pixel at full size: two per canvas unit
 RING_PX, SEAL_PX = 576, 424             # the cover's sprites (TableCustomizer shows them at PX)
 
-# Each set: its files, its scale, and the ground under it (sRGB) with the black dim over that.
-SETS = {
-    # The green dhaka cloth's middle, under TableCustomizer.ReconnectingDim.
-    "Reconnecting": (("Table/UI_Reconnecting_Ring.png", "Table/UI_Reconnecting_Seal.png"), 1.0, (64, 105, 76), 0.45),
-}
+# The green dhaka cloth's middle (sRGB), under TableCustomizer.ReconnectingDim's black dim.
+COVER_GROUND, COVER_DIM = (64, 105, 76), 0.45
 
 GOLD = '<stop offset="0" stop-color="#F7DE8E"/><stop offset="0.45" stop-color="#D9A646"/><stop offset="1" stop-color="#9C6A1E"/>'
 SPADE = ("M31 0 C42.16 14.88 62 26.04 62 42.16 C62 54.56 50.84 62 40.92 58.28 C37.2 57.04 34.72 54.56 33.48 52.08 "
@@ -104,21 +101,15 @@ def linear_light(path, ground, dim):
 
 def main():
     work = sys.argv[1] if len(sys.argv) > 1 else tempfile.mkdtemp(prefix="newui-dhaka-ring-")
-    only = set(sys.argv[2:])
     os.makedirs(work, exist_ok=True)
-    for name, maker in (("Ring", ring), ("Seal", seal)):
+    for name, maker, size in (("Ring", ring, RING_PX), ("Seal", seal, SEAL_PX)):
         source = os.path.join(work, f"{name}.svg")
         with open(source, "w", encoding="utf-8") as fh:
             fh.write(maker())
-    for place, (files, scale, ground, dim) in SETS.items():
-        if only and place not in only:
-            continue
-        for name, file, size in (("Ring", files[0], RING_PX), ("Seal", files[1], SEAL_PX)):
-            out = os.path.join(UI, *file.split("/"))
-            pixels = round(size * scale)
-            render(os.path.join(work, f"{name}.svg"), out, pixels, pixels, transparent=True)
-            linear_light(out, ground, dim)
-            print("wrote", os.path.relpath(out, ROOT), pixels)
+        out = os.path.join(work, f"{name}.png")
+        render(source, out, size, size, transparent=True)
+        linear_light(out, COVER_GROUND, COVER_DIM)
+        print("wrote", out, size)
 
 
 if __name__ == "__main__":

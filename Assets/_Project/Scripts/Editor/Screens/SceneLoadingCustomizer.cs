@@ -24,7 +24,7 @@ namespace Callbreak.Editor.Screens
 
         // The Gold Arc in the ring's place (the owner, 31 Oct 2026: "use golder arc for every loading
         // screen"; Figma "Reconnecting C · Gold Arc"), in the sprites and at the sizes the Dhaka Ring had
-        // here since 30 Oct, so it stands as Figma draws it beside the Dhaka Ring, clear of the logo and
+        // here since 30 Oct, so it keeps Figma's scale (as on the table's cover), clear of the logo and
         // "Loading...". Tools/ArtPipeline/NewUI/gold_arc.py draws the sprites at two pixels to a canvas
         // unit, a pair for the curtain and a pair for its black look; the sizes here are in canvas units.
         private const string ArcArt = UiBuildKit.ArtRoot + "/UI/Decor/Deco_LoadingRing.png";

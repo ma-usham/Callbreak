@@ -8,10 +8,10 @@ using UnityEngine.UI;
 namespace Callbreak.Tests.EditMode.Unity
 {
     /// <summary>
-    /// The table's "Reconnecting…" cover shows the Dhaka Ring (the owner, 30 Oct 2026: "use the dhaka
-    /// ring as reconnecting image"): its ring of gold diamonds turns round the still seal, about the
-    /// seal's own centre, so it never wobbles; the bright diamond runs anticlockwise, ahead of its
-    /// fading trail; the ring keeps turning while the time scale is paused, and Reduce motion stops it.
+    /// The table's "Reconnecting…" cover shows the Gold Arc (the owner, 31 Oct 2026, after the Dhaka Ring
+    /// since 30 Oct): its gold arc turns round the still crimson seal, about the seal's own centre, so it
+    /// never wobbles; the arc runs anticlockwise, its bright end leading; it keeps turning while the time
+    /// scale is paused, and Reduce motion stops it.
     /// The ring, the seal and the words lie in the middle of the screen at 16:9, 20:9 and 4:3. The art
     /// is uncompressed (the owner wants no softening). The prefab is the built one, so these live
     /// outside the folders the dotnet harness compiles.
@@ -32,12 +32,14 @@ namespace Callbreak.Tests.EditMode.Unity
         }
 
         [Test]
-        public void TheCover_ShowsTheDhakaRing_TurningRoundItsStillSeal()
+        public void TheCover_ShowsTheGoldArc_TurningRoundItsStillSeal()
         {
             Open(1920f, 1080f);
             Image ring = Piece("Ring"), seal = Piece("Seal");
-            Assert.AreEqual("UI_Reconnecting_Ring", ring.sprite.name, "the Dhaka Ring");
+            Assert.AreEqual("UI_Reconnecting_Ring", ring.sprite.name, "the Gold Arc");
             Assert.AreEqual("UI_Reconnecting_Seal", seal.sprite.name, "its seal with the spade");
+            Color32 under = SealPixelUnderTheSpade(seal.sprite);
+            Assert.That(under.r > 2 * under.g && under.r > 2 * under.b, Is.True, "the seal is the logo's crimson under its spade (the Dhaka Ring's was ivory), not " + under);
 
             var spinner = ring.GetComponent<Spinner>();
             Assert.IsNotNull(spinner, "the ring turns");
@@ -47,7 +49,7 @@ namespace Callbreak.Tests.EditMode.Unity
             Assert.That(Vector3.Distance(Centre(ring), Centre(seal)), Is.LessThan(0.01f), "the ring turns about the seal's centre");
 
             var settings = new SerializedObject(spinner);
-            Assert.IsFalse(settings.FindProperty("_clockwise").boolValue, "the bright diamond runs anticlockwise, ahead of its trail");
+            Assert.IsFalse(settings.FindProperty("_clockwise").boolValue, "the arc runs anticlockwise, its bright end leading");
             Assert.IsTrue(settings.FindProperty("_unscaledTime").boolValue, "it turns while the time scale is paused");
         }
 
@@ -125,6 +127,23 @@ namespace Callbreak.Tests.EditMode.Unity
             Assert.IsNotNull(image, name + " is a picture");
             Assert.IsNotNull(image.sprite, name + " has its art");
             return image;
+        }
+
+        private static Color32 SealPixelUnderTheSpade(Sprite sprite)
+        {
+            var picture = new Texture2D(2, 2);
+            try
+            {
+                picture.LoadImage(System.IO.File.ReadAllBytes(AssetDatabase.GetAssetPath(sprite)));
+
+                // 45 of Figma's pixels below the middle: under the spade, inside the rim (gold_arc.py).
+                float perFigmaPixel = picture.width / (2f * 92.3f);
+                return picture.GetPixel(picture.width / 2, Mathf.RoundToInt(picture.height / 2f - 45f * perFigmaPixel));
+            }
+            finally
+            {
+                Object.DestroyImmediate(picture);
+            }
         }
 
         private static Vector3 Centre(Graphic graphic) => graphic.rectTransform.TransformPoint(graphic.rectTransform.rect.center);

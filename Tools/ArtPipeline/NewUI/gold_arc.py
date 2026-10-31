@@ -1,12 +1,14 @@
-"""Writes the Gold Arc (the owner, 31 Oct 2026: "use golder arc for every loading screen") for the loading
-screen and its black look: the arc that turns and the seal that stays.
+"""Writes the Gold Arc (the owner, 31 Oct 2026: "use golder arc for every loading screen", then for the
+"Reconnecting..." cover too) in the Dhaka Ring's place: the arc that turns and the seal that stays.
 
-Usage: python -P Tools/ArtPipeline/NewUI/gold_arc.py [work-dir [Loading|Dark ...]]
+Usage: python -P Tools/ArtPipeline/NewUI/gold_arc.py [work-dir [Reconnecting|Loading|Dark ...]]
 Needs Python 3 with numpy and Pillow, and Microsoft Edge (render.py). Names after the work dir write only
-those sets. Writes, under Assets/_Project/Art/UI/Decor:
-  Deco_LoadingRing.png, Deco_LoadingSeal.png   over the loading screen's background, in its ring's place
-                                   between the logo and "Loading..." (the files the Dhaka Ring had there)
-  Deco_LoadingRing_Dark.png, Deco_LoadingSeal_Dark.png   the same over the curtain's black look (ADR 042)
+those sets. Writes, under Assets/_Project/Art/UI (the files the Dhaka Ring had, and the black look's pair):
+  Table/UI_Reconnecting_Ring.png, UI_Reconnecting_Seal.png   the table's "Reconnecting..." cover, over the
+                                   cloth under the cover's dim
+  Decor/Deco_LoadingRing.png, Deco_LoadingSeal.png   three quarters the size, over the loading screen's
+                                   background, in its ring's place between the logo and "Loading..."
+  Decor/Deco_LoadingRing_Dark.png, Deco_LoadingSeal_Dark.png   the same over the curtain's black look (ADR 042)
 The ring: a faint cream track and the gold arc on it, from the top round past the bottom (243 degrees), with
 its glow. The seal: the logo's crimson disc in its gold rim, with its shadow, and the cream spade.
 Figma: "Reconnecting C · Gold Arc" 238:56383 on "V1 Rebuild · Options", drawn in mockup pixels like the
@@ -24,14 +26,14 @@ sys.path.insert(0, HERE)
 from dhaka_ring import GOLD, PX, RING_PX, SEAL_PX, SPADE, UI, ROOT, linear_light, svg  # noqa: E402
 from render import render  # noqa: E402
 
-SCALE = 0.75                            # the loading screen's size, as the Dhaka Ring's there
-
-# Each set: its files, and the ground under it (sRGB) with the black dim over that.
+# Each set: its files, its scale, and the ground under it (sRGB) with the black dim over that.
 SETS = {
-    # Over Durbar Square's light middle, as the Dhaka Ring's loading pair was set.
-    "Loading": (("Decor/Deco_LoadingRing.png", "Decor/Deco_LoadingSeal.png"), (245, 232, 214), 0.0),
-    # Over the black look's black.
-    "Dark": (("Decor/Deco_LoadingRing_Dark.png", "Decor/Deco_LoadingSeal_Dark.png"), (0, 0, 0), 0.0),
+    # The green dhaka cloth's middle, under TableCustomizer.ReconnectingDim.
+    "Reconnecting": (("Table/UI_Reconnecting_Ring.png", "Table/UI_Reconnecting_Seal.png"), 1.0, (64, 105, 76), 0.45),
+    # Three quarters the size (SceneLoadingCustomizer), over Durbar Square's light middle.
+    "Loading": (("Decor/Deco_LoadingRing.png", "Decor/Deco_LoadingSeal.png"), 0.75, (245, 232, 214), 0.0),
+    # The same over the black look's black.
+    "Dark": (("Decor/Deco_LoadingRing_Dark.png", "Decor/Deco_LoadingSeal_Dark.png"), 0.75, (0, 0, 0), 0.0),
 }
 
 OUTER, INNER = 85.0, 76.5               # the 170 px ring, its inner radius 0.9 of its outer
@@ -85,12 +87,12 @@ def main():
     for name, maker in (("Ring", ring), ("Seal", seal)):
         with open(os.path.join(work, f"{name}.svg"), "w", encoding="utf-8") as fh:
             fh.write(maker())
-    for place, (files, ground, dim) in SETS.items():
+    for place, (files, scale, ground, dim) in SETS.items():
         if only and place not in only:
             continue
         for name, file, size in (("Ring", files[0], RING_PX), ("Seal", files[1], SEAL_PX)):
             out = os.path.join(UI, *file.split("/"))
-            pixels = round(size * SCALE)
+            pixels = round(size * scale)
             render(os.path.join(work, f"{name}.svg"), out, pixels, pixels, transparent=True)
             linear_light(out, ground, dim)
             print("wrote", os.path.relpath(out, ROOT), pixels)

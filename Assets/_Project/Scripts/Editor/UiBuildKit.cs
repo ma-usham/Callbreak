@@ -180,7 +180,7 @@ namespace Callbreak.Editor
 
         /// <summary>
         /// <see cref="LoadSpriteAt"/> at the sprite's own size, imported uncompressed: for art that
-        /// must stay sharp (the Dhaka Ring; the owner wants no softening).
+        /// must stay sharp (the Gold Arc; the owner wants no softening).
         /// </summary>
         public static Sprite LoadUncompressedSpriteAt(string path)
         {
