@@ -291,6 +291,10 @@ namespace Callbreak.Editor.Screens
             BuildPrompt(ctx, handLayer, statusStyle);
             BuildTrickLabel(ctx);
             StackUnderHome(ctx);
+            foreach (string id in new[] { "HomeButton", "ScoresButton", "SettingsButton", "EmoteButton" })
+            {
+                StyleHudButton(ctx.Nodes[id].GetComponent<Button>());
+            }
             PlaceRoundUnderLogo(ctx);
             BuildBannerRoom(ctx);
             BuildEmotePicker(ctx, statusStyle);
@@ -973,6 +977,42 @@ namespace Callbreak.Editor.Screens
             RectTransform divider = ctx.Nodes["HeaderDivider"];
             ctx.Nodes.Remove("HeaderDivider");
             Object.DestroyImmediate(divider.gameObject);
+        }
+
+        /// <summary>Use the bidding chip's face and shadow for the four round table controls.</summary>
+        public static void StyleHudButton(Button button)
+        {
+            var root = (RectTransform)button.transform;
+            var face = button.targetGraphic as Image;
+            if (face == null)
+            {
+                return;
+            }
+
+            Sprite chipFace = LoadTableSprite("UI_Chip_Normal");
+            face.sprite = chipFace;
+            RectTransform lowerRim = null;
+            foreach (Transform child in root)
+            {
+                if (child.name == "Shadow" && child.TryGetComponent(out Image shadow))
+                {
+                    shadow.color = new Color(1f, 1f, 1f, 0.6f);
+                    ((RectTransform)child).anchoredPosition = new Vector2(0f, -2.869253f);
+                }
+                else if (child.name == "LowerRim")
+                {
+                    lowerRim = (RectTransform)child;
+                }
+                else if (child.name == "Cooldown" && child.TryGetComponent(out Image cooldown))
+                {
+                    cooldown.sprite = chipFace;
+                }
+            }
+
+            if (lowerRim != null)
+            {
+                Object.DestroyImmediate(lowerRim.gameObject);
+            }
         }
 
         /// <summary>
