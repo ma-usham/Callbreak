@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Callbreak.Application.Cosmetics;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Table;
+using Callbreak.Presentation.Widgets;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
@@ -74,6 +75,26 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(DayInk, greeting.color, "their own colours on a day scene");
             Assert.AreEqual(DayTitle, title.color);
             Assert.IsTrue(title.enableVertexGradient, "the title's gradient back by day");
+        }
+
+        [Test]
+        public void ATitlePaintedLineByLine_IsDrawnPlainAtNight_AndOverTheTable()
+        {
+            var shop = new Shop { Background = Tihar };
+            BackgroundInk ink = Make(out _, out TMP_Text title);
+            var line = title.gameObject.AddComponent<TextLineGradient>();
+
+            ink.Construct(shop);
+            Assert.IsFalse(line.enabled, "the title's own gradient off at night, so it is drawn in its light colour");
+
+            shop.Equip(CosmeticKind.Background, Durbar);
+            Assert.IsTrue(line.enabled, "and back by day");
+
+            ink.KeepLight();
+            Assert.IsTrue(ink.ShowsNight, "over the table it keeps the light colours");
+            Assert.IsFalse(line.enabled);
+            shop.Equip(CosmeticKind.Background, Durbar);
+            Assert.IsTrue(ink.ShowsNight, "whatever is equipped");
         }
 
         [Test]

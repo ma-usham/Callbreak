@@ -22,7 +22,7 @@ namespace Callbreak.Presentation.Screens
     /// changes; its "+" opens Earn Coins.
     /// <para>Themes: every theme's tile says Equipped, Owned, or its price (red while the wallet can't
     /// pay it). Tapping a tile opens its preview, the theme's menu background and its cloth side by
-    /// side; its arrows go round the themes and its button buys the theme, equips it (its background
+    /// side; its button buys the theme, equips it (its background
     /// and its cloth together), or says it is equipped. Buying asks once, naming the theme and its
     /// price; a bought theme is owned, not equipped, so the button turns to Equip theme and a toast
     /// says it is the player's. Without enough coins a dialog offers the Earn Coins page or Not now.</para>
@@ -101,7 +101,6 @@ namespace Callbreak.Presentation.Screens
             _view.PrimaryClicked += OnPrimary;
             _view.EarnCoinsClicked += OnEarnCoins;
             _view.PreviewClosed += OnPreviewClosed;
-            _view.PreviewStepped += OnPreviewStepped;
             _view.PreviewBuyClicked += OnPreviewBuy;
             _view.PreviewEquipClicked += OnPreviewEquip;
             _router.Changed += OnScreenChanged;
@@ -124,7 +123,6 @@ namespace Callbreak.Presentation.Screens
             _view.PrimaryClicked -= OnPrimary;
             _view.EarnCoinsClicked -= OnEarnCoins;
             _view.PreviewClosed -= OnPreviewClosed;
-            _view.PreviewStepped -= OnPreviewStepped;
             _view.PreviewBuyClicked -= OnPreviewBuy;
             _view.PreviewEquipClicked -= OnPreviewEquip;
             _router.Changed -= OnScreenChanged;
@@ -313,12 +311,6 @@ namespace Callbreak.Presentation.Screens
             _state.ClosePreview();
             Render();
             _view.ScrollToTheme(shown);
-        }
-
-        private void OnPreviewStepped(int delta)
-        {
-            _state.Step(delta);
-            Render();
         }
 
         private void OnPreviewEquip()
