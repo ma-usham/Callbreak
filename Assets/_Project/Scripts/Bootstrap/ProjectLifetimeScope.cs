@@ -328,7 +328,9 @@ namespace Callbreak.Bootstrap
         /// </summary>
         private static void RegisterFestivalOffers(IContainerBuilder builder)
         {
-            builder.Register(resolver => new TrustedClock(resolver.Resolve<IClock>(), () => System.DateTime.UtcNow), Lifetime.Singleton);
+            builder.Register(resolver => new TrustedClock(resolver.Resolve<IClock>(), () => System.DateTime.UtcNow), Lifetime.Singleton)
+                .AsSelf()
+                .As<IWallClock>();
 #if !UNITY_EDITOR && UNITY_ANDROID
             builder.Register<FirebaseFestivalOfferSource>(Lifetime.Singleton).As<IFestivalOfferSource>().AsSelf();
             builder.Register<ServerTime>(Lifetime.Singleton);
@@ -343,7 +345,7 @@ namespace Callbreak.Bootstrap
             builder.Register<IFestivalOffers>(
                 resolver =>
                 {
-                    TrustedClock clock = resolver.Resolve<TrustedClock>();
+                    IWallClock clock = resolver.Resolve<IWallClock>();
                     return new FestivalOffers(
                         resolver.Resolve<IFestivalOfferSource>(),
                         resolver.Resolve<ICosmeticsShop>(),

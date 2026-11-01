@@ -342,6 +342,56 @@ namespace Callbreak.Tests.EditMode.Application
         }
 
         [Test]
+        public void Refresh_SaysAChange_WhenAnOfferStartsOrEnds_AndOnlyThen()
+        {
+            _now = new DateTime(2026, 10, 30, 12, 0, 0, DateTimeKind.Utc);
+            _offers.Dispose();
+            _offers = NewOffers();
+            int changes = 0;
+            _offers.Changed += () => changes++;
+
+            _offers.Refresh();
+            Assert.AreEqual(0, changes, "still before Tihar");
+
+            _now = DuringTihar;
+            _offers.Refresh();
+            Assert.AreEqual(1, changes, "Tihar has started");
+            _offers.Refresh();
+            Assert.AreEqual(1, changes, "nothing new");
+
+            _now = new DateTime(2026, 11, 16, 0, 0, 0, DateTimeKind.Utc);
+            _offers.Refresh();
+            Assert.AreEqual(2, changes, "Tihar has ended");
+            Assert.IsNull(_offers.Claimable);
+        }
+
+        [Test]
+        public void Refresh_AfterAClaim_SaysNothingMore()
+        {
+            _offers.Refresh();
+            Claim();
+            int changes = 0;
+            _offers.Changed += () => changes++;
+
+            _offers.Refresh();
+
+            Assert.AreEqual(0, changes, "the claim said it already");
+        }
+
+        [Test]
+        public void Refresh_AfterTheBackendChanged_SaysNothingMore()
+        {
+            _offers.Refresh();
+            _source.Set(FestivalOfferReaderTests.Tihar("tihar-2027"));
+            int changes = 0;
+            _offers.Changed += () => changes++;
+
+            _offers.Refresh();
+
+            Assert.AreEqual(0, changes, "the backend's change said it already");
+        }
+
+        [Test]
         public void TheOffersWords_AreInTheUiTable()
         {
             var strings = new TableStrings();

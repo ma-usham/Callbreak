@@ -422,6 +422,8 @@ namespace Callbreak.Presentation.Screens
             FestivalOffer offer = _offers.Claimable;
             if (offer == null)
             {
+                // The offer ended since the button was drawn: the preview shows what it is now.
+                Render();
                 return;
             }
 

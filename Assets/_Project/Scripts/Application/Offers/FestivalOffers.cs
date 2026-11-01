@@ -16,7 +16,8 @@ namespace Callbreak.Application.Offers
     /// it is owned like a theme bought, comes first in the shop as the one bought last, and is never
     /// equipped by the claim. The theme is saved as owned before the claim is written, so an app
     /// killed in between leaves the theme owned and the offer gone with it: nothing is given twice.
-    /// An ad watched for an offer that ended while it played still gives the theme. A file from a
+    /// An ad watched for an offer that ended while it played still gives the theme. The clock moving an
+    /// offer in or out is said as a change by <see cref="Refresh"/>. A file from a
     /// newer app version is ignored and never overwritten, and nothing is claimable or opens: a claim
     /// this build couldn't keep could be made again.
     /// </summary>
@@ -35,6 +36,9 @@ namespace Callbreak.Application.Offers
         private bool _claiming;
         private bool _disposed;
 
+        // The claimable offer's id when a change was last said, for Refresh.
+        private string _saidId;
+
         /// <param name="utcNow">The wall clock offers go by (<see cref="TrustedClock.UtcNow"/>); a time without a kind is taken as UTC.</param>
         public FestivalOffers(IFestivalOfferSource source, ICosmeticsShop shop, IRewardedAds ads, ISaveStore store, Func<DateTime> utcNow)
         {
@@ -47,6 +51,7 @@ namespace Callbreak.Application.Offers
             _data = loaded ?? new FestivalOffersData();
             Repair(_data);
             _offers = FestivalOfferReader.Read(_source.Config);
+            _saidId = Claimable?.Id;
             _source.Changed += OnSourceChanged;
             _shop.Changed += OnShopChanged;
         }
@@ -81,6 +86,14 @@ namespace Callbreak.Application.Offers
         public bool IsReadOnly => _readOnly;
 
         public bool IsOffered(string themeId) => themeId != null && Claimable?.ThemeId == themeId;
+
+        public void Refresh()
+        {
+            if (!_disposed && Claimable?.Id != _saidId)
+            {
+                RaiseChanged();
+            }
+        }
 
         public bool TakeAutoOpen()
         {
@@ -152,7 +165,7 @@ namespace Callbreak.Application.Offers
                 _store.Save(SaveKey, _data);
             }
 
-            Changed?.Invoke();
+            RaiseChanged();
             return FestivalClaimResult.Claimed;
         }
 
@@ -171,10 +184,16 @@ namespace Callbreak.Application.Offers
         private void OnSourceChanged()
         {
             _offers = FestivalOfferReader.Read(_source.Config);
-            Changed?.Invoke();
+            RaiseChanged();
         }
 
-        private void OnShopChanged() => Changed?.Invoke();
+        private void OnShopChanged() => RaiseChanged();
+
+        private void RaiseChanged()
+        {
+            _saidId = Claimable?.Id;
+            Changed?.Invoke();
+        }
 
         private static DateTime Utc(DateTime time) =>
             time.Kind == DateTimeKind.Local ? time.ToUniversalTime() : DateTime.SpecifyKind(time, DateTimeKind.Utc);
