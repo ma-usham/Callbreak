@@ -12,7 +12,7 @@ namespace Callbreak.Application.Offers
     /// when the game comes back to the foreground, since the monotonic clock may not count the time
     /// the phone slept.
     /// </summary>
-    public sealed class TrustedClock
+    public sealed class TrustedClock : IWallClock
     {
         private readonly IClock _monotonic;
         private readonly Func<DateTime> _deviceUtcNow;

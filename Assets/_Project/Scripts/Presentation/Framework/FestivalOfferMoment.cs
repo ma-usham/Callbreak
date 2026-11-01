@@ -17,7 +17,10 @@ namespace Callbreak.Presentation.Framework
     /// answered and no prize coins still to fly in, and it looks a moment later than Daily Rewards, so
     /// a day's reward opens first and the offer after it, once the menu is bare again. Once it has
     /// opened, the offer's opening is used (<see cref="IFestivalOffers.TakeAutoOpen"/>), also across
-    /// restarts; the Shop button's red dot stays until the offer is claimed or ends.
+    /// restarts; the Shop button's red dot stays until the offer is claimed or ends. Each look also
+    /// asks the offers to look at the clock again (<see cref="IFestivalOffers.Refresh"/>), so an offer
+    /// that starts or ends while the menu or the shop is up changes the dot, the tile and the preview's
+    /// button at once.
     /// </summary>
     public sealed class FestivalOfferMoment : ITickable
     {
@@ -74,6 +77,7 @@ namespace Callbreak.Presentation.Framework
             }
 
             _nextCheck = now + CheckSeconds;
+            _offers.Refresh();
             if (IsBareMainMenu() && _offers.TakeAutoOpen())
             {
                 _opening.RequestOffer();

@@ -417,6 +417,8 @@ namespace Callbreak.Tests.EditMode.Presentation
 
             public bool TakeAutoOpen() => throw new NotSupportedException("the page's state never opens it");
 
+            public void Refresh() => throw new NotSupportedException("the page's state never refreshes it");
+
             public Task<FestivalClaimResult> ClaimAsync(CancellationToken ct) => throw new NotSupportedException("the page's state never claims");
         }
 

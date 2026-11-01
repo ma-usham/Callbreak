@@ -30,7 +30,7 @@ namespace Callbreak.Application.Offers
     /// The festival offers from the backend, for the main menu and the shop (the owner, 31 Oct 2026;
     /// ADR 067): the offer the player can claim now, if any; its one opening by itself on the main
     /// menu; and claiming it, which makes its theme the player's through the shop's own ownership. Time
-    /// moves offers in and out without an event: a page reads <see cref="Claimable"/> when it shows.
+    /// moves offers in and out: <see cref="Refresh"/>, called while a page shows, says so as a change.
     /// </summary>
     public interface IFestivalOffers
     {
@@ -51,6 +51,12 @@ namespace Callbreak.Application.Offers
         /// restarts: the main menu opens the offer by itself then.
         /// </summary>
         bool TakeAutoOpen();
+
+        /// <summary>
+        /// Looks at the clock again: raises <see cref="Changed"/> when <see cref="Claimable"/> is no
+        /// longer the offer it was when a change was last said (an offer started or ended).
+        /// </summary>
+        void Refresh();
 
         /// <summary>
         /// Claims <see cref="Claimable"/>: a free offer at once; a watch-ad one when its ad is watched to

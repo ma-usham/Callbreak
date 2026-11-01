@@ -23,18 +23,23 @@ namespace Callbreak.Tests.PlayMode
     /// once on the bare main menu, as Tihar Lights' preview with "Watch ad • Free"; one ad watched makes
     /// the theme the player's and the button turns to Equip theme in the same place; its cross goes back
     /// to the menu. Left unclaimed, the Shop button has a red dot, and the theme's tile says Festival and
-    /// Free. No ad to show gives nothing and says so. Saves go to a temporary folder.
+    /// Free. No ad to show gives nothing and says so. An offer that ends while its preview is up turns
+    /// back to the theme's price, and the Shop button's dot goes. Saves go to a temporary folder.
     /// </summary>
     public sealed class FestivalOfferFlowTests
     {
         private GameFixture _game;
         private ScriptedAds _ads;
 
+        // The offers' clock, for a test that moves it; null for the real one.
+        private DateTime? _utc;
+
         [SetUp]
         public void SetUp()
         {
             _game = new GameFixture();
             _ads = new ScriptedAds();
+            _utc = null;
         }
 
         [UnityTearDown]
@@ -109,6 +114,25 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator AnOfferThatEnds_WhileItsPreviewIsUp_TurnsBackToItsPrice_AndTheDotGoes()
+        {
+            _utc = new DateTime(2026, 11, 1, 6, 0, 0, DateTimeKind.Utc);
+            yield return BootWithTihar();
+            yield return UntilOfferOpens();
+            Assert.AreEqual(ThemeAction.Claim, Preview.Action);
+
+            _utc = new DateTime(2026, 11, 16, 0, 0, 0, DateTimeKind.Utc);
+            yield return GameFixture.Until(() => Preview.Action == ThemeAction.Buy, "the preview to turn back to the theme's price");
+            Assert.AreEqual("1,000", Preview.BuyPrice);
+            Assert.AreEqual(Text("ui.shop.theme.tihar_lights.about"), Preview.Description, "the theme's own words again");
+
+            GameFixture.PressIn(View, "CloseButton");
+            yield return GameFixture.Until(() => Router.Current == ScreenId.MainMenu, "the cross to go back to the menu");
+            Assert.IsFalse(Menu.ShowsShopDot, "no dot for an offer that has ended");
+            Assert.IsFalse(_game.Services.Resolve<ICosmeticsShop>().IsOwned(CosmeticKind.Theme, CosmeticCatalog.Themes.TiharLights));
+        }
+
+        [UnityTest]
         public IEnumerator NoAdToShow_GivesNothing_AndSaysSo()
         {
             _ads.Available = false;
@@ -133,13 +157,20 @@ namespace Callbreak.Tests.PlayMode
 
         private MainMenuView Menu => Router.Get<MainMenuView>(ScreenId.MainMenu);
 
+        /// <summary>Boots with Tihar 2026 live: for all time on the real clock, or its own dates on the test's.</summary>
         private IEnumerator BootWithTihar()
         {
-            var source = new TiharSource();
+            var source = _utc.HasValue
+                ? new TiharSource("2026-10-31T00:00:00+05:45", "2026-11-16T00:00:00+05:45")
+                : new TiharSource("2000-01-01T00:00:00+05:45", "2100-01-01T00:00:00+05:45");
             yield return _game.Boot(extra: builder =>
             {
                 builder.RegisterInstance<IFestivalOfferSource>(source);
                 builder.RegisterInstance<IRewardedAds>(_ads);
+                if (_utc.HasValue)
+                {
+                    builder.RegisterInstance<IWallClock>(new TestClock(() => _utc.Value));
+                }
             });
         }
 
@@ -183,30 +214,45 @@ namespace Callbreak.Tests.PlayMode
             return false;
         }
 
-        /// <summary>The backend's Tihar 2026 offer, live whatever the test machine's date.</summary>
+        /// <summary>The backend's Tihar 2026 offer, between the given instants.</summary>
         private sealed class TiharSource : IFestivalOfferSource
         {
+            public TiharSource(string start, string end)
+            {
+                Config = new FestivalOffersConfig
+                {
+                    offers = new List<FestivalOfferEntry>
+                    {
+                        new FestivalOfferEntry
+                        {
+                            id = "tihar-2026",
+                            theme = "tihar-lights",
+                            kind = "watch-ad",
+                            start = start,
+                            end = end,
+                            title = "ui.offer.tihar",
+                        },
+                    },
+                };
+            }
+
             public event Action Changed
             {
                 add { }
                 remove { }
             }
 
-            public FestivalOffersConfig Config { get; } = new FestivalOffersConfig
-            {
-                offers = new List<FestivalOfferEntry>
-                {
-                    new FestivalOfferEntry
-                    {
-                        id = "tihar-2026",
-                        theme = "tihar-lights",
-                        kind = "watch-ad",
-                        start = "2000-01-01T00:00:00+05:45",
-                        end = "2100-01-01T00:00:00+05:45",
-                        title = "ui.offer.tihar",
-                    },
-                },
-            };
+            public FestivalOffersConfig Config { get; }
+        }
+
+        /// <summary>The offers' wall clock, set by the test.</summary>
+        private sealed class TestClock : IWallClock
+        {
+            private readonly Func<DateTime> _utc;
+
+            public TestClock(Func<DateTime> utc) => _utc = utc;
+
+            public DateTime UtcNow => _utc();
         }
 
         /// <summary>A rewarded ad watched to the end at once, or none to show.</summary>
