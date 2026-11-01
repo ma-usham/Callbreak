@@ -11,7 +11,9 @@ namespace Callbreak.Presentation.Screens
     /// n of 7", the crimson Claim button and the line under it, with the wallet at the top right.
     /// Today's tile, while its reward is ready, wears the crimson frame and the light behind its
     /// coins and its name in crimson (the others' names are brown; Day 7's, the weekly bonus, is
-    /// always crimson, as the mockup draws them); a claimed day carries the gold check. Renders what
+    /// always crimson, as the mockup draws them), and its gold glow breathes while its coins hop (the
+    /// owner, 2 Nov 2026; ADR 069; with Reduce motion the glow holds still); a claimed day carries the
+    /// gold check. Renders what
     /// its presenter gives it and reports Back, Claim and a tap on a day's tile (the owner, 28 Oct
     /// 2026: tapping today's coins collects them too). A Claim button that is not interactable
     /// shows its disabled look with its label dimmed. A claim's coins fly from today's pile into the
@@ -35,6 +37,9 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private GameObject[] _todayFrame;
         [SerializeField] private GameObject[] _coinGlow;
         [SerializeField] private GameObject[] _claimedBadge;
+
+        // Each tile's glow while it is the day to collect, and its coins' hop (ADR 069).
+        [SerializeField] private ClaimHighlight[] _dayHighlight;
 
         [SerializeField] private TMP_Text _claimLabel;
         [SerializeField] private TMP_Text _footer;
@@ -96,6 +101,27 @@ namespace Callbreak.Presentation.Screens
             SetActive(_todayFrame[index], today);
             SetActive(_coinGlow[index], today);
             SetActive(_claimedBadge[index], state == DayTileState.Claimed);
+            if (_dayHighlight != null && index < _dayHighlight.Length && _dayHighlight[index] != null)
+            {
+                _dayHighlight[index].On = today;
+            }
+        }
+
+        /// <summary>With Reduce motion the day to collect keeps its glow lit, still, and its coins rest (GDD §14).</summary>
+        public void SetReduceMotion(bool on)
+        {
+            if (_dayHighlight == null)
+            {
+                return;
+            }
+
+            foreach (ClaimHighlight highlight in _dayHighlight)
+            {
+                if (highlight != null)
+                {
+                    highlight.Still = on;
+                }
+            }
         }
 
         /// <summary>The Claim button: its label, and whether it takes a tap (only while today's reward is ready).</summary>

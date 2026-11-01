@@ -27,7 +27,9 @@ namespace Callbreak.Presentation.Screens
     /// button left of it sells the one-time purchase that removes the ads between matches
     /// (<see cref="NoAdsOffer"/>), with the game under the curtain's black cover while the store's
     /// sheet is up (ADR 042). The small button below No Ads opens Daily Rewards (the owner, 8 Oct
-    /// 2026; ADR 046), with a red dot while today's reward is ready; the Shop button has one while a
+    /// 2026; ADR 046), with a red dot and a gold glow that breathes while today's reward is ready (the
+    /// owner, 2 Nov 2026; ADR 069), the next day's coming at local midnight while the menu is up; the
+    /// Shop button has both while a
     /// festival offer waits to be claimed (the owner, 31 Oct 2026; ADR 067). Prize coins won at the table (a
     /// Stake Match, <see cref="IUnseenCoins"/>) arrive here (the owner, 9 Oct 2026): the wallet first
     /// shows the balance without them, and once the menu is on screen with no dialog over it they fly
@@ -36,6 +38,9 @@ namespace Callbreak.Presentation.Screens
     /// </summary>
     public sealed class MainMenuPresenter : IStartable, ITickable, IDisposable
     {
+        /// <summary>How often the menu on top looks whether a new day has brought a reward, in seconds.</summary>
+        private const float DayCheckSeconds = 1f;
+
         private readonly MainMenuView _view;
         private readonly ScreenRouter _router;
         private readonly IProfileService _profile;
@@ -66,6 +71,8 @@ namespace Callbreak.Presentation.Screens
         // Prize coins still to be shown arriving, held out of the balance until they have flown in.
         private int _heldCoins;
         private bool _collecting;
+
+        private float _nextDayCheck;
 
         public MainMenuPresenter(
             MainMenuView view,
@@ -206,9 +213,19 @@ namespace Callbreak.Presentation.Screens
             }
         }
 
-        /// <summary>Once the menu is on screen with nothing over it, the prize coins held out of the balance fly into the wallet.</summary>
+        /// <summary>
+        /// While the menu is on top it looks once a second whether a new day has brought a reward (it
+        /// comes at local midnight without an event). Once the menu is on screen with nothing over it,
+        /// the prize coins held out of the balance fly into the wallet.
+        /// </summary>
         public void Tick()
         {
+            if (_router.Current == ScreenId.MainMenu && Time.unscaledTime >= _nextDayCheck)
+            {
+                _nextDayCheck = Time.unscaledTime + DayCheckSeconds;
+                RenderDailyRewards();
+            }
+
             if (_heldCoins <= 0 || _collecting || _disposed
                 || _router.Current != ScreenId.MainMenu || _curtain.IsCovering || _dialogs.IsOpen || _flow.State != AppState.Menu)
             {
@@ -241,10 +258,10 @@ namespace Callbreak.Presentation.Screens
 
         private void RenderNoAds() => _view.SetNoAdsVisible(_noAds.Visible);
 
-        /// <summary>The red dot on the Daily Rewards button. A new day comes without an event: the menu reads it again whenever it is on top.</summary>
+        /// <summary>The red dot and the glow on the Daily Rewards button. A new day comes without an event: the menu reads it again whenever it comes on top, and once a second while it is.</summary>
         private void RenderDailyRewards() => _view.SetDailyRewardsReady(_dailyRewards.CanClaim);
 
-        /// <summary>The red dot on the Shop button. An offer starts and ends without an event: the menu reads it again whenever it is on top.</summary>
+        /// <summary>The red dot and the glow on the Shop button. An offer that starts or ends says so when the offers look at the clock again (FestivalOfferMoment), and the menu reads it whenever it comes on top.</summary>
         private void RenderShopOffer() => _view.SetShopOffer(_offers.Claimable != null);
 
         private void OnScreenChanged(ScreenId id)

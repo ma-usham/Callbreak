@@ -128,6 +128,22 @@ python -P Tools/ArtPipeline/NewUI/gold_arc.py [work-dir [Reconnecting|Loading|Da
 Then run `Callbreak.Editor.Screens.TableCustomizer.UseGoldArc()` and
 `Callbreak.Editor.Screens.SceneLoadingCustomizer.UseGoldArc()` in the Editor.
 
+## The claim glow: drawn here (ADR 069)
+
+`claim_glow.py` draws the glow a Daily Reward ready to collect wears, two pixels to a canvas unit, into
+`Art/UI/Decor`:
+- `Deco_ClaimGlow_Disc.png`: the warm gold halo round the main menu's Daily Rewards disc, clear inside it;
+- `Deco_ClaimRim_Disc.png`: the disc's steady gold rim, the kit's selected-disc gold;
+- `Deco_ClaimGlow_Tile.png`: the same halo round a day tile, a 9-slice with an 84 px border. The tile's
+  gold TodayFrame is its rim.
+
+```bash
+python -P Tools/ArtPipeline/NewUI/claim_glow.py [out-dir]
+```
+
+`MainMenuBuilder.AddDailyRewardsGlow()` and `DailyRewardsCustomizer.AddClaimGlows()` add them to the saved
+prefabs, and `ClaimHighlight` breathes them.
+
 ## The icons and the avatars: drawn here (ADR 065)
 
 `icons.py` draws every icon the game shows as vector art in the rebuild's palette (ink #131211,

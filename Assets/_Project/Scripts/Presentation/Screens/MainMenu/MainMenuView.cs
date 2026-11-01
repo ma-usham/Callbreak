@@ -35,13 +35,17 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private UnityEngine.UI.Button _noAdsButton;
 
         // The small Daily Rewards button below No Ads (the owner, 8 Oct 2026) and its red dot, shown
-        // while today's reward is ready. A prefab built before it has neither.
+        // while today's reward is ready, with its gold glow that breathes while the gift nudges (the
+        // owner, 2 Nov 2026; ADR 069). A prefab built before them has none.
         [SerializeField] private UnityEngine.UI.Button _dailyRewardsButton;
         [SerializeField] private GameObject _dailyRewardsDot;
+        [SerializeField] private ClaimHighlight _dailyRewardsGlow;
 
         // The Shop button's red dot while a festival offer waits to be claimed (the owner, 31 Oct 2026;
-        // ADR 067). A prefab built before it has none.
+        // ADR 067), with Daily Rewards' gold glow (the owner, 2 Nov 2026: "the same icon effect as daily
+        // login in shop as well"; ADR 069). A prefab built before them has none.
         [SerializeField] private GameObject _shopDot;
+        [SerializeField] private ClaimHighlight _shopGlow;
 
         // Prize coins arriving (the owner, 9 Oct 2026): the flight over the menu, the wallet's coin it
         // lands in and the point in the middle of the screen they come from. A prefab built before them
@@ -160,21 +164,31 @@ namespace Callbreak.Presentation.Screens
             _coinFlight.Play(_prizeCoinsFrom, _walletCoin, CoinFlight.CountFor(toBalance - fromBalance), reduceMotion, OnCoinLanded);
         }
 
-        /// <summary>The Daily Rewards button's red dot: shown while today's reward is ready to claim.</summary>
+        /// <summary>The Daily Rewards button's red dot and gold glow: shown while today's reward is ready to claim.</summary>
         public void SetDailyRewardsReady(bool ready)
         {
             if (_dailyRewardsDot != null && _dailyRewardsDot.activeSelf != ready)
             {
                 _dailyRewardsDot.SetActive(ready);
             }
+
+            if (_dailyRewardsGlow != null)
+            {
+                _dailyRewardsGlow.On = ready;
+            }
         }
 
-        /// <summary>The Shop button's red dot: shown while a festival offer waits to be claimed.</summary>
+        /// <summary>The Shop button's red dot and gold glow: shown while a festival offer waits to be claimed.</summary>
         public void SetShopOffer(bool waiting)
         {
             if (_shopDot != null && _shopDot.activeSelf != waiting)
             {
                 _shopDot.SetActive(waiting);
+            }
+
+            if (_shopGlow != null)
+            {
+                _shopGlow.On = waiting;
             }
         }
 
@@ -290,11 +304,20 @@ namespace Callbreak.Presentation.Screens
             }
         }
 
-        /// <summary>With Reduce motion the card fan stands still and the buttons do not rise (GDD §14).</summary>
+        /// <summary>With Reduce motion the card fan stands still, the buttons do not rise and the Daily Rewards and Shop glows hold still (GDD §14).</summary>
         public void SetReduceMotion(bool on)
         {
             _reduceMotion = on;
             _fanSway.Still = on;
+            if (_dailyRewardsGlow != null)
+            {
+                _dailyRewardsGlow.Still = on;
+            }
+
+            if (_shopGlow != null)
+            {
+                _shopGlow.Still = on;
+            }
         }
 
         public override void OnShown()

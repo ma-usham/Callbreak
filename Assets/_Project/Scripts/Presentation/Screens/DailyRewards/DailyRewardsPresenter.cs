@@ -18,7 +18,8 @@ namespace Callbreak.Presentation.Screens
     /// button is then off ("Claimed") until the next day, which comes at local midnight without an
     /// event, so the page reads the rewards again while it is up. A claim's coins fly into the wallet,
     /// which counts up from the old balance as they land, with the coin sound at the first landing
-    /// (the owner, 8 Oct 2026); with Reduce motion only the sound is left.
+    /// (the owner, 8 Oct 2026); with Reduce motion only the sound is left. The day to collect glows and
+    /// its coins hop (ADR 069); with Reduce motion its glow holds still.
     /// </summary>
     public sealed class DailyRewardsPresenter : IStartable, ITickable, IDisposable
     {
@@ -71,6 +72,8 @@ namespace Callbreak.Presentation.Screens
             _rewards.Changed += Render;
             _localization.LanguageChanged += Render;
             _router.Changed += OnScreenChanged;
+            _settings.Changed += RenderMotion;
+            RenderMotion();
             Render();
         }
 
@@ -86,6 +89,7 @@ namespace Callbreak.Presentation.Screens
             _rewards.Changed -= Render;
             _localization.LanguageChanged -= Render;
             _router.Changed -= OnScreenChanged;
+            _settings.Changed -= RenderMotion;
         }
 
         /// <summary>While the page is up: a new day (local midnight) shows the next reward.</summary>
@@ -135,6 +139,8 @@ namespace Callbreak.Presentation.Screens
             _view.SetFooter(_localization.Format(DailyRewardsDisplay.NextKey, DailyRewardsDisplay.NextDayNumber(today, rewards.Count)));
             RenderBalance();
         }
+
+        private void RenderMotion() => _view.SetReduceMotion(_settings.ReduceMotion);
 
         private void RenderBalance()
         {

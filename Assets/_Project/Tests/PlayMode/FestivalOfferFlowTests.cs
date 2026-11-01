@@ -9,11 +9,13 @@ using Callbreak.Application.Offers;
 using Callbreak.Application.Ports;
 using Callbreak.Presentation.Framework;
 using Callbreak.Presentation.Screens;
+using Callbreak.Presentation.Widgets;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using VContainer;
+using static Callbreak.Tests.PlayMode.ClaimGlowAsserts;
 
 namespace Callbreak.Tests.PlayMode
 {
@@ -22,9 +24,11 @@ namespace Callbreak.Tests.PlayMode
     /// 31 Oct 2026; ADR 067), the backend's Tihar 2026 offer given by a test source: it opens by itself
     /// once on the bare main menu, as Tihar Lights' preview with "Watch ad • Free"; one ad watched makes
     /// the theme the player's and the button turns to Equip theme in the same place; its cross goes back
-    /// to the menu. Left unclaimed, the Shop button has a red dot, and the theme's tile says Festival and
-    /// Free. No ad to show gives nothing and says so. An offer that ends while its preview is up turns
-    /// back to the theme's price, and the Shop button's dot goes. Saves go to a temporary folder.
+    /// to the menu. Left unclaimed, the Shop button has a red dot and Daily Rewards' gold glow, which
+    /// breathes while the shop's icon nudges (the owner, 2 Nov 2026; ADR 069; still with Reduce motion),
+    /// and the theme's tile says Festival and Free. No ad to show gives nothing and says so. An offer that
+    /// ends while its preview is up turns back to the theme's price, and the Shop button's dot and glow
+    /// go. Saves go to a temporary folder.
     /// </summary>
     public sealed class FestivalOfferFlowTests
     {
@@ -80,6 +84,8 @@ namespace Callbreak.Tests.PlayMode
             GameFixture.PressIn(View, "CloseButton");
             yield return GameFixture.Until(() => Router.Current == ScreenId.MainMenu, "the cross to go back to the menu");
             Assert.IsFalse(Menu.ShowsShopDot, "nothing left to claim");
+            Assert.IsFalse(ShopGlow.On, "no glow once it is claimed");
+            AssertAtRest(ShopIcon, "the shop's icon rests");
 
             yield return new WaitForSecondsRealtime(2f);
             Assert.AreEqual(ScreenId.MainMenu, Router.Current, "it opens by itself once");
@@ -94,6 +100,8 @@ namespace Callbreak.Tests.PlayMode
             yield return GameFixture.Until(() => Router.Current == ScreenId.MainMenu, "the cross to go back to the menu");
 
             Assert.IsTrue(Menu.ShowsShopDot, "a red dot on Shop");
+            Assert.IsTrue(ShopGlow.On, "and Daily Rewards' glow");
+            yield return AssertMoves(ShopGlow, ShopIcon, "the Shop button's glow breathes and its icon nudges");
             yield return new WaitForSecondsRealtime(2f);
             Assert.AreEqual(ScreenId.MainMenu, Router.Current, "the offer doesn't open again");
 
@@ -129,7 +137,21 @@ namespace Callbreak.Tests.PlayMode
             GameFixture.PressIn(View, "CloseButton");
             yield return GameFixture.Until(() => Router.Current == ScreenId.MainMenu, "the cross to go back to the menu");
             Assert.IsFalse(Menu.ShowsShopDot, "no dot for an offer that has ended");
+            Assert.IsFalse(ShopGlow.On, "no glow either");
             Assert.IsFalse(_game.Services.Resolve<ICosmeticsShop>().IsOwned(CosmeticKind.Theme, CosmeticCatalog.Themes.TiharLights));
+        }
+
+        [UnityTest]
+        public IEnumerator WithReduceMotion_TheShopButtonsGlowStaysLit_AndNothingMoves()
+        {
+            yield return BootWithTihar();
+            _game.Settings.SetReduceMotion(true);
+            yield return UntilOfferOpens();
+            GameFixture.PressIn(View, "CloseButton");
+            yield return GameFixture.Until(() => Router.Current == ScreenId.MainMenu, "the cross to go back to the menu");
+
+            Assert.IsTrue(ShopGlow.On, "the offer still stands out");
+            yield return AssertStill(ShopGlow, ShopIcon, "the Shop button's glow");
         }
 
         [UnityTest]
@@ -156,6 +178,10 @@ namespace Callbreak.Tests.PlayMode
         private ThemePreview Preview => View.Preview;
 
         private MainMenuView Menu => Router.Get<MainMenuView>(ScreenId.MainMenu);
+
+        private ClaimHighlight ShopGlow => GlowOf(Menu, "ShopButton");
+
+        private RectTransform ShopIcon => (RectTransform)Glyph(Menu, "ShopButton").Find("Icon");
 
         /// <summary>Boots with Tihar 2026 live: for all time on the real clock, or its own dates on the test's.</summary>
         private IEnumerator BootWithTihar()

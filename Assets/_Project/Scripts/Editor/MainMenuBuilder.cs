@@ -84,6 +84,16 @@ namespace Callbreak.Editor
         private const string DailyRewardsDotPath = "Controls/UI_Dot_Alert.png";
         private const float DailyRewardsDotSize = 20f;
 
+        // The glow a header disc wears while it has something to collect (the owner, 2 Nov 2026; ADR 069):
+        // Daily Rewards while today's reward is ready, Shop while a festival offer waits. A warm gold halo
+        // round the disc that breathes, the gold rim of the kit's selected disc on its edge
+        // (Tools/ArtPipeline/NewUI/claim_glow.py) and, at each breath's height, the icon's nudge: a little
+        // wiggle as it swells. It lies over the disc and under the icon and the red dot, built hidden.
+        private const string ClaimGlowPath = "Decor/Deco_ClaimGlow_Disc.png";
+        private const string ClaimRimPath = "Decor/Deco_ClaimRim_Disc.png";
+        private const float ClaimNudgeDegrees = 10f;
+        private const float ClaimNudgeSwell = 0.1f;
+
         // The banner ad in the bottom-left corner of the main menu (the owner, 27 Oct 2026, ADR 052): an
         // empty slot in the safe area's bottom-left corner, along the bottom of the screen, that the ad
         // network's own view is placed over. A standard banner (320 x 50 dp) is about 960 x 150 canvas
@@ -266,9 +276,10 @@ namespace Callbreak.Editor
                 "ShopButton", headerRight, shopCentre, UiBuildKit.NativeSize(circle), circle, circleShadow, 1f, 0f, 4f, 0.2f);
             Place("Icon", shop.transform, new Vector2(1548.75f, 96f), shopCentre, Ui("Icons/Icon_Shop.png"));
             GameObject shopDot = BuildShopDot(shop.transform, shopCentre, UiBuildKit.NativeSize(circle).y / UiBuildKit.ScaleY / 2f);
+            ClaimHighlight shopGlow = BuildClaimGlow(shop.transform, (RectTransform)shop.transform.Find("Icon"));
 
             UnityEngine.UI.Button dailyRewards = BuildDailyRewardsButton(
-                headerRight, UnderShop(shopCentre, 1), circle, circleShadow, out GameObject dailyRewardsDot);
+                headerRight, UnderShop(shopCentre, 1), circle, circleShadow, out GameObject dailyRewardsDot, out ClaimHighlight dailyRewardsGlow);
             UnityEngine.UI.Button noAds = BuildNoAdsButton(headerRight, UnderShop(shopCentre, 2), circle, circleShadow);
 
             RectTransform bannerSlot = BuildBannerSlot(safeArea);
@@ -302,7 +313,9 @@ namespace Callbreak.Editor
             serialized.FindProperty("_noAdsButton").objectReferenceValue = noAds;
             serialized.FindProperty("_dailyRewardsButton").objectReferenceValue = dailyRewards;
             serialized.FindProperty("_dailyRewardsDot").objectReferenceValue = dailyRewardsDot;
+            serialized.FindProperty("_dailyRewardsGlow").objectReferenceValue = dailyRewardsGlow;
             serialized.FindProperty("_shopDot").objectReferenceValue = shopDot;
+            serialized.FindProperty("_shopGlow").objectReferenceValue = shopGlow;
             serialized.FindProperty("_centre").objectReferenceValue = centre;
             serialized.FindProperty("_bannerSlot").objectReferenceValue = bannerSlot;
             BindCoinFlight(serialized, root, content, coins.transform.parent.Find("Coin"));
@@ -409,11 +422,11 @@ namespace Callbreak.Editor
 
         /// <summary>
         /// The Daily Rewards button (see <see cref="DailyRewardsIconPath"/>): the gear's disc, shadow and
-        /// press feedback with the gift glyph, and its red dot, built hidden: the presenter shows the dot
-        /// while today's reward is ready.
+        /// press feedback with the gift glyph, and its red dot and glow (<see cref="BuildClaimGlow"/>),
+        /// built hidden: the presenter shows them while today's reward is ready.
         /// </summary>
         private static UnityEngine.UI.Button BuildDailyRewardsButton(
-            RectTransform headerRight, Vector2 centre, Sprite circle, Sprite circleShadow, out GameObject dot)
+            RectTransform headerRight, Vector2 centre, Sprite circle, Sprite circleShadow, out GameObject dot, out ClaimHighlight glow)
         {
             float radius = UiBuildKit.NativeSize(circle).y / UiBuildKit.ScaleY / 2f;
             UnityEngine.UI.Button button = CreateButton(
@@ -429,7 +442,77 @@ namespace Callbreak.Editor
             UiBuildKit.AddImage(dotRect, Ui(DailyRewardsDotPath), false);
             dot = dotRect.gameObject;
             dot.SetActive(false);
+            glow = BuildClaimGlow(button.transform, iconRect);
             return button;
+        }
+
+        /// <summary>
+        /// A header disc's glow (see <see cref="ClaimGlowPath"/>): the halo and the rim, centred on the disc
+        /// right over its face, and the <see cref="ClaimHighlight"/> that breathes the halo and nudges
+        /// <paramref name="icon"/>, built hidden.
+        /// </summary>
+        private static ClaimHighlight BuildClaimGlow(Transform button, RectTransform icon)
+        {
+            RectTransform glowRect = UiBuildKit.CreateAt("ClaimGlow", button, Screen, Screen, ((RectTransform)button).sizeDelta);
+            glowRect.SetSiblingIndex(button.Find("Face").GetSiblingIndex() + 1);
+            Sprite haloSprite = Ui(ClaimGlowPath);
+            RectTransform halo = UiBuildKit.CreateAt("Halo", glowRect, Screen, Screen, UiBuildKit.NativeSize(haloSprite));
+            UnityEngine.UI.Image haloImage = UiBuildKit.AddImage(halo, haloSprite, false);
+            Sprite rimSprite = Ui(ClaimRimPath);
+            RectTransform rim = UiBuildKit.CreateAt("Rim", glowRect, Screen, Screen, UiBuildKit.NativeSize(rimSprite));
+            UiBuildKit.AddImage(rim, rimSprite, false);
+
+            var highlight = glowRect.gameObject.AddComponent<ClaimHighlight>();
+            var so = new SerializedObject(highlight);
+            so.FindProperty("_halo").objectReferenceValue = haloImage;
+            so.FindProperty("_glyph").objectReferenceValue = icon;
+            so.FindProperty("_nudgeDegrees").floatValue = ClaimNudgeDegrees;
+            so.FindProperty("_nudgeLift").floatValue = 0f;
+            so.FindProperty("_nudgeSwell").floatValue = ClaimNudgeSwell;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            glowRect.gameObject.SetActive(false);
+            return highlight;
+        }
+
+        /// <summary>
+        /// Gives the saved main menu prefab's Daily Rewards and Shop buttons their glow (<see cref="BuildClaimGlow"/>),
+        /// bound to the view; everything else in the prefab stays as it is. A button that has its glow is left alone.
+        /// </summary>
+        public static string AddClaimGlows()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+            try
+            {
+                var serialized = new SerializedObject(root.GetComponent<MainMenuView>());
+                string dailyRewards = AddClaimGlow(serialized, "_dailyRewardsButton", "_dailyRewardsGlow");
+                string shop = AddClaimGlow(serialized, "_shopButton", "_shopGlow");
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, PrefabPath, out bool saved);
+                return saved ? $"saved {PrefabPath}: Daily Rewards {dailyRewards}, Shop {shop}" : $"FAILED to save {PrefabPath}";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        /// <summary>The glow for the button in the view's <paramref name="buttonField"/>, bound as <paramref name="glowField"/>, unless it has one.</summary>
+        private static string AddClaimGlow(SerializedObject view, string buttonField, string glowField)
+        {
+            var button = view.FindProperty(buttonField).objectReferenceValue as UnityEngine.UI.Button;
+            Transform icon = button != null ? button.transform.Find("Icon") : null;
+            if (icon == null || button.transform.Find("Face") == null)
+            {
+                return "FAILED: no button with its face and icon";
+            }
+
+            if (view.FindProperty(glowField).objectReferenceValue != null)
+            {
+                return "already has its glow";
+            }
+
+            view.FindProperty(glowField).objectReferenceValue = BuildClaimGlow(button.transform, (RectTransform)icon);
+            return "glow added";
         }
 
         /// <summary>
@@ -787,10 +870,11 @@ namespace Callbreak.Editor
                 noAdsRect.anchoredPosition = new Vector2((noAdsCentre.x - Screen.x) * UiBuildKit.ScaleX, -(noAdsCentre.y - Screen.y) * UiBuildKit.ScaleY);
 
                 UnityEngine.UI.Button button = BuildDailyRewardsButton(
-                    (RectTransform)noAdsRect.parent, UnderShop(shopCentre, 1), Ui("Buttons/UI_ButtonCircle_Normal.png"), Ui("Buttons/UI_Shadow_Circle.png"), out GameObject dot);
+                    (RectTransform)noAdsRect.parent, UnderShop(shopCentre, 1), Ui("Buttons/UI_ButtonCircle_Normal.png"), Ui("Buttons/UI_Shadow_Circle.png"), out GameObject dot, out ClaimHighlight glow);
                 button.transform.SetSiblingIndex(noAdsRect.GetSiblingIndex());
                 serialized.FindProperty("_dailyRewardsButton").objectReferenceValue = button;
                 serialized.FindProperty("_dailyRewardsDot").objectReferenceValue = dot;
+                serialized.FindProperty("_dailyRewardsGlow").objectReferenceValue = glow;
                 serialized.ApplyModifiedPropertiesWithoutUndo();
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath, out bool saved);
                 return saved ? $"saved {PrefabPath} with Daily Rewards and No Ads under the shop" : $"FAILED to save {PrefabPath}";
