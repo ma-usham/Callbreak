@@ -87,5 +87,14 @@ namespace Callbreak.Application.Cosmetics
         /// equipped. A theme's part alone is not for sale (<see cref="PurchaseResult.UnknownItem"/>).
         /// </summary>
         PurchaseResult Buy(CosmeticKind kind, string id);
+
+        /// <summary>
+        /// <see cref="Buy"/> at an offer's price instead of the catalogue's (ADR 067): 0 for a gift,
+        /// at most the catalogue's price.
+        /// </summary>
+        PurchaseResult BuyAt(CosmeticKind kind, string id, int price);
+
+        /// <summary>The deck or theme of a kind bought last (an offer's gift too); null for none.</summary>
+        string LastBought(CosmeticKind kind);
     }
 }

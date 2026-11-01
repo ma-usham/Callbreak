@@ -1,3 +1,4 @@
+using Callbreak.Application.Offers;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,8 +12,10 @@ namespace Callbreak.Presentation.Screens
     /// half is a small screen, a 1920 × 1080 group scaled down: the real background or cloth (with
     /// the cloth's border tiled round its edges) under a picture of the menu or the table taken from
     /// the game. Under them the theme's description and its button: Buy for (coin) N, Equip theme,
-    /// or Equipped. The cross closes it (no arrows: the owner, 31 Oct 2026), and the wallet shows in
-    /// its corner, its "+" opening Earn Coins.
+    /// or Equipped; for a festival offer's theme (ADR 067), the offer's words and its claim button
+    /// ("Watch ad • Free"), which turns to Equip theme in the same place once claimed. The cross
+    /// closes it (no arrows: the owner, 31 Oct 2026), and the wallet shows in its corner, its "+"
+    /// opening Earn Coins.
     /// </summary>
     public sealed class ThemePreview : MonoBehaviour
     {
@@ -32,6 +35,14 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private ShopRow _buyRow;
         [SerializeField] private TMP_Text _buyPrice;
         [SerializeField] private Button _equipButton;
+        [SerializeField] private Button _claimButton;
+        [SerializeField] private CanvasGroup _claimContent;
+        [SerializeField] private ShopRow _claimRow;
+        [SerializeField] private Image _claimIcon;
+        [SerializeField] private TMP_Text _claimLabel;
+        [SerializeField] private Sprite _watchAdIcon;
+        [SerializeField] private Sprite _freeIcon;
+        [SerializeField] private Sprite _discountIcon;
         [SerializeField] private CanvasGroup _equipContent;
         [SerializeField] private GameObject _equipped;
         [SerializeField] private TMP_Text _walletBalance;
@@ -42,6 +53,14 @@ namespace Callbreak.Presentation.Screens
         public Button BuyButton => _buyButton;
 
         public Button EquipButton => _equipButton;
+
+        public Button ClaimButton => _claimButton;
+
+        public string ClaimLabel => _claimLabel.text;
+
+        public Sprite ClaimIcon => _claimIcon.sprite;
+
+        public Sprite WatchAdIcon => _watchAdIcon;
 
         public Button EarnCoinsButton => _earnCoinsButton;
 
@@ -59,7 +78,7 @@ namespace Callbreak.Presentation.Screens
 
         public Sprite ClothFrame => _clothFrame.enabled ? _clothFrame.sprite : null;
 
-        /// <summary>The preview's button: which of Buy, Equip theme and Equipped shows.</summary>
+        /// <summary>The preview's button: which of Buy, Equip theme, Equipped and the offer's claim shows.</summary>
         public ThemeAction Action { get; private set; }
 
         public bool ShowsNightMenu => _menuOverlay.sprite == _menuOverlayNight && _menuOverlayNight != null;
@@ -83,10 +102,11 @@ namespace Callbreak.Presentation.Screens
         /// <summary>
         /// Shows a theme: its name and words, its background under the menu (whose small words turn
         /// cream on a night scene), its cloth with its border (none for a cloth without one) under the
-        /// table, and its button; <paramref name="interactable"/> off dims the button (a purchase is
-        /// under way).
+        /// table, and its button; <paramref name="interactable"/> off dims the button (a purchase or a
+        /// claim is under way). A claim shows <paramref name="claimLabel"/> after the mark of its kind:
+        /// the ad's play mark, a gift, or a coin.
         /// </summary>
-        public void Show(string themeName, string description, Sprite background, bool nightScene, Sprite cloth, Sprite frame, ThemeAction action, string price, bool interactable)
+        public void Show(string themeName, string description, Sprite background, bool nightScene, Sprite cloth, Sprite frame, ThemeAction action, string price, string claimLabel, FestivalOfferKind claimKind, bool interactable)
         {
             SetText(_title, themeName);
             SetText(_description, description);
@@ -112,14 +132,22 @@ namespace Callbreak.Presentation.Screens
             SetActive(_buyButton.gameObject, action == ThemeAction.Buy);
             SetActive(_equipButton.gameObject, action == ThemeAction.Equip);
             SetActive(_equipped, action == ThemeAction.Equipped);
+            SetActive(_claimButton.gameObject, action == ThemeAction.Claim);
             if (action == ThemeAction.Buy)
             {
                 SetText(_buyPrice, price);
                 _buyRow.Refresh();
             }
+            else if (action == ThemeAction.Claim)
+            {
+                SetText(_claimLabel, claimLabel);
+                SetSprite(_claimIcon, claimKind == FestivalOfferKind.WatchAd ? _watchAdIcon : claimKind == FestivalOfferKind.Free ? _freeIcon : _discountIcon);
+                _claimRow.Refresh();
+            }
 
             SetInteractable(_buyButton, _buyContent, interactable);
             SetInteractable(_equipButton, _equipContent, interactable);
+            SetInteractable(_claimButton, _claimContent, interactable);
         }
 
         /// <summary>The wallet in the preview's corner.</summary>
@@ -131,6 +159,11 @@ namespace Callbreak.Presentation.Screens
             if (_buyButton.gameObject.activeSelf)
             {
                 _buyRow.Refresh();
+            }
+
+            if (_claimButton.gameObject.activeSelf)
+            {
+                _claimRow.Refresh();
             }
         }
 

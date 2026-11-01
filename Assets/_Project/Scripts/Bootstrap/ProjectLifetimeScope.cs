@@ -4,6 +4,7 @@ using Callbreak.Application.Economy;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Localization;
 using Callbreak.Application.Matchmaking;
+using Callbreak.Application.Offers;
 using Callbreak.Application.Online;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Analytics;
@@ -79,6 +80,10 @@ namespace Callbreak.Bootstrap
             builder.Register<IDailyRewards>(
                 resolver => new DailyRewards(resolver.Resolve<IWallet>(), resolver.Resolve<ISaveStore>(), () => System.DateTime.Now),
                 Lifetime.Singleton);
+
+            // Festival offers (the owner, 31 Oct 2026; ADR 067): a theme given for a festival, switched on
+            // and off from the backend.
+            RegisterFestivalOffers(builder);
 
             // No Ads (the owner, 5 Oct 2026): the one-time purchase that removes the ads between matches.
             RegisterPurchases(builder);
@@ -314,6 +319,39 @@ namespace Callbreak.Bootstrap
 #else
             builder.Register<LogAnalytics>(Lifetime.Singleton).As<IAnalytics>();
 #endif
+        }
+
+        /// <summary>
+        /// Festival offers (ADR 067). On Android, the offers from Firebase Remote Config, on a clock a
+        /// server keeps honest. In the Editor, in the tests and on desktop, no offers, on the device's
+        /// time; a test may bring its own source.
+        /// </summary>
+        private static void RegisterFestivalOffers(IContainerBuilder builder)
+        {
+            builder.Register(resolver => new TrustedClock(resolver.Resolve<IClock>(), () => System.DateTime.UtcNow), Lifetime.Singleton);
+#if !UNITY_EDITOR && UNITY_ANDROID
+            builder.Register<FirebaseFestivalOfferSource>(Lifetime.Singleton).As<IFestivalOfferSource>().AsSelf();
+            builder.Register<ServerTime>(Lifetime.Singleton);
+            builder.RegisterBuildCallback(resolver =>
+            {
+                resolver.Resolve<ServerTime>().Start();
+                resolver.Resolve<FirebaseFestivalOfferSource>().Initialize();
+            });
+#else
+            builder.Register<NoFestivalOffers>(Lifetime.Singleton).As<IFestivalOfferSource>();
+#endif
+            builder.Register<IFestivalOffers>(
+                resolver =>
+                {
+                    TrustedClock clock = resolver.Resolve<TrustedClock>();
+                    return new FestivalOffers(
+                        resolver.Resolve<IFestivalOfferSource>(),
+                        resolver.Resolve<ICosmeticsShop>(),
+                        resolver.Resolve<IRewardedAds>(),
+                        resolver.Resolve<ISaveStore>(),
+                        () => clock.UtcNow);
+                },
+                Lifetime.Singleton);
         }
 
         /// <summary>

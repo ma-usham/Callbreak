@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Callbreak.Application.Cosmetics;
 using Callbreak.Application.Economy;
+using Callbreak.Application.Offers;
 
 namespace Callbreak.Presentation.Screens
 {
@@ -12,6 +13,9 @@ namespace Callbreak.Presentation.Screens
     /// preview, if any. Buying and equipping go through <see cref="ICosmeticsShop"/>. Cards keeps its
     /// choice while the player switches tabs; showing another tab closes the preview. A shop that
     /// opens afresh shows Themes, with no preview open and the chosen deck back on the equipped one.
+    /// The themes come in the shop's order (<see cref="ShopDisplay.ThemeOrder"/>), which a purchase
+    /// changes, so the preview follows its theme, not its place. A festival offer's theme (ADR 067)
+    /// says Free under a Festival tag, and its preview's button claims it.
     /// Engine-free, so it is tested outside Unity.
     /// </summary>
     public sealed class ShopState
@@ -21,12 +25,16 @@ namespace Callbreak.Presentation.Screens
 
         private readonly ICosmeticsShop _shop;
         private readonly IWallet _wallet;
+        private readonly IFestivalOffers _offers;
         private string _chosenDeck;
+        private string _previewId;
 
-        public ShopState(ICosmeticsShop shop, IWallet wallet)
+        /// <param name="offers">The festival offers; null for a shop without them.</param>
+        public ShopState(ICosmeticsShop shop, IWallet wallet, IFestivalOffers offers = null)
         {
             _shop = shop ?? throw new ArgumentNullException(nameof(shop));
             _wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
+            _offers = offers;
             Reset();
         }
 
@@ -35,14 +43,24 @@ namespace Callbreak.Presentation.Screens
 
         public CosmeticKind Category { get; private set; }
 
-        /// <summary>The theme open in the preview, by its place in the catalogue; <see cref="NoPreview"/> for none.</summary>
-        public int Previewing { get; private set; }
+        /// <summary>The theme open in the preview, by its place in <see cref="Themes"/>; <see cref="NoPreview"/> for none.</summary>
+        public int Previewing
+        {
+            get
+            {
+                int index = IndexOf(Themes, _previewId);
+                return index >= 0 ? index : NoPreview;
+            }
+        }
+
+        /// <summary>The themes in the shop's order: the one bought last first, then from the cheapest to the dearest.</summary>
+        public IReadOnlyList<CosmeticItem> Themes => ShopDisplay.ThemeOrder(_shop.Catalog(CosmeticKind.Theme), _shop.LastBought(CosmeticKind.Theme));
 
         /// <summary>Opening the shop: Themes, no preview, and the chosen deck back on the equipped one.</summary>
         public void Reset()
         {
             Category = CosmeticKind.Theme;
-            Previewing = NoPreview;
+            _previewId = null;
             _chosenDeck = _shop.Equipped(CosmeticKind.Deck);
         }
 
@@ -55,7 +73,7 @@ namespace Callbreak.Presentation.Screens
             }
 
             Category = kind;
-            Previewing = NoPreview;
+            _previewId = null;
         }
 
         // ------------------------------------------------------------------ Cards
@@ -96,10 +114,18 @@ namespace Callbreak.Presentation.Screens
             return index >= 0 ? _shop.Catalog(CosmeticKind.Deck)[index] : null;
         }
 
-        /// <summary>What a tile says: a deck says Equipped or nothing (the owner, 5 Oct 2026), a theme Equipped or Owned.</summary>
+        /// <summary>
+        /// What a tile says: a deck says Equipped or nothing (the owner, 5 Oct 2026), a theme Equipped,
+        /// Owned, or Free while a festival offer gives it.
+        /// </summary>
         public ShopTileStatus StatusOf(CosmeticKind kind, int index)
         {
-            CosmeticItem item = _shop.Catalog(kind)[index];
+            CosmeticItem item = kind == CosmeticKind.Theme ? Themes[index] : _shop.Catalog(kind)[index];
+            if (kind == CosmeticKind.Theme && _offers != null && _offers.IsOffered(item.Id))
+            {
+                return ShopTileStatus.Offer;
+            }
+
             bool owned = _shop.IsOwned(kind, item.Id);
             bool equipped = _shop.Equipped(kind) == item.Id;
             return kind == CosmeticKind.Theme ? ShopDisplay.ThemeStatus(owned, equipped) : ShopDisplay.Status(owned, equipped);
@@ -131,44 +157,67 @@ namespace Callbreak.Presentation.Screens
         /// <summary>The wallet holds enough coins for the theme at that place (its price shows red otherwise).</summary>
         public bool CanAffordTheme(int index)
         {
-            IReadOnlyList<CosmeticItem> themes = _shop.Catalog(CosmeticKind.Theme);
+            IReadOnlyList<CosmeticItem> themes = Themes;
             return index >= 0 && index < themes.Count && _wallet.Coins >= themes[index].Price;
         }
+
+        /// <summary>The theme at that place is a festival offer's (its tile has the Festival tag).</summary>
+        public bool IsFestival(int index)
+        {
+            IReadOnlyList<CosmeticItem> themes = Themes;
+            return _offers != null && index >= 0 && index < themes.Count && _offers.IsOffered(themes[index].Id);
+        }
+
+        /// <summary>The festival offer's theme's place in <see cref="Themes"/>; -1 for none.</summary>
+        public int FestivalIndex => _offers == null ? -1 : IndexOf(Themes, _offers.Claimable?.ThemeId);
 
         /// <summary>The player taps a theme: it opens in the preview. False when there is no such theme.</summary>
         public bool OpenPreview(int index)
         {
-            if (index < 0 || index >= _shop.Catalog(CosmeticKind.Theme).Count)
+            IReadOnlyList<CosmeticItem> themes = Themes;
+            if (index < 0 || index >= themes.Count)
             {
                 return false;
             }
 
             Category = CosmeticKind.Theme;
-            Previewing = index;
+            _previewId = themes[index].Id;
             return true;
         }
 
-        public void ClosePreview() => Previewing = NoPreview;
+        /// <summary>Opens the festival offer's theme in the preview (the offer opening by itself); false when there is none.</summary>
+        public bool OpenOffer() => OpenPreview(FestivalIndex);
+
+        public void ClosePreview() => _previewId = null;
 
         /// <summary>The theme open in the preview, or null.</summary>
         public CosmeticItem PreviewTheme
         {
             get
             {
-                IReadOnlyList<CosmeticItem> themes = _shop.Catalog(CosmeticKind.Theme);
-                return Previewing >= 0 && Previewing < themes.Count ? themes[Previewing] : null;
+                IReadOnlyList<CosmeticItem> themes = Themes;
+                int index = IndexOf(themes, _previewId);
+                return index >= 0 ? themes[index] : null;
             }
         }
 
-        /// <summary>The preview's button for its theme: Buy, Equip theme, or Equipped (off).</summary>
+        /// <summary>The preview's button for its theme: Watch ad (a festival offer's), Buy, Equip theme, or Equipped (off).</summary>
         public ThemeAction PreviewAction
         {
             get
             {
                 CosmeticItem theme = PreviewTheme;
-                return theme == null
-                    ? ThemeAction.Equipped
-                    : ShopDisplay.ThemeActionFor(_shop.IsOwned(CosmeticKind.Theme, theme.Id), _shop.Equipped(CosmeticKind.Theme) == theme.Id);
+                if (theme == null)
+                {
+                    return ThemeAction.Equipped;
+                }
+
+                if (_offers != null && _offers.IsOffered(theme.Id))
+                {
+                    return ThemeAction.Claim;
+                }
+
+                return ShopDisplay.ThemeActionFor(_shop.IsOwned(CosmeticKind.Theme, theme.Id), _shop.Equipped(CosmeticKind.Theme) == theme.Id);
             }
         }
 

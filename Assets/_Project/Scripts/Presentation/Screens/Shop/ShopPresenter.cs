@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Callbreak.Application.Cosmetics;
 using Callbreak.Application.Economy;
+using Callbreak.Application.Offers;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Settings;
 using Callbreak.Core.Cards;
@@ -26,6 +27,11 @@ namespace Callbreak.Presentation.Screens
     /// and its cloth together), or says it is equipped. Buying asks once, naming the theme and its
     /// price; a bought theme is owned, not equipped, so the button turns to Equip theme and a toast
     /// says it is the player's. Without enough coins a dialog offers the Earn Coins page or Not now.</para>
+    /// <para>The themes come in the shop's order: the one bought last first, then from the cheapest to
+    /// the dearest (the owner, 31 Oct 2026). A festival offer's theme (ADR 067) says Free under a
+    /// Festival tag and the shop opens scrolled to it; its preview's button claims it (Tihar: "Watch
+    /// ad • Free"), then turns to Equip theme in the same place. When the main menu opens the offer by
+    /// itself, the shop opens straight on that preview, and its cross goes back to the menu.</para>
     /// <para>Cards, as before: tapping a deck chooses it and shows its ace for a moment; the primary
     /// button equips an owned choice ("Use Selected Style", off while it is equipped) or buys one that
     /// is not owned, with the same questions.</para>
@@ -54,6 +60,8 @@ namespace Callbreak.Presentation.Screens
         private readonly ISettingsService _settings;
         private readonly IAudioService _audio;
         private readonly NoAdsOffer _noAds;
+        private readonly IFestivalOffers _offers;
+        private readonly ShopOpening _opening;
         private readonly ShopState _state;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
 
@@ -62,6 +70,9 @@ namespace Callbreak.Presentation.Screens
         private int _depth;
         private bool _busy;
         private bool _disposed;
+
+        // Opened by the main menu on the festival offer: the preview's cross leaves the shop.
+        private bool _offerPopup;
 
         public ShopPresenter(
             ShopView view,
@@ -75,7 +86,9 @@ namespace Callbreak.Presentation.Screens
             ISettingsService settings,
             IAudioService audio,
             INoAds noAds,
-            ILoadingCurtain curtain)
+            ILoadingCurtain curtain,
+            IFestivalOffers offers,
+            ShopOpening opening)
         {
             _view = view;
             _router = router;
@@ -88,7 +101,9 @@ namespace Callbreak.Presentation.Screens
             _settings = settings;
             _audio = audio;
             _noAds = new NoAdsOffer(noAds, toast, localization, curtain);
-            _state = new ShopState(shop, wallet);
+            _offers = offers;
+            _opening = opening;
+            _state = new ShopState(shop, wallet, offers);
         }
 
         public void Start()
@@ -103,8 +118,10 @@ namespace Callbreak.Presentation.Screens
             _view.PreviewClosed += OnPreviewClosed;
             _view.PreviewBuyClicked += OnPreviewBuy;
             _view.PreviewEquipClicked += OnPreviewEquip;
+            _view.PreviewClaimClicked += OnPreviewClaim;
             _router.Changed += OnScreenChanged;
             _shop.Changed += Render;
+            _offers.Changed += Render;
             _wallet.Changed += Render;
             _localization.LanguageChanged += Render;
             _noAds.Changed += RenderNoAds;
@@ -125,8 +142,10 @@ namespace Callbreak.Presentation.Screens
             _view.PreviewClosed -= OnPreviewClosed;
             _view.PreviewBuyClicked -= OnPreviewBuy;
             _view.PreviewEquipClicked -= OnPreviewEquip;
+            _view.PreviewClaimClicked -= OnPreviewClaim;
             _router.Changed -= OnScreenChanged;
             _shop.Changed -= Render;
+            _offers.Changed -= Render;
             _wallet.Changed -= Render;
             _localization.LanguageChanged -= Render;
             _noAds.Changed -= RenderNoAds;
@@ -168,11 +187,16 @@ namespace Callbreak.Presentation.Screens
             }
         }
 
+        /// <summary>
+        /// A fresh visit: Themes, scrolled to the festival offer's theme if there is one, else to the
+        /// start; or, asked by the main menu, straight on the offer's preview.
+        /// </summary>
         private void OpenAfresh()
         {
             _state.Reset();
+            _offerPopup = _opening.TakeOffer() && _state.OpenOffer();
             Render();
-            _view.ScrollToTheme(0);
+            _view.ScrollToTheme(Math.Max(0, _state.FestivalIndex));
         }
 
         private void Render()
@@ -201,21 +225,31 @@ namespace Callbreak.Presentation.Screens
 
         private void RenderThemes()
         {
-            IReadOnlyList<CosmeticItem> themes = _shop.Catalog(CosmeticKind.Theme);
+            IReadOnlyList<CosmeticItem> themes = _state.Themes;
+            FestivalOffer offer = _offers.Claimable;
             for (int i = 0; i < themes.Count; i++)
             {
                 CosmeticItem theme = themes[i];
                 ShopTileStatus status = _state.StatusOf(CosmeticKind.Theme, i);
+                int price = theme.Price;
+                if (status == ShopTileStatus.Offer && offer.Kind == FestivalOfferKind.Discount)
+                {
+                    // A discount shows its own price where the shop's goes.
+                    status = ShopTileStatus.Price;
+                    price = offer.Price;
+                }
+
                 string statusKey = ShopDisplay.StatusKey(status);
                 _view.SetTheme(
                     i,
                     _localization.Get(theme.NameKey),
                     _view.ThemePicture(theme.Id),
                     NewThemes.Contains(theme.Id),
+                    _state.IsFestival(i),
                     status,
                     statusKey != null ? _localization.Get(statusKey) : null,
-                    ShopDisplay.Price(theme.Price),
-                    _state.CanAffordTheme(i));
+                    ShopDisplay.Price(price),
+                    _wallet.Coins >= price);
             }
         }
 
@@ -251,16 +285,40 @@ namespace Callbreak.Presentation.Screens
 
             Sprite background = _view.BackgroundPicture(theme.BackgroundId, out bool nightScene);
             Sprite cloth = _view.ClothPicture(theme.TableId, out Sprite frame);
+            ThemeAction action = _state.PreviewAction;
+            FestivalOffer offer = action == ThemeAction.Claim ? _offers.Claimable : null;
             _view.ShowPreview(
                 _localization.Get(theme.NameKey),
-                _localization.Get(theme.NameKey + ".about"),
+                offer != null ? OfferWords(offer) : _localization.Get(theme.NameKey + ".about"),
                 background,
                 nightScene,
                 cloth,
                 frame,
-                _state.PreviewAction,
+                action,
                 ShopDisplay.Price(theme.Price),
+                offer != null ? ClaimLabel(offer) : null,
+                offer?.Kind ?? FestivalOfferKind.Free,
                 !_busy);
+        }
+
+        /// <summary>The offer's words from the backend's key, or the game's own when the tables don't have that key.</summary>
+        private string OfferWords(FestivalOffer offer)
+        {
+            string words = _localization.Get(offer.TitleKey);
+            return words == offer.TitleKey ? _localization.Get(FestivalOfferReader.DefaultTitleKey) : words;
+        }
+
+        private string ClaimLabel(FestivalOffer offer)
+        {
+            switch (offer.Kind)
+            {
+                case FestivalOfferKind.WatchAd:
+                    return _localization.Get("ui.offer.claim.watch_ad");
+                case FestivalOfferKind.Discount:
+                    return _localization.Format("ui.offer.claim.discount", ShopDisplay.Price(offer.Price));
+                default:
+                    return _localization.Get("ui.offer.claim.free");
+            }
         }
 
         private void RenderNoAds() => _view.SetNoAdsVisible(_noAds.Visible);
@@ -307,6 +365,14 @@ namespace Callbreak.Presentation.Screens
 
         private void OnPreviewClosed()
         {
+            if (_offerPopup)
+            {
+                // The offer opened by itself over the main menu: its cross goes back there.
+                _offerPopup = false;
+                _router.Pop();
+                return;
+            }
+
             int shown = _state.Previewing;
             _state.ClosePreview();
             Render();
@@ -334,6 +400,92 @@ namespace Callbreak.Presentation.Screens
             }
 
             _ = BuyAsync(CosmeticKind.Theme, theme);
+        }
+
+        private void OnPreviewClaim()
+        {
+            if (_busy || _state.PreviewAction != ThemeAction.Claim)
+            {
+                return;
+            }
+
+            _ = ClaimAsync();
+        }
+
+        /// <summary>
+        /// Claims the festival offer (ADR 067): for Tihar, one rewarded ad watched to the end. The theme
+        /// is then owned, not equipped: the button turns to Equip theme and a toast says it is the
+        /// player's. No ad to show, or one not watched to the end, says so and gives nothing.
+        /// </summary>
+        private async Task ClaimAsync()
+        {
+            FestivalOffer offer = _offers.Claimable;
+            if (offer == null)
+            {
+                return;
+            }
+
+            string themeName = _localization.Get(_state.PreviewTheme?.NameKey ?? string.Empty);
+            _busy = true;
+            Render();
+            try
+            {
+                if (offer.Kind == FestivalOfferKind.Discount)
+                {
+                    // A discount is a purchase: the same question, for the offer's price.
+                    if (_wallet.Coins < offer.Price)
+                    {
+                        await OfferEarnCoinsAsync(themeName, offer.Price);
+                        return;
+                    }
+
+                    bool buy = await _dialogs.ConfirmAsync(
+                        new DialogRequest(
+                            _localization.Format("ui.shop.buy.title", themeName),
+                            _localization.Format("ui.shop.theme.buy.body", ShopDisplay.Price(offer.Price), ShopDisplay.Price(_wallet.Coins)),
+                            _localization.Get("ui.shop.buy.confirm"),
+                            _localization.Get("ui.shop.buy.cancel")),
+                        _lifetime.Token);
+                    if (!buy || _disposed)
+                    {
+                        return;
+                    }
+                }
+
+                FestivalClaimResult result = await _offers.ClaimAsync(_lifetime.Token);
+                if (_disposed)
+                {
+                    return;
+                }
+
+                switch (result)
+                {
+                    case FestivalClaimResult.Claimed:
+                        _toast.Show(_localization.Format("ui.shop.theme.bought", themeName));
+                        break;
+                    case FestivalClaimResult.AdUnavailable:
+                        _toast.Show(_localization.Get("ui.offer.ad_unavailable"));
+                        break;
+                    case FestivalClaimResult.AdNotWatched:
+                        _toast.Show(_localization.Get("ui.offer.ad_not_watched"));
+                        break;
+                    case FestivalClaimResult.NotEnoughCoins:
+                        await OfferEarnCoinsAsync(themeName, offer.Price);
+                        break;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+            finally
+            {
+                _busy = false;
+                Render();
+            }
         }
 
         private void OnEarnCoins()

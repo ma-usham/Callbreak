@@ -172,6 +172,10 @@ namespace Callbreak.Tests.PlayMode
             }
 
             public PurchaseResult Buy(CosmeticKind kind, string id) => PurchaseResult.AlreadyOwned;
+
+            public PurchaseResult BuyAt(CosmeticKind kind, string id, int price) => PurchaseResult.AlreadyOwned;
+
+            public string LastBought(CosmeticKind kind) => null;
         }
     }
 }

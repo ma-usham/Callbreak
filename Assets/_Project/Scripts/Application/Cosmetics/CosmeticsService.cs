@@ -116,12 +116,24 @@ namespace Callbreak.Application.Cosmetics
         /// its own, and while the file comes from a newer app version nothing is sold
         /// (<see cref="PurchaseResult.UnknownItem"/> for both); no coins are taken.
         /// </summary>
-        public PurchaseResult Buy(CosmeticKind kind, string id)
+        public PurchaseResult Buy(CosmeticKind kind, string id) => BuyAt(kind, id, CosmeticCatalog.Find(kind, id)?.Price ?? 0);
+
+        /// <summary>
+        /// <see cref="Buy"/> at an offer's price (ADR 067): the same purchase, saved the same way, for
+        /// <paramref name="price"/> coins instead of the catalogue's; 0 is a gift, which needs no wallet.
+        /// Throws <see cref="ArgumentOutOfRangeException"/> for a price below 0 or above the catalogue's.
+        /// </summary>
+        public PurchaseResult BuyAt(CosmeticKind kind, string id, int price)
         {
             CosmeticItem item = CosmeticCatalog.Find(kind, id);
             if (item == null || IsPart(kind))
             {
                 return PurchaseResult.UnknownItem;
+            }
+
+            if (price < 0 || price > item.Price)
+            {
+                throw new ArgumentOutOfRangeException(nameof(price), price, $"An offer's price is 0 to the catalogue's {item.Price}.");
             }
 
             if (IsOwned(_data, item))
@@ -134,12 +146,12 @@ namespace Callbreak.Application.Cosmetics
                 return PurchaseResult.UnknownItem;
             }
 
-            if (_wallet == null)
+            if (price > 0 && _wallet == null)
             {
                 throw new InvalidOperationException("This CosmeticsService has no wallet to pay from.");
             }
 
-            if (_wallet.Coins < item.Price)
+            if (price > 0 && _wallet.Coins < price)
             {
                 return PurchaseResult.NotEnoughCoins;
             }
@@ -149,7 +161,7 @@ namespace Callbreak.Application.Cosmetics
             List<string> bought = Bought(_data, kind);
             bought.Add(id);
             _store.Save(SaveKey, _data);
-            if (!_wallet.TrySpend(item.Price))
+            if (price > 0 && !_wallet.TrySpend(price))
             {
                 bought.Remove(id);
                 _store.Save(SaveKey, _data);
@@ -158,6 +170,21 @@ namespace Callbreak.Application.Cosmetics
 
             Changed?.Invoke();
             return PurchaseResult.Bought;
+        }
+
+        /// <summary>The last of the kind's purchases this build knows: the list keeps the order they were made in.</summary>
+        public string LastBought(CosmeticKind kind)
+        {
+            List<string> bought = Bought(_data, kind);
+            for (int i = bought.Count - 1; i >= 0; i--)
+            {
+                if (CosmeticCatalog.Find(kind, bought[i]) != null)
+                {
+                    return bought[i];
+                }
+            }
+
+            return null;
         }
 
         private void Commit()

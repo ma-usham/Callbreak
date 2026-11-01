@@ -308,6 +308,8 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_status").objectReferenceValue = status;
             so.FindProperty("_priceRow").objectReferenceValue = priceLayout;
             so.FindProperty("_price").objectReferenceValue = price;
+            so.FindProperty("_festivalTag").objectReferenceValue = AddFestivalTag(root, tag.GetSiblingIndex() + 1);
+            so.FindProperty("_offerText").objectReferenceValue = AddOfferText(root);
             so.ApplyModifiedPropertiesWithoutUndo();
             return tile;
         }
@@ -414,6 +416,7 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_equipped").objectReferenceValue = equipped.gameObject;
             so.FindProperty("_walletBalance").objectReferenceValue = walletBalance;
             so.FindProperty("_earnCoinsButton").objectReferenceValue = earn;
+            AddClaimButton(so, panel, buttonAt, buy.transform.GetSiblingIndex() + 1);
             so.ApplyModifiedPropertiesWithoutUndo();
             _ = menuScreen;
             _ = playScreen;

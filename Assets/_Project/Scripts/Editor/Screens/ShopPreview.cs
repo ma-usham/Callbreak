@@ -63,7 +63,7 @@ namespace Callbreak.Editor.Screens
             {
                 CosmeticItem theme = themes[i];
                 ShopTileStatus status = i == 0 ? ShopTileStatus.Equipped : ShopTileStatus.Price;
-                view.SetTheme(i, strings[theme.Id], view.ThemePicture(theme.Id), i >= 1 && i <= 7, status, status == ShopTileStatus.Equipped ? "Equipped" : null, ShopDisplay.Price(theme.Price), theme.Price <= Coins);
+                view.SetTheme(i, strings[theme.Id], view.ThemePicture(theme.Id), i >= 1 && i <= 7, false, status, status == ShopTileStatus.Equipped ? "Equipped" : null, ShopDisplay.Price(theme.Price), theme.Price <= Coins);
             }
 
             string[] decks = { "Classic Crimson", "Himalayan Ivory", "Kathmandu Gold" };
@@ -86,7 +86,7 @@ namespace Callbreak.Editor.Screens
                 view.ShowPreview(
                     "Tihar Lights",
                     "Tihar night at home: a glowing carved window, marigold garlands, diyo on every step, a rangoli and fireworks. The cloth is plum, with marigold swags.",
-                    background, night, cloth, frame, ThemeAction.Buy, ShopDisplay.Price(tihar.Price), true);
+                    background, night, cloth, frame, ThemeAction.Buy, ShopDisplay.Price(tihar.Price), null, Callbreak.Application.Offers.FestivalOfferKind.Free, true);
             }
         }
 

@@ -39,6 +39,10 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private UnityEngine.UI.Button _dailyRewardsButton;
         [SerializeField] private GameObject _dailyRewardsDot;
 
+        // The Shop button's red dot while a festival offer waits to be claimed (the owner, 31 Oct 2026;
+        // ADR 067). A prefab built before it has none.
+        [SerializeField] private GameObject _shopDot;
+
         // Prize coins arriving (the owner, 9 Oct 2026): the flight over the menu, the wallet's coin it
         // lands in and the point in the middle of the screen they come from. A prefab built before them
         // has none; the balance then simply changes.
@@ -164,6 +168,17 @@ namespace Callbreak.Presentation.Screens
                 _dailyRewardsDot.SetActive(ready);
             }
         }
+
+        /// <summary>The Shop button's red dot: shown while a festival offer waits to be claimed.</summary>
+        public void SetShopOffer(bool waiting)
+        {
+            if (_shopDot != null && _shopDot.activeSelf != waiting)
+            {
+                _shopDot.SetActive(waiting);
+            }
+        }
+
+        public bool ShowsShopDot => _shopDot != null && _shopDot.activeSelf;
 
         /// <summary>The picked avatar preset. A missing sprite keeps the current picture.</summary>
         public void SetAvatar(Sprite avatar)

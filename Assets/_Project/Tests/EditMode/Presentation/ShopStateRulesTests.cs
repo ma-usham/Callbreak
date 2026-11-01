@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Callbreak.Application.Cosmetics;
 using Callbreak.Application.Economy;
+using Callbreak.Application.Offers;
 using Callbreak.Presentation.Screens;
 using NUnit.Framework;
 
@@ -56,14 +59,16 @@ namespace Callbreak.Tests.EditMode.Presentation
         {
             _shop.OwnedIds.Add((CosmeticKind.Theme, "pokhara-lakeside"));
 
-            AssertStatuses(CosmeticKind.Theme, ShopTileStatus.Equipped, ShopTileStatus.Price, ShopTileStatus.Price, ShopTileStatus.Owned);
+            // In the shop's order (the owner, 31 Oct 2026): Durbar Square, Himalayan Sunrise, Pokhara Lakeside, Tihar Lights.
+            AssertStatuses(CosmeticKind.Theme, ShopTileStatus.Equipped, ShopTileStatus.Price, ShopTileStatus.Owned, ShopTileStatus.Price);
         }
 
         [Test]
         public void AThemesPrice_IsAffordable_OnlyWhenTheWalletHoldsIt()
         {
             Assert.IsTrue(_state.CanAffordTheme(1), "600 coins buy the 500 theme");
-            Assert.IsFalse(_state.CanAffordTheme(2), "but not the 1,000 one: its price shows red");
+            Assert.IsTrue(_state.CanAffordTheme(2), "nor the other 500 one");
+            Assert.IsFalse(_state.CanAffordTheme(3), "but not the 1,000 one: its price shows red");
             Assert.IsFalse(_state.CanAffordTheme(4));
             Assert.IsFalse(_state.CanAffordTheme(-1));
         }
@@ -71,7 +76,7 @@ namespace Callbreak.Tests.EditMode.Presentation
         [Test]
         public void TappingATheme_OpensItsPreview_WhoseButtonBuysEquipsOrSaysEquipped()
         {
-            Assert.IsTrue(_state.OpenPreview(2));
+            Assert.IsTrue(_state.OpenPreview(3));
             Assert.AreEqual("tihar-lights", _state.PreviewTheme.Id);
             Assert.AreEqual(ThemeAction.Buy, _state.PreviewAction);
 
@@ -91,6 +96,103 @@ namespace Callbreak.Tests.EditMode.Presentation
             Assert.IsFalse(_state.OpenPreview(4));
             Assert.IsFalse(_state.OpenPreview(-1));
             Assert.AreEqual(ShopState.NoPreview, _state.Previewing);
+        }
+
+        [Test]
+        public void TheThemes_TheOneBoughtLastFirst_ThenFromTheCheapestToTheDearest()
+        {
+            CollectionAssert.AreEqual(
+                new[] { "durbar-square", "himalayan-sunrise", "pokhara-lakeside", "tihar-lights" },
+                _state.Themes.Select(t => t.Id),
+                "nothing bought: by price, and in catalogue order where prices tie");
+
+            _shop.LastBoughtIds[CosmeticKind.Theme] = "tihar-lights";
+            CollectionAssert.AreEqual(
+                new[] { "tihar-lights", "durbar-square", "himalayan-sunrise", "pokhara-lakeside" },
+                _state.Themes.Select(t => t.Id));
+
+            _shop.LastBoughtIds[CosmeticKind.Theme] = "pokhara-lakeside";
+            CollectionAssert.AreEqual(
+                new[] { "pokhara-lakeside", "durbar-square", "himalayan-sunrise", "tihar-lights" },
+                _state.Themes.Select(t => t.Id),
+                "only the last one bought comes first");
+
+            _shop.LastBoughtIds[CosmeticKind.Theme] = "a-theme-gone-from-the-shop";
+            Assert.AreEqual("durbar-square", _state.Themes[0].Id);
+        }
+
+        [Test]
+        public void ThePreview_StaysOnItsTheme_WhenBuyingItMovesItFirst()
+        {
+            _state.OpenPreview(3);
+            Assert.AreEqual("tihar-lights", _state.PreviewTheme.Id);
+
+            _shop.OwnedIds.Add((CosmeticKind.Theme, "tihar-lights"));
+            _shop.LastBoughtIds[CosmeticKind.Theme] = "tihar-lights";
+
+            Assert.AreEqual(0, _state.Previewing);
+            Assert.AreEqual("tihar-lights", _state.PreviewTheme.Id);
+            Assert.AreEqual(ThemeAction.Equip, _state.PreviewAction);
+        }
+
+        [Test]
+        public void ThePreview_Closes_WhenItsThemeLeavesTheShop()
+        {
+            _state.OpenPreview(1);
+            _shop.Remove(CosmeticKind.Theme, "himalayan-sunrise");
+
+            Assert.AreEqual(ShopState.NoPreview, _state.Previewing);
+            Assert.IsNull(_state.PreviewTheme);
+        }
+
+        [Test]
+        public void AFestivalTheme_SaysFestival_AndItsPreviewClaimsIt()
+        {
+            var offers = new FakeOffers { ThemeId = "tihar-lights" };
+            _state = new ShopState(_shop, _wallet, offers);
+
+            Assert.AreEqual(3, _state.FestivalIndex, "the shop opens scrolled to it");
+            Assert.IsTrue(_state.IsFestival(3));
+            Assert.IsFalse(_state.IsFestival(1));
+            Assert.IsFalse(_state.IsFestival(4));
+            Assert.AreEqual(ShopTileStatus.Offer, _state.StatusOf(CosmeticKind.Theme, 3));
+            Assert.AreEqual(ShopTileStatus.Price, _state.StatusOf(CosmeticKind.Theme, 1));
+
+            _state.OpenPreview(3);
+            Assert.AreEqual(ThemeAction.Claim, _state.PreviewAction, "Watch ad, free");
+
+            // Claimed: owned, the offer gone, the button Equip theme in the same place.
+            offers.ThemeId = null;
+            _shop.OwnedIds.Add((CosmeticKind.Theme, "tihar-lights"));
+            _shop.LastBoughtIds[CosmeticKind.Theme] = "tihar-lights";
+            Assert.AreEqual(ThemeAction.Equip, _state.PreviewAction);
+            Assert.AreEqual(-1, _state.FestivalIndex);
+            Assert.AreEqual(ShopTileStatus.Owned, _state.StatusOf(CosmeticKind.Theme, 0));
+        }
+
+        [Test]
+        public void OpenOffer_OpensTheFestivalThemesPreview_OrNothing()
+        {
+            var offers = new FakeOffers();
+            _state = new ShopState(_shop, _wallet, offers);
+            Assert.IsFalse(_state.OpenOffer(), "no offer");
+            Assert.AreEqual(ShopState.NoPreview, _state.Previewing);
+
+            offers.ThemeId = "tihar-lights";
+            _state.Show(CosmeticKind.Deck);
+            Assert.IsTrue(_state.OpenOffer());
+
+            Assert.AreEqual(CosmeticKind.Theme, _state.Category);
+            Assert.AreEqual("tihar-lights", _state.PreviewTheme.Id);
+            Assert.AreEqual(ThemeAction.Claim, _state.PreviewAction);
+        }
+
+        [Test]
+        public void WithoutOffers_NoThemeIsAFestivalOne()
+        {
+            Assert.AreEqual(-1, _state.FestivalIndex);
+            Assert.IsFalse(_state.IsFestival(3));
+            Assert.IsFalse(_state.OpenOffer());
         }
 
         [Test]
@@ -288,6 +390,34 @@ namespace Callbreak.Tests.EditMode.Presentation
             public void Equip(CosmeticKind kind, string id) => EquippedIds[kind] = id;
 
             public PurchaseResult Buy(CosmeticKind kind, string id) => throw new NotSupportedException("the page's state never buys");
+
+            public PurchaseResult BuyAt(CosmeticKind kind, string id, int price) => throw new NotSupportedException("the page's state never buys");
+
+            public Dictionary<CosmeticKind, string> LastBoughtIds { get; } = new Dictionary<CosmeticKind, string>();
+
+            public string LastBought(CosmeticKind kind) => LastBoughtIds.TryGetValue(kind, out string id) ? id : null;
+        }
+
+        private sealed class FakeOffers : IFestivalOffers
+        {
+            public event Action Changed
+            {
+                add { }
+                remove { }
+            }
+
+            /// <summary>The theme of the claimable offer; null for none.</summary>
+            public string ThemeId { get; set; }
+
+            public FestivalOffer Claimable => ThemeId == null
+                ? null
+                : new FestivalOffer("tihar-2026", ThemeId, FestivalOfferKind.WatchAd, 0, DateTimeOffset.MinValue, DateTimeOffset.MaxValue, "ui.offer.tihar");
+
+            public bool IsOffered(string themeId) => themeId != null && themeId == ThemeId;
+
+            public bool TakeAutoOpen() => throw new NotSupportedException("the page's state never opens it");
+
+            public Task<FestivalClaimResult> ClaimAsync(CancellationToken ct) => throw new NotSupportedException("the page's state never claims");
         }
 
         private sealed class FakeWallet : IWallet
