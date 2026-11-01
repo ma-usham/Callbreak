@@ -1006,7 +1006,6 @@ namespace Callbreak.Editor
 
                 _table.Seat(0).HideBubble();
                 _table.Seat(0).HideChat();
-                _table.Prompt.Hide();
                 Equal(CardViewPool.DeckSize, _table.Cards.Free, "every card is back in the pool after a match");
             }
 
@@ -1108,7 +1107,6 @@ namespace Callbreak.Editor
             {
                 Settle(_table.Hand, "_arrangeMotion");
                 Settle(_table.Hand, "_shakeMotion");
-                Settle(_table.Prompt, "_motion");
                 Settle(_table.Emotes, "_motion");
                 Settle(_table, "_coverMotion");
                 for (int i = 0; i < TableView.SeatCount; i++)
@@ -1464,11 +1462,6 @@ namespace Callbreak.Editor
                     return;
                 }
 
-                if (Once("prompts"))
-                {
-                    StagePrompts();
-                }
-
                 if (Once("status pills"))
                 {
                     StageStatusPills();
@@ -1480,7 +1473,7 @@ namespace Callbreak.Editor
                     return;
                 }
 
-                // An illegal card thrown: refused and explained, nothing is sent (GDD screen 08, callout 9).
+                // An illegal card thrown: refused, nothing is sent (GDD screen 08, callout 9; no prompt explains it since ADR 070).
                 if (!illegal.IsEmpty && Once("illegal throw"))
                 {
                     int plays = _session.PlayCalls, warnings = _haptics.Count(HapticPattern.Warning);
@@ -1490,7 +1483,6 @@ namespace Callbreak.Editor
                     Equal(plays, _session.PlayCalls, "an illegal card is never sent");
                     Equal(held, hand.Count, "an illegal card stays in the hand");
                     Equal(warnings + 1, _haptics.Count(HapticPattern.Warning), "an illegal throw gives a warning nudge");
-                    Check(_table.Prompt.IsShowing, "the prompt that explains the refusal is showing");
                     Check(_table.Trick.CardAt(0) == null, "an illegal card does not reach the trick");
                     Check(hand.Held == null && thrown.Rect.parent == hand.CardsRoot, "a refused card slides back into the hand");
                     _nextTapAt = _clock.Now + 0.3;
@@ -2706,8 +2698,6 @@ namespace Callbreak.Editor
                             Check(!_bidding.IsPanelShown, "the call panel is hidden on another seat's call turn");
                             TMP_Text calling = Field<TMP_Text>(_bidding, "_callingText");
                             Check(!calling.gameObject.activeSelf, "the middle of the table stays clear while another seat calls (ADR 040)");
-                            Check(_table.Prompt.IsShowing, "the prompt above the hand says who is calling");
-                            Equal(_text.Format("ui.bidding.calling", _active.Seats[(int)turn.Seat].Name), _table.Prompt.Text, "\"{name} is calling…\" in the prompt");
                             Equal(_text.Get("ui.seat.calling"), StatusOf(turn.Seat), "the caller's pill reads \"Calling…\"");
                         }
 
@@ -2727,27 +2717,8 @@ namespace Callbreak.Editor
                         break;
 
                     case PlayTurnStarted turn:
-                        Check(_table.Prompt.IsShowing, "a prompt shows during play");
-                        Drawable(Field<TMP_Text>(_table.Prompt, "_label"), "every character of the prompt can be drawn");
                         if (turn.Seat == Local)
                         {
-                            TMP_Text promptLabel = Field<TMP_Text>(_table.Prompt, "_label");
-                            state.TryGetObligation(out PlayObligation asked);
-
-                            // No tips, the first match too (the owner, 30 Oct 2026, ADR 063): the prompt names the turn.
-                            Check(_table.Prompt.Text.StartsWith("Your turn", StringComparison.Ordinal), "the prompt says it is your turn", _table.Prompt.Text);
-                            Equal(TurnPrompt.ForObligation(asked, _text), _table.Prompt.Text, "the prompt states the obligation");
-                            if (asked.Kind == ObligationKind.BeatCard)
-                            {
-                                Drawable(promptLabel, "a \"beat\" prompt in play has no character its label cannot draw");
-                                Equal(1, SpritesDrawn(promptLabel), "a \"beat\" prompt in play draws its suit from the suit sprites");
-                            }
-                            else if (asked.Kind == ObligationKind.FollowSuit)
-                            {
-                                Drawable(promptLabel, "a \"follow\" prompt in play has no character its label cannot draw");
-                                Equal(1, SpritesDrawn(promptLabel), "a \"follow\" prompt in play draws its suit from the suit sprites");
-                            }
-
                             Check(_table.Hand.Interactable, "the hand takes input on the local turn");
                             Equal(0, _audio.Count(SoundCue.YourTurn), "no sound plays when the player's turn comes (ADR 041)");
                             Check(state.TryGetObligation(out PlayObligation _), "the local turn has an obligation");
@@ -2761,7 +2732,6 @@ namespace Callbreak.Editor
                         }
                         else
                         {
-                            Equal(_text.Format("ui.prompt.waiting_for", _active.Seats[(int)turn.Seat].Name), _table.Prompt.Text, "the prompt says who is awaited");
                             Check(!_table.Hand.Interactable, "the hand takes no input on another seat's turn");
                         }
 
@@ -2801,7 +2771,6 @@ namespace Callbreak.Editor
                     }
 
                     case RoundScored scored:
-                        Check(!_table.Prompt.IsShowing, "the prompt is hidden once the round is scored");
                         if (scored.Result.Round == _active.Rules.Rounds && _lastSummaryView == null && _active.View.Phase == Phase.RoundSummary)
                         {
                             // For a staged online table in the last round's summary.
@@ -2976,76 +2945,6 @@ namespace Callbreak.Editor
                     {
                         Note($"{where}: '{c}' (U+{(int)c:X4}) is not in the atlas of {label.font.name}; it is drawn by a fallback font, or as an empty box without one");
                     }
-                }
-            }
-
-            /// <summary>How many of a label's characters TextMeshPro draws as sprites.</summary>
-            private static int SpritesDrawn(TMP_Text label)
-            {
-                label.ForceMeshUpdate(true, true);
-                TMP_TextInfo info = label.textInfo;
-                int sprites = 0;
-                for (int i = 0; i < info.characterCount; i++)
-                {
-                    if (info.characterInfo[i].elementType == TMP_TextElementType.Sprite)
-                    {
-                        sprites++;
-                    }
-                }
-
-                return sprites;
-            }
-
-            /// <summary>
-            /// The prompts that name a suit or a card, for every suit: "Your turn · Follow ♠",
-            /// "Your turn · Beat Q♥". A match only happens to show some of them.
-            /// </summary>
-            private void StagePrompts()
-            {
-                TablePromptView prompt = _table.Prompt;
-                TMP_Text label = Field<TMP_Text>(prompt, "_label");
-                RectTransform pill = Field<RectTransform>(prompt, "_pill");
-                bool showing = prompt.IsShowing;
-                string before = prompt.Text;
-                Check(label.spriteAsset != null, "the prompt label has the suit sprites");
-                prompt.Show(_text.Get("ui.prompt.lead_any"));
-                label.ForceMeshUpdate(true, true);
-                float plainHeight = label.textBounds.size.y;
-                float lineHeight = label.preferredHeight;
-                foreach (Suit suit in new[] { Suit.Spades, Suit.Hearts, Suit.Diamonds, Suit.Clubs })
-                {
-                    string follow = _text.Format("ui.prompt.follow", TurnPrompt.SuitSymbol(suit).ToString());
-                    prompt.Show(follow);
-                    Drawable(label, "a \"follow\" prompt has no character its label cannot draw");
-                    Equal(1, SpritesDrawn(label), "the suit of a \"follow\" prompt is drawn from the suit sprites");
-                    Check(label.preferredHeight <= lineHeight + 0.01f, "a suit does not make the prompt's line taller", $"{label.preferredHeight} against {lineHeight}");
-                    Check(pill.sizeDelta.x >= label.GetPreferredValues(follow).x, "the prompt pill is as wide as its text");
-                    if (suit == Suit.Spades)
-                    {
-                        Snapshot("Table_prompt_follow");
-                    }
-
-                    foreach (Rank rank in new[] { Rank.Queen, Rank.Ten, Rank.Ace, Rank.Seven })
-                    {
-                        string beat = _text.Format("ui.prompt.beat", TurnPrompt.CardLabel(new Card(suit, rank)));
-                        prompt.Show(beat);
-                        Drawable(label, "a \"beat\" prompt has no character its label cannot draw");
-                        Equal(1, SpritesDrawn(label), "the suit of a \"beat\" prompt is drawn from the suit sprites");
-                        Check(label.textBounds.size.y <= plainHeight * 1.35f, "a suit stays within the height of the prompt's text", $"{label.textBounds.size.y} against {plainHeight}");
-                        if (suit == Suit.Hearts && rank == Rank.Queen)
-                        {
-                            Snapshot("Table_prompt_beat");
-                        }
-                    }
-                }
-
-                if (showing)
-                {
-                    prompt.Show(before);
-                }
-                else
-                {
-                    prompt.Hide();
                 }
             }
 

@@ -58,7 +58,6 @@ namespace Callbreak.Editor.Screens
 
             view.SetRound(text.Format("ui.table.round", 1, 5));
             view.SetTrick(null);
-            view.Prompt.Hide();
             view.Emotes.Close();
 
             // Opponents: relative seats 1 right, 2 top, 3 left. Mockup 08 draws eight backs at the top

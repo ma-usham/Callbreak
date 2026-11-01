@@ -9,9 +9,9 @@ namespace Callbreak.Presentation.Table
 {
     /// <summary>
     /// GDD §11 screen 08, the table: the HUD (home, the round, scores and settings; no trump line,
-    /// spades are always trump), the four seats, the trick area, the local hand, the emote button,
-    /// the turn prompt and the emote picker. The hand keeps one order, so there is no sort button
-    /// (ADR 021), and the emote button
+    /// spades are always trump), the four seats, the trick area, the local hand, the emote button
+    /// and the emote picker; no turn prompt (ADR 070). The hand keeps one order, so there is no sort
+    /// button (ADR 021), and the emote button
     /// sits in the bottom-right corner where mockup 08 draws that button; it shows the wait before
     /// the next quick phrase (ADR 024). Every phrase, the player's own too, shows in the speech box
     /// above its speaker's avatar (ADR 027). Behind everything is the table the player equipped in
@@ -38,7 +38,6 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private HandView _hand;
         [SerializeField] private TrickAreaView _trick;
         [SerializeField] private CardViewPool _cards;
-        [SerializeField] private TablePromptView _prompt;
         [SerializeField] private EmotePickerView _emotes;
         [SerializeField] private GameObject _reconnecting;
         [SerializeField] private Widgets.Spinner _reconnectingRing;
@@ -71,7 +70,7 @@ namespace Callbreak.Presentation.Table
         // While a banner may come, the table makes room for it: the top seat and the trick come down
         // a little (canvas units), so the banner covers nothing of the game. The top seat stands higher
         // since ADR 060 and comes further down, to below the banner's slot; the trick comes down about
-        // half as far, still clear of the top seat's fan and of the turn prompt. The slot is an empty
+        // half as far, still clear of the top seat's fan and of the hand. The slot is an empty
         // rectangle across the top of the HUD, from right of the logo and the round line to the right
         // edge, that the ad network's own view is placed over; it is off while the table makes no room.
         // The banner keeps the gap from the round line's pill, however long its words are, and sits in
@@ -118,8 +117,6 @@ namespace Callbreak.Presentation.Table
 
         public CardViewPool Cards => _cards;
 
-        public TablePromptView Prompt => _prompt;
-
         public EmotePickerView Emotes => _emotes;
 
         /// <summary>Whether the HUD shows "Trick 6 / 13" under the round line (off: mockup 08 has no such line).</summary>
@@ -135,8 +132,8 @@ namespace Callbreak.Presentation.Table
         public UnityEngine.UI.Image ClothFrame => _clothFrame;
 
         /// <summary>
-        /// GDD §14 Reduce motion, for the table's own parts: the turn prompt, the emote picker and
-        /// the seat chips only fade, the "Reconnecting…" ring stands still, and the opponents' cards
+        /// GDD §14 Reduce motion, for the table's own parts: the emote picker and the seat chips
+        /// only fade, the "Reconnecting…" ring stands still, and the opponents' cards
         /// jump to their places in the fans instead of gliding (the hand has its own switch).
         /// </summary>
         public bool ReduceMotion
@@ -145,7 +142,6 @@ namespace Callbreak.Presentation.Table
             set
             {
                 _reduceMotion = value;
-                _prompt.ReduceMotion = value;
                 _emotes.ReduceMotion = value;
                 if (_reconnectingRing != null)
                 {

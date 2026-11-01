@@ -11,18 +11,19 @@ using UnityEngine;
 namespace Callbreak.Tests.EditMode.Unity
 {
     /// <summary>
-    /// The table as other Callbreak games lay it (the owner, 30 Oct 2026: "in my the thrown cards get
-    /// small", "here is how other games card are shown same size evven after throwing"; ADR 062, in
-    /// place of ADR 059's and 060's trick). On the table prefab laid out on a 16:9, 20:9, 21:9 and 4:3
-    /// canvas, with and without its room for the banner ad (ADR 051, 057): a trick card is the hand's
-    /// card, the four meet in a cross in the middle, the side ones lying sideways towards their
-    /// players; the top one is below the top seat and its full fan, the side ones clear the side seats
-    /// and their fans, the bottom one is above the hand with a card lifted, and none is under the turn
-    /// prompt. The hand keeps its gentle arc (ADR 021), centred under the trick and clear of the local
-    /// seat and the emote button. Its cards are a fifth of the screen's height, their corner index still
-    /// readable (the owner, 30 Oct 2026: "way too big"), in every deck of the shop (Figma's 512 × 712
-    /// decks since ADR 068). The prefab is the built one, so these live outside the folders the dotnet
-    /// harness compiles.
+    /// The table as the owner's mock-ups lay it (2 Nov 2026: "when throwing a card make it a bit small
+    /// so that it feels like card is being thrown like in real", "move our cards a bit up and remove
+    /// the tips/suggestion box"; ADR 070, in place of ADR 062's full-size cross). On the table prefab
+    /// laid out on a 16:9, 20:9, 21:9 and 4:3 canvas, with and without its room for the banner ad
+    /// (ADR 051, 057): a trick card is three quarters of the hand's card; the four lie apart in a
+    /// cross round the middle, the top and the bottom one upright, the side ones leaning 8° towards
+    /// their players; the top one is below the top seat and its full fan, the side ones clear the
+    /// side seats and their fans, and the bottom one is above the hand with a card lifted. There is
+    /// no turn prompt. The hand keeps its gentle arc (ADR 021), centred under the trick, its whole
+    /// middle card on the screen, clear of the local seat and the emote button. Its cards are a fifth
+    /// of the screen's height, their corner index still readable (the owner, 30 Oct 2026: "way too
+    /// big"), in every deck of the shop (Figma's 512 × 712 decks since ADR 068). The prefab is the
+    /// built one, so these live outside the folders the dotnet harness compiles.
     /// </summary>
     public sealed class TrickFitTests
     {
@@ -51,8 +52,11 @@ namespace Callbreak.Tests.EditMode.Unity
         /// <summary>Canvas units of cloth that show between a trick card and what is next to it.</summary>
         private const float Clear = 5f;
 
-        /// <summary>The widest prompt in English: a name as long as a profile takes, of the widest letter, wins the trick.</summary>
-        private const string LongestPrompt = "WWWWWWWWWWWWWWWW wins the trick";
+        /// <summary>A thrown card's size, of the hand card's.</summary>
+        private const float TrickShare = 0.75f;
+
+        /// <summary>How far a side card leans towards its player, in degrees.</summary>
+        private const float SideLean = 8f;
 
         private static readonly string[] Trick = { "J♥", "9♥", "Q♥", "10♥" };
 
@@ -73,31 +77,45 @@ namespace Callbreak.Tests.EditMode.Unity
         [TestCase(2520f, 1080f, true)]
         [TestCase(1920f, 1440f, false)]
         [TestCase(1920f, 1440f, true)]
-        public void AFullTrick_OfTheHandsCards_MeetsInTheMiddle_ClearOfTheSeatsThePromptAndTheHand(float width, float height, bool bannerRoom)
+        public void AFullTrick_OfSmallerCards_LiesApartRoundTheMiddle_ClearOfTheSeatsAndTheHand(float width, float height, bool bannerRoom)
         {
             Open(width, height);
             _view.SetBannerRoom(bannerRoom);
             Rect[] trick = Deal();
 
-            // The hand's card, upright at the top and the bottom, lying sideways at the sides with
-            // its top towards the player who played it (seats: 0 bottom, 1 right, 2 top, 3 left).
-            Vector2[] towards = { Vector2.up, Vector2.right, Vector2.up, Vector2.left };
+            // Three quarters of the hand's card, upright at the top and the bottom, leaning towards
+            // the player who played it at the sides (seats: 0 bottom, 1 right, 2 top, 3 left; a
+            // positive angle turns anticlockwise, so the left card's top leans left).
+            float[] leans = { 0f, -SideLean, 0f, SideLean };
             Vector2 handCard = SizeOf(Find("HandLayer").GetComponentInChildren<CardView>(false));
             for (int seat = 0; seat < TrickAreaView.Slots; seat++)
             {
                 CardView card = _view.Trick.CardAt(seat);
-                Assert.AreEqual(_view.Hand.CardScale, card.Placement.Scale, 1e-4f, $"seat {seat}'s card keeps the hand's size");
-                Assert.AreEqual(handCard.x, SizeOf(card).x, 0.5f, "on the screen too");
-                Assert.AreEqual(handCard.y, SizeOf(card).y, 0.5f);
-                Assert.AreEqual(1f, Vector2.Dot(card.transform.up, towards[seat]), 1e-3f, $"seat {seat}'s card points at its player");
+                Assert.AreEqual(TrickShare * _view.Hand.CardScale, card.Placement.Scale, 1e-4f, $"seat {seat}'s card is smaller than the hand's");
+                Assert.AreEqual(TrickShare * handCard.x, SizeOf(card).x, 0.5f, "on the screen too");
+                Assert.AreEqual(TrickShare * handCard.y, SizeOf(card).y, 0.5f);
+                Assert.AreEqual(leans[seat], Vector2.SignedAngle(Vector2.up, card.transform.up), 0.01f, $"seat {seat}'s card leans towards its player");
             }
 
-            // A cross: every card reaches the middle.
+            // A cross round the middle: the top and the bottom card one above the other, the side
+            // ones level with the middle, no card over another, and all of them close together.
             Vector2 middle = Box(_view.Trick.Area).center;
-            foreach (Rect card in trick)
+            Assert.AreEqual(middle.x, trick[0].center.x, 0.5f, "the bottom card stands under the middle");
+            Assert.AreEqual(middle.x, trick[2].center.x, 0.5f, "the top card stands over the middle");
+            Assert.AreEqual(middle.y, trick[1].center.y, 0.5f, "the right card is level with the middle");
+            Assert.AreEqual(middle.y, trick[3].center.y, 0.5f, "the left card is level with the middle");
+            Assert.Greater(trick[2].yMin, trick[0].yMax, "the top card is clear of the bottom one");
+            foreach (int side in new[] { 1, 3 })
             {
-                Assert.IsTrue(Rect.MinMaxRect(card.xMin - 0.5f, card.yMin - 0.5f, card.xMax + 0.5f, card.yMax + 0.5f).Contains(middle), "the cards meet in the middle");
+                foreach (int column in new[] { 0, 2 })
+                {
+                    Assert.IsFalse(Overlaps(_view.Trick.CardAt(side), trick[column]), $"the side card of seat {side} is clear of the card of seat {column}");
+                }
             }
+
+            Rect cross = Union(new[] { _view.Trick.CardAt(0), _view.Trick.CardAt(1), _view.Trick.CardAt(2), _view.Trick.CardAt(3) });
+            Assert.LessOrEqual(cross.width, 2.8f * TrickShare * handCard.y, "the four lie close together");
+            Assert.LessOrEqual(cross.height, 2.2f * TrickShare * handCard.y);
 
             Rect top = trick[2];
             foreach (Rect piece in new[] { Box(Find("SeatPlate2")), Box(Find("SeatPill2")), Box(Find("SeatRing2")), Box(Find("SeatTimerRing2")), Fan(2) })
@@ -116,26 +134,16 @@ namespace Callbreak.Tests.EditMode.Unity
                 }
             }
 
-            Rect prompt = Prompt();
-            for (int seat = 0; seat < TrickAreaView.Slots; seat++)
-            {
-                Assert.IsFalse(trick[seat].Overlaps(prompt), $"the trick card of seat {seat} is clear of the turn prompt");
-            }
-
             Rect bottom = trick[0];
             Assert.GreaterOrEqual(bottom.yMin - HandTop(), Clear, "the bottom trick card is above the hand, a card lifted");
-            Assert.GreaterOrEqual(prompt.yMin - HandTop(), Clear, "and so is the prompt");
 
             Rect canvas = Box(_canvas.transform);
-            foreach (Rect piece in new[] { trick[0], trick[1], trick[2], trick[3], prompt })
+            foreach (Rect piece in trick)
             {
                 Assert.IsTrue(canvas.Contains(piece.min) && canvas.Contains(piece.max), "on the screen");
             }
 
-            foreach (Rect piece in new[] { Box(Find("SeatPill1")), Box(Find("SeatPlate1")), Fan(1), Box(Find("EmoteButton")) })
-            {
-                Assert.IsFalse(prompt.Overlaps(piece), "the prompt clears the right seat, its fan and the emote button");
-            }
+            Assert.IsFalse(Has("Prompt"), "no turn prompt on the table");
         }
 
         [TestCase(1920f, 1080f)]
@@ -160,6 +168,7 @@ namespace Callbreak.Tests.EditMode.Unity
             Assert.GreaterOrEqual(row.xMin, canvas.xMin, "on the screen");
             Assert.LessOrEqual(row.xMax, canvas.xMax);
             Assert.AreEqual(Box(_view.Trick.Area).center.x, Box(cards[6].transform).center.x, 1f, "under the trick");
+            Assert.GreaterOrEqual(Box(cards[6].transform).yMin, canvas.yMin, "the whole middle card shows");
             foreach (string piece in new[] { "SeatPlate0", "SeatPill0", "SeatRing0", "SeatTimerRing0", "EmoteButton" })
             {
                 Rect box = Box(Find(piece));
@@ -248,8 +257,8 @@ namespace Callbreak.Tests.EditMode.Unity
         private static float Luminance(Color32 p) => (0.2126f * p.r) + (0.7152f * p.g) + (0.0722f * p.b);
 
         /// <summary>
-        /// The table as a trick is won: four cards in the trick, a full fan at each opponent, the
-        /// player's full hand with A♥ lifted and the longest prompt. Returns the trick cards' boxes.
+        /// The table as a trick is won: four cards in the trick, a full fan at each opponent and the
+        /// player's full hand with A♥ lifted. Returns the trick cards' boxes.
         /// </summary>
         private Rect[] Deal()
         {
@@ -281,8 +290,6 @@ namespace Callbreak.Tests.EditMode.Unity
                 _view.Trick.Settle(seat);
             }
 
-            _view.Prompt.ReduceMotion = true;
-            _view.Prompt.Show(LongestPrompt);
             Canvas.ForceUpdateCanvases();
             for (int seat = 0; seat < TrickAreaView.Slots; seat++)
             {
@@ -369,14 +376,17 @@ namespace Callbreak.Tests.EditMode.Unity
             return Union(HandCards()).yMax;
         }
 
-        /// <summary>The turn prompt's pill, at its full size (its pop-in does not run in Edit mode).</summary>
-        private Rect Prompt()
+        private bool Has(string name)
         {
-            RectTransform pill = Find("Prompt").Find("Pill") as RectTransform;
-            Assert.IsNotNull(pill, "the prompt has its pill");
-            Assert.IsTrue(pill.gameObject.activeInHierarchy, "the prompt shows");
-            pill.localScale = Vector3.one;
-            return Box(pill);
+            foreach (RectTransform t in _canvas.GetComponentsInChildren<RectTransform>(true))
+            {
+                if (t.name == name)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private RectTransform Find(string name)

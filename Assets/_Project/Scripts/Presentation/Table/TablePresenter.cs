@@ -30,10 +30,9 @@ namespace Callbreak.Presentation.Table
     /// <em>played</em> event; a resync clears the queue and rebuilds the table from the session's
     /// view at once. It owns the local hand's input: a legal card flies at once (optimistic) and
     /// input stays locked until that play's own event has played, the session refuses it, or two
-    /// seconds pass, when the card rolls back; an illegal tap shakes the card and flashes the prompt
-    /// that says what the rules ask for. It also drives the HUD, the turn prompt, the turn clock,
-    /// emotes and the way into the match menu, scorecard and settings, and pauses an offline
-    /// match while one of those covers the table.
+    /// seconds pass, when the card rolls back; an illegal tap shakes the card. It also drives the
+    /// HUD, the turn clock, emotes and the way into the match menu, scorecard and settings, and
+    /// pauses an offline match while one of those covers the table.
     /// While a page covers the table, nothing on the table answers a touch (<see cref="TableInput"/>).
     /// An event whose playback throws ends like a resync: the error is logged and the table is
     /// rebuilt from the session's view (GDD §17 principle 9).
@@ -334,7 +333,6 @@ namespace Callbreak.Presentation.Table
             _optimistic = null;
             _playLock.Release();
             State.Reset(view);
-            _view.Prompt.Hide();
             RenderAll(false);
             _table.NotifyRebuilt(FollowerFailed);
         }
@@ -482,7 +480,6 @@ namespace Callbreak.Presentation.Table
                     AbandonOptimisticPlay();
                     State.Apply(e);
                     _emoteLimiter.ResetRound();
-                    _view.Prompt.Hide();
                     return null;
 
                 case Redealt redealt:
@@ -511,18 +508,12 @@ namespace Callbreak.Presentation.Table
                     _audio.Play(SoundCue.CallConfirm);
                     return new Beat(CallBeatSeconds);
 
-                case PlayTurnStarted turn:
+                case PlayTurnStarted _:
                 {
                     // The beat after the fourth call, before the first card of the round.
                     bool firstOfRound = State.Phase == TablePhase.Calling;
                     State.Apply(e);
-                    if (!firstOfRound)
-                    {
-                        return null;
-                    }
-
-                    ShowPrompt(turn.Seat == Local ? TurnPrompt.YouLead(_localization) : TurnPrompt.WaitingFor(_renderer.NameOf(turn.Seat), _localization));
-                    return new Beat(LeadBeatSeconds);
+                    return firstOfRound ? new Beat(LeadBeatSeconds) : null;
                 }
 
                 case CardPlayed played:
@@ -532,7 +523,6 @@ namespace Callbreak.Presentation.Table
                 {
                     State.Apply(e);
                     int winner = _renderer.RelativeSeat(completed.Winner);
-                    ShowPrompt(TurnPrompt.TrickWon(_renderer.NameOf(completed.Winner), completed.Winner == Local, _localization));
                     if (completed.Winner == Local)
                     {
                         _haptics.Play(HapticPattern.Light);
@@ -543,7 +533,6 @@ namespace Callbreak.Presentation.Table
 
                 case RoundScored scored:
                     State.Apply(e);
-                    _view.Prompt.Hide();
                     PlayRoundCues(scored);
                     return null;
 
@@ -568,7 +557,7 @@ namespace Callbreak.Presentation.Table
                     break;
 
                 // No sound when the player's turn comes (ADR 041: the owner found it irritating);
-                // the light buzz and the prompt above the hand say so.
+                // the light buzz, the turn ring and the glowing cards say so.
                 case CallTurnStarted callTurn when callTurn.Seat == Local:
                 case PlayTurnStarted playTurn when playTurn.Seat == Local:
                     _haptics.Play(HapticPattern.Light);
@@ -718,7 +707,6 @@ namespace Callbreak.Presentation.Table
         {
             Card? pending = _playLock.IsLocked ? _playLock.Pending : (Card?)null;
             _renderer.Render(State, pending, CanTakeInput(), animateHand);
-            RenderPrompt();
             RenderAway();
         }
 
@@ -735,55 +723,9 @@ namespace Callbreak.Presentation.Table
         }
 
         /// <summary>
-        /// The prompt above the hand (GDD screen 08 "TURN PROMPT COPY"). During play it names the
-        /// turn. While another seat calls it says "Asha is calling…", where the prompt shows (the
-        /// owner, 6 Oct 2026, ADR 040: it stood in the middle of the table); on the local call turn
-        /// the call panel speaks instead.
-        /// </summary>
-        private void RenderPrompt()
-        {
-            TableState state = State;
-            if (state.Phase == TablePhase.Calling)
-            {
-                if (state.HasTurn && !state.IsLocalCallTurn)
-                {
-                    ShowPrompt(TurnPrompt.Calling(_renderer.NameOf(state.TurnSeat), _localization));
-                }
-                else
-                {
-                    _view.Prompt.Hide();
-                }
-
-                return;
-            }
-
-            if (state.Phase != TablePhase.Playing)
-            {
-                _view.Prompt.Hide();
-                return;
-            }
-
-            if (state.TryGetObligation(out PlayObligation obligation))
-            {
-                ShowPrompt(TurnPrompt.ForObligation(obligation, _localization));
-            }
-            else if (state.HasTurn)
-            {
-                ShowPrompt(TurnPrompt.WaitingFor(_renderer.NameOf(state.TurnSeat), _localization));
-            }
-
-            // Between turns the last line stays (the trick winner, or the lead beat).
-        }
-
-        private void ShowPrompt(string text)
-        {
-            _view.Prompt.Show(text);
-        }
-
-        /// <summary>
         /// Online, a turn can start while the scorecard or a menu covers the table: say so (GDD
         /// screens 13, 16). The banner is a toast, whose font has no suit symbols, so it says only
-        /// that it is the player's turn; the prompt on the table says what to play.
+        /// that it is the player's turn; on the table the cards that can be played glow.
         /// </summary>
         private void AnnounceTurnUnderOverlay()
         {
@@ -816,13 +758,13 @@ namespace Callbreak.Presentation.Table
 
             if (!state.Legal.Contains(card))
             {
-                // The prompt is the reason: it says what the rules ask for right now.
+                // Refused: the card shakes and the phone nudges (ADR 070: no prompt says why; the
+                // cards that can be played glow).
                 if (!ReduceMotion)
                 {
                     _view.Hand.Shake(card);
                 }
 
-                _view.Prompt.Refuse(ReduceMotion);
                 _haptics.Play(HapticPattern.Warning);
                 return;
             }

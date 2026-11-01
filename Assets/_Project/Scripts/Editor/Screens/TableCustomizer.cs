@@ -17,12 +17,12 @@ namespace Callbreak.Editor.Screens
     /// V2, 28 Oct 2026);
     /// the layers (table, hand, HUD as nested canvases, GDD §23); the card pool; the hand with its
     /// touch area, pinned to the bottom edge, its cards drawn a little larger than the shared card;
-    /// the trick's cross of slots for cards of the hand's size (ADR 062) and the opponents' fans,
+    /// the trick's cross of slots for cards smaller than the hand's (ADR 070) and the opponents' fans,
     /// placed as mockup 07 draws them; a
     /// <see cref="SeatView"/> per seat, with the timer ring, seconds disc and call bubble the
     /// opponents' seats need (derived from the local seat's) and the speech box for quick phrases;
     /// the seats' profiles as the owner arranged them (the side seats lower, the top seat's name
-    /// above its avatar, the local seat's below it); the turn prompt, the trick counter, the emote
+    /// above its avatar, the local seat's below it); the trick counter, the emote
     /// picker, the "Reconnecting…" cover and the "I'm back" banner (derived from kit pills, panels
     /// and buttons); and each seat's chip for "Away", "Reconnecting…" and "Bot playing" (the kit's
     /// tag pill, hidden until there is something to say; a bot that fills a seat has none, ADR 025).
@@ -38,17 +38,19 @@ namespace Callbreak.Editor.Screens
 
         // ---- The local hand. Mockup 08 draws its cards unevenly (88 to 114 px apart, 116 to 136 wide);
         // this is the even fan that fits its thirteen card corners best. Since 30 Oct 2026 (ADR 062) it
-        // is centred under the trick and hangs from the bottom edge, HandShows canvas units of its
-        // middle card on the screen (its corner index and its top pips), so that the trick fits above it.
-        private const float HandShows = 0.65f * HandCardHeight; // 147 canvas units
+        // is centred under the trick; since 2 Nov 2026 (ADR 070, the owner: "move our cards a bit up")
+        // its whole middle card shows, HandBelow canvas units of cloth under it (the end cards, bent
+        // lower, still run off the bottom edge).
+        private const float HandBelow = 10f;
+        private const float HandShows = HandCardHeight + HandBelow; // 236 canvas units
         private const float HandCentreX = 836.2f;               // the trick's centre
         private const float HandWidthFraction = 0.772f;         // 94.5 px between cards on the mockup; the GDD says 70%
         private const float HandLift = 14.4f;                   // 12.5 mockup px; the GDD says 28
 
-        // The hand's, the trick's and the deck's cards are one size (ADR 062), a fifth of the screen's
-        // height: the owner found them "way too big" at 9% larger than the shared card (30 Oct 2026),
-        // so they are drawn at HandCardScale of it, 144 x 226 canvas units (ADR 062's addendum). The
-        // touch area reaches HandTouchAbove canvas units above the middle card.
+        // The hand's cards are a fifth of the screen's height: the owner found them "way too big" at
+        // 9% larger than the shared card (30 Oct 2026), so they are drawn at HandCardScale of it,
+        // 163 x 226 canvas units (ADR 062's addendum; Figma's card shape since ADR 068). The touch area
+        // reaches HandTouchAbove canvas units above the middle card.
         private const float HandCardScale = 0.8f;
         private const float HandCardHeight = HandCardScale * TableCardBuilder.CardHeight;
         private const float HandTouchAbove = 35f;
@@ -58,18 +60,21 @@ namespace Callbreak.Editor.Screens
         // kept it on 30 Oct 2026: "make the hand card slightly bend like before").
         private const float HandArcRadius = 7480f;
 
-        // ---- The trick, by relative seat (0 bottom, 1 right, 2 top, 3 left), as other Callbreak games
-        // lay it (the owner, 30 Oct 2026, with their screenshots: "in my the thrown cards get small",
-        // "same size even after throwing"; ADR 062, in place of ADR 059's slots and ADR 060): the
-        // hand's cards, so a played card keeps its size. The top and the bottom card are upright; the
-        // side cards lie sideways, their tops towards the players who played them, their inner ends
-        // meeting at the trick's centre (the owner's pick). The top and the bottom card meet there
-        // too, TrickColumnStep from the centre. The cross stands midway between the top seat's fan and
-        // a lifted hand card with the banner's room made (TableView brings the top seat down 80 canvas
+        // ---- The trick, by relative seat (0 bottom, 1 right, 2 top, 3 left), as the owner's own table
+        // mock-ups lay it (2 Nov 2026, ADR 070, in place of ADR 062's full-size cross: "when throwing a
+        // card make it a bit small so that it feels like card is being thrown like in real"). A thrown
+        // card shrinks to TrickCardScale of the hand's as it flies, 122 x 170 canvas units. The top
+        // and the bottom card stand upright, one above the other, TrickColumnGap apart; the side cards
+        // stand beside them at the centre's height, leaning TrickSideTurn outwards (their tops towards
+        // the players who played them), TrickSideGap clear of the column. The deck lies at the centre,
+        // as small, while a round is dealt. The cross stands midway between the top seat's fan and a
+        // lifted hand card with the banner's room made (TableView brings the top seat down 80 canvas
         // units and the trick 40).
-        private static readonly Vector2 TrickCentre = new Vector2(836.2f, 541.8f);
-        private const float TrickColumnStep = HandCardHeight / 2f;
-        private static readonly float[] TrickTurns = { 0f, -90f, 0f, 90f };
+        private static readonly Vector2 TrickCentre = new Vector2(836.2f, 502.7f);
+        private const float TrickCardScale = 0.75f * HandCardScale;
+        private const float TrickColumnGap = 12f;
+        private const float TrickSideGap = 8f;
+        private const float TrickSideTurn = 8f;
 
         // ---- Opponent fans, as the bidding mockup draws them since 2 Oct 2026 (ADR 026; measured on
         // 07-bidding.png). Its card backs are 46 px long, at a real card's shape (29 wide at the old
@@ -92,12 +97,8 @@ namespace Callbreak.Editor.Screens
         private const float TopFanRadius = 242f;
         private const float TopFanStep = 4.77f;
 
-        // ---- Derived pieces (not on the mockup): where they sit. The turn prompt stands right of the
-        // trick's bottom card, PromptGap canvas units past it, its middle PromptAboveBottom above the
-        // bottom edge (beside the card's lower half), and grows to the right with its words.
-        private const float PromptGap = 24f;
-        private const float PromptAboveBottom = 289f;
-        private const float PromptHeight = 38f;
+        // ---- Derived pieces (not on the mockup): where they sit. There is no turn prompt since ADR 070
+        // (the owner, 2 Nov 2026: "remove the tips/suggestion box from gameplay").
         private static readonly Vector2 TrickLabelCentre = new Vector2(836f, 104f);
         // Six phrases, each an 88 px touch target with 16 px between them (GDD §16): 76.8 and 14 mockup px.
         // The panel opens to the left of the emote button, 112 px in from the right edge (ADR 021),
@@ -290,7 +291,6 @@ namespace Callbreak.Editor.Screens
             }
 
             RectTransform handLayer = BuildHand(ctx, pool, centre);
-            BuildPrompt(ctx, handLayer, statusStyle);
             BuildTrickLabel(ctx);
             StackUnderHome(ctx);
             foreach (string id in new[] { "HomeButton", "ScoresButton", "SettingsButton", "EmoteButton" })
@@ -386,7 +386,7 @@ namespace Callbreak.Editor.Screens
         }
 
         /// <summary>
-        /// The trick (ADR 060): the area is centred on the trick's centre, where the deck also lies
+        /// The trick (ADR 070): the area is centred on the trick's centre, where the deck also lies
         /// while a round is dealt, and its four slots form a cross round it, the cards a gap apart.
         /// </summary>
         private static void BuildTrickArea(ScreenBuildContext ctx)
@@ -397,12 +397,18 @@ namespace Callbreak.Editor.Screens
             var so = new SerializedObject(trick);
             so.FindProperty("_area").objectReferenceValue = area;
 
-            // Canvas units: the hand's card, the side ones lying sideways with their inner ends at the
-            // centre. The area covers the cross.
-            float scale = HandCardScale;
+            // Canvas units. A leaning side card comes nearest the column at its lower inner corner, its
+            // half-width out from its centre: (w cos + h sin) / 2. The area covers the cross.
+            float scale = TrickCardScale;
+            float width = TableCardBuilder.CardWidth * scale;
             float height = TableCardBuilder.CardHeight * scale;
-            Vector2[] slots = { new Vector2(0f, -TrickColumnStep), new Vector2(height / 2f, 0f), new Vector2(0f, TrickColumnStep), new Vector2(-height / 2f, 0f) };
-            area.sizeDelta = new Vector2(2f * height, (2f * TrickColumnStep) + height);
+            float lean = TrickSideTurn * Mathf.Deg2Rad;
+            float sideHalfWidth = ((width * Mathf.Cos(lean)) + (height * Mathf.Sin(lean))) / 2f;
+            float columnStep = (height + TrickColumnGap) / 2f;
+            float sideStep = (width / 2f) + TrickSideGap + sideHalfWidth;
+            Vector2[] slots = { new Vector2(0f, -columnStep), new Vector2(sideStep, 0f), new Vector2(0f, columnStep), new Vector2(-sideStep, 0f) };
+            float[] turns = { 0f, -TrickSideTurn, 0f, TrickSideTurn };
+            area.sizeDelta = new Vector2(2f * (sideStep + sideHalfWidth), (2f * columnStep) + height);
 
             SerializedProperty positions = so.FindProperty("_slotPositions");
             SerializedProperty rotations = so.FindProperty("_slotRotations");
@@ -410,7 +416,7 @@ namespace Callbreak.Editor.Screens
             for (int i = 0; i < TrickAreaView.Slots; i++)
             {
                 positions.GetArrayElementAtIndex(i).vector2Value = slots[i];
-                rotations.GetArrayElementAtIndex(i).floatValue = TrickTurns[i];
+                rotations.GetArrayElementAtIndex(i).floatValue = turns[i];
             }
 
             so.FindProperty("_cardScale").floatValue = scale;
@@ -895,46 +901,6 @@ namespace Callbreak.Editor.Screens
 
             so.ApplyModifiedPropertiesWithoutUndo();
             return fan;
-        }
-
-        /// <summary>The turn prompt: the status pill's sand pill beside the trick's bottom card, sized to its text at runtime.</summary>
-        private static void BuildPrompt(ScreenBuildContext ctx, RectTransform handLayer, TMP_Text style)
-        {
-            var holder = new GameObject("Prompt", typeof(RectTransform));
-            var holderRect = (RectTransform)holder.transform;
-            holderRect.SetParent(handLayer, false);
-            holderRect.anchorMin = holderRect.anchorMax = new Vector2(0.5f, 0f);
-            holderRect.pivot = new Vector2(0.5f, 0.5f);
-            holderRect.sizeDelta = Vector2.zero;
-            holderRect.anchoredPosition = new Vector2(
-                ((TrickCentre.x - UiBuildKit.MockWidth / 2f) * UiBuildKit.ScaleX) + (HandCardScale * TableCardBuilder.CardWidth / 2f) + PromptGap,
-                PromptAboveBottom);
-
-            // The pill grows to the right from its left end.
-            var pillObject = new GameObject("Pill", typeof(RectTransform));
-            var pill = (RectTransform)pillObject.transform;
-            pill.SetParent(holderRect, false);
-            pill.anchorMin = pill.anchorMax = new Vector2(0.5f, 0.5f);
-            pill.pivot = new Vector2(0f, 0.5f);
-            pill.sizeDelta = UiBuildKit.FromMock(280f, PromptHeight);
-            Image pillImage = Sliced(pill, LoadTableSprite("UI_StatusPill"));
-            TextMeshProUGUI label = Label("Text", pill, style, "Your turn · Lead any card");
-            label.richText = true;
-
-            // The prompt names cards and suits ("Beat Q♥"); the fonts have no suit symbols, so they
-            // are drawn from the suit sprites (each sprite answers to its Unicode character).
-            label.spriteAsset = SuitSpriteBuilder.Ensure();
-            pillObject.SetActive(false);
-
-            var prompt = holder.AddComponent<TablePromptView>();
-            var so = new SerializedObject(prompt);
-            so.FindProperty("_pill").objectReferenceValue = pill;
-            so.FindProperty("_pillImage").objectReferenceValue = pillImage;
-            so.FindProperty("_label").objectReferenceValue = label;
-            so.FindProperty("_padding").floatValue = 56f;
-            so.FindProperty("_minWidth").floatValue = 180f;
-            so.ApplyModifiedPropertiesWithoutUndo();
-            ctx.Bound["_prompt"] = prompt;
         }
 
         /// <summary>"Trick 6 / 13" under the round line (GDD screen 08, callout 1). The mockup does not draw it, so it starts hidden.</summary>

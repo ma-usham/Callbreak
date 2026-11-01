@@ -84,6 +84,9 @@ namespace Callbreak.Editor
 
         private static readonly string[] SuitNames = { "Clubs", "Diamonds", "Hearts", "Spades" };
 
+        // By rank, from Two (2): as the card's index prints it.
+        private static readonly string[] RankNames = { "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A" };
+
         [MenuItem("Callbreak/Build/Table Card Assets")]
         public static void BuildMenu()
         {
@@ -172,7 +175,7 @@ namespace Callbreak.Editor
                 for (int id = 0; id < Card.Count; id++)
                 {
                     Card card = Card.FromId(id);
-                    faces[id] = LoadCardSprite($"{folder}/Card_{SuitNames[(int)card.Suit]}_{TurnPrompt.RankLabel(card.Rank)}.png", false);
+                    faces[id] = LoadCardSprite($"{folder}/Card_{SuitNames[(int)card.Suit]}_{RankNames[(int)card.Rank - (int)Rank.Two]}.png", false);
                     missing += faces[id] == null ? 1 : 0;
                 }
 

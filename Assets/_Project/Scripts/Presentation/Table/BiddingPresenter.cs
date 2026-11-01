@@ -17,7 +17,7 @@ namespace Callbreak.Presentation.Table
 {
     /// <summary>
     /// GDD §11 screen 07, "Make your call". The panel appears only once the local seat's call turn
-    /// has been played back; before that the prompt above the hand reads "Asha is calling…" (ADR 040). Chips
+    /// has been played back; before that the caller's pill reads "Calling…" (ADR 040, 070). Chips
     /// come from the rule set (MinCall to MaxCall) with nothing chosen; Confirm is disabled until a
     /// chip is chosen, reads "Confirm {n}", and is final once pressed. When the call has been
     /// placed the panel slides away. If the session refuses the call the panel takes input again
@@ -199,8 +199,8 @@ namespace Callbreak.Presentation.Table
                 _view.ShowPanel(false);
             }
 
-            // "Asha is calling…" shows in the prompt above the hand now, not in the middle of the
-            // table (the owner, 6 Oct 2026, ADR 040).
+            // Nothing in the middle of the table says who is calling (the owner, 6 Oct 2026, ADR 040):
+            // the caller's pill reads "Calling…".
             _view.SetCalling(null);
         }
 

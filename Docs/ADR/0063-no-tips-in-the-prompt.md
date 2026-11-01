@@ -1,6 +1,6 @@
 # ADR 063 - No tips in the turn prompt
 
-**Status:** accepted (owner, 30 Oct 2026). The owner: "remove that tips in game play that comes in
+**Status:** accepted (owner, 30 Oct 2026); the prompt itself is gone since ADR 070 (2 Nov 2026). The owner: "remove that tips in game play that comes in
 the middle."
 
 ## Context

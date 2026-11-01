@@ -1,6 +1,6 @@
 # ADR 062 - The trick as other Callbreak games lay it: full-size cards in a cross that meets in the middle
 
-**Status:** proposed (30 Oct 2026). The owner: "in game play why doesnt my game fell like other
+**Status:** proposed (30 Oct 2026); its trick and turn prompt superseded by ADR 070 (2 Nov 2026). The owner: "in game play why doesnt my game fell like other
 callbreak games?? look at theirs how cards being renderer and in my the thrown cards get small. can you
 fix that?? ... if you reed to remove that ADR or something lets do that as well". With a screenshot of
 another Callbreak game: "here is how other games card are shown same size evven after throwing".
