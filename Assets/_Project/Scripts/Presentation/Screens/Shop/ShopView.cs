@@ -14,10 +14,10 @@ namespace Callbreak.Presentation.Screens
     /// The shop (Figma "V1 Rebuild · Shop", ADR 064; mockup 15's decks, the owner, 5 Oct 2026): the
     /// equipped background behind it, Back at the top left, a cream panel with the tab's title and
     /// subtitle and the wallet (its "+" opens Earn Coins), and the drawer on the right, always open
-    /// (<see cref="ShopDrawer"/>): Themes, Cards, and No Ads under them while the store sells it.
+    /// (<see cref="ShopDrawer"/>): Themes and Cards (No Ads is bought on the main menu only, ADR 068).
     /// Themes shows a row of every theme that scrolls sideways (<see cref="ThemeShelf"/>); tapping one
-    /// opens its preview over the shop (<see cref="ThemePreview"/>). Cards shows the three decks as
-    /// they were (<see cref="ShopTiles"/>, nothing scrolls) with the primary button under them ("Use
+    /// opens its preview over the shop (<see cref="ThemePreview"/>). Cards shows the decks side by
+    /// side (<see cref="ShopTiles"/>, nothing scrolls) with the primary button under them ("Use
     /// Selected Style", or "Buy for (coin) N"); tapping a deck turns its picture over to the deck's ace
     /// of spades for a moment and back (<see cref="PeekFace"/>, timed by <see cref="DeckPeek"/>). A
     /// primary button that is not interactable shows its disabled look with its words dimmed.
@@ -65,9 +65,6 @@ namespace Callbreak.Presentation.Screens
 
         /// <summary>A drawer tab: 0 Themes, 1 Cards.</summary>
         public event Action<int> CategoryClicked;
-
-        /// <summary>The drawer's No Ads button.</summary>
-        public event Action NoAdsClicked;
 
         /// <summary>A theme's tile was tapped, by its place in the row.</summary>
         public event Action<int> ThemeClicked;
@@ -165,8 +162,6 @@ namespace Callbreak.Presentation.Screens
 
             _preview.SetCoins(coins);
         }
-
-        public void SetNoAdsVisible(bool visible) => _drawer.SetNoAdsVisible(visible);
 
         /// <summary>One theme's tile; a null picture keeps the one the tile has.</summary>
         public void SetTheme(int index, string themeName, Sprite picture, bool isNew, bool isFestival, ShopTileStatus status, string statusText, string priceText, bool affordable)
@@ -311,7 +306,6 @@ namespace Callbreak.Presentation.Screens
             _primaryButton.onClick.AddListener(OnPrimary);
             _earnCoinsButton.onClick.AddListener(OnEarnCoins);
             _drawer.CategoryClicked += OnCategory;
-            _drawer.NoAdsClicked += OnNoAds;
             _shelf.TileClicked += OnTheme;
             _decks.TileClicked += OnDeck;
             _preview.CloseButton.onClick.AddListener(OnPreviewClose);
@@ -327,7 +321,6 @@ namespace Callbreak.Presentation.Screens
             _primaryButton.onClick.RemoveListener(OnPrimary);
             _earnCoinsButton.onClick.RemoveListener(OnEarnCoins);
             _drawer.CategoryClicked -= OnCategory;
-            _drawer.NoAdsClicked -= OnNoAds;
             _shelf.TileClicked -= OnTheme;
             _decks.TileClicked -= OnDeck;
             _preview.CloseButton.onClick.RemoveListener(OnPreviewClose);
@@ -479,8 +472,6 @@ namespace Callbreak.Presentation.Screens
         private void OnBack() => BackClicked?.Invoke();
 
         private void OnCategory(int category) => CategoryClicked?.Invoke(category);
-
-        private void OnNoAds() => NoAdsClicked?.Invoke();
 
         private void OnTheme(int index) => ThemeClicked?.Invoke(index);
 

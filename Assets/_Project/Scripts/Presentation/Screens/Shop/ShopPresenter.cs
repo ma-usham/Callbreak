@@ -18,9 +18,9 @@ namespace Callbreak.Presentation.Screens
     /// <summary>
     /// The shop (GDD §11 screen 15; Figma "V1 Rebuild · Shop", ADR 064; mockup 15's decks and the
     /// designer's spec shop-drawer-and-tables-prompts.md). It opens on Themes. The drawer is always
-    /// open; its tabs switch between Themes and Cards, and No Ads under them starts the store's
-    /// purchase, as on the main menu, while the store sells it. The wallet shows the balance as it
-    /// changes; its "+" opens Earn Coins.
+    /// open; its tabs switch between Themes and Cards (No Ads is bought on the main menu only, the
+    /// owner, 2 Nov 2026; ADR 068). The wallet shows the balance as it changes; its "+" opens Earn
+    /// Coins.
     /// <para>Themes: every theme's tile says Equipped, Owned, or its price (red while the wallet can't
     /// pay it). Tapping a tile opens its preview, the theme's menu background and its cloth side by
     /// side; its button buys the theme, equips it (its background
@@ -59,7 +59,6 @@ namespace Callbreak.Presentation.Screens
         private readonly CardSpriteProvider _cards;
         private readonly ISettingsService _settings;
         private readonly IAudioService _audio;
-        private readonly NoAdsOffer _noAds;
         private readonly IFestivalOffers _offers;
         private readonly ShopOpening _opening;
         private readonly ShopState _state;
@@ -85,8 +84,6 @@ namespace Callbreak.Presentation.Screens
             CardSpriteProvider cards,
             ISettingsService settings,
             IAudioService audio,
-            INoAds noAds,
-            ILoadingCurtain curtain,
             IFestivalOffers offers,
             ShopOpening opening)
         {
@@ -100,7 +97,6 @@ namespace Callbreak.Presentation.Screens
             _cards = cards;
             _settings = settings;
             _audio = audio;
-            _noAds = new NoAdsOffer(noAds, toast, localization, curtain);
             _offers = offers;
             _opening = opening;
             _state = new ShopState(shop, wallet, offers);
@@ -110,7 +106,6 @@ namespace Callbreak.Presentation.Screens
         {
             _view.BackClicked += OnBack;
             _view.CategoryClicked += OnCategory;
-            _view.NoAdsClicked += OnNoAds;
             _view.ThemeClicked += OnTheme;
             _view.DeckClicked += OnDeck;
             _view.PrimaryClicked += OnPrimary;
@@ -124,17 +119,13 @@ namespace Callbreak.Presentation.Screens
             _offers.Changed += Render;
             _wallet.Changed += Render;
             _localization.LanguageChanged += Render;
-            _noAds.Changed += RenderNoAds;
-            _noAds.Start();
             OpenAfresh();
-            RenderNoAds();
         }
 
         public void Dispose()
         {
             _view.BackClicked -= OnBack;
             _view.CategoryClicked -= OnCategory;
-            _view.NoAdsClicked -= OnNoAds;
             _view.ThemeClicked -= OnTheme;
             _view.DeckClicked -= OnDeck;
             _view.PrimaryClicked -= OnPrimary;
@@ -148,8 +139,6 @@ namespace Callbreak.Presentation.Screens
             _offers.Changed -= Render;
             _wallet.Changed -= Render;
             _localization.LanguageChanged -= Render;
-            _noAds.Changed -= RenderNoAds;
-            _noAds.Dispose();
 
             // A question still open is answered "no" and closes with the screen.
             _disposed = true;
@@ -321,8 +310,6 @@ namespace Callbreak.Presentation.Screens
             }
         }
 
-        private void RenderNoAds() => _view.SetNoAdsVisible(_noAds.Visible);
-
         private void OnBack() => _router.Pop();
 
         private void OnCategory(int category)
@@ -334,23 +321,6 @@ namespace Callbreak.Presentation.Screens
 
             _state.Show(ShopState.Kinds[category]);
             Render();
-        }
-
-        private void OnNoAds() => _ = BuyNoAdsAsync();
-
-        private async Task BuyNoAdsAsync()
-        {
-            try
-            {
-                await _noAds.TapAsync(_lifetime.Token);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-            }
         }
 
         private void OnTheme(int index)

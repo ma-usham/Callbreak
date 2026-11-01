@@ -161,10 +161,10 @@ namespace Callbreak.Tests.PlayMode
         {
             var seats = new[]
             {
-                new SeatProfile("Hari", "1", CosmeticsService.ClassicCrimson, false),
-                new SeatProfile("Asha", "2", CosmeticsService.ClassicCrimson, false),
-                new SeatProfile("Bikash", "3", CosmeticsService.ClassicCrimson, true),
-                new SeatProfile("Suman", "4", CosmeticsService.ClassicCrimson, true),
+                new SeatProfile("Hari", "1", CosmeticsService.Classic, false),
+                new SeatProfile("Asha", "2", CosmeticsService.Classic, false),
+                new SeatProfile("Bikash", "3", CosmeticsService.Classic, true),
+                new SeatProfile("Suman", "4", CosmeticsService.Classic, true),
             };
             _engine = new MatchEngine(RuleSet.NepaliStandard, new Pcg32Random(7), new MatchSetup(MatchId, seats, Host));
             _engine.Start();

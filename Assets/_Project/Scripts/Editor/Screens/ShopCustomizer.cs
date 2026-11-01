@@ -17,14 +17,15 @@ namespace Callbreak.Editor.Screens
     /// the themes, with pieces measured on mockups 20 and 21 (ShopBackgroundsLayout,
     /// ShopTablesLayout):
     /// <list type="bullet">
-    /// <item>the three decks (<see cref="ShopTiles"/>), each made from mockup 15's measured tile 0
-    /// (picture, name, status line; the price line comes from mockup 21), with the primary button
-    /// under them, its "Use Selected Style" and "Buy for (coin) N" row;</item>
+    /// <item>the decks (<see cref="ShopTiles"/>), one tile for each deck of the catalogue (ADR 068),
+    /// each made from mockup 15's measured tile 0 (picture, name, status line; the price
+    /// line comes from mockup 21) at mockup 15's spacing, with the primary button under them, its
+    /// "Use Selected Style" and "Buy for (coin) N" row;</item>
     /// <item>the drawer (<see cref="ShopDrawer"/>), always open and without the mockups' storefront
     /// disc and divider: the panel flush with the right edge and as tall as the screen, narrowed to
-    /// <see cref="DrawerWidth"/>, its Themes and Cards tabs and its No Ads button at
-    /// <see cref="CategoryScale"/> of the mockups' size and stacked in its middle; each tab has its
-    /// crimson (active) and ivory (inactive) look;</item>
+    /// <see cref="DrawerWidth"/>, its Themes and Cards tabs at <see cref="CategoryScale"/> of the
+    /// mockups' size and stacked in its middle; each tab has its crimson (active) and ivory
+    /// (inactive) look. No Ads is bought on the main menu only (the owner, 2 Nov 2026; ADR 068);</item>
     /// <item>the cream panel, the Themes row, the theme preview and the wallet (ShopCustomizer.Themes.cs).</item>
     /// </list>
     /// The UI pieces are the kit's and the ShopUI batch's, named in the layouts (rects from
@@ -38,12 +39,11 @@ namespace Callbreak.Editor.Screens
 
         public const string FinalThemesFolder = "Assets/_Project/Art/Shop/Themes";
 
-        // The drawer's buttons: the Themes and Cards tabs, then No Ads.
-        private const int DrawerButtons = 3;
-        private const int NoAdsButton = 2;
+        // The drawer's buttons: the Themes and Cards tabs.
+        private const int DrawerButtons = 2;
 
-        // The decks show exactly three, side by side (the owner, 5 Oct 2026); the mockups measure
-        // three tiles each.
+        // The mockups measure three tiles each; the decks show one tile per deck at that size and
+        // spacing, side by side (the owner, 5 Oct 2026; ADR 068).
         private const int TilesPerCategory = 3;
 
         // Plain drawer beyond the panel art's right edge (canvas units), for a phone whose safe area
@@ -78,13 +78,13 @@ namespace Callbreak.Editor.Screens
         private const float DiscShadowDrop = 2f;
         private const float DiscShadowOpacity = 0.5f;
 
-        // The drawer's buttons' words: Themes, Cards, No Ads.
-        private static readonly string[] DrawerKeys = { "ui.shop.category.themes", "ui.shop.category.cards", "ui.shop.category.no_ads" };
-        private static readonly string[] DrawerWords = { "Themes", "Cards", "No Ads" };
+        // The drawer's buttons' words: Themes, Cards.
+        private static readonly string[] DrawerKeys = { "ui.shop.category.themes", "ui.shop.category.cards" };
+        private static readonly string[] DrawerWords = { "Themes", "Cards" };
 
         // Each drawer button is drawn from a mockup's button at that place: Themes from Backgrounds',
-        // Cards from Cards', No Ads from Cloths' (its ivory look).
-        private static readonly int[] DrawerSources = { 1, 0, 2 };
+        // Cards from Cards'.
+        private static readonly int[] DrawerSources = { 1, 0 };
 
         public static void Customize(ScreenBuildContext ctx)
         {
@@ -140,8 +140,9 @@ namespace Callbreak.Editor.Screens
         // ------------------------------------------------------------------ tiles
 
         /// <summary>
-        /// The three decks (<see cref="ShopTiles"/>, node Decks), side by side at the spacing mockup 15
-        /// measures, in the middle of its panel (the panel builder moves them into the Cards page).
+        /// The decks (<see cref="ShopTiles"/>, node Decks): a tile for each deck of the catalogue, side
+        /// by side at the size and spacing mockup 15 measures, centred where mockup 15 centres its three
+        /// (the panel builder moves them into the Cards page).
         /// </summary>
         private static void BuildTiles(ScreenBuildContext ctx, ScreenLayout[] layouts)
         {
@@ -152,11 +153,13 @@ namespace Callbreak.Editor.Screens
             ctx.Nodes["Decks"] = root;
 
             TileModel model = TileModel.Measure(layouts[0]);
-            var tiles = new Object[TilesPerCategory];
-            for (int i = 0; i < TilesPerCategory; i++)
+            IReadOnlyList<CosmeticItem> decks = CosmeticCatalog.Of(CosmeticKind.Deck);
+            float middle = model.FirstX + (TilesPerCategory - 1) * model.Stride / 2f;
+            var tiles = new Object[decks.Count];
+            for (int i = 0; i < tiles.Length; i++)
             {
-                var at = new Vector2(model.FirstX + i * model.Stride, panelCentre.y);
-                tiles[i] = BuildTile(i, layouts, model, root, panelCentre, at);
+                var at = new Vector2(middle + (i - (tiles.Length - 1) / 2f) * model.Stride, panelCentre.y);
+                tiles[i] = BuildTile(i, decks[i].Id, layouts, model, root, panelCentre, at);
             }
 
             var shopTiles = root.gameObject.AddComponent<ShopTiles>();
@@ -174,9 +177,9 @@ namespace Callbreak.Editor.Screens
         /// <summary>
         /// Deck tile <paramref name="index"/>, centred on <paramref name="at"/>, built from mockup 15's
         /// tile 0 (the outline from the tile that has it, the price line from mockup 21's tile 1). It
-        /// starts with the back of the deck at its place.
+        /// starts with the back of the deck at its place, <paramref name="deckId"/>.
         /// </summary>
-        private static ShopItemTile BuildTile(int index, ScreenLayout[] layouts, TileModel model, RectTransform parent, Vector2 parentCentre, Vector2 at)
+        private static ShopItemTile BuildTile(int index, string deckId, ScreenLayout[] layouts, TileModel model, RectTransform parent, Vector2 parentCentre, Vector2 at)
         {
             ScreenLayout layout = layouts[0];
             ScreenLayout tables = layouts[2];
@@ -199,7 +202,7 @@ namespace Callbreak.Editor.Screens
             outlineImage.pixelsPerUnitMultiplier = SliceScale(outlineNode);
             outlineImage.gameObject.SetActive(false);
 
-            BuildDeckPicture(layout, index, root, at, out RectTransform picture, out Image pictureFace);
+            BuildDeckPicture(layout, deckId, root, at, out RectTransform picture, out Image pictureFace);
             Image pictureBase = AddDeckBase(pictureFace);
 
             // Everything measured on a tile is placed by its offset from that tile's own centre.
@@ -245,21 +248,22 @@ namespace Callbreak.Editor.Screens
         }
 
         /// <summary>
-        /// A deck's back (the geometry of mockup 15's tile 0, the back of the deck mockup 15 draws at
-        /// this place), shown at the card's own proportions, with the kit card's soft shadow scaled
-        /// down to a card (the mockup draws a faint one under each back).
+        /// A deck's back (the geometry of mockup 15's tile 0; the back of the deck shown at this place),
+        /// shown at the card's own proportions and as tall as mockup 15's back (Figma's 512 x 712 cards
+        /// are a little wider than its box, ADR 068), with the kit card's soft shadow scaled down to a
+        /// card (the mockup draws a faint one under each back).
         /// </summary>
-        private static void BuildDeckPicture(ScreenLayout layout, int index, RectTransform tile, Vector2 at, out RectTransform picture, out Image face)
+        private static void BuildDeckPicture(ScreenLayout layout, string deckId, RectTransform tile, Vector2 at, out RectTransform picture, out Image face)
         {
             LayoutNode node = Node(layout, "DeckPicture0");
             Vector2 source = Centre(Node(layout, "Tile0").rect);
             Vector2 centre = at + (Centre(node.rect) - source);
-            picture = UiBuildKit.CreateAt("Picture", tile, centre, at, UiBuildKit.FromMock(node.rect[2], node.rect[3]));
-            Sprite back = UiBuildKit.LoadSpriteAt(Node(layout, "DeckPicture" + index).sprite, 0f);
+            Sprite back = TableCardBuilder.EnsureLibrary().Back(deckId);
 
-            // The card as drawn inside its box: the back's own proportions at the box's height.
+            // The card: the back's own proportions at the box's height, never narrower than the box.
             float aspect = back != null && back.rect.height > 0f ? back.rect.width / back.rect.height : node.rect[2] / node.rect[3];
-            var card = new Vector2(Mathf.Min(node.rect[2], node.rect[3] * aspect), Mathf.Min(node.rect[3], node.rect[2] / aspect));
+            var card = new Vector2(node.rect[3] * aspect, node.rect[3]);
+            picture = UiBuildKit.CreateAt("Picture", tile, centre, at, UiBuildKit.FromMock(Mathf.Max(node.rect[2], card.x), node.rect[3]));
             Image shadow = SpriteSized(picture, "Shadow", centre + new Vector2(0f, DeckShadowDrop), centre,
                 card + new Vector2(2f * DeckShadowSpread, 2f * DeckShadowSpread), Load($"{UiBuildKit.ArtRoot}/UI/Common/UI_Panel_Card_Shadow.png"), false);
             shadow.pixelsPerUnitMultiplier = DeckShadowSliceScale;
@@ -390,11 +394,12 @@ namespace Callbreak.Editor.Screens
         /// The drawer, rebuilt from the builder's nodes: a rail flush with the right edge and as tall
         /// as the screen, <see cref="DrawerWidth"/> wide. It holds the panel art at its own width
         /// from the rail's left edge (its right part lies beyond the screen's edge, and a plain bleed
-        /// carries on past it), the panel's shadow to its left, and its three buttons (the Themes and
-        /// Cards tabs, then No Ads) at <see cref="CategoryScale"/>, <see cref="CategoryPitch"/> apart,
-        /// the three together centred on the screen's middle and each where the mockups' drawer has its
-        /// button across, scaled to the narrower one. The rail stretches over the safe area's height
-        /// and sits on its right edge (ADR 064: its width no longer moves it in from the edge).
+        /// carries on past it), the panel's shadow to its left, and its two buttons (the Themes and
+        /// Cards tabs) at <see cref="CategoryScale"/>, <see cref="CategoryPitch"/> apart, the two
+        /// together centred on the screen's middle and each where the mockups' drawer has its button
+        /// across, scaled to the narrower one. The mockups' third button (Tables; No Ads until ADR 068)
+        /// is not built. The rail stretches over the safe area's height and sits on its right edge
+        /// (ADR 064: its width no longer moves it in from the edge).
         /// </summary>
         private static void BuildDrawer(ScreenBuildContext ctx, ScreenLayout[] layouts)
         {
@@ -466,16 +471,12 @@ namespace Callbreak.Editor.Screens
             for (int b = 0; b < DrawerButtons; b++)
             {
                 RectTransform root = roots[b];
-                root.name = b == NoAdsButton ? "NoAdsButton" : "CategoryButton" + b;
+                root.name = "CategoryButton" + b;
                 root.SetSiblingIndex(b);
                 float x = left + (centres[b].x - artLeft) * DrawerWidth / artWidth;
                 root.anchoredPosition = Position(new Vector2(x, firstY + b * CategoryPitch), railCentre);
                 root.localScale = new Vector3(CategoryScale, CategoryScale, 1f);
             }
-
-            // No Ads is never a tab: it keeps its ivory look, and shows while the store sells it.
-            Object.DestroyImmediate(active[NoAdsButton]);
-            buttons[NoAdsButton].gameObject.SetActive(false);
 
             Object.DestroyImmediate(oldDrawer.gameObject);
 
@@ -484,7 +485,6 @@ namespace Callbreak.Editor.Screens
             SetArray(so.FindProperty("_categoryButton"), buttons[0], buttons[1]);
             SetArray(so.FindProperty("_activeLook"), active[0], active[1]);
             SetArray(so.FindProperty("_inactiveLook"), inactive[0], inactive[1]);
-            so.FindProperty("_noAdsButton").objectReferenceValue = buttons[NoAdsButton];
             so.FindProperty("_face").objectReferenceValue = face.rectTransform;
             so.FindProperty("_shadow").objectReferenceValue = shadow.rectTransform;
             so.FindProperty("_faceWidth").floatValue = face.rectTransform.sizeDelta.x;
@@ -506,7 +506,7 @@ namespace Callbreak.Editor.Screens
         /// crimson disc, the light icon and the crimson label, from the mockup where it is active)
         /// and its inactive look (the ivory disc, the dark icon and the brown label, from a mockup
         /// where it is not), and a hit area over both disc and label, <paramref name="hitRect"/>
-        /// (mockup pixels). Themes draws the mountains over a cloth, No Ads its glyph; each has its own words.
+        /// (mockup pixels). Themes draws the mountains over a cloth; each has its own words.
         /// </summary>
         private static void BuildCategoryButton(
             ScreenBuildContext ctx, ScreenLayout[] layouts, int c, int b, RectTransform items, Vector2 oldCentre, Vector2 railCentre,
@@ -550,7 +550,7 @@ namespace Callbreak.Editor.Screens
 
         /// <summary>
         /// A look's label: for Cards, mockup 15's own when 15 draws that state, otherwise fitted on the
-        /// other mockup; for Themes and No Ads, their own words fitted on the wording of the mockups'
+        /// other mockup; for Themes, its own words fitted on the wording of the mockups'
         /// button at that place, centred where it is centred.
         /// </summary>
         private static void LookLabel(ScreenBuildContext ctx, ScreenLayout source, ScreenLayout cards, int c, int b, Transform look, Vector2 centre, Vector2 oldCentre)
@@ -574,19 +574,10 @@ namespace Callbreak.Editor.Screens
 
         /// <summary>
         /// A drawer button's icon: the mockup's own for Cards; for Themes the mountains over a small
-        /// cloth with a diamond on it; for No Ads its glyph, as big as the mockup's cloth icon there.
+        /// cloth with a diamond on it.
         /// </summary>
         private static void DrawerIcon(Transform look, int b, LayoutNode icon, Vector2 centre, bool light)
         {
-            if (b == NoAdsButton)
-            {
-                Sprite glyph = Load($"{UiBuildKit.ArtRoot}/UI/Icons/Icon_NoAds.png");
-                float side = Mathf.Max(icon.spriteRect[2], icon.spriteRect[3]) * 0.82f;
-                Vector2 at = Centre(icon.spriteRect);
-                SpriteAt("Icon", look, new[] { at.x - side / 2f, at.y - side / 2f, side, side }, centre, glyph).preserveAspect = true;
-                return;
-            }
-
             if (b != 0)
             {
                 SpriteAt("Icon", look, icon.spriteRect, centre, Load(icon.sprite));

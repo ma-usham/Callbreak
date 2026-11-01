@@ -21,16 +21,16 @@ namespace Callbreak.Application.Cosmetics
     /// An unknown id is rejected; a stored id this build doesn't know (a removed seasonal item), or an
     /// equipped one no longer owned, falls back to the default. A purchase this build doesn't know
     /// stays in the file. A version 1 file keeps its deck while it is still owned (every deck was
-    /// free until 6 Oct 2026; now only Classic Crimson is) and starts the rest at the defaults. A file
+    /// free until 6 Oct 2026; now only the first is) and starts the rest at the defaults. A file
     /// from a newer app version is ignored and never overwritten: equipping then lives in memory for
     /// this session, and nothing is sold, because this build couldn't keep the purchase.
     /// </summary>
     public sealed class CosmeticsService : ICosmeticsService, ICosmeticsShop
     {
         public const string SaveKey = "cosmetics";
-        public const string ClassicCrimson = CosmeticCatalog.Decks.ClassicCrimson;
-        public const string HimalayanIvory = CosmeticCatalog.Decks.HimalayanIvory;
-        public const string KathmanduGold = CosmeticCatalog.Decks.KathmanduGold;
+        public const string Classic = CosmeticCatalog.Decks.Classic;
+        public const string MithilaInk = CosmeticCatalog.Decks.MithilaInk;
+        public const string KathmanduRoyal = CosmeticCatalog.Decks.KathmanduRoyal;
         public const string DefaultDeckId = CosmeticCatalog.Decks.Default;
 
         private const int FirstShopVersion = 2;
@@ -290,11 +290,13 @@ namespace Callbreak.Application.Cosmetics
             }
 
             data.schemaVersion = CosmeticsData.CurrentVersion;
-            data.boughtDeckIds = Clean(data.boughtDeckIds);
             data.boughtThemeIds = Clean(data.boughtThemeIds);
 
-            // Durbar Square took the Himalayan Vista's place (the owner, 30 Oct 2026), and the tables
-            // became cloths (ADR 058): a file that names an old item owns and equips its successor.
+            // Durbar Square took the Himalayan Vista's place (the owner, 30 Oct 2026), the tables
+            // became cloths (ADR 058) and the Figma decks took the old decks' places (ADR 068): a file
+            // that names an old item owns and equips its successor.
+            data.selectedDeckId = Successor(CosmeticCatalog.Decks.Renamed, data.selectedDeckId);
+            data.boughtDeckIds = Clean(data.boughtDeckIds?.Select(id => Successor(CosmeticCatalog.Decks.Renamed, id)).ToList());
             data.equippedBackgroundId = Successor(CosmeticCatalog.Backgrounds.Renamed, data.equippedBackgroundId);
             data.boughtBackgroundIds = Clean(data.boughtBackgroundIds?.Select(id => Successor(CosmeticCatalog.Backgrounds.Renamed, id)).ToList());
             data.equippedTableId = Successor(CosmeticCatalog.Tables.Renamed, data.equippedTableId);

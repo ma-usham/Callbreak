@@ -38,8 +38,8 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
 
             // Every deck but the first costs coins since 6 Oct 2026: this player has bought them all.
             var everyDeck = new CosmeticsData();
-            everyDeck.boughtDeckIds.Add(CosmeticsService.HimalayanIvory);
-            everyDeck.boughtDeckIds.Add(CosmeticsService.KathmanduGold);
+            everyDeck.boughtDeckIds.Add(CosmeticsService.KathmanduRoyal);
+            everyDeck.boughtDeckIds.Add(CosmeticsService.MithilaInk);
             _saves.Put(CosmeticsService.SaveKey, everyDeck);
             _cosmetics = new CosmeticsService(_saves);
         }
@@ -113,7 +113,7 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
         public void Start_NewMatch_EverySeatBotsIncludedIsInThePlayersDeck()
         {
             // ADR 031, my deck everywhere: the player sees every card in the deck it selected.
-            _cosmetics.SelectDeck(CosmeticsService.HimalayanIvory);
+            _cosmetics.SelectDeck(CosmeticsService.MithilaInk);
 
             // Every match draws its bots from a seed of its own: several, so no draw passes by luck.
             for (int match = 0; match < 8; match++)
@@ -123,8 +123,8 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
 
                 for (int s = 0; s < 4; s++)
                 {
-                    Assert.AreEqual(CosmeticsService.HimalayanIvory, session.Seats[s].DeckThemeId, $"match {match}: what the table draws for {(Seat)s}");
-                    Assert.AreEqual(CosmeticsService.HimalayanIvory, session.View.Seats[s].DeckThemeId, $"match {match}: the profile {(Seat)s} is saved with");
+                    Assert.AreEqual(CosmeticsService.MithilaInk, session.Seats[s].DeckThemeId, $"match {match}: what the table draws for {(Seat)s}");
+                    Assert.AreEqual(CosmeticsService.MithilaInk, session.View.Seats[s].DeckThemeId, $"match {match}: the profile {(Seat)s} is saved with");
                 }
             }
         }
@@ -134,18 +134,18 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
         {
             // A save from before ADR 020, when bots drew a back of their own; and the player has
             // chosen another deck since ("Choose a deck for your next match").
-            _cosmetics.SelectDeck(CosmeticsService.KathmanduGold);
+            _cosmetics.SelectDeck(CosmeticsService.KathmanduRoyal);
             OfflineMatchSession first = NewSession(BotTiming.Instant);
             first.Start();
             double now = 0;
             PlayUntil(first, ref now, view => view.CompletedTricks.Count >= 1);
             first.LeaveAsync(CancellationToken.None).Wait();
             OfflineMatchSave save = _saves.Peek<OfflineMatchSave>(OfflineMatchStore.Key);
-            save.match.seats[(int)Seat.East].deckThemeId = CosmeticsService.ClassicCrimson;
-            save.match.seats[(int)Seat.North].deckThemeId = CosmeticsService.HimalayanIvory;
-            save.match.seats[(int)Seat.West].deckThemeId = CosmeticsService.ClassicCrimson;
+            save.match.seats[(int)Seat.East].deckThemeId = CosmeticsService.Classic;
+            save.match.seats[(int)Seat.North].deckThemeId = CosmeticsService.MithilaInk;
+            save.match.seats[(int)Seat.West].deckThemeId = CosmeticsService.Classic;
             _saves.Put(OfflineMatchStore.Key, save);
-            _cosmetics.SelectDeck(CosmeticsService.HimalayanIvory);
+            _cosmetics.SelectDeck(CosmeticsService.MithilaInk);
 
             OfflineMatchSession second = NewSession(BotTiming.Instant, resume: true);
             second.Start();
@@ -153,7 +153,7 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
             Assert.IsTrue(second.IsResumed);
             for (int s = 0; s < 4; s++)
             {
-                Assert.AreEqual(CosmeticsService.KathmanduGold, second.Seats[s].DeckThemeId, "what the table draws for " + (Seat)s);
+                Assert.AreEqual(CosmeticsService.KathmanduRoyal, second.Seats[s].DeckThemeId, "what the table draws for " + (Seat)s);
             }
         }
 

@@ -70,15 +70,15 @@ namespace Callbreak.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator ChoseKathmanduGold_EveryCardOnTheScreenIsKathmanduGold()
+        public IEnumerator ChoseKathmanduRoyal_EveryCardOnTheScreenIsKathmanduRoyal()
         {
-            yield return EveryCardIsInTheDeckThisPlayerChose(CosmeticsService.KathmanduGold, CosmeticsService.HimalayanIvory);
+            yield return EveryCardIsInTheDeckThisPlayerChose(CosmeticsService.KathmanduRoyal, CosmeticsService.MithilaInk);
         }
 
         [UnityTest]
-        public IEnumerator ChoseHimalayanIvory_TheSameTableIsHimalayanIvoryOnThisScreen()
+        public IEnumerator ChoseMithilaInk_TheSameTableIsMithilaInkOnThisScreen()
         {
-            yield return EveryCardIsInTheDeckThisPlayerChose(CosmeticsService.HimalayanIvory, CosmeticsService.KathmanduGold);
+            yield return EveryCardIsInTheDeckThisPlayerChose(CosmeticsService.MithilaInk, CosmeticsService.KathmanduRoyal);
         }
 
         /// <summary>
@@ -172,8 +172,7 @@ namespace Callbreak.Tests.PlayMode
             CardSpriteProvider sprites = _game.Services.Resolve<CardSpriteProvider>();
             LearnArt(sprites);
             Assert.AreNotSame(sprites.Back(mine), sprites.Back(theirs), "the two decks have backs of their own");
-            Assert.AreNotSame(sprites.Base(mine), sprites.Base(theirs), "and bases of their own under the faces");
-            Assert.AreSame(sprites.Face(mine, new Card(Suit.Spades, Rank.Ace)), sprites.Face(theirs, new Card(Suit.Spades, Rank.Ace)), "ADR 053: every deck shares the faces");
+            Assert.AreNotSame(sprites.Face(mine, new Card(Suit.Spades, Rank.Ace)), sprites.Face(theirs, new Card(Suit.Spades, Rank.Ace)), "ADR 068: and faces of their own");
 
             // Every deck but the first costs coins since 6 Oct 2026: this player bought theirs.
             _game.Services.Resolve<IWallet>().Add(750);
@@ -188,7 +187,7 @@ namespace Callbreak.Tests.PlayMode
             var seats = new[]
             {
                 new SeatProfile("Hari", "1", theirs, false),
-                new SeatProfile("Asha", "2", CosmeticsService.ClassicCrimson, false),
+                new SeatProfile("Asha", "2", CosmeticsService.Classic, false),
                 new SeatProfile("Bikash", "3", theirs, true),
                 new SeatProfile("Suman", "4", theirs, false),
             };
@@ -232,8 +231,8 @@ namespace Callbreak.Tests.PlayMode
         }
 
         /// <summary>
-        /// Remembers every deck's art: each back and each base by its deck, and the faces, which every
-        /// deck shares (ADR 053), by card only.
+        /// Remembers every deck's art by its deck: each back, each face (every deck has its own since
+        /// ADR 068) and a base, should a deck draw its faces over one (ADR 053).
         /// </summary>
         private void LearnArt(CardSpriteProvider sprites)
         {
@@ -242,14 +241,17 @@ namespace Callbreak.Tests.PlayMode
             {
                 CardSpriteProvider.DeckSprites deck = sprites.DeckAt(d);
                 _art[deck.Back] = (deck.Id, BackArt);
-                Assert.IsNotNull(deck.Base, deck.Id + " has a base under its faces");
-                _art[deck.Base] = (deck.Id, BaseArt);
+                if (deck.Base != null)
+                {
+                    _art[deck.Base] = (deck.Id, BaseArt);
+                }
+
                 for (int id = 0; id < Card.Count; id++)
                 {
                     Sprite face = deck.Face(id);
                     if (face != null)
                     {
-                        _art[face] = (null, id);
+                        _art[face] = (deck.Id, id);
                     }
                 }
             }
@@ -272,8 +274,8 @@ namespace Callbreak.Tests.PlayMode
         }
 
         /// <summary>
-        /// The card art a card on the table shows: its deck (a back's, or the base under the shared
-        /// face), and its card id or <see cref="BackArt"/>.
+        /// The card art a card on the table shows: its deck (its back's or its face's, or a base's
+        /// under a face), and its card id or <see cref="BackArt"/>.
         /// </summary>
         private (string Deck, int Card) ArtOf(CardView card)
         {
@@ -298,6 +300,7 @@ namespace Callbreak.Tests.PlayMode
                 else
                 {
                     shown = art.Card;
+                    deck = deck ?? art.Deck;
                 }
             }
 

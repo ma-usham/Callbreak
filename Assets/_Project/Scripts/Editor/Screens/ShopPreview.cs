@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Callbreak.Application.Cosmetics;
+using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Screens;
-using UnityEditor;
 using UnityEngine;
 
 namespace Callbreak.Editor.Screens
@@ -10,8 +10,8 @@ namespace Callbreak.Editor.Screens
     /// The shop in a state of each tab, and the theme preview, for the screen captures (the tiles are
     /// filled at run time by the presenter): Themes with Durbar Square equipped and every other theme
     /// at its price, as Figma's "V1 Rebuild · Shop" A shows it (1,200 coins, so the 1,000 themes are
-    /// within reach); Cards with Classic Crimson equipped, as mockup 15; and Tihar Lights' preview,
-    /// not owned ("Buy for 1,000").
+    /// within reach); Cards with Classic equipped and the other decks at their prices (ADR 068); and
+    /// Tihar Lights' preview, not owned ("Buy for 1,000").
     /// </summary>
     public static class ShopPreview
     {
@@ -57,7 +57,6 @@ namespace Callbreak.Editor.Screens
             };
 
             view.SetCoins(ShopDisplay.Price(Coins));
-            view.SetNoAdsVisible(true);
             IReadOnlyList<CosmeticItem> themes = CosmeticCatalog.Of(CosmeticKind.Theme);
             for (int i = 0; i < themes.Count; i++)
             {
@@ -66,14 +65,14 @@ namespace Callbreak.Editor.Screens
                 view.SetTheme(i, strings[theme.Id], view.ThemePicture(theme.Id), i >= 1 && i <= 7, false, status, status == ShopTileStatus.Equipped ? "Equipped" : null, ShopDisplay.Price(theme.Price), theme.Price <= Coins);
             }
 
-            string[] decks = { "Classic Crimson", "Himalayan Ivory", "Kathmandu Gold" };
-            string[] backs = { "ClassicCrimson", "HimalayanIvory", "KathmanduGold" };
-            view.SetDeckCount(decks.Length);
-            for (int i = 0; i < decks.Length; i++)
+            string[] decks = { "Classic", "Mithila Ink", "Kathmandu Royal" };
+            IReadOnlyList<CosmeticItem> deckItems = CosmeticCatalog.Of(CosmeticKind.Deck);
+            CardSpriteProvider library = TableCardBuilder.EnsureLibrary();
+            view.SetDeckCount(deckItems.Count);
+            for (int i = 0; i < deckItems.Count; i++)
             {
                 ShopTileStatus status = i == 0 ? ShopTileStatus.Equipped : ShopTileStatus.Price;
-                int price = CosmeticCatalog.Of(CosmeticKind.Deck)[i].Price;
-                view.SetDeck(i, decks[i], Back(backs[i]), status, status == ShopTileStatus.Equipped ? "Equipped" : null, ShopDisplay.Price(price), i == 0);
+                view.SetDeck(i, decks[i], library.Back(deckItems[i].Id), status, status == ShopTileStatus.Equipped ? "Equipped" : null, ShopDisplay.Price(deckItems[i].Price), i == 0);
             }
 
             view.ShowCategory(category == Cards ? Cards : Themes);
@@ -89,7 +88,5 @@ namespace Callbreak.Editor.Screens
                     background, night, cloth, frame, ThemeAction.Buy, ShopDisplay.Price(tihar.Price), null, Callbreak.Application.Offers.FestivalOfferKind.Free, true);
             }
         }
-
-        private static Sprite Back(string deck) => AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/_Project/Art/Cards/{deck}/Back_{deck}.png");
     }
 }

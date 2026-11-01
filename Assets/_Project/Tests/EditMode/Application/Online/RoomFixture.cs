@@ -42,7 +42,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 new TestBots(),
                 new NameFilter(),
                 new Pcg32Random(5),
-                new[] { "classic-crimson", "himalayan-ivory", "kathmandu-gold" },
+                new[] { "classic", "mithila-ink", "kathmandu-royal" },
                 seeds ?? (() => 42UL),
                 timing ?? BotTiming.Instant,
                 clocks: clocks,

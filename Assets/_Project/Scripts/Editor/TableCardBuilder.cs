@@ -14,17 +14,17 @@ namespace Callbreak.Editor
     /// Everything the table needs to draw cards (GDD §13, §23):
     /// the import settings of the cards (sprites with mip maps, since a fan card is a fifth
     /// of its texture's size, filtered anisotropically, since a thrown card lies flat); the
-    /// <see cref="CardSpriteProvider"/> asset indexing 52 faces shared by every deck, and a base and
-    /// a back per deck; the premultiplied material the shared faces draw with (ADR 054); the two effect sprites the game draws itself (GDD §13 "glow, dimming and
-    /// shadows are drawn by the game, never baked"): the card silhouette for the subdued overlay
-    /// and the gold glow of a legal card, both derived from the cards' own outline; and the Card
-    /// prefab the pool instantiates 52 times. Re-running rebuilds everything; a PNG is only
-    /// rewritten when its pixels change.
+    /// <see cref="CardSpriteProvider"/> asset indexing each deck's 52 faces and its back (since ADR
+    /// 068 every deck has its own faces, each a whole card, so no deck has a base); the
+    /// premultiplied material a shared face over a base would draw with (ADR 054); the two effect
+    /// sprites the game draws itself (GDD §13 "glow, dimming and shadows are drawn by the game, never
+    /// baked"): the card silhouette for the subdued overlay and the gold glow of a legal card, both
+    /// derived from the cards' own outline; and the Card prefab the pool instantiates 52 times.
+    /// Re-running rebuilds everything; a PNG is only rewritten when its pixels change.
     /// </summary>
     public static class TableCardBuilder
     {
         public const string CardsFolder = "Assets/_Project/Art/Cards";
-        public const string FacesFolder = CardsFolder + "/Faces";
         public const string FaceMaterialPath = CardsFolder + "/CardFace.mat";
         public const string FaceShaderName = "Callbreak/UI/Premultiplied";
         public const string LibraryPath = "Assets/_Project/Config/Cards/CardSprites.asset";
@@ -34,14 +34,19 @@ namespace Callbreak.Editor
         public const string GlowPath = "Assets/_Project/Art/Screens/Table/FX_CardGlow.png";
         public const string ShadowPath = "Assets/_Project/Art/UI/Common/UI_Panel_Card_Shadow.png";
 
-        /// <summary>A hand card on the 1080p canvas (GDD §12: 180 wide; the height follows the art's 228 × 358).</summary>
-        public const float CardWidth = 180f;
+        /// <summary>
+        /// A hand card on the 1080p canvas: as tall as GDD §12's card (180 wide at the old art's
+        /// 228 × 358), in the shape of Figma's 512 × 712 decks since ADR 068.
+        /// </summary>
+        public const float CardHeight = 180f * 358f / 228f;
 
-        public const float CardHeight = CardWidth * 358f / 228f;
+        public const float CardWidth = CardHeight * 512f / 712f;
 
         // Glow, in card-texture pixels: a solid rim at the edge, then a halo that fades out.
-        // Measured on mockup 08's A♥: a 2.5 px rim and about 7 px of halo at hand size (× 228 / 156.75).
+        // Measured on mockup 08's A♥: a 2.5 px rim and about 7 px of halo at hand size (× 228 / 156.75),
+        // on a back 358 px tall; GlowTexels scales them to the back's own height.
         private const int GlowMargin = 18;
+        private const float GlowTexelHeight = 358f;
         private const float GlowRim = 3.6f;
         private const float GlowHalo = 11f;
         private const float GlowHaloOpacity = 0.62f;
@@ -58,17 +63,23 @@ namespace Callbreak.Editor
         private const float ShadowOpacity = 0.55f;
         private const float ShadowSliceScale = 2.6f;
 
+        // The main menu's fan: its middle aces' centres stand this far apart (canvas units; the spade
+        // and the diamond of MainMenuBuilder's fan, 168.5 mockup px).
+        private const float FanCardStride = 193.4f;
+
         // A card thrown on the table lies flat, drawn at 64% of its height (CardView): without
         // anisotropic filtering the GPU picks its mip level from that squash and the face blurs.
         // Phones use the Mobile quality level, which filters anisotropically only the textures that
         // ask for it (the Editor's PC level forces it on, so there the cards looked clear).
         private const int CardAnisoLevel = 8;
 
+        // The decks of CosmeticCatalog.Decks, the default first, and the folder of each one's art
+        // (Tools/ArtPipeline/NewUI/cut_decks.py).
         private static readonly (string id, string folder)[] Decks =
         {
-            ("classic-crimson", "ClassicCrimson"),
-            ("himalayan-ivory", "HimalayanIvory"),
-            ("kathmandu-gold", "KathmanduGold"),
+            ("classic", "Classic"),
+            ("mithila-ink", "MithilaInk"),
+            ("kathmandu-royal", "KathmanduRoyal"),
         };
 
         private static readonly string[] SuitNames = { "Clubs", "Diamonds", "Hearts", "Spades" };
@@ -80,17 +91,13 @@ namespace Callbreak.Editor
         }
 
         /// <summary>
-        /// ADR 053 and 054 in one go, for a batch run (-executeMethod): the card assets with the
-        /// shared faces and the deck bases, then the bases added under the main menu's fan and the
-        /// shop's decks, and the faces there given their premultiplied material.
+        /// ADR 068 in one go, for a batch run (-executeMethod): the card assets with every deck's own
+        /// faces, then the main menu's fan given the default deck's aces at the new shape.
         /// </summary>
-        public static void BuildDeckBases()
+        public static void BuildDeckFaces()
         {
             Debug.Log(BuildAll());
-            Debug.Log("[MainMenuBuilder] " + MainMenuBuilder.AddFanBases());
-            Debug.Log("[MainMenuBuilder] " + MainMenuBuilder.UseSharedFanFaces());
-            Debug.Log("[ShopCustomizer] " + Screens.ShopCustomizer.AddDeckBases());
-            Debug.Log("[ShopCustomizer] " + Screens.ShopCustomizer.UseDeckFaceMaterial());
+            Debug.Log("[TableCardBuilder] " + UseDeckFanFaces());
         }
 
         /// <summary>
@@ -151,31 +158,27 @@ namespace Callbreak.Editor
         }
 
         /// <summary>
-        /// One set of 52 faces for every deck (<see cref="FacesFolder"/>, see-through around the
-        /// marks) and, per deck, the base drawn under them and the back (ADR 053).
+        /// Per deck (ADR 068), its 52 faces, each a whole card (Art/Cards/&lt;Deck&gt;/Card_&lt;Suit&gt;_&lt;Rank&gt;.png),
+        /// and its back; no deck has a base.
         /// </summary>
         public static CardSpriteProvider BuildLibrary(out string report)
         {
             var decks = new CardSpriteProvider.DeckSprites[Decks.Length];
             int missing = 0;
-            var faces = new Sprite[Card.Count];
-            for (int id = 0; id < Card.Count; id++)
-            {
-                Card card = Card.FromId(id);
-                faces[id] = LoadCardSprite($"{FacesFolder}/Card_{SuitNames[(int)card.Suit]}_{TurnPrompt.RankLabel(card.Rank)}.png", true);
-                if (faces[id] == null)
-                {
-                    missing++;
-                }
-            }
-
             for (int d = 0; d < Decks.Length; d++)
             {
                 string folder = $"{CardsFolder}/{Decks[d].folder}";
+                var faces = new Sprite[Card.Count];
+                for (int id = 0; id < Card.Count; id++)
+                {
+                    Card card = Card.FromId(id);
+                    faces[id] = LoadCardSprite($"{folder}/Card_{SuitNames[(int)card.Suit]}_{TurnPrompt.RankLabel(card.Rank)}.png", false);
+                    missing += faces[id] == null ? 1 : 0;
+                }
+
                 Sprite back = LoadCardSprite($"{folder}/Back_{Decks[d].folder}.png", false);
-                Sprite cardBase = LoadCardSprite($"{folder}/Base_{Decks[d].folder}.png", false);
-                missing += (back == null ? 1 : 0) + (cardBase == null ? 1 : 0);
-                decks[d] = new CardSpriteProvider.DeckSprites(Decks[d].id, back, cardBase, faces);
+                missing += back == null ? 1 : 0;
+                decks[d] = new CardSpriteProvider.DeckSprites(Decks[d].id, back, null, faces);
             }
 
             var library = AssetDatabase.LoadAssetAtPath<CardSpriteProvider>(LibraryPath);
@@ -189,18 +192,19 @@ namespace Callbreak.Editor
             library.SetDecks(decks, Decks[0].id);
             EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();
-            report = $"{LibraryPath}: {Decks.Length} decks, {Card.Count + Decks.Length * 2 - missing} sprites, {missing} missing";
+            report = $"{LibraryPath}: {Decks.Length} decks, {Decks.Length * (Card.Count + 1) - missing} sprites, {missing} missing";
             return library;
         }
 
         /// <summary>
-        /// Card textures are sprites shown far below their own size (a fan card is 46 px wide from a
-        /// 228 px texture), so they keep mip maps, and lying on the table, so they are filtered
+        /// Card textures are sprites shown far below their own size (a fan card is 33 px wide from a
+        /// 278 px texture), so they keep mip maps, and lying on the table, so they are filtered
         /// anisotropically (<see cref="CardAnisoLevel"/>); everything else follows the UI recipe.
         /// </summary>
         /// <param name="premultiplied">
-        /// A shared face (ADR 054): its colour is premultiplied, so Unity must not bleed colour into
-        /// its see-through pixels (Alpha Is Transparency off); the bases and backs have it on.
+        /// A shared face over a base (ADR 054): its colour is premultiplied, so Unity must not bleed
+        /// colour into its see-through pixels (Alpha Is Transparency off); whole cards and backs have
+        /// it on.
         /// </param>
         private static Sprite LoadCardSprite(string path, bool premultiplied)
         {
@@ -264,7 +268,7 @@ namespace Callbreak.Editor
                 int w = texture.width, h = texture.height;
                 Color32[] card = texture.GetPixels32();
                 WriteSprite(SilhouettePath, RenderSilhouette(card, w, h));
-                WriteSprite(GlowPath, RenderGlow(card, w, h));
+                WriteSprite(GlowPath, RenderGlow(card, w, h, GlowTexels(h)));
             }
             finally
             {
@@ -283,16 +287,23 @@ namespace Callbreak.Editor
             return Encode(pixels, w, h);
         }
 
-        private static byte[] RenderGlow(Color32[] card, int w, int h)
+        /// <summary>The glow's sizes in the texels of a back <paramref name="height"/> px tall (they are measured on one 358 tall).</summary>
+        private static float GlowTexels(int height) => height / GlowTexelHeight;
+
+        private static int GlowMarginOf(int height) => Mathf.RoundToInt(GlowMargin * GlowTexels(height));
+
+        private static byte[] RenderGlow(Color32[] card, int w, int h, float texels)
         {
-            int gw = w + 2 * GlowMargin, gh = h + 2 * GlowMargin;
-            int reach = GlowMargin;
+            int margin = GlowMarginOf(h);
+            int gw = w + 2 * margin, gh = h + 2 * margin;
+            int reach = margin;
+            float rimWidth = GlowRim * texels, haloWidth = GlowHalo * texels;
 
             // Distance to the card, outside it: first along each row, then combined down the columns.
             var rowDistance = new float[gw * gh];
             for (int y = 0; y < gh; y++)
             {
-                int cy = y - GlowMargin;
+                int cy = y - margin;
                 for (int x = 0; x < gw; x++)
                 {
                     float best = float.MaxValue;
@@ -300,7 +311,7 @@ namespace Callbreak.Editor
                     {
                         for (int dx = -reach; dx <= reach; dx++)
                         {
-                            int cx = x - GlowMargin + dx;
+                            int cx = x - margin + dx;
                             if (cx < 0 || cx >= w)
                             {
                                 continue;
@@ -345,8 +356,8 @@ namespace Callbreak.Editor
                         best = Mathf.Min(best, Mathf.Sqrt(row * row + dy * dy));
                     }
 
-                    float rimAlpha = Mathf.Clamp01(GlowRim + 0.5f - best);
-                    float t = Mathf.Clamp01(1f - (best - GlowRim) / GlowHalo);
+                    float rimAlpha = Mathf.Clamp01(rimWidth + 0.5f - best);
+                    float t = Mathf.Clamp01(1f - (best - rimWidth) / haloWidth);
                     float haloAlpha = best >= float.MaxValue ? 0f : GlowHaloOpacity * t * t;
                     float alpha = Mathf.Max(rimAlpha, haloAlpha);
                     Color c = Color.Lerp(halo, rim, rimAlpha);
@@ -410,7 +421,9 @@ namespace Callbreak.Editor
                 shadowImage.type = Image.Type.Sliced;
                 shadowImage.pixelsPerUnitMultiplier = ShadowSliceScale;
 
-                float margin = GlowMargin * CardWidth / 228f;
+                // The glow reaches its margin past the back it was drawn from (BuildEffects), in that back's texels.
+                int backHeight = back != null ? (int)back.rect.height : (int)GlowTexelHeight;
+                float margin = GlowMarginOf(backHeight) * CardHeight / backHeight;
                 Image glowImage = Layer(rect, "Glow", glow, new Vector2(-margin, -margin), new Vector2(margin, margin));
                 glowImage.enabled = false;
 
@@ -465,6 +478,65 @@ namespace Callbreak.Editor
             finally
             {
                 UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>
+        /// Gives the four aces of the saved main menu's fan the default deck's own faces at its shape
+        /// (ADR 068): each card keeps its height, its top edge and its tilt and takes the deck's width;
+        /// its face is a whole card, drawn with the default UI material, with no base under it.
+        /// Everything else in the prefab stays as it is. The presenter puts in the equipped deck's aces
+        /// when the menu opens.
+        /// </summary>
+        public static string UseDeckFanFaces()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(MainMenuBuilder.PrefabPath);
+            try
+            {
+                CardSpriteProvider cards = EnsureLibrary();
+                var serialized = new SerializedObject(root.GetComponent<Callbreak.Presentation.Screens.MainMenuView>());
+                SerializedProperty faces = serialized.FindProperty("_fanFaces");
+                SerializedProperty bases = serialized.FindProperty("_fanBases");
+                for (int i = 0; i < faces.arraySize; i++)
+                {
+                    var face = faces.GetArrayElementAtIndex(i).objectReferenceValue as Image;
+                    if (face == null)
+                    {
+                        return $"FAILED: the fan has no face {i}";
+                    }
+
+                    // The fan's faces are indexed by suit; each hangs from its top edge, so a card that
+                    // keeps its height and its centre keeps that edge. The fan spreads from its foot as
+                    // much as a card widened, so each ace still shows its corner index beside the next.
+                    Sprite ace = cards.Face(cards.DefaultDeckId, new Card((Suit)i, Rank.Ace));
+                    face.sprite = ace;
+                    face.material = null;
+                    var card = (RectTransform)face.transform.parent;
+                    float width = card.sizeDelta.y * ace.rect.width / ace.rect.height;
+                    if (!Mathf.Approximately(width, card.sizeDelta.x))
+                    {
+                        card.anchoredPosition = new Vector2(card.anchoredPosition.x * (1f + ((width - card.sizeDelta.x) / FanCardStride)), card.anchoredPosition.y);
+                        card.sizeDelta = new Vector2(width, card.sizeDelta.y);
+                    }
+
+                    // Cleared through its serialized property: a sprite whose file is gone reads as null,
+                    // so setting the Image's sprite to null would keep the dangling reference.
+                    var under = i < bases.arraySize ? bases.GetArrayElementAtIndex(i).objectReferenceValue as Image : null;
+                    if (under != null)
+                    {
+                        var image = new SerializedObject(under);
+                        image.FindProperty("m_Sprite").objectReferenceValue = null;
+                        image.FindProperty("m_Enabled").boolValue = false;
+                        image.ApplyModifiedPropertiesWithoutUndo();
+                    }
+                }
+
+                PrefabUtility.SaveAsPrefabAsset(root, MainMenuBuilder.PrefabPath, out bool saved);
+                return saved ? $"saved {MainMenuBuilder.PrefabPath}: the fan shows {cards.DefaultDeckId}'s aces at its shape" : $"FAILED to save {MainMenuBuilder.PrefabPath}";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
             }
         }
 

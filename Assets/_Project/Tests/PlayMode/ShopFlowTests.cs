@@ -18,7 +18,7 @@ namespace Callbreak.Tests.PlayMode
     /// The shop in the real Boot and Menu scenes, with the real wallet and cosmetics (Figma "V1
     /// Rebuild · Shop", ADR 064; the decks as since the owner's 4, 5 and 6 Oct 2026): the main menu's
     /// storefront opens it on Themes; the drawer is always open and flush with the screen's right
-    /// edge, Themes and Cards stacked in its middle with No Ads under them while the store sells it;
+    /// edge, Themes and Cards stacked in its middle (No Ads is the main menu's alone, ADR 068);
     /// the themes lie in a row that scrolls sideways, each saying Equipped, Owned or its price; a
     /// theme tapped opens its preview, its menu background and its cloth side by side, with no
     /// arrows; a theme is bought after a confirmation and its preview then equips it,
@@ -115,12 +115,9 @@ namespace Callbreak.Tests.PlayMode
                 }
             }
 
-            RectTransform noAds = Find("NoAdsButton");
-            Assert.AreEqual(View.Drawer.NoAdsButton.transform, noAds, "No Ads, the store's purchase, under the tabs");
-            Rect noAdsRect = ScreenRect(View.Drawer.NoAdsButton.targetGraphic.rectTransform);
-            Assert.LessOrEqual(noAdsRect.yMax, ButtonRect("CategoryButton1").yMin, "No Ads lies below Cards");
-            float middle = (ButtonRect("CategoryButton0").yMax + noAdsRect.yMin) / 2f;
-            Assert.AreEqual(drawer.center.y, middle, drawer.height * 0.01f, "the three are centred in the drawer");
+            Assert.IsFalse(Has("NoAdsButton"), "No Ads is bought on the main menu only (the owner, 2 Nov 2026)");
+            float middle = (ButtonRect("CategoryButton0").yMax + ButtonRect("CategoryButton" + (ShopView.CategoryCount - 1)).yMin) / 2f;
+            Assert.AreEqual(drawer.center.y, middle, drawer.height * 0.01f, "the two tabs are centred in the drawer, with no gap where No Ads was");
         }
 
         /// <summary>
@@ -341,19 +338,19 @@ namespace Callbreak.Tests.PlayMode
             Assert.IsTrue(View.ShowsBuy && View.PrimaryInteractable, "Buy for 750");
             Assert.AreEqual("750", View.BuyPrice);
             Press("PrimaryButton");
-            Assert.IsTrue(DialogShows(Format("ui.shop.buy.title", Text("ui.deck.kathmandu_gold"))), "it names the deck");
+            Assert.IsTrue(DialogShows(Format("ui.shop.buy.title", Text("ui.deck.kathmandu_royal"))), "it names the deck");
             _game.PressDialog(confirm: true);
             yield return null;
 
-            Assert.IsTrue(shop.IsOwned(CosmeticKind.Deck, CosmeticCatalog.Decks.KathmanduGold), "bought");
+            Assert.IsTrue(shop.IsOwned(CosmeticKind.Deck, CosmeticCatalog.Decks.KathmanduRoyal), "bought");
             Assert.AreEqual(0, wallet.Coins, "for 750 coins");
-            Assert.AreEqual(CosmeticCatalog.Decks.ClassicCrimson, cosmetics.SelectedDeckId, "buying does not equip");
+            Assert.AreEqual(CosmeticCatalog.Decks.Classic, cosmetics.SelectedDeckId, "buying does not equip");
             Assert.IsFalse(Deck(2).ShowsPrice);
             Assert.IsFalse(View.ShowsBuy, "the button turns to Use Selected Style");
 
             Press("PrimaryButton");
             yield return null;
-            Assert.AreEqual(CosmeticCatalog.Decks.KathmanduGold, cosmetics.SelectedDeckId, "Use equips it");
+            Assert.AreEqual(CosmeticCatalog.Decks.KathmanduRoyal, cosmetics.SelectedDeckId, "Use equips it");
             Assert.AreEqual(Text("ui.shop.status.equipped"), Deck(2).StatusLabel.text);
         }
 
@@ -363,7 +360,7 @@ namespace Callbreak.Tests.PlayMode
             yield return OpenShop(saves =>
             {
                 var data = new CosmeticsData();
-                data.boughtDeckIds.Add(CosmeticCatalog.Decks.HimalayanIvory);
+                data.boughtDeckIds.Add(CosmeticCatalog.Decks.MithilaInk);
                 saves.Save(CosmeticsService.SaveKey, data);
             });
             var cosmetics = _game.Services.Resolve<ICosmeticsService>();
@@ -375,7 +372,7 @@ namespace Callbreak.Tests.PlayMode
             Press("PrimaryButton");
             yield return null;
 
-            Assert.AreEqual(CosmeticCatalog.Decks.HimalayanIvory, cosmetics.SelectedDeckId, "the deck for the next match");
+            Assert.AreEqual(CosmeticCatalog.Decks.MithilaInk, cosmetics.SelectedDeckId, "the deck for the next match");
             Assert.AreEqual(Text("ui.shop.status.equipped"), Deck(1).StatusLabel.text);
             Assert.IsFalse(Deck(0).ShowsStatus, "\"Equipped\" moved to the deck in use");
             Assert.IsFalse(View.PrimaryInteractable);

@@ -25,7 +25,7 @@ namespace Callbreak.Tests.EditMode.Application.Online
             RoomSeat seat = room.HostMember.Client.Seats[1];
             Assert.AreEqual("Asha", seat.Name);
             Assert.AreEqual(0, seat.AvatarId, "an avatar this build does not have is the default one");
-            Assert.AreEqual("classic-crimson", seat.DeckThemeId, "and so is a deck");
+            Assert.AreEqual("classic", seat.DeckThemeId, "and so is a deck");
         }
 
         [Test]
@@ -33,10 +33,10 @@ namespace Callbreak.Tests.EditMode.Application.Online
         {
             var room = new RoomFixture();
 
-            Say(room, new HelloMessage(Protocol.Version, "player-asha", "Asha", 4, "kathmandu-gold"));
+            Say(room, new HelloMessage(Protocol.Version, "player-asha", "Asha", 4, "kathmandu-royal"));
 
             Assert.AreEqual(4, room.HostMember.Client.Seats[1].AvatarId);
-            Assert.AreEqual("kathmandu-gold", room.HostMember.Client.Seats[1].DeckThemeId);
+            Assert.AreEqual("kathmandu-royal", room.HostMember.Client.Seats[1].DeckThemeId);
         }
 
         [Test]

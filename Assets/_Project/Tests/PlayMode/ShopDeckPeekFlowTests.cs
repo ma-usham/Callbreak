@@ -127,13 +127,16 @@ namespace Callbreak.Tests.PlayMode
             return tile.Face;
         }
 
-        /// <summary>The ace of spades, on its deck's base (ADR 053), drawn premultiplied (ADR 054).</summary>
+        /// <summary>
+        /// The deck's own ace of spades, a whole card (ADR 068): no base shows under it, and it draws
+        /// with the default UI material.
+        /// </summary>
         private bool ShowsFace(int deck)
         {
             Image under = Screen.Decks.Tile(deck).Base;
             return Picture(deck).sprite == Sprites().Face(DeckId(deck), new Card(Suit.Spades, Rank.Ace))
-                && under != null && under.enabled && under.sprite == Sprites().Base(DeckId(deck))
-                && Picture(deck).material.shader.name == "Callbreak/UI/Premultiplied";
+                && (under == null || !under.enabled)
+                && Picture(deck).material == Picture(deck).defaultMaterial;
         }
 
         /// <summary>The back, with no base showing under it, drawn with the default UI material.</summary>

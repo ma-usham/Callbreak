@@ -32,7 +32,7 @@ namespace Callbreak.Editor.Screens
             Bidding,
         }
 
-        public const string Deck = "classic-crimson";
+        public const string Deck = Callbreak.Application.Cosmetics.CosmeticCatalog.Decks.Default;
 
         /// <summary>The avatar presets the project scope hands to the table (built with the scenes).</summary>
         public const string AvatarLibraryPath = "Assets/_Project/Config/UI/AvatarLibrary.asset";

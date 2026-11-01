@@ -35,7 +35,7 @@ namespace Callbreak.Tests.PlayMode
     public sealed class MenuStateTests
     {
         private const float TurnTimeout = 40f;
-        private const string PremultipliedShader = "Callbreak/UI/Premultiplied";
+        private const string DefaultShader = "UI/Default";
 
         private GameFixture _game;
 
@@ -305,7 +305,7 @@ namespace Callbreak.Tests.PlayMode
             UIScreen menu = MainMenu();
             Assert.GreaterOrEqual(cosmetics.DeckIds.Count, 3, "three decks to choose from");
 
-            // Every deck but the first costs coins since 6 Oct 2026 (500 and 750): buy them all.
+            // Every deck but the first costs coins since 6 Oct 2026 (500 and 750, ADR 068): buy them all.
             _game.Services.Resolve<IWallet>().Add(750);
             var shop = _game.Services.Resolve<ICosmeticsShop>();
             foreach (string deck in cosmetics.DeckIds)
@@ -321,10 +321,10 @@ namespace Callbreak.Tests.PlayMode
                     Sprite ace = cards.Face(deck, new Card((Suit)suit, Rank.Ace));
                     Assert.IsNotNull(ace, deck + " has its ace of " + (Suit)suit);
                     Assert.IsTrue(Shows(menu, ace), "GDD 13: the fan shows the " + deck + " ace of " + (Suit)suit);
-                    Assert.IsTrue(Shows(menu, ace, PremultipliedShader), "ADR 054: the shared ace of " + (Suit)suit + " draws premultiplied");
+                    Assert.IsTrue(Shows(menu, ace, DefaultShader), "ADR 068: the " + deck + " ace of " + (Suit)suit + " is a whole card, drawn as any picture");
                 }
 
-                Assert.IsTrue(Shows(menu, cards.Base(deck)), "ADR 053: the aces lie on the " + deck + " base");
+                Assert.IsNull(cards.Base(deck), "ADR 068: no base under the " + deck + " aces");
             }
         }
 
@@ -425,10 +425,10 @@ namespace Callbreak.Tests.PlayMode
             {
                 var seats = new List<RoomSeat>
                 {
-                    new RoomSeat(0, true, "Hari", 1, CosmeticsService.ClassicCrimson, false, true, false, true),
-                    new RoomSeat(1, true, "Asha", 2, CosmeticsService.ClassicCrimson, false, true, true, false),
-                    new RoomSeat(2, true, "Bikash", 3, CosmeticsService.ClassicCrimson, false, true, true, false),
-                    new RoomSeat(3, true, "Suman", 4, CosmeticsService.ClassicCrimson, false, true, true, false),
+                    new RoomSeat(0, true, "Hari", 1, CosmeticsService.Classic, false, true, false, true),
+                    new RoomSeat(1, true, "Asha", 2, CosmeticsService.Classic, false, true, true, false),
+                    new RoomSeat(2, true, "Bikash", 3, CosmeticsService.Classic, false, true, true, false),
+                    new RoomSeat(3, true, "Suman", 4, CosmeticsService.Classic, false, true, true, false),
                 };
                 progress?.Report(new MatchmakingProgress(seats, 2.0, false));
                 var search = new TaskCompletionSource<MatchmakingResult>();

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using Callbreak.Application.Cosmetics;
 using Callbreak.Core.Cards;
 using Callbreak.Presentation.Feedback;
 using Callbreak.Presentation.Table;
@@ -19,22 +20,33 @@ namespace Callbreak.Tests.EditMode.Unity
     /// and their fans, the bottom one is above the hand with a card lifted, and none is under the turn
     /// prompt. The hand keeps its gentle arc (ADR 021), centred under the trick and clear of the local
     /// seat and the emote button. Its cards are a fifth of the screen's height, their corner index still
-    /// readable (the owner, 30 Oct 2026: "way too big"). The prefab is the built one, so these live
-    /// outside the folders the dotnet harness compiles.
+    /// readable (the owner, 30 Oct 2026: "way too big"), in every deck of the shop (Figma's 512 × 712
+    /// decks since ADR 068). The prefab is the built one, so these live outside the folders the dotnet
+    /// harness compiles.
     /// </summary>
     public sealed class TrickFitTests
     {
         private const string TablePrefab = "Assets/_Project/Prefabs/UI/Screens/Table.prefab";
         private const string CardLibrary = "Assets/_Project/Config/Cards/CardSprites.asset";
-        private const string Deck = "classic-crimson";
-        private const string FacesFolder = "Assets/_Project/Art/Cards/Faces";
+        private const string Deck = CosmeticCatalog.Decks.Default;
 
-        /// <summary>A face's corner index lies in these columns of its texture, left of a court card's frame.</summary>
-        private const int IndexLeft = 12;
-        private const int IndexRight = 64;
+        /// <summary>
+        /// A face's corner index lies in these columns of its texture (278 px wide), inside the frame
+        /// lines and left of a court card's frame, below its top frame lines.
+        /// </summary>
+        private const int IndexLeft = 8;
+        private const int IndexRight = 36;
+        private const int IndexTop = 8;
 
-        /// <summary>Canvas units the smallest rank (the 10's) stood at 28% of the screen's height, less a little.</summary>
-        private const float MinRank = 18f;
+        /// <summary>Ink is this much darker than the paper above the index (luminance, 0-255).</summary>
+        private const float InkContrast = 80f;
+
+        /// <summary>
+        /// Canvas units the smallest rank stands at the table, less a little: Figma's decks' 10s stand
+        /// 17.0 (Kathmandu Royal, Mithila Ink) to 17.6 (Classic) (ADR 068; the old art's stood 19.3,
+        /// with its index enlarged on 30 Oct 2026).
+        /// </summary>
+        private const float MinRank = 16.9f;
 
         /// <summary>Canvas units of cloth that show between a trick card and what is next to it.</summary>
         private const float Clear = 5f;
@@ -166,19 +178,24 @@ namespace Callbreak.Tests.EditMode.Unity
             Vector2 card = SizeOf(Find("HandLayer").GetComponentInChildren<CardView>(false));
             Assert.That(card.y / Box(_canvas.transform).height, Is.InRange(0.19f, 0.22f), "a card is a fifth of the screen's height");
 
-            // So the corner index grew in the art (ADR 062's addendum): every face's rank, the first ink
-            // from the top of its corner, stands MinRank canvas units or more at the table's size.
-            foreach (string path in Directory.GetFiles(FacesFolder, "Card_*.png"))
+            // Every face's rank, the first ink from the top of its corner, stands MinRank canvas units
+            // or more at the table's size, in every deck.
+            var sprites = AssetDatabase.LoadAssetAtPath<CardSpriteProvider>(CardLibrary);
+            foreach (CosmeticItem deck in CosmeticCatalog.Of(CosmeticKind.Deck))
             {
-                var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-                try
+                for (int id = 0; id < Card.Count; id++)
                 {
-                    Assert.IsTrue(texture.LoadImage(File.ReadAllBytes(path)), path);
-                    Assert.GreaterOrEqual(RankHeight(texture) * card.y / texture.height, MinRank, path + "'s rank reads at the table");
-                }
-                finally
-                {
-                    Object.DestroyImmediate(texture);
+                    string path = AssetDatabase.GetAssetPath(sprites.Face(deck.Id, Card.FromId(id)));
+                    var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                    try
+                    {
+                        Assert.IsTrue(texture.LoadImage(File.ReadAllBytes(path)), path);
+                        Assert.GreaterOrEqual(RankHeight(texture) * card.y / texture.height, MinRank, path + "'s rank reads at the table");
+                    }
+                    finally
+                    {
+                        Object.DestroyImmediate(texture);
+                    }
                 }
             }
         }
@@ -187,14 +204,16 @@ namespace Callbreak.Tests.EditMode.Unity
         private static int RankHeight(Texture2D face)
         {
             Color32[] pixels = face.GetPixels32();
+            float paper = PaperAbove(pixels, face);
             int first = -1;
-            for (int y = 0; y < face.height / 2; y++)
+            for (int y = IndexTop; y < face.height / 2; y++)
             {
                 int row = (face.height - 1 - y) * face.width;
                 bool ink = false;
                 for (int x = IndexLeft; x < IndexRight && !ink; x++)
                 {
-                    ink = pixels[row + x].a > 128;
+                    Color32 p = pixels[row + x];
+                    ink = p.a > 128 && Luminance(p) < paper - InkContrast;
                 }
 
                 if (ink && first < 0)
@@ -209,6 +228,24 @@ namespace Callbreak.Tests.EditMode.Unity
 
             return 0;
         }
+
+        /// <summary>The paper's luminance in the margin above a face's corner index (its median).</summary>
+        private static float PaperAbove(Color32[] pixels, Texture2D face)
+        {
+            var values = new List<float>();
+            for (int y = IndexTop; y < IndexTop + 12; y++)
+            {
+                for (int x = IndexLeft; x < IndexRight; x++)
+                {
+                    values.Add(Luminance(pixels[((face.height - 1 - y) * face.width) + x]));
+                }
+            }
+
+            values.Sort();
+            return values[values.Count / 2];
+        }
+
+        private static float Luminance(Color32 p) => (0.2126f * p.r) + (0.7152f * p.g) + (0.0722f * p.b);
 
         /// <summary>
         /// The table as a trick is won: four cards in the trick, a full fan at each opponent, the

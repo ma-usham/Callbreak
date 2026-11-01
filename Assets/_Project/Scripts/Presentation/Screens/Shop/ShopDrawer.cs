@@ -7,17 +7,15 @@ namespace Callbreak.Presentation.Screens
     /// <summary>
     /// The shop's right-hand drawer (mockups 15, 20 and 21; the owner, 5 Oct 2026; Figma "V1 Rebuild ·
     /// Shop", ADR 064): an ivory panel flush with the right edge, always open, with the Themes and Cards
-    /// buttons and, under them, No Ads, stacked in its middle, and no storefront disc of its own. The
-    /// active tab is a crimson disc with its label in crimson (each tab has both looks, smaller than
-    /// the mockups draw them). No Ads is the store's one-time purchase, not a tab: it shows while the
-    /// store sells it, as on the main menu.
+    /// buttons stacked in its middle, and no storefront disc of its own. The active tab is a crimson
+    /// disc with its label in crimson (each tab has both looks, smaller than the mockups draw them).
+    /// No Ads is bought on the main menu only (the owner, 2 Nov 2026; ADR 068).
     /// </summary>
     public sealed class ShopDrawer : MonoBehaviour
     {
         [SerializeField] private Button[] _categoryButton;
         [SerializeField] private GameObject[] _activeLook;
         [SerializeField] private GameObject[] _inactiveLook;
-        [SerializeField] private Button _noAdsButton;
 
         // The panel art and its shadow, pinned to the rail's left edge, and their widths as built:
         // they grow by the safe area's right inset, so the drawer reaches the screen's edge (ADR 064).
@@ -34,22 +32,8 @@ namespace Callbreak.Presentation.Screens
         /// <summary>A tab was tapped: 0 Themes, 1 Cards.</summary>
         public event Action<int> CategoryClicked;
 
-        /// <summary>No Ads was tapped.</summary>
-        public event Action NoAdsClicked;
-
         /// <summary>The tab that shows as active: 0 Themes, 1 Cards.</summary>
         public int Active { get; private set; }
-
-        public Button NoAdsButton => _noAdsButton;
-
-        /// <summary>No Ads shows while the store sells it (and while its purchase is under way).</summary>
-        public void SetNoAdsVisible(bool visible)
-        {
-            if (_noAdsButton != null)
-            {
-                SetActiveObject(_noAdsButton.gameObject, visible);
-            }
-        }
 
         /// <summary>Lights the category that shows: its disc and its label crimson.</summary>
         public void SetActive(int category)
@@ -70,11 +54,6 @@ namespace Callbreak.Presentation.Screens
                 int category = i;
                 _categoryButton[i].onClick.AddListener(() => OnCategory(category));
             }
-
-            if (_noAdsButton != null)
-            {
-                _noAdsButton.onClick.AddListener(OnNoAds);
-            }
         }
 
         private void OnDisable()
@@ -82,11 +61,6 @@ namespace Callbreak.Presentation.Screens
             foreach (Button button in _categoryButton)
             {
                 button.onClick.RemoveAllListeners();
-            }
-
-            if (_noAdsButton != null)
-            {
-                _noAdsButton.onClick.RemoveListener(OnNoAds);
             }
         }
 
@@ -136,8 +110,6 @@ namespace Callbreak.Presentation.Screens
         }
 
         private void OnCategory(int category) => CategoryClicked?.Invoke(category);
-
-        private void OnNoAds() => NoAdsClicked?.Invoke();
 
         private static void SetActiveObject(GameObject target, bool active)
         {

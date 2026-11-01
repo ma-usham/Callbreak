@@ -6,16 +6,16 @@ namespace Callbreak.Presentation.Feedback
 {
     /// <summary>
     /// The card art of every deck (GDD §13, §23 "CardSpriteProvider resolves faces from your deck's
-    /// atlas and each seat's back by its DeckThemeId"): 52 faces indexed by <see cref="Card.Id"/>, a
-    /// base and a back per deck. The faces are shared by every deck and see-through around the card's
-    /// marks; a deck's base (its border and paper) is drawn under them, so a deck is one base and one
-    /// back rather than 53 pictures (ADR 053). The asset is filled by the editor builder
-    /// (Callbreak/Build/Table Card Assets), so nothing is looked up by name at runtime.
+    /// atlas and each seat's back by its DeckThemeId"): per deck, 52 faces indexed by
+    /// <see cref="Card.Id"/>, a back, and a base drawn under faces that are see-through around the
+    /// card's marks (ADR 053). Since ADR 068 every deck has its own faces, each a whole card, and no
+    /// base. The asset is filled by the editor builder (Callbreak/Build/Table Card Assets), so nothing
+    /// is looked up by name at runtime.
     /// </summary>
     [CreateAssetMenu(menuName = "Callbreak/Card Sprite Provider", fileName = "CardSprites")]
     public sealed class CardSpriteProvider : ScriptableObject
     {
-        /// <summary>One deck: its stable id ("classic-crimson"), its back, its base and its 52 faces.</summary>
+        /// <summary>One deck: its stable id ("classic"), its back, its base and its 52 faces.</summary>
         [Serializable]
         public sealed class DeckSprites
         {
@@ -72,7 +72,7 @@ namespace Callbreak.Presentation.Feedback
         }
 
         [SerializeField] private DeckSprites[] _decks = Array.Empty<DeckSprites>();
-        [SerializeField] private string _defaultDeckId = "classic-crimson";
+        [SerializeField] private string _defaultDeckId = "classic";
 
         public int DeckCount => _decks.Length;
 

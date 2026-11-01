@@ -11,31 +11,50 @@ namespace Callbreak.Application.Cosmetics
     /// remained in the game", the shop themes of Figma "V1 Rebuild · Themes" and "V1 Rebuild · Shop").
     /// The backgrounds and the cloths are listed too, as the parts of the themes, in the themes' order:
     /// the pictures are found by their ids, but they are never sold or equipped on their own. Ids are
-    /// stable strings: save files keep them and the art is found by them. A deck's id is its deck theme
-    /// id (card-designs/full-decks/manifest.json); a new theme's background and cloth carry the theme's
-    /// own id. The first deck and the first theme (Durbar Square on the Green Dhaka cloth) are owned
-    /// from the start (price 0); the rest cost coins: the decks 500 and 750 (the owner, 6 Oct 2026),
-    /// the themes their <see cref="Themes"/> prices. Names are localization keys: the decks keep
-    /// theirs, a theme's is <c>ui.shop.theme.&lt;id with underscores&gt;</c>, and its parts carry their
-    /// theme's. An id that has left the shop (Kathmandu Courtyard, Village Terrace and Vintage Home,
+    /// stable strings: save files keep them and the art is found by them (a deck's in Art/Cards, a new
+    /// theme's background and cloth carry the theme's own id). The first deck and the first theme
+    /// (Durbar Square on the Green Dhaka cloth) are owned from the start (price 0); the rest cost
+    /// coins: their <see cref="Decks"/> and <see cref="Themes"/> prices. Names are localization keys:
+    /// a deck's is <c>ui.deck.&lt;id with underscores&gt;</c>, a theme's
+    /// <c>ui.shop.theme.&lt;id with underscores&gt;</c>, and its parts carry their theme's. An id that has left the shop (Kathmandu Courtyard, Village Terrace and Vintage Home,
     /// 5 Oct 2026) is unknown from then on, and a save file that still names it falls back to the
     /// default. The tables became cloths, each in its table's place (<see cref="Tables.Renamed"/>),
-    /// and Durbar Square took the Himalayan Vista's (<see cref="Backgrounds.Renamed"/>).
+    /// Durbar Square took the Himalayan Vista's (<see cref="Backgrounds.Renamed"/>), and the Figma decks
+    /// the old decks' (<see cref="Decks.Renamed"/>).
     /// </summary>
     public static class CosmeticCatalog
     {
+        /// <summary>
+        /// The decks of Figma's "Card Decks" page the game ships (the owner, 2 Nov 2026; ADR 068), in
+        /// shop order, each in an old deck's place: Classic, everyone's, in Classic Crimson's; Mithila
+        /// Ink in Himalayan Ivory's and Kathmandu Royal in Kathmandu Gold's, at their prices (the owner,
+        /// 6 Oct 2026), kept here for the owner to change. Figma's fourth deck, Vintage (342:569), waits
+        /// to be downloaded only by those who buy it: its art alone would add about 16 MB to every
+        /// phone's download.
+        /// </summary>
         public static class Decks
         {
-            public const string ClassicCrimson = "classic-crimson";
-            public const string HimalayanIvory = "himalayan-ivory";
-            public const string KathmanduGold = "kathmandu-gold";
-            public const string Default = ClassicCrimson;
+            public const string Classic = "classic";
+            public const string MithilaInk = "mithila-ink";
+            public const string KathmanduRoyal = "kathmandu-royal";
+            public const string Default = Classic;
 
-            /// <summary>In coins (the owner, 6 Oct 2026).</summary>
-            public const int HimalayanIvoryPrice = 500;
+            /// <summary>In coins: Himalayan Ivory's (the owner, 6 Oct 2026).</summary>
+            public const int MithilaInkPrice = 500;
 
-            /// <summary>In coins (the owner, 6 Oct 2026).</summary>
-            public const int KathmanduGoldPrice = 750;
+            /// <summary>In coins: Kathmandu Gold's (the owner, 6 Oct 2026).</summary>
+            public const int KathmanduRoyalPrice = 750;
+
+            /// <summary>
+            /// The decks the shop gave and sold until 2 Nov 2026, each with the deck in its place: a
+            /// save file that names one owns and equips that deck instead (ADR 068).
+            /// </summary>
+            public static readonly IReadOnlyDictionary<string, string> Renamed = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>
+            {
+                ["classic-crimson"] = Classic,
+                ["himalayan-ivory"] = MithilaInk,
+                ["kathmandu-gold"] = KathmanduRoyal,
+            });
         }
 
         /// <summary>
@@ -129,9 +148,9 @@ namespace Callbreak.Application.Cosmetics
         }
 
         private static readonly ReadOnlyCollection<CosmeticItem> DeckItems = Items(
-            new CosmeticItem(CosmeticKind.Deck, Decks.ClassicCrimson, "ui.deck.classic_crimson", 0),
-            new CosmeticItem(CosmeticKind.Deck, Decks.HimalayanIvory, "ui.deck.himalayan_ivory", Decks.HimalayanIvoryPrice),
-            new CosmeticItem(CosmeticKind.Deck, Decks.KathmanduGold, "ui.deck.kathmandu_gold", Decks.KathmanduGoldPrice));
+            new CosmeticItem(CosmeticKind.Deck, Decks.Classic, "ui.deck.classic", 0),
+            new CosmeticItem(CosmeticKind.Deck, Decks.MithilaInk, "ui.deck.mithila_ink", Decks.MithilaInkPrice),
+            new CosmeticItem(CosmeticKind.Deck, Decks.KathmanduRoyal, "ui.deck.kathmandu_royal", Decks.KathmanduRoyalPrice));
 
         private static readonly ReadOnlyCollection<CosmeticItem> ThemeItems = Items(
             Theme(Themes.DurbarSquare, 0, Backgrounds.DurbarSquare, Tables.GreenDhaka),

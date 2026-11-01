@@ -573,8 +573,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
                 if (!saves.TryLoad(CosmeticsService.SaveKey, out CosmeticsData _))
                 {
                     var everyDeck = new CosmeticsData();
-                    everyDeck.boughtDeckIds.Add(CosmeticsService.HimalayanIvory);
-                    everyDeck.boughtDeckIds.Add(CosmeticsService.KathmanduGold);
+                    everyDeck.boughtDeckIds.Add(CosmeticsService.KathmanduRoyal);
+                    everyDeck.boughtDeckIds.Add(CosmeticsService.MithilaInk);
                     saves.Put(CosmeticsService.SaveKey, everyDeck);
                 }
 

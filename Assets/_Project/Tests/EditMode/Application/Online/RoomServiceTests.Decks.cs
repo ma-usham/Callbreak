@@ -24,17 +24,17 @@ namespace Callbreak.Tests.EditMode.Application.Online
         {
             Device host = NewDevice("Hari");
             Device guest = NewDevice("Asha");
-            host.Cosmetics.SelectDeck(CosmeticsService.KathmanduGold);
-            guest.Cosmetics.SelectDeck(CosmeticsService.HimalayanIvory);
+            host.Cosmetics.SelectDeck(CosmeticsService.KathmanduRoyal);
+            guest.Cosmetics.SelectDeck(CosmeticsService.MithilaInk);
             JoinRoom(host, guest);
 
             StartMatch(host, guest);
 
             IMatchSession guestTable = guest.Rooms.Current.Match;
-            AssertDrawnIn(host.Rooms.Current.Match, CosmeticsService.KathmanduGold, "the host's table");
-            AssertDrawnIn(guestTable, CosmeticsService.HimalayanIvory, "the guest's table");
-            Assert.AreEqual(CosmeticsService.KathmanduGold, guestTable.View.Seats[0].DeckThemeId, "the host's profile says what the host chose");
-            Assert.AreEqual(CosmeticsService.HimalayanIvory, guestTable.View.Seats[(int)guestTable.LocalSeat].DeckThemeId, "and the guest's what the guest chose");
+            AssertDrawnIn(host.Rooms.Current.Match, CosmeticsService.KathmanduRoyal, "the host's table");
+            AssertDrawnIn(guestTable, CosmeticsService.MithilaInk, "the guest's table");
+            Assert.AreEqual(CosmeticsService.KathmanduRoyal, guestTable.View.Seats[0].DeckThemeId, "the host's profile says what the host chose");
+            Assert.AreEqual(CosmeticsService.MithilaInk, guestTable.View.Seats[(int)guestTable.LocalSeat].DeckThemeId, "and the guest's what the guest chose");
             Assert.IsTrue(guestTable.Seats[2].IsBot && guestTable.Seats[3].IsBot, "two of those seats were filled with bots");
         }
 
@@ -43,8 +43,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
         {
             Device host = NewDevice("Hari");
             Device guest = NewDevice("Asha");
-            host.Cosmetics.SelectDeck(CosmeticsService.HimalayanIvory);
-            guest.Cosmetics.SelectDeck(CosmeticsService.KathmanduGold);
+            host.Cosmetics.SelectDeck(CosmeticsService.MithilaInk);
+            guest.Cosmetics.SelectDeck(CosmeticsService.KathmanduRoyal);
             JoinRoom(host, guest);
             StartMatch(host, guest);
             IMatchSession first = guest.Rooms.Current.Match;
@@ -55,8 +55,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
             StartMatch(host, guest);
 
             Assert.AreNotSame(first, guest.Rooms.Current.Match, "a second match");
-            AssertDrawnIn(host.Rooms.Current.Match, CosmeticsService.HimalayanIvory, "the host's second table");
-            AssertDrawnIn(guest.Rooms.Current.Match, CosmeticsService.KathmanduGold, "the guest's second table");
+            AssertDrawnIn(host.Rooms.Current.Match, CosmeticsService.MithilaInk, "the host's second table");
+            AssertDrawnIn(guest.Rooms.Current.Match, CosmeticsService.KathmanduRoyal, "the guest's second table");
         }
 
         [Test]
@@ -64,8 +64,8 @@ namespace Callbreak.Tests.EditMode.Application.Online
         {
             Device host = NewDevice("Hari");
             Device guest = NewDevice("Asha");
-            host.Cosmetics.SelectDeck(CosmeticsService.KathmanduGold);
-            guest.Cosmetics.SelectDeck(CosmeticsService.HimalayanIvory);
+            host.Cosmetics.SelectDeck(CosmeticsService.KathmanduRoyal);
+            guest.Cosmetics.SelectDeck(CosmeticsService.MithilaInk);
             JoinRoom(host, guest);
             StartMatch(host, guest);
             Play(host, guest, 20);
@@ -74,21 +74,21 @@ namespace Callbreak.Tests.EditMode.Application.Online
 
             // Back in the app, the player chooses another deck before going back to the match.
             Device back = NewDevice("Asha", guest.Saves);
-            Assert.AreEqual(CosmeticsService.HimalayanIvory, back.Cosmetics.SelectedDeckId, "the guest's own choice is still its own");
-            back.Cosmetics.SelectDeck(CosmeticsService.ClassicCrimson);
+            Assert.AreEqual(CosmeticsService.MithilaInk, back.Cosmetics.SelectedDeckId, "the guest's own choice is still its own");
+            back.Cosmetics.SelectDeck(CosmeticsService.Classic);
             Assert.IsTrue(back.Tickets.TryGet(out string code));
             Task<RoomResult> rejoining = back.Rooms.JoinRoomAsync(code, CancellationToken.None);
             Settle();
 
             Assert.IsTrue(rejoining.Result.Succeeded);
-            AssertDrawnIn(back.Rooms.Current.Match, CosmeticsService.ClassicCrimson, "the table the guest is back at");
-            AssertDrawnIn(host.Rooms.Current.Match, CosmeticsService.KathmanduGold, "the host's table");
+            AssertDrawnIn(back.Rooms.Current.Match, CosmeticsService.Classic, "the table the guest is back at");
+            AssertDrawnIn(host.Rooms.Current.Match, CosmeticsService.KathmanduRoyal, "the host's table");
         }
 
         [Test]
         public void QuickMatch_ThreePlayersOnThreeDecks_EachSeesItsOwn_AlsoAtTheNextHostAfterAHandOver()
         {
-            string[] decks = { CosmeticsService.KathmanduGold, CosmeticsService.HimalayanIvory, CosmeticsService.ClassicCrimson };
+            string[] decks = { CosmeticsService.KathmanduRoyal, CosmeticsService.MithilaInk, CosmeticsService.Classic };
             List<QuickPlayer> players = QuickTable(3, decks);
             for (int i = 0; i < players.Count; i++)
             {

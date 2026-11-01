@@ -72,8 +72,10 @@ namespace Callbreak.Editor.Screens
         private static readonly float[] TrickTurns = { 0f, -90f, 0f, 90f };
 
         // ---- Opponent fans, as the bidding mockup draws them since 2 Oct 2026 (ADR 026; measured on
-        // 07-bidding.png). Its card backs are 46 px long; at a real card's shape that is 29 wide.
-        private const float FanCardWidth = 29f;
+        // 07-bidding.png). Its card backs are 46 px long, at a real card's shape (29 wide at the old
+        // shape, 33 at Figma's 512 x 712 since ADR 068).
+        private const float FanCardLength = 46f;
+        private const float FanCardWidth = FanCardLength * TableCardBuilder.CardWidth / TableCardBuilder.CardHeight;
 
         // A side seat's fan turns about a point behind the profile (from the avatar's centre: away
         // from the table, and down): 13 cards 5.35° apart, from 126° (the bottom card, in front)
