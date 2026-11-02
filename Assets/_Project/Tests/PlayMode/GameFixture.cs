@@ -25,7 +25,8 @@ namespace Callbreak.Tests.PlayMode
     /// temporary folder (so a run never touches the player's files), waits for the menu, and tears
     /// everything down again afterwards. Online play stays off the internet unless a test asks for it
     /// (<see cref="Boot"/>): no test starts Epic Online Services or signs in to Epic's servers. Nor
-    /// does a test get the Editor's drawn test banner (ADR 071) unless it asks for it.
+    /// does a test get the Editor's AdMob test ads or its festival offers from Remote Config (ADR 073)
+    /// unless it asks for them.
     /// </summary>
     public sealed class GameFixture
     {
@@ -73,12 +74,12 @@ namespace Callbreak.Tests.PlayMode
         /// off: a scope above the game's brings a room transport that never connects, so rooms answer
         /// "Couldn't connect" and Quick Match plays at a table of the device's own, with bots.
         /// </param>
-        /// <param name="editorTestBanner">
-        /// True shows the Editor's drawn test banner as a game played in the Editor does (ADR 071);
-        /// false (the default) boots without it, whatever its switch says, so the table and the main
-        /// menu make no room for a banner.
+        /// <param name="editorPhoneServices">
+        /// True boots with the Editor's AdMob test ads and festival offers, as a game played in the
+        /// Editor does (ADR 073); false (the default) boots with the stand-ins, whatever their switches
+        /// say, so no ad network or Remote Config is touched.
         /// </param>
-        public IEnumerator Boot(bool freshInstall = false, Action<ISaveStore> seed = null, Action<IContainerBuilder> extra = null, bool liveOnline = false, bool editorTestBanner = false)
+        public IEnumerator Boot(bool freshInstall = false, Action<ISaveStore> seed = null, Action<IContainerBuilder> extra = null, bool liveOnline = false, bool editorPhoneServices = false)
         {
             _saveFolder = Path.Combine(UnityEngine.Application.temporaryCachePath, "callbreak-playmode-" + Guid.NewGuid().ToString("N"));
             var saves = new JsonSaveStore(_saveFolder);
@@ -104,11 +105,11 @@ namespace Callbreak.Tests.PlayMode
             // leaves EOS off (ProjectLifetimeScope.RegisterRoomTransport).
             IDisposable parent = _online != null ? LifetimeScope.EnqueueParent(_online) : (IDisposable)null;
 
-            // The project scope reads the switch as it builds, inside the Boot scene's load.
+            // The project scope reads the switches as it builds, inside the Boot scene's load.
 #if UNITY_EDITOR
-            IDisposable banner = EditorTestBanner.While(editorTestBanner);
+            IDisposable phone = EditorPhoneServices.While(editorPhoneServices);
 #else
-            IDisposable banner = null;
+            IDisposable phone = null;
 #endif
             try
             {
@@ -126,7 +127,7 @@ namespace Callbreak.Tests.PlayMode
             }
             finally
             {
-                banner?.Dispose();
+                phone?.Dispose();
                 parent?.Dispose();
             }
 

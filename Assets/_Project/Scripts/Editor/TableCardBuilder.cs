@@ -42,6 +42,13 @@ namespace Callbreak.Editor
 
         public const float CardWidth = CardHeight * 512f / 712f;
 
+        /// <summary>
+        /// The see-through texels round every card picture (cut_decks.py's EDGE; ADR 073): a card turned
+        /// on the table has its straight edges smoothed by the texture's filtering, where an edge that is
+        /// the picture's own edge is drawn in steps. The card's layers reach that far past the card.
+        /// </summary>
+        public const int ArtEdge = 2;
+
         // Glow, in card-texture pixels: a solid rim at the edge, then a halo that fades out.
         // Measured on mockup 08's A♥: a 2.5 px rim and about 7 px of halo at hand size (× 228 / 156.75),
         // on a back 358 px tall; GlowTexels scales them to the back's own height.
@@ -429,7 +436,8 @@ namespace Callbreak.Editor
         /// <summary>
         /// Card.prefab: shadow, glow, the deck's base, the face and the subdued overlay under one
         /// root the size of a hand card. The face shows a back until a card is assigned; the base
-        /// shows only under a face (ADR 053).
+        /// shows only under a face (ADR 053). The pictures reach <see cref="ArtEdge"/> texels past the
+        /// card, their see-through frame (ADR 073).
         /// </summary>
         public static void BuildCardPrefab(CardSpriteProvider library)
         {
@@ -453,18 +461,23 @@ namespace Callbreak.Editor
                 shadowImage.type = Image.Type.Sliced;
                 shadowImage.pixelsPerUnitMultiplier = ShadowSliceScale;
 
-                // The glow reaches its margin past the back it was drawn from (BuildEffects), in that back's texels.
-                int backHeight = back != null ? (int)back.rect.height : (int)GlowTexelHeight;
-                float margin = GlowMarginOf(backHeight) * CardHeight / backHeight;
-                Image glowImage = Layer(rect, "Glow", glow, new Vector2(-margin, -margin), new Vector2(margin, margin));
+                // A texel of the card's pictures on the canvas (the card itself, without its see-through
+                // frame, fills the root). The glow reaches its margin past the back it was drawn from
+                // (BuildEffects), in that back's texels.
+                int backWidth = back != null ? (int)back.rect.width : 278 + (2 * ArtEdge);
+                int backHeight = back != null ? (int)back.rect.height : 386 + (2 * ArtEdge);
+                var texel = new Vector2(CardWidth / (backWidth - (2 * ArtEdge)), CardHeight / (backHeight - (2 * ArtEdge)));
+                Vector2 edge = ArtEdge * texel;
+                Vector2 margin = (GlowMarginOf(backHeight) + ArtEdge) * texel;
+                Image glowImage = Layer(rect, "Glow", glow, -margin, margin);
                 glowImage.enabled = false;
 
-                Image cardBase = Layer(rect, "Base", null, Vector2.zero, Vector2.zero);
+                Image cardBase = Layer(rect, "Base", null, -edge, edge);
                 cardBase.enabled = false;
 
-                Image face = Layer(rect, "Face", back, Vector2.zero, Vector2.zero);
+                Image face = Layer(rect, "Face", back, -edge, edge);
 
-                Image dim = Layer(rect, "Dim", silhouette, Vector2.zero, Vector2.zero);
+                Image dim = Layer(rect, "Dim", silhouette, -edge, edge);
                 Color dimColour = UiBuildKit.Hex(DimColour);
                 dimColour.a = DimOpacity;
                 dim.color = dimColour;

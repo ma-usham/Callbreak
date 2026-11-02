@@ -13,14 +13,20 @@ namespace Callbreak.Tests.EditMode.Unity
     /// The decks of Figma's "Card Decks" page (ADR 068): every deck the shop sells has its own 52 faces
     /// and its back in the card library, each a whole card in the shape of Figma's 512 × 712 card at
     /// the old 386 px height (cut_decks.py), so no deck has a base and no two decks share a face. The
-    /// cards are opaque but for their rounded corners and their edge's soft line, and import as ADR 048 keeps card art:
-    /// uncompressed, with mip maps, filtered for lying flat, their see-through corners dilated.
+    /// cards are opaque but for their rounded corners and their edge's soft line, inside a see-through
+    /// frame (ADR 073: a turned card's straight edges are then smoothed by the texture's filtering), and
+    /// import as ADR 048 keeps card art: uncompressed, with mip maps, filtered for lying flat, their
+    /// see-through corners dilated.
     /// </summary>
     public sealed class DeckCardArtTests
     {
         private const string Library = "Assets/_Project/Config/Cards/CardSprites.asset";
-        private const int Width = 278;
-        private const int Height = 386;
+
+        /// <summary>The see-through texels round each card (cut_decks.py's EDGE).</summary>
+        private const int Frame = 2;
+
+        private const int Width = 278 + (2 * Frame);
+        private const int Height = 386 + (2 * Frame);
 
         // Opaque enough that no cloth shows through (the Vintage pack's paper is 253-255).
         private const byte Opaque = 250;
@@ -53,7 +59,7 @@ namespace Callbreak.Tests.EditMode.Unity
         }
 
         [Test]
-        public void EveryCard_IsWhole_InFigmasShape_SeeThroughOnlyAtItsCorners()
+        public void EveryCard_IsWhole_InFigmasShape_SeeThroughOnlyAtItsCornersAndFrame()
         {
             var library = AssetDatabase.LoadAssetAtPath<CardSpriteProvider>(Library);
             var off = new List<string>();
@@ -67,14 +73,22 @@ namespace Callbreak.Tests.EditMode.Unity
                     continue;
                 }
 
-                // The corners are rounded away; the card's middle and its sides, a few pixels in from the
-                // edge's soft line (Vintage's cards are a pixel inside theirs), are paper or ink.
-                byte corner = pixels[0].a;
-                byte middle = pixels[(h / 2 * w) + (w / 2)].a;
-                byte edge = pixels[(h / 2 * w) + EdgeIn].a;
-                if (corner != 0 || middle < Opaque || edge < Opaque)
+                // The frame round the card is see-through on every side; the corners are rounded away; the
+                // card's middle and its sides, a few pixels in from the edge's soft line (Vintage's cards
+                // are a pixel inside theirs), are paper or ink. (Rows count from the bottom.)
+                int frame = 0;
+                for (int i = 0; i < Frame; i++)
                 {
-                    off.Add($"{path}: corner alpha {corner}, middle {middle}, edge {edge}");
+                    frame = Mathf.Max(frame, pixels[(h / 2 * w) + i].a, pixels[(h / 2 * w) + (w - 1 - i)].a);
+                    frame = Mathf.Max(frame, pixels[(i * w) + (w / 2)].a, pixels[((h - 1 - i) * w) + (w / 2)].a);
+                }
+
+                byte corner = pixels[(Frame * w) + Frame].a;
+                byte middle = pixels[(h / 2 * w) + (w / 2)].a;
+                byte edge = pixels[(h / 2 * w) + Frame + EdgeIn].a;
+                if (frame != 0 || corner != 0 || middle < Opaque || edge < Opaque)
+                {
+                    off.Add($"{path}: frame alpha {frame}, corner {corner}, middle {middle}, edge {edge}");
                 }
             }
 

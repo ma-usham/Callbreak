@@ -9,8 +9,8 @@ namespace Callbreak.Application.Economy
     /// whether one may come (<see cref="MayShow"/>) to make room for it, says where the banner may go
     /// (<see cref="ShowIn"/>) and when it must not be seen (<see cref="Hide"/>); the banner is a view of
     /// the ad network's own, drawn over the game, so it is hidden whenever anything covers the bare
-    /// table. On phones it is Google AdMob (<see cref="BannerAds"/> over the AdMob adapter); in the
-    /// Editor the same rule over a drawn test banner (ADR 071); in the tests and on desktop
+    /// table. On phones it is Google AdMob (<see cref="BannerAds"/> over the AdMob adapter), and in the
+    /// Editor too, with Google's test ads (ADR 073); in the tests and on desktop
     /// <see cref="StandInBannerAds"/>, which never has one.
     /// Every call comes on the main thread.
     /// </summary>

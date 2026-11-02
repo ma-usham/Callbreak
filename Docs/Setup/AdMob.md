@@ -7,11 +7,11 @@ during a match and on the main menu (below, "The banner on the table", "The bann
 menu"). They come through the
 Google Mobile Ads Unity plugin (`com.google.ads.mobile` 11.5.0, from OpenUPM) and the External
 Dependency Manager it brings (`com.google.external-dependency-manager` 1.2.187, EDM4U). In the
-Editor, in the tests and in desktop builds stand-ins take their place: one completes every Earn
-Coins ad (`StandInRewardedAds`) and another never has an ad between matches
-(`StandInInterstitialAds`). The banners are never there (`StandInBannerAds`), unless the Editor's
-test banner is switched on (below, "Seeing the banner in the Editor"). No ad network is touched
-there.
+Editor the game uses AdMob too, with Google's test units, whose ads the plugin draws as its own
+placeholders (below, "Google's test ads in the Editor"). In the tests and in desktop builds stand-ins
+take their place: one completes every Earn Coins ad (`StandInRewardedAds`), another never has an ad
+between matches (`StandInInterstitialAds`), and the banners are never there (`StandInBannerAds`). No
+ad network is touched there.
 
 ## Identifiers (not secret: they ship inside the app)
 
@@ -176,29 +176,25 @@ main menu the same **320 x 50 banner**, of the same ad unit, sits in the **botto
   - `BannerSlot` sits a banner on its bottom edge for the menu (`AtBottom`);
   - tests: `BannerAdsTests` and `MenuBannerRoomTests` (EditMode), `MenuBannerFlowTests` (PlayMode).
 
-## Seeing the banner in the Editor
+## Google's test ads in the Editor
 
-ADR 071 (the owner, 2 Nov 2026). A game played in the Editor can show a drawn **test banner** where a
-phone shows AdMob's: a white 320 x 50 card with a dark "Test Ad" tag. The table and the main menu make
-room for it, and it goes off the screen under every page, exactly as on a phone without No Ads. It is
-**off by default**: the owner checks the banner on Android ("remove the editor test banner ads from
-both game play and mainmenu i will check that on android").
+ADR 073 (the owner, 2 Nov 2026), in place of ADR 071's drawn banner. A game played in the Editor uses
+AdMob exactly as a development build does, with Google's test units. The plugin's Editor client draws
+its own **placeholder ads**: the banner on the table and the main menu, the ad between matches, Earn
+Coins' rewarded ad and the app open ad, after its placeholder consent form. Release builds are
+unchanged: they use the real units.
 
-- **Its size is a phone's.** In the **Device Simulator** (the Game view's "Game" menu > Simulator; pick
-  a phone and turn it to landscape), it takes the phone's density, and the simulator shows the notch
-  and the safe area. In the plain Game view it takes a common phone's scale for the view's height:
-  840 x 131 pixels in a 1920 x 1080 view.
-- **Turning it on:** **Callbreak > Ads > Test Banner in Play Mode** (ticked = on). It counts from the
-  next Play. Buying No Ads in the Editor takes the banner away too, until the Editor leaves Play mode.
-- **Not in the tests:** the PlayMode tests boot without it (`GameFixture.Boot`'s `editorTestBanner`),
-  so the switch never changes what a test sees.
-- **A real AdMob banner** still needs a phone: a **Development Build** (Build Profiles > Android >
-  Development Build, then Build And Run with the phone on USB debugging) shows Google's test banner,
-  which is safe to tap. Never tap the real banner of a release build.
-- Code: `Infrastructure/Platform/EditorTestBanner.cs` (the switch), `EditorTestBannerAdNetwork.cs`
-  and `EditorTestBannerView.cs`; the menu `Editor/EditorTestBannerMenu.cs`; registered in
-  `ProjectLifetimeScope.RegisterAds`. Tests: `EditorTestBannerTests` (EditMode),
-  `EditorTestBannerFlowTests` (PlayMode).
+- **Turning it off:** **Callbreak > Editor Play > AdMob Test Ads** (ticked = on, the default). It
+  counts from the next Play; off, the Editor uses the stand-ins.
+- **A phone's shape:** the **Device Simulator** (the Game view's "Game" menu > Simulator; pick a phone
+  and turn it to landscape) shows the notch and the safe area.
+- **Not in the tests:** the PlayMode tests boot with the stand-ins (`GameFixture.Boot`'s
+  `editorPhoneServices`), so the switch never changes what a test sees.
+- **A real AdMob ad** still needs a phone: a **Development Build** (Build Profiles > Android >
+  Development Build, then Build And Run with the phone on USB debugging) shows Google's test ads,
+  which are safe to tap. Never tap the real ads of a release build.
+- Code: the switch `Infrastructure/Platform/EditorPhoneServices.cs`, the menu
+  `Editor/EditorPhoneServicesMenu.cs`, `ProjectLifetimeScope.RegisterAds`.
 
 ## How the app asks for consent
 

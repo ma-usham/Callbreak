@@ -9,10 +9,13 @@ screenshots have no alpha and it is recovered from the two:
                                      from the ace down to the two, then the back alone in the fifth row
 Every deck has its own faces (its paper, frame lines, indices, pips and courts all differ), so each card is
 written whole, as the Figma card is, at the game's size: scaled down in premultiplied linear light and stored
-with straight alpha (only the rounded corners are see-through), each file keeping its .meta (GUID, import
-settings: uncompressed, mip maps, no atlas; ADR 048):
-  Art/Cards/<Deck>/Card_<Suit>_<Rank>.png   the 52 whole cards, 278 x 386
-  Art/Cards/<Deck>/Back_<Deck>.png          the back, 278 x 386
+with straight alpha (the rounded corners are see-through), each file keeping its .meta (GUID, import
+settings: uncompressed, mip maps, no atlas; ADR 048). Round the card, EDGE see-through pixels: a card turned on
+the table then has its straight edges smoothed by the texture's filtering, where an edge that is the picture's
+own edge is drawn in steps (the owner, 2 Nov 2026: "the card that are tilted has rough edges"; ADR 073). The
+table draws the picture that much larger, so the card keeps its size (TableCardBuilder.ArtEdge):
+  Art/Cards/<Deck>/Card_<Suit>_<Rank>.png   the 52 whole cards, 278 x 386 in a 282 x 390 picture
+  Art/Cards/<Deck>/Back_<Deck>.png          the back, the same
 The Figma sheets are the source; re-exporting is the four sheets shot again and this script.
 """
 import os
@@ -31,8 +34,10 @@ LATER = {"vintage": "Vintage"}
 SUITS = ["Spades", "Hearts", "Clubs", "Diamonds"]
 RANKS = ["A", "K", "Q", "J", "10", "9", "8", "7", "6", "5", "4", "3", "2"]
 CELL_W, CELL_H, GAP = 512, 712, 16
-# The game's card: the old 386 px height (ADR 048, 061), at Figma's 512 x 712 shape.
+# The game's card: the old 386 px height (ADR 048, 061), at Figma's 512 x 712 shape, and the see-through
+# pixels round it (ADR 073).
 SIZE = (278, 386)
+EDGE = 2
 
 
 def linear(s):
@@ -70,6 +75,11 @@ def to8(rgb, alpha):
     return pixels
 
 
+def framed(pixels):
+    """The card with EDGE see-through pixels round it."""
+    return np.pad(pixels, ((EDGE, EDGE), (EDGE, EDGE), (0, 0)))
+
+
 def save(path, pixels):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     Image.fromarray(pixels, "RGBA").save(path, optimize=True)
@@ -90,7 +100,7 @@ def main(sheets_dir, art_dir=CARDS, *later):
         colour, alpha = recover(os.path.join(sheets_dir, f"{key}_black.png"), os.path.join(sheets_dir, f"{key}_white.png"))
         for name, c, a in cells(colour, alpha):
             name = name or f"Back_{folder}"
-            save(os.path.join(art_dir, folder, name + ".png"), to8(*shrink(c, a, SIZE)))
+            save(os.path.join(art_dir, folder, name + ".png"), framed(to8(*shrink(c, a, SIZE))))
         print(f"{folder}: 52 cards and the back")
 
 

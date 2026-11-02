@@ -146,8 +146,9 @@ one listed shows first:
 
 ## Good to know
 
-- **Phones only.** The offers come to Android builds. The Editor and desktop builds have none, so
-  test on a phone, or with `FestivalOfferFlowTests` in the Editor.
+- **Android and the Editor.** The offers come to Android builds, and to a game played in the Editor
+  through Firebase's desktop SDK (ADR 073; **Callbreak > Editor Play > Festival Offers** turns that
+  off). Desktop builds and the tests have none; `FestivalOfferFlowTests` brings its own offers.
 - **The clock is a server's.** At start, and whenever the game comes back to the foreground, it asks
   Google's connectivity check (`https://www.gstatic.com/generate_204`) for the time, so a phone set
   to another date can't bring an ended offer back. The request sends nothing about the player.

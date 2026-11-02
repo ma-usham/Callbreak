@@ -170,12 +170,51 @@ namespace Callbreak.Bootstrap
         /// On phones the game is silent while any ad is up (the owner, 8 Oct 2026): Android keeps the
         /// game running under an ad. And the banner network for the banners on the table and the main menu
         /// (the owner, 14 and 27 Oct 2026): AdMob on phones, one ad unit for both (Google's test banners
-        /// in development builds); in the Editor a drawn test banner of a phone's size when its switch
-        /// is on (ADR 071); otherwise none, so the table and the menu make a stand-in that never has one.
+        /// in development builds); none elsewhere, so the table and the menu make a stand-in that never
+        /// has one. A game played in the Editor gets AdMob too, with Google's test units, whose ads the
+        /// plugin draws as its own placeholders (the owner, 2 Nov 2026; ADR 073), unless Callbreak >
+        /// Editor Play > AdMob Test Ads is off; the tests never do. Release builds are unchanged.
         /// </summary>
         private static void RegisterAds(IContainerBuilder builder)
         {
-#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
+#if UNITY_EDITOR
+            bool adMob = EditorPhoneServices.AdMobTestAds;
+#elif UNITY_ANDROID || UNITY_IOS
+            bool adMob = true;
+#else
+            bool adMob = false;
+#endif
+            if (adMob)
+            {
+                RegisterAdMob(builder);
+            }
+            else
+            {
+                RegisterStandInAds(builder);
+            }
+
+            // At most one full-screen ad every three minutes, between matches and on the return alike.
+            builder.Register<FullScreenAdPacing>(Lifetime.Singleton);
+
+            // When an ad shows between matches: leaving a finished match's results, at most one every
+            // three minutes, never after the first match or with No Ads (the owner, 5 Oct 2026).
+            builder.Register<IBetweenMatchAds>(
+                resolver => new BetweenMatchAds(
+                    resolver.Resolve<IInterstitialAds>(),
+                    resolver.Resolve<IStatsService>(),
+                    resolver.Resolve<INoAds>(),
+                    () => System.DateTime.UtcNow,
+                    Debug.Log,
+                    pacing: resolver.Resolve<FullScreenAdPacing>()),
+                Lifetime.Singleton);
+        }
+
+        /// <summary>
+        /// Google AdMob: the units of <see cref="AdMobIds"/>, Google's test units in the Editor and in
+        /// development builds (<see cref="Debug.isDebugBuild"/>), the owner's in release builds.
+        /// </summary>
+        private static void RegisterAdMob(IContainerBuilder builder)
+        {
             string adUnit = AdMobIds.RewardedAdUnit(UnityEngine.Application.platform == RuntimePlatform.IPhonePlayer, Debug.isDebugBuild);
             var privacy = new AdMobAdPrivacy();
 
@@ -220,7 +259,11 @@ namespace Callbreak.Bootstrap
             // own banner over this network (TableLifetimeScope, MenuLifetimeScope), and No Ads removes them.
             string bannerUnit = AdMobIds.BannerAdUnit(UnityEngine.Application.platform == RuntimePlatform.IPhonePlayer, Debug.isDebugBuild);
             builder.RegisterInstance<IBannerAdNetwork>(new AdMobBannerAdNetwork(bannerUnit, rewarded.StartAsync));
-#else
+        }
+
+        /// <summary>No ad network: every Earn Coins ad completes at once, and there are no other ads.</summary>
+        private static void RegisterStandInAds(IContainerBuilder builder)
+        {
             builder.Register<StandInRewardedAds>(Lifetime.Singleton).As<IRewardedAds>();
             builder.Register<StandInAdPrivacy>(Lifetime.Singleton).As<IAdPrivacy>();
             builder.Register<StandInInterstitialAds>(Lifetime.Singleton).As<IInterstitialAds>();
@@ -233,33 +276,6 @@ namespace Callbreak.Bootstrap
                     resolver.Resolve<FullScreenAdPacing>(),
                     () => System.DateTime.UtcNow,
                     Debug.Log),
-                Lifetime.Singleton);
-#if UNITY_EDITOR
-
-            // A game played in the Editor can show a drawn test banner where a phone shows AdMob's, so the
-            // table and the main menu look as on a phone (ADR 071). It is off unless Callbreak > Ads >
-            // Test Banner in Play Mode turns it on (the owner checks the banner on Android); the PlayMode
-            // tests boot without it unless they ask.
-            if (EditorTestBanner.On)
-            {
-                builder.RegisterInstance<IBannerAdNetwork>(new EditorTestBannerAdNetwork());
-            }
-#endif
-#endif
-
-            // At most one full-screen ad every three minutes, between matches and on the return alike.
-            builder.Register<FullScreenAdPacing>(Lifetime.Singleton);
-
-            // When an ad shows between matches: leaving a finished match's results, at most one every
-            // three minutes, never after the first match or with No Ads (the owner, 5 Oct 2026).
-            builder.Register<IBetweenMatchAds>(
-                resolver => new BetweenMatchAds(
-                    resolver.Resolve<IInterstitialAds>(),
-                    resolver.Resolve<IStatsService>(),
-                    resolver.Resolve<INoAds>(),
-                    () => System.DateTime.UtcNow,
-                    Debug.Log,
-                    pacing: resolver.Resolve<FullScreenAdPacing>()),
                 Lifetime.Singleton);
         }
 
@@ -334,25 +350,37 @@ namespace Callbreak.Bootstrap
 
         /// <summary>
         /// Festival offers (ADR 067). On Android, the offers from Firebase Remote Config, on a clock a
-        /// server keeps honest. In the Editor, in the tests and on desktop, no offers, on the device's
-        /// time; a test may bring its own source.
+        /// server keeps honest. A game played in the Editor gets them too, through Firebase's desktop
+        /// SDK (the owner, 2 Nov 2026: "also show offer gift panel in editor screen as well"; ADR 073),
+        /// unless Callbreak > Editor Play > Festival Offers is off. In the tests and on desktop, no
+        /// offers, on the device's time; a test may bring its own source.
         /// </summary>
         private static void RegisterFestivalOffers(IContainerBuilder builder)
         {
             builder.Register(resolver => new TrustedClock(resolver.Resolve<IClock>(), () => System.DateTime.UtcNow), Lifetime.Singleton)
                 .AsSelf()
                 .As<IWallClock>();
-#if !UNITY_EDITOR && UNITY_ANDROID
-            builder.Register<FirebaseFestivalOfferSource>(Lifetime.Singleton).As<IFestivalOfferSource>().AsSelf();
-            builder.Register<ServerTime>(Lifetime.Singleton);
-            builder.RegisterBuildCallback(resolver =>
-            {
-                resolver.Resolve<ServerTime>().Start();
-                resolver.Resolve<FirebaseFestivalOfferSource>().Initialize();
-            });
+#if UNITY_EDITOR
+            bool remote = EditorPhoneServices.FestivalOffers;
+#elif UNITY_ANDROID
+            bool remote = true;
 #else
-            builder.Register<NoFestivalOffers>(Lifetime.Singleton).As<IFestivalOfferSource>();
+            bool remote = false;
 #endif
+            if (remote)
+            {
+                builder.Register<FirebaseFestivalOfferSource>(Lifetime.Singleton).As<IFestivalOfferSource>().AsSelf();
+                builder.Register<ServerTime>(Lifetime.Singleton);
+                builder.RegisterBuildCallback(resolver =>
+                {
+                    resolver.Resolve<ServerTime>().Start();
+                    resolver.Resolve<FirebaseFestivalOfferSource>().Initialize();
+                });
+            }
+            else
+            {
+                builder.Register<NoFestivalOffers>(Lifetime.Singleton).As<IFestivalOfferSource>();
+            }
             builder.Register<IFestivalOffers>(
                 resolver =>
                 {

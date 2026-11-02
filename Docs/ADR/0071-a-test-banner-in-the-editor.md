@@ -1,6 +1,6 @@
 # ADR 071 - A test banner in the Editor
 
-**Status:** accepted (owner, 2 Nov 2026); off by default since the same day. The owner: "we have banner
+**Status:** superseded by ADR 073 (2 Nov 2026): the Editor uses AdMob's own test ads, and the drawn banner is gone. Accepted (owner, 2 Nov 2026); off by default since the same day. The owner: "we have banner
 ads right? how am i gonna test that how the game gonna look on mobile device?" Then, to the offer of a
 test banner in the Editor: "Yes, add it". After trying it: "remove the editor test banner ads from both
 game play and mainmenu i will check that on android" — so the switch below starts off.

@@ -31,13 +31,17 @@ namespace Callbreak.Tests.EditMode.Unity
         private const string CardLibrary = "Assets/_Project/Config/Cards/CardSprites.asset";
         private const string Deck = CosmeticCatalog.Decks.Default;
 
+        /// <summary>The see-through texels round every card picture (ADR 073), outside the card.</summary>
+        private const int Frame = 2;
+
         /// <summary>
-        /// A face's corner index lies in these columns of its texture (278 px wide), inside the frame
-        /// lines and left of a court card's frame, below its top frame lines.
+        /// A face's corner index lies in these columns of its texture (the card 278 px wide inside its
+        /// see-through frame), inside the frame lines and left of a court card's frame, below its top
+        /// frame lines.
         /// </summary>
-        private const int IndexLeft = 8;
-        private const int IndexRight = 36;
-        private const int IndexTop = 8;
+        private const int IndexLeft = Frame + 8;
+        private const int IndexRight = Frame + 36;
+        private const int IndexTop = Frame + 8;
 
         /// <summary>Ink is this much darker than the paper above the index (luminance, 0-255).</summary>
         private const float InkContrast = 80f;
@@ -279,7 +283,7 @@ namespace Callbreak.Tests.EditMode.Unity
                     try
                     {
                         Assert.IsTrue(texture.LoadImage(File.ReadAllBytes(path)), path);
-                        Assert.GreaterOrEqual(RankHeight(texture) * card.y / texture.height, MinRank, path + "'s rank reads at the table");
+                        Assert.GreaterOrEqual(RankHeight(texture) * card.y / (texture.height - (2 * Frame)), MinRank, path + "'s rank reads at the table");
                     }
                     finally
                     {
