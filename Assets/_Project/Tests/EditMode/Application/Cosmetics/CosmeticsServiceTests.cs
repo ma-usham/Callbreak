@@ -31,9 +31,9 @@ namespace Callbreak.Tests.EditMode.Application
         public void SelectDeck_SavesAndRaisesChanged_AndSurvivesARestart()
         {
             var wallet = new Wallet(_store);
-            wallet.Add(250);
+            wallet.Add(CosmeticCatalog.Decks.KathmanduRoyalPrice - WalletRules.StartingCoins);
             var cosmetics = new CosmeticsService(_store, wallet);
-            Assert.AreEqual(PurchaseResult.Bought, cosmetics.Buy(CosmeticKind.Deck, "kathmandu-royal"), "750 coins (Kathmandu Gold's, the owner, 6 Oct 2026)");
+            Assert.AreEqual(PurchaseResult.Bought, cosmetics.Buy(CosmeticKind.Deck, "kathmandu-royal"), "the deck's price (ADR 077)");
             int changed = 0;
             cosmetics.Changed += () => changed++;
 

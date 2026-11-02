@@ -68,9 +68,9 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(Text("ui.shop.theme.durbar_square"), durbar.Name.text);
             Assert.IsFalse(durbar.ShowsNew);
             Assert.IsTrue(Theme(Sunrise).ShowsPrice && Theme(Sunrise).ShowsNew, "a new theme for sale: its price and the NEW tag");
-            Assert.AreEqual("500", Theme(Sunrise).Price.text);
-            Assert.AreEqual("1,000", Theme(Tihar).Price.text);
-            Assert.AreNotEqual(Theme(Sunrise).Price.color, Theme(Tihar).Price.color, "the 500 starting coins can't pay 1,000: that price is red");
+            Assert.AreEqual(ShopDisplay.Price(CosmeticCatalog.Themes.HimalayanSunrisePrice), Theme(Sunrise).Price.text);
+            Assert.AreEqual(ShopDisplay.Price(CosmeticCatalog.Themes.TiharLightsPrice), Theme(Tihar).Price.text);
+            Assert.AreNotEqual(Theme(Sunrise).Price.color, Theme(Tihar).Price.color, "the starting coins can't pay a premium theme: that price is red");
             Assert.IsFalse(Theme(Pokhara).ShowsNew, "an older theme has no tag");
             Assert.AreEqual(View.ThemePicture(CosmeticCatalog.Themes.TiharLights), Theme(Tihar).Picture.sprite, "each tile shows its theme's picture");
             Assert.AreEqual("500", View.Coins, "the wallet");
@@ -200,7 +200,7 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(library.Cloth(CosmeticCatalog.Themes.TiharLights), View.Preview.Cloth, "the game half shows its cloth");
             Assert.AreEqual(library.Frame(CosmeticCatalog.Themes.TiharLights), View.Preview.ClothFrame, "with its border");
             Assert.AreEqual(ThemeAction.Buy, View.Preview.Action);
-            Assert.AreEqual("1,000", View.Preview.BuyPrice);
+            Assert.AreEqual(ShopDisplay.Price(CosmeticCatalog.Themes.TiharLightsPrice), View.Preview.BuyPrice);
 
             Assert.IsNull(FindOrNull("PreviousButton"), "no arrows (the owner, 31 Oct 2026)");
             Assert.IsNull(FindOrNull("NextButton"), "no arrows (the owner, 31 Oct 2026)");
@@ -227,13 +227,14 @@ namespace Callbreak.Tests.PlayMode
 
             PressTheme(Sunrise);
             Assert.AreEqual(ThemeAction.Buy, View.Preview.Action);
-            Assert.AreEqual("500", View.Preview.BuyPrice);
+            string price = ShopDisplay.Price(CosmeticCatalog.Themes.HimalayanSunrisePrice);
+            Assert.AreEqual(price, View.Preview.BuyPrice);
 
             // Cancelled first: nothing changes.
             Press("BuyButton");
             Assert.IsTrue(_game.Dialogs.IsOpen, "a confirmation");
             Assert.IsTrue(DialogShows(Format("ui.shop.buy.title", Text("ui.shop.theme.himalayan_sunrise"))), "it names the theme");
-            Assert.IsTrue(DialogShows(Format("ui.shop.theme.buy.body", "500", "500")), "both its halves and its price");
+            Assert.IsTrue(DialogShows(Format("ui.shop.theme.buy.body", price, ShopDisplay.Price(WalletRules.StartingCoins))), "both its halves and its price");
             _game.PressDialog(confirm: false);
             yield return null;
             Assert.IsFalse(shop.IsOwned(CosmeticKind.Theme, CosmeticCatalog.Themes.HimalayanSunrise));
@@ -243,7 +244,7 @@ namespace Callbreak.Tests.PlayMode
             _game.PressDialog(confirm: true);
             yield return null;
             Assert.IsTrue(shop.IsOwned(CosmeticKind.Theme, CosmeticCatalog.Themes.HimalayanSunrise), "bought");
-            Assert.AreEqual(0, wallet.Coins, "for 500 coins, the whole starting balance");
+            Assert.AreEqual(WalletRules.StartingCoins - CosmeticCatalog.Themes.HimalayanSunrisePrice, wallet.Coins, "a starter theme from the starting coins, some left (ADR 077)");
             Assert.AreEqual(CosmeticCatalog.Themes.DurbarSquare, shop.Equipped(CosmeticKind.Theme), "buying does not equip");
             Assert.AreEqual(ThemeAction.Equip, View.Preview.Action, "the button turns to Equip theme");
             Assert.IsTrue(ToastShows(Format("ui.shop.theme.bought", Text("ui.shop.theme.himalayan_sunrise"))), "a toast says it is the player's");
@@ -323,27 +324,27 @@ namespace Callbreak.Tests.PlayMode
         [UnityTest]
         public IEnumerator BuyingADeck_AfterTheConfirmation_OwnsIt_ThenUseEquipsIt()
         {
-            yield return OpenShop(saves => new Wallet(saves).Add(250));
+            yield return OpenShop(saves => new Wallet(saves).Add(CosmeticCatalog.Decks.KathmanduRoyalPrice - WalletRules.StartingCoins));
             var cosmetics = _game.Services.Resolve<ICosmeticsService>();
             var shop = _game.Services.Resolve<ICosmeticsShop>();
             var wallet = _game.Services.Resolve<IWallet>();
-            Assert.AreEqual(750, wallet.Coins);
+            Assert.AreEqual(CosmeticCatalog.Decks.KathmanduRoyalPrice, wallet.Coins);
 
             Press("CategoryButton1");
             Assert.AreEqual(Cards, View.Category);
             Assert.AreEqual(3, View.Decks.Count, "the three decks");
             Assert.IsTrue(Deck(0).IsChosen && Deck(0).RadioFilled, "mockup 15: Classic Crimson chosen, filled radio");
-            Assert.AreEqual("500", Deck(1).PriceLabel.text);
+            Assert.AreEqual(ShopDisplay.Price(CosmeticCatalog.Decks.MithilaInkPrice), Deck(1).PriceLabel.text);
             Press("Tile2");
-            Assert.IsTrue(View.ShowsBuy && View.PrimaryInteractable, "Buy for 750");
-            Assert.AreEqual("750", View.BuyPrice);
+            Assert.IsTrue(View.ShowsBuy && View.PrimaryInteractable, "Buy for its price");
+            Assert.AreEqual(ShopDisplay.Price(CosmeticCatalog.Decks.KathmanduRoyalPrice), View.BuyPrice);
             Press("PrimaryButton");
             Assert.IsTrue(DialogShows(Format("ui.shop.buy.title", Text("ui.deck.kathmandu_royal"))), "it names the deck");
             _game.PressDialog(confirm: true);
             yield return null;
 
             Assert.IsTrue(shop.IsOwned(CosmeticKind.Deck, CosmeticCatalog.Decks.KathmanduRoyal), "bought");
-            Assert.AreEqual(0, wallet.Coins, "for 750 coins");
+            Assert.AreEqual(0, wallet.Coins, "for its price");
             Assert.AreEqual(CosmeticCatalog.Decks.Classic, cosmetics.SelectedDeckId, "buying does not equip");
             Assert.IsFalse(Deck(2).ShowsPrice);
             Assert.IsFalse(View.ShowsBuy, "the button turns to Use Selected Style");

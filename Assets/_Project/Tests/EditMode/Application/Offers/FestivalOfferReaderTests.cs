@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Callbreak.Application.Cosmetics;
 using Callbreak.Application.Offers;
 using NUnit.Framework;
 
@@ -136,8 +137,8 @@ namespace Callbreak.Tests.EditMode.Application
 
         [TestCase(0)]
         [TestCase(-1)]
-        [TestCase(1000)]
-        [TestCase(1500)]
+        [TestCase(CosmeticCatalog.Themes.TiharLightsPrice)]
+        [TestCase(CosmeticCatalog.Themes.TiharLightsPrice + 500)]
         public void ADiscount_NotBelowTheShopsPrice_LeavesTheEntryOut(int price)
         {
             FestivalOfferEntry entry = Tihar();

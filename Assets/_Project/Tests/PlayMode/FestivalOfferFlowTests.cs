@@ -137,7 +137,7 @@ namespace Callbreak.Tests.PlayMode
 
             _utc = new DateTime(2026, 11, 16, 0, 0, 0, DateTimeKind.Utc);
             yield return GameFixture.Until(() => Preview.Action == ThemeAction.Buy, "the preview to turn back to the theme's price");
-            Assert.AreEqual("1,000", Preview.BuyPrice);
+            Assert.AreEqual(ShopDisplay.Price(CosmeticCatalog.Themes.TiharLightsPrice), Preview.BuyPrice);
             Assert.AreEqual(Text("ui.shop.theme.tihar_lights.about"), Preview.Description, "the theme's own words again");
 
             GameFixture.PressIn(View, "CloseButton");

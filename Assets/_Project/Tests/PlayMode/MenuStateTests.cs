@@ -305,8 +305,8 @@ namespace Callbreak.Tests.PlayMode
             UIScreen menu = MainMenu();
             Assert.GreaterOrEqual(cosmetics.DeckIds.Count, 3, "three decks to choose from");
 
-            // Every deck but the first costs coins since 6 Oct 2026 (500 and 750, ADR 068): buy them all.
-            _game.Services.Resolve<IWallet>().Add(750);
+            // Every deck but the first costs coins since 6 Oct 2026 (ADR 068, 077): buy them all.
+            _game.Services.Resolve<IWallet>().Add(CosmeticCatalog.Decks.MithilaInkPrice + CosmeticCatalog.Decks.KathmanduRoyalPrice);
             var shop = _game.Services.Resolve<ICosmeticsShop>();
             foreach (string deck in cosmetics.DeckIds)
             {

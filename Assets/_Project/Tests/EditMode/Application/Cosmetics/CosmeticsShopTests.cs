@@ -30,7 +30,7 @@ namespace Callbreak.Tests.EditMode.Application
         };
 
         // The placeholders of Figma's "V1 Rebuild · Shop" and, for the last two, the prices they had as backgrounds.
-        private static readonly int[] ThemePrices = { 0, 500, 500, 750, 1000, 750, 1000, 1000, 500, 750 };
+        private static readonly int[] ThemePrices = { 0, 400, 400, 900, 1500, 900, 1500, 1500, 400, 900 };
 
         private static readonly string[] Backgrounds =
         {
@@ -61,8 +61,19 @@ namespace Callbreak.Tests.EditMode.Application
         [Test]
         public void Catalogs_InShopOrder_WithTheirPrices()
         {
-            AssertCatalog(CosmeticKind.Deck, Decks, new[] { 0, 500, 750 });
+            AssertCatalog(CosmeticKind.Deck, Decks, new[] { 0, 600, 1000 });
             AssertCatalog(CosmeticKind.Theme, Themes, ThemePrices);
+        }
+
+        [Test]
+        public void TheStartingCoins_BuyOneStarterTheme_WithCoinsLeftForAStake_ButNotTwo()
+        {
+            // The owner, 3 Nov 2026: "with the default money the user can at least purchase one theme,
+            // then he has to earn money to purchase other themes" (ADR 077).
+            int[] paid = _shop.Catalog(CosmeticKind.Theme).Select(i => i.Price).Where(p => p > 0).OrderBy(p => p).ToArray();
+            Assert.LessOrEqual(paid[0], WalletRules.StartingCoins, "one theme on the first day");
+            Assert.GreaterOrEqual(WalletRules.StartingCoins - paid[0], 100, "with coins left for a stake match");
+            Assert.Greater(paid[0] + paid[1], WalletRules.StartingCoins, "but not a second theme");
         }
 
         [Test]
@@ -157,15 +168,16 @@ namespace Callbreak.Tests.EditMode.Application
             CosmeticItem theme = CosmeticCatalog.Find(CosmeticKind.Theme, id);
             Assert.Throws<InvalidOperationException>(() => _shop.Equip(CosmeticKind.Theme, id));
 
-            if (theme.Price > 500)
+            if (theme.Price > _wallet.Coins)
             {
-                _wallet.Add(theme.Price - 500);
+                _wallet.Add(theme.Price - _wallet.Coins);
             }
 
+            int before = _wallet.Coins;
             Assert.AreEqual(PurchaseResult.Bought, _shop.Buy(CosmeticKind.Theme, id));
             _shop.Equip(CosmeticKind.Theme, id);
 
-            Assert.AreEqual(0, _wallet.Coins, "the theme's price, once");
+            Assert.AreEqual(before - theme.Price, _wallet.Coins, "the theme's price, once");
             Assert.AreEqual(id, _shop.Equipped(CosmeticKind.Theme));
             Assert.AreEqual(theme.BackgroundId, _shop.Equipped(CosmeticKind.Background));
             Assert.AreEqual(theme.TableId, _shop.Equipped(CosmeticKind.Table));
@@ -201,7 +213,7 @@ namespace Callbreak.Tests.EditMode.Application
         [Test]
         public void ABackgroundAndItsCloth_AreOwned_WithTheirTheme()
         {
-            _wallet.Add(500);
+            _wallet.Add(CosmeticCatalog.Themes.TiharLightsPrice - WalletRules.StartingCoins);
             Assert.IsFalse(_shop.IsOwned(CosmeticKind.Background, "tihar-lights"));
             Assert.IsFalse(_shop.IsOwned(CosmeticKind.Table, "tihar-lights"));
 
@@ -230,7 +242,7 @@ namespace Callbreak.Tests.EditMode.Application
         {
             ICosmeticsService decks = _shop;
             ICosmeticsShop shop = _shop;
-            _wallet.Add(750);
+            _wallet.Add(CosmeticCatalog.Decks.KathmanduRoyalPrice + CosmeticCatalog.Decks.MithilaInkPrice - WalletRules.StartingCoins);
             shop.Buy(CosmeticKind.Deck, "kathmandu-royal");
             shop.Buy(CosmeticKind.Deck, "mithila-ink");
 
@@ -250,7 +262,7 @@ namespace Callbreak.Tests.EditMode.Application
 
             Assert.AreEqual(PurchaseResult.Bought, _shop.Buy(CosmeticKind.Theme, "himalayan-sunrise"));
 
-            Assert.AreEqual(0, _wallet.Coins, "the 500 starting coins buy the 500 theme");
+            Assert.AreEqual(WalletRules.StartingCoins - CosmeticCatalog.Themes.HimalayanSunrisePrice, _wallet.Coins, "the starting coins buy a starter theme, with coins to spare");
             Assert.IsTrue(_shop.IsOwned(CosmeticKind.Theme, "himalayan-sunrise"));
             Assert.AreEqual("durbar-square", _shop.Equipped(CosmeticKind.Theme), "buying never equips");
             Assert.AreEqual("green-dhaka", _shop.Equipped(CosmeticKind.Table));
@@ -273,25 +285,26 @@ namespace Callbreak.Tests.EditMode.Application
             _wallet.Add(500);
             Assert.AreEqual(PurchaseResult.Bought, _shop.Buy(CosmeticKind.Theme, "golden-terraces"));
             Assert.AreEqual(PurchaseResult.AlreadyOwned, _shop.Buy(CosmeticKind.Theme, "golden-terraces"));
-            Assert.AreEqual(250, _wallet.Coins, "paid once");
+            Assert.AreEqual(1000 - CosmeticCatalog.Themes.GoldenTerracesPrice, _wallet.Coins, "paid once");
         }
 
         [Test]
         public void Buy_WithoutEnoughCoins_TakesNothing_AndOwnsNothing()
         {
-            _wallet.Add(499);
+            int oneShort = CosmeticCatalog.Themes.TiharLightsPrice - 1;
+            _wallet.Add(oneShort - WalletRules.StartingCoins);
             int changed = 0;
             _shop.Changed += () => changed++;
 
             Assert.AreEqual(PurchaseResult.NotEnoughCoins, _shop.Buy(CosmeticKind.Theme, "tihar-lights"));
 
-            Assert.AreEqual(999, _wallet.Coins);
+            Assert.AreEqual(oneShort, _wallet.Coins);
             Assert.IsFalse(_shop.IsOwned(CosmeticKind.Theme, "tihar-lights"));
             Assert.AreEqual(0, changed);
             Assert.AreEqual(0, _store.SavesOf(CosmeticsService.SaveKey));
 
             Assert.AreEqual(PurchaseResult.Bought, _shop.Buy(CosmeticKind.Theme, "golden-terraces"));
-            Assert.AreEqual(249, _wallet.Coins);
+            Assert.AreEqual(oneShort - CosmeticCatalog.Themes.GoldenTerracesPrice, _wallet.Coins);
         }
 
         [Test]
@@ -301,7 +314,7 @@ namespace Callbreak.Tests.EditMode.Application
 
             Assert.Throws<InvalidOperationException>(() => _shop.Buy(CosmeticKind.Theme, "laligurans-forest"), "the listener's exception reaches the caller");
 
-            Assert.AreEqual(0, new Wallet(_store).Coins);
+            Assert.AreEqual(WalletRules.StartingCoins - CosmeticCatalog.Themes.LaliguransForestPrice, new Wallet(_store).Coins);
             Assert.IsTrue(_shop.IsOwned(CosmeticKind.Theme, "laligurans-forest"), "the coins were taken, so the theme is the player's");
             Assert.IsTrue(new CosmeticsService(_store, new Wallet(_store)).IsOwned(CosmeticKind.Theme, "laligurans-forest"), "and that is saved");
         }
@@ -320,7 +333,7 @@ namespace Callbreak.Tests.EditMode.Application
         [Test]
         public void Buy_TheWholeBalance_IsEnough()
         {
-            _wallet.Add(500);
+            _wallet.Add(CosmeticCatalog.Themes.MithilaGardenPrice - WalletRules.StartingCoins);
 
             Assert.AreEqual(PurchaseResult.Bought, _shop.Buy(CosmeticKind.Theme, "mithila-garden"));
             Assert.AreEqual(0, _wallet.Coins);
@@ -382,7 +395,7 @@ namespace Callbreak.Tests.EditMode.Application
             Assert.Throws<InvalidOperationException>(() => _shop.Equip(CosmeticKind.Theme, "prayer-flag-pass"));
             Assert.AreEqual("durbar-square", _shop.Equipped(CosmeticKind.Theme));
 
-            _wallet.Add(250);
+            _wallet.Add(CosmeticCatalog.Themes.PrayerFlagPassPrice - WalletRules.StartingCoins);
             _shop.Buy(CosmeticKind.Theme, "prayer-flag-pass");
             _shop.Equip(CosmeticKind.Theme, "prayer-flag-pass");
 
@@ -418,7 +431,8 @@ namespace Callbreak.Tests.EditMode.Application
         [Test]
         public void EverythingSurvivesARestart()
         {
-            _wallet.Add(2100);
+            int prices = CosmeticCatalog.Themes.PhewaMoonlightPrice + CosmeticCatalog.Themes.GoldenTerracesPrice + CosmeticCatalog.Decks.KathmanduRoyalPrice;
+            _wallet.Add(prices + 100 - WalletRules.StartingCoins);
             _shop.Buy(CosmeticKind.Theme, "phewa-moonlight");
             _shop.Buy(CosmeticKind.Theme, "golden-terraces");
             _shop.Buy(CosmeticKind.Deck, "kathmandu-royal");
@@ -436,7 +450,7 @@ namespace Callbreak.Tests.EditMode.Application
             Assert.IsTrue(again.IsOwned(CosmeticKind.Deck, "kathmandu-royal"));
             Assert.IsFalse(again.IsOwned(CosmeticKind.Theme, "tihar-lights"));
             Assert.IsFalse(again.IsOwned(CosmeticKind.Deck, "mithila-ink"));
-            Assert.AreEqual(100, wallet.Coins, "2600 less 1000, 750 and 750");
+            Assert.AreEqual(100, wallet.Coins, "the three prices taken, and no more");
             Assert.AreEqual(CosmeticsData.CurrentVersion, _store.Peek<CosmeticsData>(CosmeticsService.SaveKey).schemaVersion);
         }
 
@@ -758,7 +772,7 @@ namespace Callbreak.Tests.EditMode.Application
                 Assert.IsTrue(cosmetics.IsOwned(CosmeticKind.Theme, "pokhara-lakeside"), "what was bought stays bought");
             }
 
-            _wallet.Add(250);
+            _wallet.Add(CosmeticCatalog.Themes.GoldenTerracesPrice - WalletRules.StartingCoins);
             Assert.AreEqual(PurchaseResult.Bought, cosmetics.Buy(CosmeticKind.Theme, "golden-terraces"), "a purchase writes the file");
 
             CosmeticsData saved = _store.Peek<CosmeticsData>(CosmeticsService.SaveKey);
@@ -908,7 +922,7 @@ namespace Callbreak.Tests.EditMode.Application
         {
             _wallet.Add(5000);
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => _shop.BuyAt(CosmeticKind.Theme, "tihar-lights", 1001));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _shop.BuyAt(CosmeticKind.Theme, "tihar-lights", CosmeticCatalog.Themes.TiharLightsPrice + 1));
             Assert.Throws<ArgumentOutOfRangeException>(() => _shop.BuyAt(CosmeticKind.Theme, "tihar-lights", -1));
             Assert.IsFalse(_shop.IsOwned(CosmeticKind.Theme, "tihar-lights"));
             Assert.AreEqual(PurchaseResult.UnknownItem, _shop.BuyAt(CosmeticKind.Background, "tihar-lights", 0), "a part comes only with its theme");

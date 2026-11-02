@@ -39,11 +39,11 @@ namespace Callbreak.Application.Cosmetics
             public const string KathmanduRoyal = "kathmandu-royal";
             public const string Default = Classic;
 
-            /// <summary>In coins: Himalayan Ivory's (the owner, 6 Oct 2026).</summary>
-            public const int MithilaInkPrice = 500;
+            /// <summary>In coins: a second goal after a starter theme (the owner, 3 Nov 2026; ADR 077).</summary>
+            public const int MithilaInkPrice = 600;
 
-            /// <summary>In coins: Kathmandu Gold's (the owner, 6 Oct 2026).</summary>
-            public const int KathmanduRoyalPrice = 750;
+            /// <summary>In coins: the dearer deck (the owner, 3 Nov 2026; ADR 077).</summary>
+            public const int KathmanduRoyalPrice = 1000;
 
             /// <summary>
             /// The decks the shop gave and sold until 2 Nov 2026, each with the deck in its place: a
@@ -59,8 +59,11 @@ namespace Callbreak.Application.Cosmetics
 
         /// <summary>
         /// The themes (ADR 064), in shop order: the free Durbar Square first, the seven new themes,
-        /// then the two that were sold as a background until 31 Oct 2026. Their prices are the
-        /// placeholders of Figma's "V1 Rebuild · Shop", kept here for the owner to change.
+        /// then the two that were sold as a background until 31 Oct 2026. Their prices come in three
+        /// tiers (the owner, 3 Nov 2026: "with the default money the user can at least purchase one
+        /// theme, then he has to earn money to purchase other themes"; ADR 077): starter themes the
+        /// 500 starting coins buy one of, with coins left for a stake match; themes a week of play
+        /// buys; and premium themes, which festival offers can give or discount.
         /// </summary>
         public static class Themes
         {
@@ -76,32 +79,32 @@ namespace Callbreak.Application.Cosmetics
             public const string MonasteryGarden = "monastery-garden";
             public const string Default = DurbarSquare;
 
-            /// <summary>In coins: a placeholder (ADR 064).</summary>
-            public const int HimalayanSunrisePrice = 500;
+            /// <summary>In coins: a starter theme (ADR 077).</summary>
+            public const int HimalayanSunrisePrice = 400;
 
-            /// <summary>In coins: a placeholder (ADR 064).</summary>
-            public const int LaliguransForestPrice = 500;
+            /// <summary>In coins: a starter theme (ADR 077).</summary>
+            public const int LaliguransForestPrice = 400;
 
-            /// <summary>In coins: a placeholder (ADR 064).</summary>
-            public const int GoldenTerracesPrice = 750;
+            /// <summary>In coins: a week of play (ADR 077).</summary>
+            public const int GoldenTerracesPrice = 900;
 
-            /// <summary>In coins: a placeholder (ADR 064).</summary>
-            public const int TiharLightsPrice = 1000;
+            /// <summary>In coins: premium (ADR 077).</summary>
+            public const int TiharLightsPrice = 1500;
 
-            /// <summary>In coins: a placeholder (ADR 064).</summary>
-            public const int PrayerFlagPassPrice = 750;
+            /// <summary>In coins: a week of play (ADR 077).</summary>
+            public const int PrayerFlagPassPrice = 900;
 
-            /// <summary>In coins: a placeholder (ADR 064).</summary>
-            public const int MithilaGardenPrice = 1000;
+            /// <summary>In coins: premium (ADR 077).</summary>
+            public const int MithilaGardenPrice = 1500;
 
-            /// <summary>In coins: a placeholder (ADR 064).</summary>
-            public const int PhewaMoonlightPrice = 1000;
+            /// <summary>In coins: premium (ADR 077).</summary>
+            public const int PhewaMoonlightPrice = 1500;
 
-            /// <summary>In coins: the price of the background it was sold as (the owner, 6 Oct 2026).</summary>
-            public const int PokharaLakesidePrice = 500;
+            /// <summary>In coins: a starter theme (ADR 077).</summary>
+            public const int PokharaLakesidePrice = 400;
 
-            /// <summary>In coins: the price of the background it was sold as (the owner, 6 Oct 2026).</summary>
-            public const int MonasteryGardenPrice = 750;
+            /// <summary>In coins: a week of play (ADR 077).</summary>
+            public const int MonasteryGardenPrice = 900;
         }
 
         /// <summary>The themes' backgrounds, shown behind the menus.</summary>

@@ -175,7 +175,7 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreNotSame(sprites.Face(mine, new Card(Suit.Spades, Rank.Ace)), sprites.Face(theirs, new Card(Suit.Spades, Rank.Ace)), "ADR 068: and faces of their own");
 
             // Every deck but the first costs coins since 6 Oct 2026: this player bought theirs.
-            _game.Services.Resolve<IWallet>().Add(750);
+            _game.Services.Resolve<IWallet>().Add(CosmeticCatalog.Decks.KathmanduRoyalPrice);
             _game.Services.Resolve<ICosmeticsShop>().Buy(CosmeticKind.Deck, mine);
             ICosmeticsService cosmetics = _game.Services.Resolve<ICosmeticsService>();
             cosmetics.SelectDeck(mine);
