@@ -170,8 +170,8 @@ namespace Callbreak.Bootstrap
         /// On phones the game is silent while any ad is up (the owner, 8 Oct 2026): Android keeps the
         /// game running under an ad. And the banner network for the banners on the table and the main menu
         /// (the owner, 14 and 27 Oct 2026): AdMob on phones, one ad unit for both (Google's test banners
-        /// in development builds); none elsewhere, so the table and the menu make a stand-in that never
-        /// has one.
+        /// in development builds); in the Editor a drawn test banner of a phone's size, unless its switch
+        /// is off (ADR 071); none on desktop, so the table and the menu make a stand-in that never has one.
         /// </summary>
         private static void RegisterAds(IContainerBuilder builder)
         {
@@ -234,6 +234,16 @@ namespace Callbreak.Bootstrap
                     () => System.DateTime.UtcNow,
                     Debug.Log),
                 Lifetime.Singleton);
+#if UNITY_EDITOR
+
+            // A game played in the Editor shows a drawn test banner where a phone shows AdMob's, so the
+            // table and the main menu look as on a phone (the owner, 2 Nov 2026; ADR 071). Callbreak >
+            // Ads > Test Banner in Play Mode turns it off; the PlayMode tests boot without it.
+            if (EditorTestBanner.On)
+            {
+                builder.RegisterInstance<IBannerAdNetwork>(new EditorTestBannerAdNetwork());
+            }
+#endif
 #endif
 
             // At most one full-screen ad every three minutes, between matches and on the return alike.
