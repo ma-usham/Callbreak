@@ -32,6 +32,11 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private TMP_Text _price;
         [SerializeField] private TMP_Text _offerText;
 
+        // The festival offer's tile glows like a reward ready to collect, its "Free" swelling at each
+        // breath, so the player taps it (the owner, 3 Nov 2026: "in free text is looking so off the theme
+        // should like glow or something so that the user clicks on it"; ADR 076).
+        [SerializeField] private Widgets.ClaimHighlight _offerGlow;
+
         public event Action Clicked;
 
         public Image Picture => _picture;
@@ -51,6 +56,18 @@ namespace Callbreak.Presentation.Screens
         public bool ShowsOffer => _offerText != null && _offerText.gameObject.activeSelf;
 
         public TMP_Text OfferText => _offerText;
+
+        /// <summary>The tile glows: it is a festival offer's, to claim.</summary>
+        public bool Glows => _offerGlow != null && _offerGlow.On;
+
+        /// <summary>Reduce motion (GDD §14): the glow stays lit and nothing moves.</summary>
+        public void SetStill(bool still)
+        {
+            if (_offerGlow != null)
+            {
+                _offerGlow.Still = still;
+            }
+        }
 
         public bool ShowsPrice => _priceRow != null && _priceRow.gameObject.activeSelf;
 
@@ -87,6 +104,11 @@ namespace Callbreak.Presentation.Screens
             if (_offerText != null)
             {
                 SetActive(_offerText.gameObject, offer);
+            }
+
+            if (_offerGlow != null)
+            {
+                _offerGlow.On = offer;
             }
 
             if (offer)

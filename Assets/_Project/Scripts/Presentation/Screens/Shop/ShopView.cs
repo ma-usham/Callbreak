@@ -167,12 +167,16 @@ namespace Callbreak.Presentation.Screens
             _preview.SetCoins(coins);
         }
 
-        /// <summary>One theme's tile; a null picture keeps the one the tile has.</summary>
-        public void SetTheme(int index, string themeName, Sprite picture, bool isNew, bool isFestival, ShopTileStatus status, string statusText, string priceText, bool affordable)
+        /// <summary>
+        /// One theme's tile; a null picture keeps the one the tile has. A festival offer's tile glows,
+        /// lit and still with <paramref name="reduceMotion"/>.
+        /// </summary>
+        public void SetTheme(int index, string themeName, Sprite picture, bool isNew, bool isFestival, ShopTileStatus status, string statusText, string priceText, bool affordable, bool reduceMotion = false)
         {
             ThemeTile tile = _shelf.Tile(index);
             if (tile != null)
             {
+                tile.SetStill(reduceMotion);
                 tile.Show(themeName, picture, isNew, isFestival, status, statusText, priceText, affordable);
             }
         }

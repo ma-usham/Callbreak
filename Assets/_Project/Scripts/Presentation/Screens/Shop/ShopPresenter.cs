@@ -242,7 +242,8 @@ namespace Callbreak.Presentation.Screens
                     status,
                     statusKey != null ? _localization.Get(statusKey) : null,
                     ShopDisplay.Price(price),
-                    _wallet.Coins >= price);
+                    _wallet.Coins >= price,
+                    _settings.ReduceMotion);
             }
         }
 

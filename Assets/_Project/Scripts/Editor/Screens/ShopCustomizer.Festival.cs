@@ -1,4 +1,5 @@
 using Callbreak.Presentation.Screens;
+using Callbreak.Presentation.Widgets;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
@@ -19,6 +20,15 @@ namespace Callbreak.Editor.Screens
         private static readonly Color OfferInk = UiBuildKit.Hex("#810911");
 
         private const string WatchAdIconPath = "UI/Icons/Icon_Play.png";
+
+        // The festival tile's glow (ADR 076): the Daily Rewards tile's halo art and 9-slice border (px, at
+        // 200 pixels per unit), reaching this far past the tile, canvas units; its breath grows it a
+        // little, and the tile's "Free" swells this much at its height.
+        private const string OfferGlowArt = "Assets/_Project/Art/UI/Decor/Deco_ClaimGlow_Tile.png";
+        private const float OfferGlowBorder = 84f;
+        private const float OfferGlowReach = 16f;
+        private const float OfferGlowSwell = 0.02f;
+        private const float OfferWordsSwell = 0.12f;
         private const string FreeIconPath = "UI/Icons/Icon_Spade_Gold.png";
         private const string DiscountIconPath = "UI/Icons/Icon_Coin.png";
 
@@ -128,6 +138,71 @@ namespace Callbreak.Editor.Screens
             {
                 PrefabUtility.UnloadPrefabContents(root);
             }
+        }
+
+        /// <summary>
+        /// The festival tile's glow (ADR 076), added to the saved shop prefab's theme tiles that have
+        /// none, each bound to its tile; everything else in the prefab stays as it is.
+        /// </summary>
+        public static string AddOfferGlows()
+        {
+            string path = ScreenLayoutBuilder.PrefabPath("Shop");
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                int added = 0;
+                foreach (ThemeTile tile in root.GetComponentsInChildren<ThemeTile>(true))
+                {
+                    var so = new SerializedObject(tile);
+                    if (so.FindProperty("_offerGlow").objectReferenceValue != null)
+                    {
+                        continue;
+                    }
+
+                    var words = so.FindProperty("_offerText").objectReferenceValue as TMP_Text;
+                    so.FindProperty("_offerGlow").objectReferenceValue = AddOfferGlow((RectTransform)tile.transform, words);
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                    added++;
+                }
+
+                if (added == 0)
+                {
+                    return "the theme tiles already glow";
+                }
+
+                PrefabUtility.SaveAsPrefabAsset(root, path, out bool saved);
+                return saved ? $"saved {path}: a glow on {added} theme tiles" : $"FAILED to save {path}";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        /// <summary>
+        /// The glow round a theme tile while it is a festival offer's (ADR 076): the warm gold halo of a
+        /// reward ready to collect (ADR 069's art), behind the whole tile and reaching a little past its
+        /// edge, breathing while the tile's "Free" swells at each breath's height; hidden.
+        /// </summary>
+        private static ClaimHighlight AddOfferGlow(RectTransform tile, TMP_Text offerText)
+        {
+            RectTransform glow = UiBuildKit.CreateAt("OfferGlow", tile, Vector2.zero, Vector2.zero, tile.rect.size);
+            glow.SetAsFirstSibling();
+            RectTransform halo = UiBuildKit.CreateAt("Halo", glow, Vector2.zero, Vector2.zero, tile.rect.size + (Vector2.one * (2f * OfferGlowReach)));
+            Image image = UiBuildKit.AddImage(halo, UiBuildKit.LoadSpriteAt(OfferGlowArt, 200f, Vector4.one * OfferGlowBorder), false);
+            image.raycastTarget = false;
+
+            var highlight = glow.gameObject.AddComponent<ClaimHighlight>();
+            var so = new SerializedObject(highlight);
+            so.FindProperty("_halo").objectReferenceValue = image;
+            so.FindProperty("_glyph").objectReferenceValue = offerText != null ? offerText.rectTransform : null;
+            so.FindProperty("_swell").floatValue = OfferGlowSwell;
+            so.FindProperty("_nudgeDegrees").floatValue = 0f;
+            so.FindProperty("_nudgeLift").floatValue = 0f;
+            so.FindProperty("_nudgeSwell").floatValue = OfferWordsSwell;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            glow.gameObject.SetActive(false);
+            return highlight;
         }
 
         /// <summary>The Festival tag: the NEW tag's pill and words, wider, in marigold, hidden.</summary>

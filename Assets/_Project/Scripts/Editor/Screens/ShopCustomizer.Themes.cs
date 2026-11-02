@@ -309,7 +309,9 @@ namespace Callbreak.Editor.Screens
             so.FindProperty("_priceRow").objectReferenceValue = priceLayout;
             so.FindProperty("_price").objectReferenceValue = price;
             so.FindProperty("_festivalTag").objectReferenceValue = AddFestivalTag(root, tag.GetSiblingIndex() + 1);
-            so.FindProperty("_offerText").objectReferenceValue = AddOfferText(root);
+            TextMeshProUGUI offerText = AddOfferText(root);
+            so.FindProperty("_offerText").objectReferenceValue = offerText;
+            so.FindProperty("_offerGlow").objectReferenceValue = AddOfferGlow(root, offerText);
             so.ApplyModifiedPropertiesWithoutUndo();
             return tile;
         }
