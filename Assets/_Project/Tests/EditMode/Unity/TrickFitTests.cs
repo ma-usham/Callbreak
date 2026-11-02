@@ -16,8 +16,8 @@ namespace Callbreak.Tests.EditMode.Unity
     /// the tips/suggestion box"; ADR 070, in place of ADR 062's full-size cross). On the table prefab
     /// laid out on a 16:9, 20:9, 21:9 and 4:3 canvas, with and without its room for the banner ad
     /// (ADR 051, 057): a trick card is three quarters of the hand's card; the four lie apart in a
-    /// cross round the middle, the top and the bottom one upright, the side ones leaning 8° towards
-    /// their players; the top one is below the top seat and its full fan, the side ones clear the
+    /// "+" round the middle, the top and the bottom one upright, the side ones lying sideways towards
+    /// their players (ADR 075); the top one is below the top seat and its full fan, the side ones clear the
     /// side seats and their fans, and the bottom one is above the hand with a card lifted. There is
     /// no turn prompt. The hand keeps its gentle arc (ADR 021), centred under the trick, its whole
     /// middle card on the screen, clear of the local seat and the emote button. Its cards are a fifth
@@ -59,8 +59,8 @@ namespace Callbreak.Tests.EditMode.Unity
         /// <summary>A thrown card's size, of the hand card's.</summary>
         private const float TrickShare = 0.75f;
 
-        /// <summary>How far a side card leans towards its player, in degrees.</summary>
-        private const float SideLean = 8f;
+        /// <summary>How far a side card is turned towards its player, in degrees: it lies sideways (ADR 075).</summary>
+        private const float SideLean = 90f;
 
         private static readonly string[] Trick = { "J♥", "9♥", "Q♥", "10♥" };
 
@@ -87,9 +87,9 @@ namespace Callbreak.Tests.EditMode.Unity
             _view.SetBannerRoom(bannerRoom);
             Rect[] trick = Deal();
 
-            // Three quarters of the hand's card, upright at the top and the bottom, leaning towards
-            // the player who played it at the sides (seats: 0 bottom, 1 right, 2 top, 3 left; a
-            // positive angle turns anticlockwise, so the left card's top leans left).
+            // Three quarters of the hand's card, upright at the top and the bottom, lying sideways
+            // with its top towards the player who played it at the sides (seats: 0 bottom, 1 right,
+            // 2 top, 3 left; a positive angle turns anticlockwise, so the left card's top points left).
             float[] leans = { 0f, -SideLean, 0f, SideLean };
             Vector2 handCard = SizeOf(Find("HandLayer").GetComponentInChildren<CardView>(false));
             for (int seat = 0; seat < TrickAreaView.Slots; seat++)
@@ -101,8 +101,8 @@ namespace Callbreak.Tests.EditMode.Unity
                 Assert.AreEqual(leans[seat], Vector2.SignedAngle(Vector2.up, card.transform.up), 0.01f, $"seat {seat}'s card leans towards its player");
             }
 
-            // A cross round the middle: the top and the bottom card one above the other, the side
-            // ones level with the middle, no card over another, and all of them close together.
+            // A "+" round the middle: the top and the bottom card one above the other, the side ones
+            // level with the middle, no card over another, and all of them close together.
             Vector2 middle = Box(_view.Trick.Area).center;
             Assert.AreEqual(middle.x, trick[0].center.x, 0.5f, "the bottom card stands under the middle");
             Assert.AreEqual(middle.x, trick[2].center.x, 0.5f, "the top card stands over the middle");
@@ -118,7 +118,7 @@ namespace Callbreak.Tests.EditMode.Unity
             }
 
             Rect cross = Union(new[] { _view.Trick.CardAt(0), _view.Trick.CardAt(1), _view.Trick.CardAt(2), _view.Trick.CardAt(3) });
-            Assert.LessOrEqual(cross.width, 2.8f * TrickShare * handCard.y, "the four lie close together");
+            Assert.LessOrEqual(cross.width, TrickShare * (handCard.x + (2f * handCard.y)) + 20f, "the four lie close together");
             Assert.LessOrEqual(cross.height, 2.2f * TrickShare * handCard.y);
 
             Rect top = trick[2];

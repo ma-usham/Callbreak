@@ -65,8 +65,10 @@ namespace Callbreak.Editor.Screens
         // card make it a bit small so that it feels like card is being thrown like in real"). A thrown
         // card shrinks to TrickCardScale of the hand's as it flies, 122 x 170 canvas units. The top
         // and the bottom card stand upright, one above the other, TrickColumnGap apart; the side cards
-        // stand beside them at the centre's height, leaning TrickSideTurn outwards (their tops towards
-        // the players who played them), TrickSideGap clear of the column. The deck lies at the centre,
+        // lie sideways beside them at the centre's height, their tops towards the players who played
+        // them, TrickSideGap clear of the column, so the four make a "+" (the owner, 2 Nov 2026: "the
+        // thrown card at any angle kinda looks like something is off ... rotated on 90 like we did
+        // before"; ADR 075, in place of ADR 070's 8° lean). The deck lies at the centre,
         // as small, while a round is dealt. The cross stands midway between the top seat's fan and a
         // lifted hand card with the banner's room made (TableView brings the top seat down 80 canvas
         // units and the trick 40): since the top seat rose (ADR 072), about the screen's middle.
@@ -74,7 +76,7 @@ namespace Callbreak.Editor.Screens
         private const float TrickCardScale = 0.75f * HandCardScale;
         private const float TrickColumnGap = 12f;
         private const float TrickSideGap = 8f;
-        private const float TrickSideTurn = 8f;
+        private const float TrickSideTurn = 90f;
 
         // ---- Opponent fans, as the bidding mockup draws them since 2 Oct 2026 (ADR 026; measured on
         // 07-bidding.png). Its card backs are 46 px long, at a real card's shape (29 wide at the old
@@ -405,8 +407,8 @@ namespace Callbreak.Editor.Screens
             var so = new SerializedObject(trick);
             so.FindProperty("_area").objectReferenceValue = area;
 
-            // Canvas units. A leaning side card comes nearest the column at its lower inner corner, its
-            // half-width out from its centre: (w cos + h sin) / 2. The area covers the cross.
+            // Canvas units. A turned side card reaches (w cos + h sin) / 2 across from its centre (h / 2
+            // lying sideways), which keeps it TrickSideGap clear of the column. The area covers the cross.
             float scale = TrickCardScale;
             float width = TableCardBuilder.CardWidth * scale;
             float height = TableCardBuilder.CardHeight * scale;
