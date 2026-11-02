@@ -399,6 +399,7 @@ namespace Callbreak.Editor.Screens
             var preview = root.gameObject.AddComponent<ThemePreview>();
             var so = new SerializedObject(preview);
             so.FindProperty("_title").objectReferenceValue = title;
+            so.FindProperty("_subtitle").objectReferenceValue = subtitle;
             so.FindProperty("_description").objectReferenceValue = description;
             so.FindProperty("_menuBackground").objectReferenceValue = background;
             so.FindProperty("_menuOverlay").objectReferenceValue = menuOverlay;

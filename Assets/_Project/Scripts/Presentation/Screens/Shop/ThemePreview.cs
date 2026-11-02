@@ -15,13 +15,15 @@ namespace Callbreak.Presentation.Screens
     /// or Equipped; for a festival offer's theme (ADR 067), the offer's words and its claim button
     /// ("Watch ad • Free"), which turns to Equip theme in the same place once claimed. The cross
     /// closes it (no arrows: the owner, 31 Oct 2026), and the wallet shows in its corner, its "+"
-    /// opening Earn Coins.
+    /// opening Earn Coins. Opened by itself on the main menu, it is the Festival Offer panel: its
+    /// title and the line under it say so (ADR 074).
     /// </summary>
     public sealed class ThemePreview : MonoBehaviour
     {
         private const float DimmedAlpha = 0.5f;
 
         [SerializeField] private TMP_Text _title;
+        [SerializeField] private TMP_Text _subtitle;
         [SerializeField] private TMP_Text _description;
         [SerializeField] private Image _menuBackground;
         [SerializeField] private Image _menuOverlay;
@@ -68,6 +70,8 @@ namespace Callbreak.Presentation.Screens
 
         public string Title => _title.text;
 
+        public string Subtitle => _subtitle != null ? _subtitle.text : null;
+
         public string Description => _description.text;
 
         public string BuyPrice => _buyPrice.text;
@@ -96,6 +100,31 @@ namespace Callbreak.Presentation.Screens
             if (gameObject.activeSelf)
             {
                 gameObject.SetActive(false);
+            }
+        }
+
+        /// <summary>
+        /// The line under the title: <paramref name="text"/>, or the preview's own ("One purchase, both
+        /// looks", in the player's language) when null.
+        /// </summary>
+        public void SetSubtitle(string text)
+        {
+            if (_subtitle == null)
+            {
+                return;
+            }
+
+            // Its own words follow the language; re-enabled, it puts them back.
+            var own = _subtitle.GetComponent<Framework.LocalizedText>();
+            bool showOwn = text == null;
+            if (own != null && own.enabled != showOwn)
+            {
+                own.enabled = showOwn;
+            }
+
+            if (!showOwn)
+            {
+                SetText(_subtitle, text);
             }
         }
 

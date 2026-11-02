@@ -27,11 +27,14 @@ namespace Callbreak.Presentation.Screens
     /// and its cloth together), or says it is equipped. Buying asks once, naming the theme and its
     /// price; a bought theme is owned, not equipped, so the button turns to Equip theme and a toast
     /// says it is the player's. Without enough coins a dialog offers the Earn Coins page or Not now.</para>
-    /// <para>The themes come in the shop's order: the one bought last first, then from the cheapest to
-    /// the dearest (the owner, 31 Oct 2026). A festival offer's theme (ADR 067) says Free under a
+    /// <para>The themes come in the shop's order: the one bought last first, then the others the
+    /// player owns, then a festival offer's theme, then the rest, each group from the cheapest to the
+    /// dearest (the owner, 31 Oct and 2 Nov 2026). A festival offer's theme (ADR 067) says Free under a
     /// Festival tag and the shop opens scrolled to it; its preview's button claims it (Tihar: "Watch
     /// ad • Free"), then turns to Equip theme in the same place. When the main menu opens the offer by
-    /// itself, the shop opens straight on that preview, and its cross goes back to the menu.</para>
+    /// itself, the shop shows only that preview, as the Festival Offer panel over the menus' background
+    /// (the owner, 2 Nov 2026: "this should be on the main menu screen like daily login popups panel";
+    /// ADR 074), and its cross goes back to the menu.</para>
     /// <para>Cards, as before: tapping a deck chooses it and shows its ace for a moment; the primary
     /// button equips an owned choice ("Use Selected Style", off while it is equipped) or buys one that
     /// is not owned, with the same questions.</para>
@@ -184,6 +187,7 @@ namespace Callbreak.Presentation.Screens
         {
             _state.Reset();
             _offerPopup = _opening.TakeOffer() && _state.OpenOffer();
+            _view.ShowPage(!_offerPopup);
             Render();
             _view.ScrollToTheme(Math.Max(0, _state.FestivalIndex));
         }
@@ -276,8 +280,12 @@ namespace Callbreak.Presentation.Screens
             Sprite cloth = _view.ClothPicture(theme.TableId, out Sprite frame);
             ThemeAction action = _state.PreviewAction;
             FestivalOffer offer = action == ThemeAction.Claim ? _offers.Claimable : null;
+
+            // Opened by itself on the main menu, it is the Festival Offer panel, the theme named under the title.
+            string themeName = _localization.Get(theme.NameKey);
+            _view.SetPreviewSubtitle(_offerPopup ? _localization.Format("ui.offer.popup.subtitle", themeName.ToUpperInvariant()) : null);
             _view.ShowPreview(
-                _localization.Get(theme.NameKey),
+                _offerPopup ? _localization.Get("ui.offer.popup.title") : themeName,
                 offer != null ? OfferWords(offer) : _localization.Get(theme.NameKey + ".about"),
                 background,
                 nightScene,

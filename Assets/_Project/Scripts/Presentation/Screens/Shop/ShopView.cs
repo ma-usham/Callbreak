@@ -47,6 +47,10 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private TMP_Text _walletBalance;
         [SerializeField] private Button _earnCoinsButton;
         [SerializeField] private ThemePreview _preview;
+
+        // The shop's own page (its header, drawer and tiles): hidden while the festival offer opens on
+        // the main menu by itself, so its panel stands alone over the menus' background (ADR 074).
+        [SerializeField] private GameObject _page;
         [SerializeField] private ShopPictures _pictures;
         [SerializeField] private TableBackdropLibrary _library;
 
@@ -249,6 +253,20 @@ namespace Callbreak.Presentation.Screens
         }
 
         public void ClosePreview() => _preview.Close();
+
+        /// <summary>The line under the preview's title; its own when null.</summary>
+        public void SetPreviewSubtitle(string text) => _preview.SetSubtitle(text);
+
+        /// <summary>Shows or hides the shop's own page behind the preview.</summary>
+        public void ShowPage(bool shown)
+        {
+            if (_page != null && _page.activeSelf != shown)
+            {
+                _page.SetActive(shown);
+            }
+        }
+
+        public bool IsPageShown => _page == null || _page.activeSelf;
 
         /// <summary>Brings a theme's tile into view (the one whose preview just closed).</summary>
         public void ScrollToTheme(int index) => _shelf.ScrollTo(index);

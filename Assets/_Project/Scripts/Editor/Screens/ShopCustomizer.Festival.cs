@@ -94,6 +94,42 @@ namespace Callbreak.Editor.Screens
             }
         }
 
+        /// <summary>
+        /// The Festival Offer panel (the owner, 2 Nov 2026; ADR 074): binds the saved shop prefab's page
+        /// (its Content, hidden while the offer opens by itself on the main menu) to its view and the
+        /// preview's subtitle to the preview, which says "Tihar Lights · for a few days only" there;
+        /// everything else in the prefab stays as it is.
+        /// </summary>
+        public static string BindFestivalPanel()
+        {
+            string path = ScreenLayoutBuilder.PrefabPath("Shop");
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                ShopView view = root.GetComponentInChildren<ShopView>(true);
+                ThemePreview preview = root.GetComponentInChildren<ThemePreview>(true);
+                Transform page = root.transform.Find("Content");
+                Transform subtitle = preview != null ? preview.transform.Find("Panel/Subtitle") : null;
+                if (view == null || page == null || subtitle == null)
+                {
+                    return $"FAILED: {path} has no shop view, page or preview subtitle";
+                }
+
+                var viewSo = new SerializedObject(view);
+                viewSo.FindProperty("_page").objectReferenceValue = page.gameObject;
+                viewSo.ApplyModifiedPropertiesWithoutUndo();
+                var previewSo = new SerializedObject(preview);
+                previewSo.FindProperty("_subtitle").objectReferenceValue = subtitle.GetComponent<TMP_Text>();
+                previewSo.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, path, out bool saved);
+                return saved ? $"saved {path}: the page and the preview's subtitle bound" : $"FAILED to save {path}";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
         /// <summary>The Festival tag: the NEW tag's pill and words, wider, in marigold, hidden.</summary>
         private static GameObject AddFestivalTag(RectTransform tile, int siblingIndex)
         {

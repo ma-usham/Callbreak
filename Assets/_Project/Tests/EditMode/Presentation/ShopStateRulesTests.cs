@@ -59,8 +59,8 @@ namespace Callbreak.Tests.EditMode.Presentation
         {
             _shop.OwnedIds.Add((CosmeticKind.Theme, "pokhara-lakeside"));
 
-            // In the shop's order (the owner, 31 Oct 2026): Durbar Square, Himalayan Sunrise, Pokhara Lakeside, Tihar Lights.
-            AssertStatuses(CosmeticKind.Theme, ShopTileStatus.Equipped, ShopTileStatus.Price, ShopTileStatus.Owned, ShopTileStatus.Price);
+            // In the shop's order, the player's own first (ADR 074): Durbar Square, Pokhara Lakeside, Himalayan Sunrise, Tihar Lights.
+            AssertStatuses(CosmeticKind.Theme, ShopTileStatus.Equipped, ShopTileStatus.Owned, ShopTileStatus.Price, ShopTileStatus.Price);
         }
 
         [Test]
@@ -122,6 +122,25 @@ namespace Callbreak.Tests.EditMode.Presentation
         }
 
         [Test]
+        public void TheThemes_ThePlayersFirst_ThenAFestivalOffersTheme_ThenTheRestByPrice()
+        {
+            // The owner, 2 Nov 2026: "the free one should come after owned themes".
+            var offers = new FakeOffers { ThemeId = "tihar-lights" };
+            _state = new ShopState(_shop, _wallet, offers);
+            _shop.OwnedIds.Add((CosmeticKind.Theme, "pokhara-lakeside"));
+            CollectionAssert.AreEqual(
+                new[] { "durbar-square", "pokhara-lakeside", "tihar-lights", "himalayan-sunrise" },
+                _state.Themes.Select(t => t.Id),
+                "owned, by price; the offer's theme; the rest, by price");
+
+            _shop.LastBoughtIds[CosmeticKind.Theme] = "pokhara-lakeside";
+            CollectionAssert.AreEqual(
+                new[] { "pokhara-lakeside", "durbar-square", "tihar-lights", "himalayan-sunrise" },
+                _state.Themes.Select(t => t.Id),
+                "the one bought last before the other owned ones");
+        }
+
+        [Test]
         public void ThePreview_StaysOnItsTheme_WhenBuyingItMovesItFirst()
         {
             _state.OpenPreview(3);
@@ -151,14 +170,14 @@ namespace Callbreak.Tests.EditMode.Presentation
             var offers = new FakeOffers { ThemeId = "tihar-lights" };
             _state = new ShopState(_shop, _wallet, offers);
 
-            Assert.AreEqual(3, _state.FestivalIndex, "the shop opens scrolled to it");
-            Assert.IsTrue(_state.IsFestival(3));
-            Assert.IsFalse(_state.IsFestival(1));
+            Assert.AreEqual(1, _state.FestivalIndex, "the shop opens scrolled to it, right after the player's own");
+            Assert.IsTrue(_state.IsFestival(1));
+            Assert.IsFalse(_state.IsFestival(2));
             Assert.IsFalse(_state.IsFestival(4));
-            Assert.AreEqual(ShopTileStatus.Offer, _state.StatusOf(CosmeticKind.Theme, 3));
-            Assert.AreEqual(ShopTileStatus.Price, _state.StatusOf(CosmeticKind.Theme, 1));
+            Assert.AreEqual(ShopTileStatus.Offer, _state.StatusOf(CosmeticKind.Theme, 1));
+            Assert.AreEqual(ShopTileStatus.Price, _state.StatusOf(CosmeticKind.Theme, 2));
 
-            _state.OpenPreview(3);
+            _state.OpenPreview(1);
             Assert.AreEqual(ThemeAction.Claim, _state.PreviewAction, "Watch ad, free");
 
             // Claimed: owned, the offer gone, the button Equip theme in the same place.

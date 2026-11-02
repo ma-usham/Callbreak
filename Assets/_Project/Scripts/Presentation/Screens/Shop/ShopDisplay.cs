@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Callbreak.Application.Cosmetics;
@@ -117,39 +118,49 @@ namespace Callbreak.Presentation.Screens
         }
 
         /// <summary>
-        /// The themes in the shop's order (the owner, 31 Oct 2026): the one bought last first, then the
-        /// rest from the cheapest to the dearest, in catalogue order where prices tie. A last purchase
-        /// the catalogue no longer has changes nothing.
+        /// The themes in the shop's order: the one bought last first (the owner, 31 Oct 2026), then the
+        /// other themes the player owns, then a festival offer's theme (the owner, 2 Nov 2026: "the free
+        /// one should come after owned themes"; ADR 074), then the rest; each group from the cheapest to
+        /// the dearest, in catalogue order where prices tie. A last purchase the catalogue no longer has
+        /// changes nothing.
         /// </summary>
-        public static IReadOnlyList<CosmeticItem> ThemeOrder(IReadOnlyList<CosmeticItem> catalog, string lastBought)
+        /// <param name="owned">Whether the player owns a theme; none is when null.</param>
+        /// <param name="offerTheme">The theme of the festival offer the player can claim; null for none.</param>
+        public static IReadOnlyList<CosmeticItem> ThemeOrder(IReadOnlyList<CosmeticItem> catalog, string lastBought, Func<CosmeticItem, bool> owned = null, string offerTheme = null)
         {
-            var order = new List<CosmeticItem>(catalog.Count);
-            CosmeticItem first = null;
-            foreach (CosmeticItem theme in catalog)
-            {
-                if (first == null && lastBought != null && theme.Id == lastBought)
-                {
-                    first = theme;
-                }
-                else
-                {
-                    order.Add(theme);
-                }
-            }
-
             // A stable sort: List.Sort isn't, so the catalogue's place breaks ties.
-            var place = new Dictionary<CosmeticItem, int>(order.Count);
-            for (int i = 0; i < order.Count; i++)
+            var place = new Dictionary<CosmeticItem, int>(catalog.Count);
+            for (int i = 0; i < catalog.Count; i++)
             {
-                place[order[i]] = i;
+                place[catalog[i]] = i;
             }
 
-            order.Sort((a, b) => a.Price != b.Price ? a.Price.CompareTo(b.Price) : place[a].CompareTo(place[b]));
-            if (first != null)
+            int Group(CosmeticItem theme)
             {
-                order.Insert(0, first);
+                if (lastBought != null && theme.Id == lastBought)
+                {
+                    return 0;
+                }
+
+                if (owned != null && owned(theme))
+                {
+                    return 1;
+                }
+
+                return offerTheme != null && theme.Id == offerTheme ? 2 : 3;
             }
 
+            var order = new List<CosmeticItem>(catalog);
+            order.Sort((a, b) =>
+            {
+                int group = Group(a).CompareTo(Group(b));
+                if (group != 0)
+                {
+                    return group;
+                }
+
+                return a.Price != b.Price ? a.Price.CompareTo(b.Price) : place[a].CompareTo(place[b]);
+            });
             return order;
         }
 

@@ -53,8 +53,12 @@ namespace Callbreak.Presentation.Screens
             }
         }
 
-        /// <summary>The themes in the shop's order: the one bought last first, then from the cheapest to the dearest.</summary>
-        public IReadOnlyList<CosmeticItem> Themes => ShopDisplay.ThemeOrder(_shop.Catalog(CosmeticKind.Theme), _shop.LastBought(CosmeticKind.Theme));
+        /// <summary>The themes in the shop's order: the one bought last, the others owned, a festival offer's, the rest (each by price).</summary>
+        public IReadOnlyList<CosmeticItem> Themes => ShopDisplay.ThemeOrder(
+            _shop.Catalog(CosmeticKind.Theme),
+            _shop.LastBought(CosmeticKind.Theme),
+            theme => _shop.IsOwned(CosmeticKind.Theme, theme.Id),
+            _offers?.Claimable?.ThemeId);
 
         /// <summary>Opening the shop: Themes, no preview, and the chosen deck back on the equipped one.</summary>
         public void Reset()

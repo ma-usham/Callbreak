@@ -97,6 +97,9 @@ namespace Callbreak.Editor.Screens
             BuildPictures(ctx);
             BuildThemes(ctx);
 
+            // The page the Festival Offer panel hides (ADR 074): everything but the preview.
+            ctx.Bound["_page"] = ctx.Content.gameObject;
+
             foreach (string gone in ctx.Nodes.Where(pair => pair.Value == null).Select(pair => pair.Key).ToList())
             {
                 ctx.Nodes.Remove(gone);
