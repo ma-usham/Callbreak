@@ -68,8 +68,6 @@ namespace Callbreak.Application.Cosmetics
         /// <summary>Equips a deck: the same as <see cref="Equip"/> for <see cref="CosmeticKind.Deck"/>.</summary>
         public void SelectDeck(string deckId) => Equip(CosmeticKind.Deck, deckId);
 
-        public bool IsKnown(string deckId) => CosmeticCatalog.Find(CosmeticKind.Deck, deckId) != null;
-
         public IReadOnlyList<CosmeticItem> Catalog(CosmeticKind kind) => CosmeticCatalog.Of(kind);
 
         public bool IsOwned(CosmeticKind kind, string id) => IsOwned(_data, CosmeticCatalog.Find(kind, id));

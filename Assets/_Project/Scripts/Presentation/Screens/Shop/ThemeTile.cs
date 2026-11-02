@@ -57,9 +57,6 @@ namespace Callbreak.Presentation.Screens
 
         public TMP_Text OfferText => _offerText;
 
-        /// <summary>The tile glows: it is a festival offer's, to claim.</summary>
-        public bool Glows => _offerGlow != null && _offerGlow.On;
-
         /// <summary>Reduce motion (GDD §14): the glow stays lit and nothing moves.</summary>
         public void SetStill(bool still)
         {

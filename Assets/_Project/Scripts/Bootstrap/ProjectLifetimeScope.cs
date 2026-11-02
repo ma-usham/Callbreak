@@ -49,6 +49,14 @@ namespace Callbreak.Bootstrap
 
         protected override void Awake()
         {
+            // A release build logs warnings, errors and exceptions only: logcat is a phone's one
+            // diagnostic, and the informational lines (ads loading, store, updates) are for
+            // development builds and the Editor (3 Nov 2026).
+            if (!Debug.isDebugBuild)
+            {
+                Debug.unityLogger.filterLogType = LogType.Warning;
+            }
+
             DontDestroyOnLoad(gameObject);
             base.Awake();
         }

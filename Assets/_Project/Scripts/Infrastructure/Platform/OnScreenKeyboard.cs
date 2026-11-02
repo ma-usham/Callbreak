@@ -10,7 +10,8 @@ namespace Callbreak.Infrastructure.Platform
     /// the window over JNI: the keyboard's inset (Android 11 and later), or else how much of the
     /// window the keyboard leaves hidden below its visible frame. Either is converted from device
     /// pixels to Unity's. A device that says nothing gets the keyboard of a phone held sideways
-    /// (60% of the screen) while one is up. Read at most ten times a second; never throws.
+    /// (60% of the screen) while one is up. Read at most ten times a second; never throws, and warns
+    /// once.
     /// </summary>
     public sealed class OnScreenKeyboard : IOnScreenKeyboard, IDisposable
     {
@@ -24,6 +25,7 @@ namespace Callbreak.Infrastructure.Platform
         private int _imeType;
         private bool _androidReady;
         private bool _androidBroken;
+        private bool _warned;
         private float _readAt = float.NegativeInfinity;
         private float _height;
 
@@ -55,7 +57,13 @@ namespace Callbreak.Infrastructure.Platform
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"[OnScreenKeyboard] {e.Message}");
+                    // Read every frame while a text field is focused, so only the first failure is told.
+                    if (!_warned)
+                    {
+                        _warned = true;
+                        Debug.LogWarning($"[OnScreenKeyboard] {e.Message}");
+                    }
+
                     return 0f;
                 }
             }

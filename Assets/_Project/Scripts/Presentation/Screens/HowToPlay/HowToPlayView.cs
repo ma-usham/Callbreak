@@ -41,9 +41,6 @@ namespace Callbreak.Presentation.Screens
         /// <summary>False while only the background and the logo show.</summary>
         public bool RulesVisible => _rulesVisible;
 
-        /// <summary>True while the primer is shown for the first time: dimmed behind the rules, no header buttons.</summary>
-        public bool IsFirstTime => _firstTime;
-
         /// <summary>
         /// The rules panel; without it the screen is the background and the logo. Shown again
         /// while the screen is up, the rules come in (see the class summary).

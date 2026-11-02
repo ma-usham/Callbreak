@@ -46,8 +46,6 @@ namespace Callbreak.Presentation.Screens
         /// <summary>The material of a shared face over <see cref="Base"/> (ADR 054); null on tiles that are not decks.</summary>
         public Material FaceMaterial => _faceMaterial;
 
-        public TMP_Text NameLabel => _name;
-
         public TMP_Text StatusLabel => _status;
 
         public TMP_Text PriceLabel => _price;

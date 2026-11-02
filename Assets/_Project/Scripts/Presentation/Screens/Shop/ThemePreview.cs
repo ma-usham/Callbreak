@@ -86,8 +86,6 @@ namespace Callbreak.Presentation.Screens
         /// <summary>The preview's button: which of Buy, Equip theme, Equipped and the offer's claim shows.</summary>
         public ThemeAction Action { get; private set; }
 
-        public bool ShowsNightMenu => _menuOverlay.sprite == _menuOverlayNight && _menuOverlayNight != null;
-
         public void Open()
         {
             if (!gameObject.activeSelf)

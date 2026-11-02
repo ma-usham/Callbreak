@@ -37,9 +37,6 @@ namespace Callbreak.Presentation.Widgets
         /// <summary>The chosen call, or 0 when nothing is chosen.</summary>
         public int Selected => _selected;
 
-        /// <summary>How many chips the row can show.</summary>
-        public int Capacity => _chips.Length;
-
         /// <summary>With Reduce motion the crimson chip moves at once (GDD §14).</summary>
         public bool ReduceMotion { get; set; }
 

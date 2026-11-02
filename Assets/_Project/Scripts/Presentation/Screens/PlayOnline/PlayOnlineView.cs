@@ -61,8 +61,6 @@ namespace Callbreak.Presentation.Screens
 
         public int ChipCount => _chipLabel.Length;
 
-        public int PrizeCount => _prizeAmount.Length;
-
         /// <summary>Whether the prize popover is open (or opening): it is still on screen while it shrinks away.</summary>
         public bool PrizesOpen => _prizesOpen;
 

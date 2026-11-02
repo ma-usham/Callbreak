@@ -49,26 +49,6 @@ namespace Callbreak.Presentation.Feedback
             {
                 return _faces != null && (uint)cardId < (uint)_faces.Length ? _faces[cardId] : null;
             }
-
-            public int FaceCount
-            {
-                get
-                {
-                    int count = 0;
-                    if (_faces != null)
-                    {
-                        for (int i = 0; i < _faces.Length; i++)
-                        {
-                            if (_faces[i] != null)
-                            {
-                                count++;
-                            }
-                        }
-                    }
-
-                    return count;
-                }
-            }
         }
 
         [SerializeField] private DeckSprites[] _decks = Array.Empty<DeckSprites>();

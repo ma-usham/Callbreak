@@ -247,9 +247,6 @@ namespace Callbreak.Presentation.Table
             }
         }
 
-        /// <summary>Whether the table is waiting for a touch to bring the Away player back.</summary>
-        public bool IsAway => _imBackButton.gameObject.activeSelf;
-
         /// <summary>The table has made room at its top for the banner ad (<see cref="SetBannerRoom"/>).</summary>
         public bool HasBannerRoom => _bannerRoom;
 

@@ -40,9 +40,6 @@ namespace Callbreak.Presentation.Framework
             }
         }
 
-        /// <summary>The words and lines it colours.</summary>
-        public Graphic[] Targets => _targets;
-
         /// <summary>The words and lines it colours, their day and night colours, and which words have a day gradient (editor builders only).</summary>
         public void Set(TableBackdropLibrary library, Graphic[] targets, Color[] day, Color[] night, bool[] dayGradient)
         {
