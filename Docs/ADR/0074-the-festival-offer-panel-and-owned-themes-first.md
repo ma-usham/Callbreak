@@ -28,7 +28,9 @@
   - Its title says **Festival Offer** (`ui.offer.popup.title`), and the line under it names the
     theme: **"TIHAR LIGHTS · FOR A FEW DAYS ONLY"** (`ui.offer.popup.subtitle`).
   - The rest stays as the owner liked it: the two halves, their captions, the offer's words, "Watch
-    ad • Free" (then Equip theme in the same place), the wallet, and the cross back to the main menu.
+    ad • Free" (then Equip theme in the same place), and the cross back to the main menu.
+  - No wallet in its corner (the owner, 3 Nov 2026: "remove this coin section form festival offer").
+    A preview opened from the shop keeps it.
   - Opened from the Shop button, the shop and its previews are as before.
   - This is the shop's own screen in a mode of its own, so the Menu scene, which holds the owner's
     scene changes, needs no new screen. The Shop prefab gains two references, patched in place

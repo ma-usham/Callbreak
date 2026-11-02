@@ -47,6 +47,7 @@ namespace Callbreak.Presentation.Screens
         [SerializeField] private Sprite _discountIcon;
         [SerializeField] private CanvasGroup _equipContent;
         [SerializeField] private GameObject _equipped;
+        [SerializeField] private GameObject _wallet;
         [SerializeField] private TMP_Text _walletBalance;
         [SerializeField] private Button _earnCoinsButton;
 
@@ -181,6 +182,17 @@ namespace Callbreak.Presentation.Screens
 
         /// <summary>The wallet in the preview's corner.</summary>
         public void SetCoins(string coins) => SetText(_walletBalance, coins);
+
+        /// <summary>The wallet in the corner shows; the Festival Offer panel has none (the owner, 3 Nov 2026; ADR 074).</summary>
+        public void ShowWallet(bool shown)
+        {
+            if (_wallet != null)
+            {
+                SetActive(_wallet, shown);
+            }
+        }
+
+        public bool ShowsWallet => _wallet == null || _wallet.activeSelf;
 
         /// <summary>Lays the Buy row out again (words measured while the preview was hidden were never drawn).</summary>
         public void RefreshRows()

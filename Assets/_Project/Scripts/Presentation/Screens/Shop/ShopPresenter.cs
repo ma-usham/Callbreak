@@ -270,6 +270,8 @@ namespace Callbreak.Presentation.Screens
 
         private void RenderPreview()
         {
+            // The Festival Offer panel has no wallet in its corner (the owner, 3 Nov 2026).
+            _view.ShowPreviewWallet(!_offerPopup);
             CosmeticItem theme = _state.PreviewTheme;
             if (theme == null)
             {

@@ -106,9 +106,9 @@ namespace Callbreak.Editor.Screens
 
         /// <summary>
         /// The Festival Offer panel (the owner, 2 Nov 2026; ADR 074): binds the saved shop prefab's page
-        /// (its Content, hidden while the offer opens by itself on the main menu) to its view and the
-        /// preview's subtitle to the preview, which says "Tihar Lights · for a few days only" there;
-        /// everything else in the prefab stays as it is.
+        /// (its Content, hidden while the offer opens by itself on the main menu) to its view, and the
+        /// preview's subtitle (which says "Tihar Lights · for a few days only" there) and its wallet
+        /// (hidden there) to the preview; everything else in the prefab stays as it is.
         /// </summary>
         public static string BindFestivalPanel()
         {
@@ -120,9 +120,10 @@ namespace Callbreak.Editor.Screens
                 ThemePreview preview = root.GetComponentInChildren<ThemePreview>(true);
                 Transform page = root.transform.Find("Content");
                 Transform subtitle = preview != null ? preview.transform.Find("Panel/Subtitle") : null;
-                if (view == null || page == null || subtitle == null)
+                Transform wallet = preview != null ? preview.transform.Find("Panel/Wallet") : null;
+                if (view == null || page == null || subtitle == null || wallet == null)
                 {
-                    return $"FAILED: {path} has no shop view, page or preview subtitle";
+                    return $"FAILED: {path} has no shop view, page, preview subtitle or preview wallet";
                 }
 
                 var viewSo = new SerializedObject(view);
@@ -130,9 +131,10 @@ namespace Callbreak.Editor.Screens
                 viewSo.ApplyModifiedPropertiesWithoutUndo();
                 var previewSo = new SerializedObject(preview);
                 previewSo.FindProperty("_subtitle").objectReferenceValue = subtitle.GetComponent<TMP_Text>();
+                previewSo.FindProperty("_wallet").objectReferenceValue = wallet.gameObject;
                 previewSo.ApplyModifiedPropertiesWithoutUndo();
                 PrefabUtility.SaveAsPrefabAsset(root, path, out bool saved);
-                return saved ? $"saved {path}: the page and the preview's subtitle bound" : $"FAILED to save {path}";
+                return saved ? $"saved {path}: the page and the preview's subtitle and wallet bound" : $"FAILED to save {path}";
             }
             finally
             {

@@ -60,6 +60,7 @@ namespace Callbreak.Tests.PlayMode
 
             // The Festival Offer panel alone over the menus' background (ADR 074), the theme named under its title.
             Assert.IsFalse(View.IsPageShown, "none of the shop's own page behind it");
+            Assert.IsFalse(Preview.ShowsWallet, "and no wallet in its corner");
             Assert.AreEqual(Text("ui.offer.popup.title"), Preview.Title);
             Assert.That(Preview.Subtitle, Does.Contain(Text("ui.shop.theme.tihar_lights").ToUpperInvariant()));
             Assert.AreEqual(Text("ui.offer.tihar"), Preview.Description, "the backend's words");
@@ -112,6 +113,7 @@ namespace Callbreak.Tests.PlayMode
             yield return GameFixture.Until(() => Router.Current == ScreenId.Shop && !_game.Curtain.IsCovering, "the shop to open");
             Assert.IsFalse(Preview.IsOpen, "the Shop button opens the shop itself");
             Assert.IsTrue(View.IsPageShown, "with its own page");
+            Assert.IsTrue(Preview.ShowsWallet, "and a preview opened there has its wallet");
             ThemeTile tihar = TileNamed(Text("ui.shop.theme.tihar_lights"));
             Assert.IsTrue(tihar.ShowsFestival, "the Festival tag");
             Assert.IsFalse(tihar.ShowsNew, "in the NEW tag's place");

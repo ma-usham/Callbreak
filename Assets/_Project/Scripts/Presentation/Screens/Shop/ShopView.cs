@@ -261,6 +261,9 @@ namespace Callbreak.Presentation.Screens
         /// <summary>The line under the preview's title; its own when null.</summary>
         public void SetPreviewSubtitle(string text) => _preview.SetSubtitle(text);
 
+        /// <summary>Shows or hides the wallet in the preview's corner.</summary>
+        public void ShowPreviewWallet(bool shown) => _preview.ShowWallet(shown);
+
         /// <summary>Shows or hides the shop's own page behind the preview.</summary>
         public void ShowPage(bool shown)
         {
