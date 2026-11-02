@@ -192,8 +192,8 @@ namespace Callbreak.Editor
             RectTransform headerLeft = UiBuildKit.CreateDesignGroup("HeaderLeft", safeArea, UiBuildKit.Attach.TopLeft);
             RectTransform headerRight = UiBuildKit.CreateDesignGroup("HeaderRight", safeArea, UiBuildKit.Attach.TopRight);
 
-            // Centre column, back to front. Rozha Royal's lettering fills the logo's width, so the logo sits
-            // between the wallet and the fan (ADR 066).
+            // Centre column, back to front. The logo sits between the wallet and the fan (ADR 066); the Temple
+            // Crown without its roof stands as tall in its sprite as the Rozha Royal did (ADR 078).
             Place("Logo", centre, new Vector2(834.75f, 224.75f), Screen, Ui("Ornaments/Logo_Callbreak.png"));
 
             // The fan and its shadow rock together about the fan's foot, which the Play Online

@@ -163,9 +163,11 @@ menu's ivory and the table's green) and `svg/` (each design as an SVG, as upload
 
 ## Logos and the Cloths tab icon: cut from Figma
 
-The sheet "Unity Export · NewUI" on the design-system page holds Art/Logo · Rozha Royal and Art/Logo
-Compact · Rozha Royal (the owner's pick, 31 Oct 2026, ADR 066), each filling the width of the sprite it
-replaces, centred, and the drawer's folded-cloth icon, fitted into the ink box of its sprite. Shoot it
+The sheet "Unity Export · NewUI" on the design-system page holds Art/Logo Compact · Temple Crown, the
+Temple Crown without its roof (the owner's pick, 3 Nov 2026, ADR 078), in each of the three logo cells:
+as large as fits 8 px inside the cell, centred, except in Logo_Callbreak, where it stands as tall as the
+Rozha Royal did (ADR 066) so the main menu keeps its gaps. The drawer's folded-cloth icon is fitted into
+the ink box of its sprite. Shoot it
 with the Figma MCP's `get_screenshot` (maxDimension 1602, contentsOnly) on a black and on a white
 sheet fill, then:
 

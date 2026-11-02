@@ -1,10 +1,11 @@
 """Cuts the game's logos and the Cloths tab icon out of Figma's "Unity Export · NewUI" sheet (ADR 058).
 
 Usage: python -P Tools/ArtPipeline/NewUI/cut_sheet.py <sheet-on-black.png> <sheet-on-white.png> [out-dir]
-The sheet (on the V1 Rebuild · Design System page) holds the logo the owner chose on 31 Oct 2026, Art/Logo ·
-Rozha Royal (Logo_Callbreak) and Art/Logo Compact · Rozha Royal (the two Logo_Callbreak_NoFlag), and the
-folded-cloth icon of the shop's drawer, each at the pixel size of the game sprite it replaces: the logos
-fill their sprite's width, centred, and the icon its ink box. Figma's screenshots have no alpha, so the
+The sheet (on the V1 Rebuild · Design System page) holds the logo the owner chose on 3 Nov 2026, the Temple
+Crown without its roof (Art/Logo Compact · Temple Crown, ADR 078), in Logo_Callbreak and the two
+Logo_Callbreak_NoFlag, and the folded-cloth icon of the shop's drawer, each at the pixel size of the game
+sprite it replaces: the logo centred, as large as fits 8 px inside its cell (in Logo_Callbreak as tall as
+the Rozha Royal was, for the main menu's gaps), and the icon in its ink box. Figma's screenshots have no alpha, so the
 sheet is shot on black and on white and the alpha is recovered from the difference. Give an out-dir to
 look first.
 """
