@@ -7,11 +7,10 @@ during a match and on the main menu (below, "The banner on the table", "The bann
 menu"). They come through the
 Google Mobile Ads Unity plugin (`com.google.ads.mobile` 11.5.0, from OpenUPM) and the External
 Dependency Manager it brings (`com.google.external-dependency-manager` 1.2.187, EDM4U). In the
-Editor the game uses AdMob too, with Google's test units, whose ads the plugin draws as its own
-placeholders (below, "Google's test ads in the Editor"). In the tests and in desktop builds stand-ins
-take their place: one completes every Earn Coins ad (`StandInRewardedAds`), another never has an ad
-between matches (`StandInInterstitialAds`), and the banners are never there (`StandInBannerAds`). No
-ad network is touched there.
+Editor, in the tests and in desktop builds stand-ins take their place: one completes every Earn
+Coins ad (`StandInRewardedAds`), another never has an ad between matches (`StandInInterstitialAds`),
+and the banners are never there (`StandInBannerAds`). No ad network is touched there; ads are checked
+on a phone (below, "Checking the ads").
 
 ## Identifiers (not secret: they ship inside the app)
 
@@ -176,25 +175,17 @@ main menu the same **320 x 50 banner**, of the same ad unit, sits in the **botto
   - `BannerSlot` sits a banner on its bottom edge for the menu (`AtBottom`);
   - tests: `BannerAdsTests` and `MenuBannerRoomTests` (EditMode), `MenuBannerFlowTests` (PlayMode).
 
-## Google's test ads in the Editor
+## Checking the ads
 
-ADR 073 (the owner, 2 Nov 2026), in place of ADR 071's drawn banner. A game played in the Editor uses
-AdMob exactly as a development build does, with Google's test units. The plugin's Editor client draws
-its own **placeholder ads**: the banner on the table and the main menu, the ad between matches, Earn
-Coins' rewarded ad and the app open ad, after its placeholder consent form. Release builds are
-unchanged: they use the real units.
+ADR 077 (the owner, 3 Nov 2026: "remove that test ads from the system. I will check on android
+device"), in place of ADR 073's AdMob test ads in the Editor and ADR 075's placeholders. The Editor
+plays with the stand-ins: no banner, no ads between matches, and Earn Coins pays at once.
 
-- **Turning it off:** **Callbreak > Editor Play > AdMob Test Ads** (ticked = on, the default). It
-  counts from the next Play; off, the Editor uses the stand-ins.
-- **A phone's shape:** the **Device Simulator** (the Game view's "Game" menu > Simulator; pick a phone
-  and turn it to landscape) shows the notch and the safe area.
-- **Not in the tests:** the PlayMode tests boot with the stand-ins (`GameFixture.Boot`'s
-  `editorPhoneServices`), so the switch never changes what a test sees.
-- **A real AdMob ad** still needs a phone: a **Development Build** (Build Profiles > Android >
-  Development Build, then Build And Run with the phone on USB debugging) shows Google's test ads,
-  which are safe to tap. Never tap the real ads of a release build.
-- Code: the switch `Infrastructure/Platform/EditorPhoneServices.cs`, the menu
-  `Editor/EditorPhoneServicesMenu.cs`, `ProjectLifetimeScope.RegisterAds`.
+- **On a phone:** a **Development Build** (Build Profiles > Android > Development Build, then Build
+  And Run with the phone on USB debugging) shows Google's test ads, which are safe to tap: the banner
+  at its real size (320 x 50 dp, about 840 x 131 pixels on a 1080p phone) in the table's and the
+  menu's slots, the ads between matches, Earn Coins' rewarded ads and the app open ad. Never tap the
+  real ads of a release build.
 
 ## How the app asks for consent
 

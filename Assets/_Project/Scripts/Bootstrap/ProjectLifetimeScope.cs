@@ -171,15 +171,12 @@ namespace Callbreak.Bootstrap
         /// game running under an ad. And the banner network for the banners on the table and the main menu
         /// (the owner, 14 and 27 Oct 2026): AdMob on phones, one ad unit for both (Google's test banners
         /// in development builds); none elsewhere, so the table and the menu make a stand-in that never
-        /// has one. A game played in the Editor gets AdMob too, with Google's test units, whose ads the
-        /// plugin draws as its own placeholders (the owner, 2 Nov 2026; ADR 073), unless Callbreak >
-        /// Editor Play > AdMob Test Ads is off; the tests never do. Release builds are unchanged.
+        /// has one. The Editor plays with the stand-ins: the owner checks ads on Android (3 Nov 2026,
+        /// ADR 077, in place of ADR 073's AdMob test ads in the Editor).
         /// </summary>
         private static void RegisterAds(IContainerBuilder builder)
         {
-#if UNITY_EDITOR
-            bool adMob = EditorPhoneServices.AdMobTestAds;
-#elif UNITY_ANDROID || UNITY_IOS
+#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
             bool adMob = true;
 #else
             bool adMob = false;
@@ -210,8 +207,8 @@ namespace Callbreak.Bootstrap
         }
 
         /// <summary>
-        /// Google AdMob: the units of <see cref="AdMobIds"/>, Google's test units in the Editor and in
-        /// development builds (<see cref="Debug.isDebugBuild"/>), the owner's in release builds.
+        /// Google AdMob: the units of <see cref="AdMobIds"/>, Google's test units in development builds
+        /// (<see cref="Debug.isDebugBuild"/>), the owner's in release builds.
         /// </summary>
         private static void RegisterAdMob(IContainerBuilder builder)
         {

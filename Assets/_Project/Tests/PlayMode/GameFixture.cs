@@ -25,8 +25,7 @@ namespace Callbreak.Tests.PlayMode
     /// temporary folder (so a run never touches the player's files), waits for the menu, and tears
     /// everything down again afterwards. Online play stays off the internet unless a test asks for it
     /// (<see cref="Boot"/>): no test starts Epic Online Services or signs in to Epic's servers. Nor
-    /// does a test get the Editor's AdMob test ads or its festival offers from Remote Config (ADR 073)
-    /// unless it asks for them.
+    /// does a test get the Editor's festival offers from Remote Config (ADR 073) unless it asks.
     /// </summary>
     public sealed class GameFixture
     {
@@ -75,9 +74,9 @@ namespace Callbreak.Tests.PlayMode
         /// "Couldn't connect" and Quick Match plays at a table of the device's own, with bots.
         /// </param>
         /// <param name="editorPhoneServices">
-        /// True boots with the Editor's AdMob test ads and festival offers, as a game played in the
-        /// Editor does (ADR 073); false (the default) boots with the stand-ins, whatever their switches
-        /// say, so no ad network or Remote Config is touched.
+        /// True boots with the Editor's festival offers from Remote Config, as a game played in the
+        /// Editor does (ADR 073); false (the default) boots with none, whatever the switch says, so
+        /// Remote Config is not touched.
         /// </param>
         public IEnumerator Boot(bool freshInstall = false, Action<ISaveStore> seed = null, Action<IContainerBuilder> extra = null, bool liveOnline = false, bool editorPhoneServices = false)
         {

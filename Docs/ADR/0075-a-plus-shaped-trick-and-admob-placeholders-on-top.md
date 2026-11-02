@@ -1,6 +1,6 @@
 # ADR 075 - A "+"-shaped trick; AdMob's Editor placeholders over the game
 
-**Status:** accepted (owner, 3 Nov 2026):
+**Status:** accepted (owner, 3 Nov 2026); its Editor placeholder fixes superseded by ADR 077 the same day:
 
 > why even after enabling test abd the place holder for banner ads doesnt shows up in editor play
 > mode. and the thrown card at any angle kinda looks like something is off lets do one thing the

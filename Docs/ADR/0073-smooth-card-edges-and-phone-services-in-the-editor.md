@@ -1,6 +1,6 @@
 # ADR 073 - Smooth edges on turned cards; AdMob's test ads and the festival offers in the Editor
 
-**Status:** accepted (owner, 2 Nov 2026):
+**Status:** accepted (owner, 2 Nov 2026); its AdMob test ads in the Editor superseded by ADR 077 (3 Nov 2026):
 
 > cant we check the tes banner ads in unity editor from ad mob ?? not just banner every other ad like
 > interstitial rewarded the test ad enable so that the test ad will appear in editor as well and

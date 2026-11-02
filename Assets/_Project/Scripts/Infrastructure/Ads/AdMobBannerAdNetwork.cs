@@ -130,21 +130,6 @@ namespace Callbreak.Infrastructure.Ads
 
         private static string Describe(AdError error) => error == null ? "no banner, and no error" : error.GetCode() + " " + error.GetMessage();
 
-        /// <summary>
-        /// Screen pixels per unit of <see cref="BannerView.SetPosition(int, int)"/>: the device's scale on
-        /// phones. In the Editor the plugin's placeholder banner sits on a canvas of its own that scales a
-        /// 1280 x 800 design to the screen's height, and is placed in that canvas's units, while the
-        /// device's scale there is 1, which put it below the screen (ADR 075).
-        /// </summary>
-        private static float PlacementScale()
-        {
-#if UNITY_EDITOR
-            return Screen.height / 800f;
-#else
-            float scale = MobileAds.Utils.GetDeviceScale();
-            return scale > 0f ? scale : 1f;
-#endif
-        }
 
         private static void Destroy(BannerView view)
         {
@@ -188,7 +173,12 @@ namespace Callbreak.Infrastructure.Ads
 
                 // The plugin places views in density-independent pixels. Rounded down across, so the
                 // banner never edges right, towards the Scores button.
-                float scale = PlacementScale();
+                float scale = MobileAds.Utils.GetDeviceScale();
+                if (scale <= 0f)
+                {
+                    scale = 1f;
+                }
+
                 _view.SetPosition(Mathf.FloorToInt(x / scale), Mathf.RoundToInt(y / scale));
                 _view.Show();
                 _onScreen = true;

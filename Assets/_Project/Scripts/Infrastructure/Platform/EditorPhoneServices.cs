@@ -4,23 +4,15 @@ using System;
 namespace Callbreak.Infrastructure.Platform
 {
     /// <summary>
-    /// What a game played in the Editor takes from a phone (the owner, 2 Nov 2026; ADR 073), each the
-    /// Editor's own setting, on until it is turned off (Callbreak &gt; Editor Play), read as the game
-    /// starts: Google AdMob with Google's test units, whose banner, interstitial, rewarded and app open
-    /// ads the plugin draws as its own placeholders; and the festival offers from Firebase Remote
-    /// Config. The PlayMode tests boot with neither unless they ask (<see cref="While"/>). Builds never
-    /// read these: a release build has the owner's ad units, a development build Google's test units.
+    /// What a game played in the Editor takes from a phone (ADR 073), the Editor's own setting, on until
+    /// it is turned off (Callbreak &gt; Editor Play), read as the game starts: the festival offers from
+    /// Firebase Remote Config. Ads are not among them: the owner checks ads on Android (3 Nov 2026,
+    /// ADR 077), so the Editor plays with the stand-ins. The PlayMode tests boot without the offers
+    /// unless they ask (<see cref="While"/>). Builds never read this.
     /// </summary>
     public static class EditorPhoneServices
     {
-        public const string AdMobTestAdsKey = "Callbreak.EditorAdMobTestAds";
         public const string FestivalOffersKey = "Callbreak.EditorFestivalOffers";
-
-        public static bool AdMobTestAds
-        {
-            get => UnityEditor.EditorPrefs.GetBool(AdMobTestAdsKey, true);
-            set => UnityEditor.EditorPrefs.SetBool(AdMobTestAdsKey, value);
-        }
 
         public static bool FestivalOffers
         {
@@ -28,24 +20,21 @@ namespace Callbreak.Infrastructure.Platform
             set => UnityEditor.EditorPrefs.SetBool(FestivalOffersKey, value);
         }
 
-        /// <summary>Sets both until the returned handle is disposed, then puts them back as they were.</summary>
+        /// <summary>Sets the switch until the returned handle is disposed, then puts it back as it was.</summary>
         public static IDisposable While(bool on)
         {
-            var restore = new Restore(AdMobTestAds, FestivalOffers);
-            AdMobTestAds = on;
+            var restore = new Restore(FestivalOffers);
             FestivalOffers = on;
             return restore;
         }
 
         private sealed class Restore : IDisposable
         {
-            private readonly bool _adMobTestAds;
             private readonly bool _festivalOffers;
             private bool _done;
 
-            public Restore(bool adMobTestAds, bool festivalOffers)
+            public Restore(bool festivalOffers)
             {
-                _adMobTestAds = adMobTestAds;
                 _festivalOffers = festivalOffers;
             }
 
@@ -57,7 +46,6 @@ namespace Callbreak.Infrastructure.Platform
                 }
 
                 _done = true;
-                AdMobTestAds = _adMobTestAds;
                 FestivalOffers = _festivalOffers;
             }
         }
