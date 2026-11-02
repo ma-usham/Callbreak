@@ -53,10 +53,12 @@ namespace Callbreak.Editor
         private const string GlowRimColour = "#FFB20C";
         private const string GlowHaloColour = "#FF9A10";
 
-        // The subdued overlay, fitted to mockup 08's 8♥ for blending in linear light (GDD §13: "a
-        // warm-dark overlay, never transparency").
-        private const string DimColour = "#BF9A8B";
-        private const float DimOpacity = 0.20f;
+        // The subdued overlay (GDD §13: "a warm-dark overlay, never transparency"): a warm near-black,
+        // so a card that cannot be played is the same card in shade, its paper a neutral grey about 80%
+        // as bright, in linear light. Mockup 08's pinkish beige left the paper pinkish (the owner,
+        // 2 Nov 2026: "the color isnt looking good"; ADR 072).
+        private const string DimColour = "#2B211B";
+        private const float DimOpacity = 0.40f;
 
         private const float ShadowSpread = 9f;
         private const float ShadowDrop = 3f;
@@ -394,6 +396,33 @@ namespace Callbreak.Editor
             {
                 File.WriteAllBytes(path, png);
                 AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+            }
+        }
+
+        /// <summary>
+        /// Card.prefab's subdued overlay in <see cref="DimColour"/>, patched in place (ADR 072): the
+        /// rest of the prefab, and every reference to it, stays as it is. Returns what it did.
+        /// </summary>
+        public static string ApplyDim()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(CardPrefabPath);
+            try
+            {
+                Image dim = root.transform.Find("Dim")?.GetComponent<Image>();
+                if (dim == null)
+                {
+                    return CardPrefabPath + " has no Dim layer: rebuild it (Callbreak > Build > Table Card Assets)";
+                }
+
+                Color colour = UiBuildKit.Hex(DimColour);
+                colour.a = DimOpacity;
+                dim.color = colour;
+                PrefabUtility.SaveAsPrefabAsset(root, CardPrefabPath);
+                return $"{CardPrefabPath}: the subdued overlay is {DimColour} at {DimOpacity:0.00}";
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
             }
         }
 

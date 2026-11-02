@@ -9,9 +9,9 @@ Google Mobile Ads Unity plugin (`com.google.ads.mobile` 11.5.0, from OpenUPM) an
 Dependency Manager it brings (`com.google.external-dependency-manager` 1.2.187, EDM4U). In the
 Editor, in the tests and in desktop builds stand-ins take their place: one completes every Earn
 Coins ad (`StandInRewardedAds`) and another never has an ad between matches
-(`StandInInterstitialAds`). The banners are drawn test banners in the Editor (below, "Seeing the
-banner in the Editor") and never there in the tests and desktop builds (`StandInBannerAds`). No ad
-network is touched there.
+(`StandInInterstitialAds`). The banners are never there (`StandInBannerAds`), unless the Editor's
+test banner is switched on (below, "Seeing the banner in the Editor"). No ad network is touched
+there.
 
 ## Identifiers (not secret: they ship inside the app)
 
@@ -178,15 +178,17 @@ main menu the same **320 x 50 banner**, of the same ad unit, sits in the **botto
 
 ## Seeing the banner in the Editor
 
-ADR 071 (the owner, 2 Nov 2026). A game played in the Editor shows a drawn **test banner** where a
+ADR 071 (the owner, 2 Nov 2026). A game played in the Editor can show a drawn **test banner** where a
 phone shows AdMob's: a white 320 x 50 card with a dark "Test Ad" tag. The table and the main menu make
-room for it, and it goes off the screen under every page, exactly as on a phone without No Ads.
+room for it, and it goes off the screen under every page, exactly as on a phone without No Ads. It is
+**off by default**: the owner checks the banner on Android ("remove the editor test banner ads from
+both game play and mainmenu i will check that on android").
 
 - **Its size is a phone's.** In the **Device Simulator** (the Game view's "Game" menu > Simulator; pick
   a phone and turn it to landscape), it takes the phone's density, and the simulator shows the notch
   and the safe area. In the plain Game view it takes a common phone's scale for the view's height:
   840 x 131 pixels in a 1920 x 1080 view.
-- **Turning it off:** **Callbreak > Ads > Test Banner in Play Mode** (ticked = on). It counts from the
+- **Turning it on:** **Callbreak > Ads > Test Banner in Play Mode** (ticked = on). It counts from the
   next Play. Buying No Ads in the Editor takes the banner away too, until the Editor leaves Play mode.
 - **Not in the tests:** the PlayMode tests boot without it (`GameFixture.Boot`'s `editorTestBanner`),
   so the switch never changes what a test sees.

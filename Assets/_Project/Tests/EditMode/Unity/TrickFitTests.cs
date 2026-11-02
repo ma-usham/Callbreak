@@ -146,6 +146,86 @@ namespace Callbreak.Tests.EditMode.Unity
             Assert.IsFalse(Has("Prompt"), "no turn prompt on the table");
         }
 
+        [TestCase(1920f, 1080f, false)]
+        [TestCase(1920f, 1080f, true)]
+        [TestCase(2400f, 1080f, false)]
+        [TestCase(2400f, 1080f, true)]
+        [TestCase(2520f, 1080f, false)]
+        [TestCase(2520f, 1080f, true)]
+        [TestCase(1920f, 1440f, false)]
+        [TestCase(1920f, 1440f, true)]
+        public void TheTopSeat_HasItsNameAndCallLeftOfItsAvatar_AndStandsWhereItsNameDid(float width, float height, bool bannerRoom)
+        {
+            Open(width, height);
+            _view.SetBannerRoom(bannerRoom);
+            Deal();
+            RectTransform seat = Find("Seat2");
+            Rect timer = Box(Find("SeatTimerRing2"));
+            Rect plate = Box(Find("SeatPlate2"));
+            Rect pill = Box(Find("SeatPill2"));
+
+            // The name above the call, left of the avatar's timer ring, the name level with the ring's
+            // top and the call centred under it as on the other seats; nothing of the seat stands above
+            // the ring (ADR 072).
+            Assert.LessOrEqual(plate.xMax, timer.xMin, "the name plate stands left of the avatar");
+            Assert.Greater(plate.xMax, timer.xMin - 20f, "close to it");
+            Assert.AreEqual(plate.center.x, pill.center.x, 0.5f, "the call's pill centred under the name plate");
+            Assert.GreaterOrEqual(plate.yMin, pill.yMax - 0.5f, "the name above the call");
+            Assert.AreEqual(timer.yMax, plate.yMax, 1f, "the name level with the top of the avatar");
+            Assert.GreaterOrEqual(timer.yMax, plate.yMax - 0.5f, "the avatar stands as high as the seat goes");
+
+            // Its widest words stay centred under the name, clear of the avatar.
+            foreach (string words in new[] { "Calling…", "Waiting", "13-13" })
+            {
+                _view.Seat(2).SetStatus(words, false);
+                Canvas.ForceUpdateCanvases();
+                Rect said = Box(Find("SeatPill2"));
+                Assert.AreEqual(plate.center.x, said.center.x, 0.5f, words + " centred under the name");
+                Assert.LessOrEqual(said.xMax, timer.xMin, words + " clear of the avatar");
+            }
+
+            // The seconds disc and the speech box stand right of the avatar, the bubble left of the
+            // name; each clear of the others and of the fan, under the banner's slot when there is one.
+            Rect disc = Box(FindIn(seat, "SeatTimerDisc2"));
+            Rect chat = Box(FindIn(seat, "Chat"));
+            Rect bubble = Box(FindIn(seat, "Bubble"));
+            Assert.GreaterOrEqual(disc.center.x, timer.center.x, "the seconds disc on the avatar's right");
+            Assert.GreaterOrEqual(chat.xMin, disc.xMax - 0.5f, "the speech box right of the disc");
+            Assert.LessOrEqual(bubble.xMax, Mathf.Min(plate.xMin, pill.xMin), "the bubble left of the name and the call");
+            Rect canvas = Box(_canvas.transform);
+            foreach (Rect piece in new[] { plate, pill, disc, chat, bubble })
+            {
+                Assert.IsTrue(canvas.Contains(piece.min) && canvas.Contains(piece.max), "on the screen");
+                foreach (CardView card in _view.Seat(2).Fan.Area.GetComponentsInChildren<CardView>(false))
+                {
+                    Assert.IsFalse(Overlaps(card, piece), "clear of the fan");
+                }
+            }
+
+            foreach (Rect piece in new[] { plate, pill, disc, chat })
+            {
+                Assert.IsFalse(piece.Overlaps(bubble), "clear of the bubble");
+            }
+
+            Assert.IsFalse(chat.Overlaps(disc), "the speech box clear of the disc");
+            if (bannerRoom)
+            {
+                Rect slot = Box(Find("BannerSlot"));
+                foreach (Rect piece in new[] { plate, pill, timer, disc, chat, bubble })
+                {
+                    Assert.LessOrEqual(piece.yMax, slot.yMin, "below the banner's slot");
+                }
+            }
+
+            foreach (string corner in new[] { "Logo", "RoundPill", "HomeButton", "ScoresButton", "SettingsButton" })
+            {
+                foreach (Rect piece in new[] { plate, pill, bubble })
+                {
+                    Assert.IsFalse(piece.Overlaps(Box(Find(corner))), "clear of " + corner);
+                }
+            }
+        }
+
         [TestCase(1920f, 1080f)]
         [TestCase(2400f, 1080f)]
         [TestCase(2520f, 1080f)]
@@ -387,6 +467,20 @@ namespace Callbreak.Tests.EditMode.Unity
             }
 
             return false;
+        }
+
+        private static RectTransform FindIn(Transform root, string name)
+        {
+            foreach (RectTransform t in root.GetComponentsInChildren<RectTransform>(true))
+            {
+                if (t.name == name)
+                {
+                    return t;
+                }
+            }
+
+            Assert.Fail(root.name + " has " + name);
+            return null;
         }
 
         private RectTransform Find(string name)

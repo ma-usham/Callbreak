@@ -22,7 +22,7 @@ namespace Callbreak.Editor.Screens
     /// <see cref="SeatView"/> per seat, with the timer ring, seconds disc and call bubble the
     /// opponents' seats need (derived from the local seat's) and the speech box for quick phrases;
     /// the seats' profiles as the owner arranged them (the side seats lower, the top seat's name
-    /// above its avatar, the local seat's below it); the trick counter, the emote
+    /// and call left of its avatar, the local seat's below it); the trick counter, the emote
     /// picker, the "Reconnecting…" cover and the "I'm back" banner (derived from kit pills, panels
     /// and buttons); and each seat's chip for "Away", "Reconnecting…" and "Bot playing" (the kit's
     /// tag pill, hidden until there is something to say; a bot that fills a seat has none, ADR 025).
@@ -69,8 +69,8 @@ namespace Callbreak.Editor.Screens
         // the players who played them), TrickSideGap clear of the column. The deck lies at the centre,
         // as small, while a round is dealt. The cross stands midway between the top seat's fan and a
         // lifted hand card with the banner's room made (TableView brings the top seat down 80 canvas
-        // units and the trick 40).
-        private static readonly Vector2 TrickCentre = new Vector2(836.2f, 502.7f);
+        // units and the trick 40): since the top seat rose (ADR 072), about the screen's middle.
+        private static readonly Vector2 TrickCentre = new Vector2(836.2f, 472.2f);
         private const float TrickCardScale = 0.75f * HandCardScale;
         private const float TrickColumnGap = 12f;
         private const float TrickSideGap = 8f;
@@ -90,10 +90,12 @@ namespace Callbreak.Editor.Screens
         private const float SideFanBottomAngle = 125.9f;
         private const float SideFanStep = 5.35f;
 
-        // The top seat's hangs below its avatar (its name and status pill are above it since 2 Oct
-        // 2026, so nothing covers the fan): it turns about a point 164 px above the avatar's centre,
-        // 13 cards 4.77° apart around straight down, the middle ones in front.
-        private const float TopFanPivotAbove = 163.7f;
+        // The top seat's hangs below its avatar (its name and status pill are beside it, so nothing
+        // covers the fan): it turns about a point TopFanPivotAbove px above the avatar's centre, 13
+        // cards 4.77° apart around straight down, the middle ones in front. Mockup 19's point is
+        // 163.7 px up; since ADR 072 the fan hangs 8 px lower, so that its left end, which curls up
+        // beside the avatar, stays clear of the call's pill.
+        private const float TopFanPivotAbove = 155.5f;
         private const float TopFanRadius = 242f;
         private const float TopFanStep = 4.77f;
 
@@ -133,12 +135,16 @@ namespace Callbreak.Editor.Screens
         // The side seats sit lower, nearer the player: the whole seat moves, fan and all.
         private const float SideSeatDrop = 55f;
 
-        // The top seat's name plate and status pill stand above its avatar, just under the trump
-        // line, and its fan hangs below the avatar where nothing covers it (as mockup 19 draws it):
-        // the avatar comes down to make room. The trump line is gone (3 Oct 2026), and since 30 Oct
-        // 2026 the whole seat stands TopSeatRise higher, so that the trick fits under it (ADR 060, 062).
-        private const float TopProfileGap = 5f;                 // from the trump line to the name plate
-        private const float TopRingGap = 1f;                    // from the status pill to the avatar's ring
+        // The top seat stands just under where the trump line was (gone since 3 Oct 2026), TopSeatRise
+        // higher since 30 Oct 2026 (ADR 060, 062), and its fan hangs below its avatar where nothing
+        // covers it (as mockup 19 draws it). Its name plate and status pill stood above the avatar;
+        // since 2 Nov 2026 they stand left of it, the name above the call, from the avatar's top, the
+        // name plate TopLabelGap short of its timer ring and the call centred under it as on the
+        // other seats (the owner, 2 Nov 2026), so the avatar takes the name plate's
+        // place and the whole seat stands higher (the owner: "make the top player name and bid on the
+        // left side so you can move that upper player slightly upwards"; ADR 072).
+        private const float TopProfileGap = 5f;                 // from the trump line to the timer ring
+        private const float TopLabelGap = 6f;                   // from the name plate and the pill to the timer ring
         private const float TopSeatRise = 24.4f;                // 28 canvas units
 
         // The local seat's name plate and status pill are below its avatar, centred under it at the
@@ -147,26 +153,27 @@ namespace Callbreak.Editor.Screens
         private const float LocalProfileX = 90f;
 
         // The seconds disc sits on a free side of the avatar (from its centre): the outer top corner
-        // of a side seat; on the left of the top and the local avatar, whose name plates, chips and
-        // speech boxes take the other sides.
+        // of a side seat; on the left of the local avatar and the right of the top one, whose name
+        // plates, chips and speech boxes take the other sides.
         private static readonly Vector2[] DiscOffsets =
         {
-            new Vector2(-52f, 0f), new Vector2(29f, -29f), new Vector2(-52f, 0f), new Vector2(-29f, -29f),
+            new Vector2(-52f, 0f), new Vector2(29f, -29f), new Vector2(52f, 0f), new Vector2(-29f, -29f),
         };
 
         // The call bubble (a call as it is placed, "auto"), from the avatar's centre: right of the
-        // local avatar, towards the hand; below a side seat's status pill; left of the top avatar,
-        // past its seconds disc (its fan hangs below it, its speech box is on the right).
+        // local avatar, towards the hand; below a side seat's status pill; left of the top seat's
+        // name and call, past their widest (its fan hangs below the avatar, its seconds disc and
+        // speech box are on the right).
         private static readonly Vector2[] BubbleOffsets =
         {
-            new Vector2(84f, 0f), new Vector2(0f, 123f), new Vector2(-112f, 0f), new Vector2(0f, 123f),
+            new Vector2(84f, 0f), new Vector2(0f, 123f), new Vector2(-262f, 0f), new Vector2(0f, 123f),
         };
 
         // ---- The speech box for quick phrases (ADR 027; the owner's reference image, as mockup 18
         // draws it): an ivory box with a golden rim and its tail at the bottom-left corner pointing
         // down at the speaker, the phrase in bold Heading Burgundy. It sits just above the avatar
-        // (to the upper right of the top seat's, whose name and pill are above it) and grows away
-        // from its tail: rightwards, leftwards on the right seat, whose tail is mirrored.
+        // (right of the top seat's, past its seconds disc) and grows away from its tail: rightwards,
+        // leftwards on the right seat, whose tail is mirrored.
         // The box is 9-sliced, its soft shadow inside the image: the rim is inset from the image's
         // edges by these margins (canvas units). The tail is an overlay drawn over the box's foot,
         // its bottom-left corner this far from the box image's; its tip ends this far from the rim's
@@ -188,12 +195,13 @@ namespace Callbreak.Editor.Screens
 
         // The tail's tip stops this far outside the avatar's timer ring (mockup px), up and 30° over
         // to the box's side, so that the tail, which leans 30°, points at the avatar's centre. The
-        // top seat's box stands right of its status pill, its rim's foot this far above the avatar's
-        // centre, its tail reaching down towards the avatar (and clear of the fan below it).
+        // top seat's box stands right of its seconds disc, its rim's foot this far below the avatar's
+        // centre: above the right end of the fan, and below the banner's slot when the seat comes down
+        // to make room for it (ADR 072).
         private const float ChatTipGap = 8f;
         private const float ChatTipTurn = 30f;
         private const float ChatBesideGap = 8f;
-        private const float ChatBesideRise = 30f;
+        private const float ChatBesideDrop = 6f;
 
         // The local seat's box leans less and stands a little higher, so that its rim keeps clear of
         // the tops of the hand's first cards (y 737 to 728 there); its tail then points a little left
@@ -202,7 +210,7 @@ namespace Callbreak.Editor.Screens
         private const float LocalChatTipTurn = 20f;
 
         // ---- The seat chip ("Away", "Reconnecting…", "Bot playing"): the kit's tag pill on the
-        // top edge of the avatar (the bottom edge of the top seat's, whose name and pill are above).
+        // top edge of the avatar (the bottom edge of the top seat's, which stands at the screen's top).
         private const float ChipHeight = 24f;
         private const float ChipTextScale = 0.8f;
         private const float ChipSpinnerSize = 15f;
@@ -626,8 +634,8 @@ namespace Callbreak.Editor.Screens
         /// <summary>
         /// Puts the parts of a seat's profile where the owner arranged them (2 Oct 2026) and returns
         /// the avatar's centre (mockup px). A side seat keeps the layout's (the whole seat moves down
-        /// later). The top seat's name plate and status pill stand above its avatar, just under the
-        /// trump line, and its avatar comes down below them (mockup 19). The local seat's plate and
+        /// later). The top seat's avatar stands just under where the trump line was, its name plate and
+        /// status pill left of it, the name above the call, from its top (ADR 072). The local seat's plate and
         /// pill are centred below its avatar at the opponents' widths, their words centred in them,
         /// the pill keeping its place at the bottom; the avatar, its timer ring and its seconds disc
         /// go up so that the plate lies over the ring's foot as an opponent's does.
@@ -637,13 +645,19 @@ namespace Callbreak.Editor.Screens
             LayoutNode ring = ctx.Node($"SeatRing{seat}"), plate = ctx.Node($"SeatPlate{seat}"), pill = ctx.Node($"SeatPill{seat}");
             if (seat == 2)
             {
+                // The timer ring's top where the name plate's was; the name and the call left of it,
+                // the name level with the ring's top, the call centred under it as on the other seats
+                // (its words are never wider than the plate: "Waiting", "Calling…", "1-3").
                 LayoutNode trump = ctx.Node("TrumpLabel"), suit = ctx.Node("TrumpSuit");
+                LayoutNode localRing = ctx.Node("SeatRing0"), localTimer = ctx.Node("SeatTimerRing0");
                 float top = Mathf.Max(trump.inkBox[3], suit.rect[1] + suit.rect[3]) + TopProfileGap - TopSeatRise;
-                float pillTop = top + plate.rect[3];
-                MoveNode(ctx, "SeatPlate2", new Vector2(plate.Centre.x, top + plate.rect[3] / 2f));
-                MoveNode(ctx, "SeatPill2", new Vector2(pill.Centre.x, pillTop + pill.rect[3] / 2f));
-                var topAvatar = new Vector2(ring.Centre.x, pillTop + pill.rect[3] + TopRingGap + ring.rect[3] / 2f);
+                float timerHalf = ring.rect[3] * localTimer.rect[3] / localRing.rect[3] / 2f;
+                var topAvatar = new Vector2(ring.Centre.x, top + timerHalf);
                 MoveNode(ctx, "SeatRing2", topAvatar);
+
+                float column = topAvatar.x - timerHalf - TopLabelGap - (plate.rect[2] / 2f);
+                MoveNode(ctx, "SeatPlate2", new Vector2(column, top + (plate.rect[3] / 2f)));
+                MoveNode(ctx, "SeatPill2", new Vector2(column, top + plate.rect[3] + (pill.rect[3] / 2f)));
                 return topAvatar;
             }
 
@@ -772,16 +786,16 @@ namespace Callbreak.Editor.Screens
         /// bottom-right on the right seat), in mockup px. Above a side avatar the tail's tip stops
         /// just outside the timer ring, up and over to the box's side, so that the leaning tail
         /// points at the avatar's centre; the local seat's stops a little further out and turned
-        /// less, which keeps its box off the hand. The top seat's box stands right of its status
-        /// pill, its foot a little above the avatar's centre and its tail reaching down towards the
-        /// avatar.
+        /// less, which keeps its box off the hand. The top seat's box stands right of its seconds
+        /// disc, its shadow included, its foot a little below the avatar's centre.
         /// </summary>
         private static Vector2 ChatRimCorner(ScreenBuildContext ctx, int seat, Vector2 avatarCentre, float timerRadius)
         {
             if (seat == 2)
             {
-                LayoutNode pill = ctx.Node("SeatPill2");
-                return new Vector2(pill.rect[0] + pill.rect[2] + ChatBesideGap, avatarCentre.y - ChatBesideRise);
+                LayoutNode disc = ctx.Node("SeatTimerDisc0");
+                float left = avatarCentre.x + DiscOffsets[2].x + (disc.rect[2] / 2f) + ChatBesideGap;
+                return new Vector2(left + (ChatRimSide / UiBuildKit.ScaleX), avatarCentre.y + ChatBesideDrop);
             }
 
             float side = seat == 1 ? -1f : 1f;

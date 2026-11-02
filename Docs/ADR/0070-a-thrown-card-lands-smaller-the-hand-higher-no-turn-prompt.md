@@ -1,6 +1,6 @@
 # ADR 070 - A thrown card lands smaller, the hand stands higher, and there is no turn prompt
 
-**Status:** proposed. The owner, 2 Nov 2026, with three mock-ups of our own table (the green cloth,
+**Status:** proposed; the trick's centre moved up with the top seat in ADR 072. The owner, 2 Nov 2026, with three mock-ups of our own table (the green cloth,
 our HUD and seats), "just for references for thrown cards":
 
 > In game play when throwing a card make it a bit small so that it feels like card is being thrown

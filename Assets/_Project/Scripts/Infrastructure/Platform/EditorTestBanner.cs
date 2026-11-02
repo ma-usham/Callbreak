@@ -5,9 +5,9 @@ namespace Callbreak.Infrastructure.Platform
 {
     /// <summary>
     /// Whether a game played in the Editor shows the drawn test banner (<see cref="EditorTestBannerAdNetwork"/>,
-    /// ADR 071): the Editor's own setting, on until it is turned off (Callbreak &gt; Ads &gt; Test Banner in
-    /// Play Mode), read as the game starts. The PlayMode tests boot with it as they ask
-    /// (<see cref="While"/>), off unless a test is about the banner.
+    /// ADR 071): the Editor's own setting, off until it is turned on (Callbreak &gt; Ads &gt; Test Banner in
+    /// Play Mode; the owner checks the banner on Android), read as the game starts. The PlayMode tests
+    /// boot with it as they ask (<see cref="While"/>), off unless a test is about the banner.
     /// </summary>
     public static class EditorTestBanner
     {
@@ -15,7 +15,7 @@ namespace Callbreak.Infrastructure.Platform
 
         public static bool On
         {
-            get => UnityEditor.EditorPrefs.GetBool(SettingKey, true);
+            get => UnityEditor.EditorPrefs.GetBool(SettingKey, false);
             set => UnityEditor.EditorPrefs.SetBool(SettingKey, value);
         }
 

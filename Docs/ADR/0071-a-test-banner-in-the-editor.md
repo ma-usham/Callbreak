@@ -1,8 +1,9 @@
 # ADR 071 - A test banner in the Editor
 
-**Status:** accepted (owner, 2 Nov 2026). The owner: "we have banner ads right? how am i gonna test
-that how the game gonna look on mobile device?" Then, to the offer of a test banner in the Editor:
-"Yes, add it".
+**Status:** accepted (owner, 2 Nov 2026); off by default since the same day. The owner: "we have banner
+ads right? how am i gonna test that how the game gonna look on mobile device?" Then, to the offer of a
+test banner in the Editor: "Yes, add it". After trying it: "remove the editor test banner ads from both
+game play and mainmenu i will check that on android" — so the switch below starts off.
 
 ## Context
 
@@ -34,7 +35,7 @@ That needed a Development Build on a phone.
     1080-pixel-high view draws it 840 × 131 pixels, as a 1080p phone does.
   - The size follows the view as it is resized.
 - **A switch:** Callbreak > Ads > Test Banner in Play Mode. It is the Editor's own setting
-  (EditorPrefs `Callbreak.EditorTestBanner`) and on until it is turned off. It is read as the game
+  (EditorPrefs `Callbreak.EditorTestBanner`), off until it is turned on. It is read as the game
   starts, so it counts from the next Play.
 - **The PlayMode tests boot without it,** whatever the switch says (`GameFixture.Boot`'s
   `editorTestBanner`, false by default). Every other test sees the table and the menu as before.
@@ -43,8 +44,9 @@ That needed a Development Build on a phone.
 
 ## Consequences
 
-- Pressing Play in the Editor shows the game as a player without No Ads sees it on a phone, banner
-  included.
+- With the switch on, pressing Play in the Editor shows the game as a player without No Ads sees it
+  on a phone, banner included. With it off (the default), the Editor shows the table and the menu
+  without a banner, as before.
 - Use the Device Simulator for a phone's shape, notch and safe area. Turn the switch off for the game
   without a banner (as with No Ads).
 - What a real AdMob banner looks like still needs a Development Build on a phone. AdMob's test
