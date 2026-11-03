@@ -42,28 +42,37 @@ namespace Callbreak.Editor.Screens
         // its whole middle card shows, HandBelow canvas units of cloth under it (the end cards, bent
         // lower, still run off the bottom edge).
         private const float HandBelow = 10f;
-        private const float HandShows = HandCardHeight + HandBelow; // 236 canvas units
+        private const float HandShows = HandCardHeight + HandBelow; // 253 canvas units
         private const float HandCentreX = 836.2f;               // the trick's centre
         private const float HandWidthFraction = 0.772f;         // 94.5 px between cards on the mockup; the GDD says 70%
+
+        // How wide the hand may spread to keep its 7 mm strips (the GDD says 86%), and the widest strip
+        // between two cards: since the cards grew (ADR 083) the hand stops at 80% of the safe area, clear
+        // of the local seat in the bottom-left corner, and the strips stay as wide as they were, so the
+        // larger cards overlap a little more instead of spreading further.
+        private const float HandMaxWidthFraction = 0.80f;
+        private const float HandMaxStrip = 130f;
         private const float HandLift = 14.4f;                   // 12.5 mockup px; the GDD says 28
 
-        // The hand's cards are a fifth of the screen's height: the owner found them "way too big" at
-        // 9% larger than the shared card (30 Oct 2026), so they are drawn at HandCardScale of it,
-        // 163 x 226 canvas units (ADR 062's addendum; Figma's card shape since ADR 068). The touch area
-        // reaches HandTouchAbove canvas units above the middle card.
-        private const float HandCardScale = 0.8f;
+        // The hand's cards are under a quarter of the screen's height: the owner found them "way too
+        // big" at 9% larger than the shared card (30 Oct 2026), so they were drawn at 0.8 of it (ADR
+        // 062's addendum), then asked for them "by small amount" larger (3 Nov 2026, ADR 083): at
+        // HandCardScale of it, 175 x 243 canvas units (Figma's card shape since ADR 068). The touch
+        // area reaches HandTouchAbove canvas units above the middle card.
+        private const float HandCardScale = 0.86f;
         private const float HandCardHeight = HandCardScale * TableCardBuilder.CardHeight;
         private const float HandTouchAbove = 35f;
 
         // Half the bend mockup 08 draws (a radius of 3740, end cards leaning 10°): the owner asked for
         // a gentler arc, so a full hand's end cards lean 5° and hang 28 px lower (ADR 021; the owner
-        // kept it on 30 Oct 2026: "make the hand card slightly bend like before").
-        private const float HandArcRadius = 7480f;
+        // kept it on 30 Oct 2026: "make the hand card slightly bend like before"). A touch flatter than
+        // twice 3740 since the cards grew (ADR 083), so the widest hands' end cards still lean under 7°.
+        private const float HandArcRadius = 7600f;
 
         // ---- The trick, by relative seat (0 bottom, 1 right, 2 top, 3 left), as the owner's own table
         // mock-ups lay it (2 Nov 2026, ADR 070, in place of ADR 062's full-size cross: "when throwing a
         // card make it a bit small so that it feels like card is being thrown like in real"). A thrown
-        // card shrinks to TrickCardScale of the hand's as it flies, 122 x 170 canvas units. The top
+        // card shrinks to TrickCardScale of the hand's as it flies, 131 x 182 canvas units. The top
         // and the bottom card stand upright, one above the other, TrickColumnGap apart; the side cards
         // lie sideways beside them at the centre's height, their tops towards the players who played
         // them, TrickSideGap clear of the column, so the four make a "+" (the owner, 2 Nov 2026: "the
@@ -490,9 +499,9 @@ namespace Callbreak.Editor.Screens
             SerializedProperty layout = so.FindProperty("_layout");
             layout.FindPropertyRelative("CardWidth").floatValue = cardWidth;
             layout.FindPropertyRelative("MinWidthFraction").floatValue = HandWidthFraction;
-            layout.FindPropertyRelative("MaxWidthFraction").floatValue = 0.86f;
+            layout.FindPropertyRelative("MaxWidthFraction").floatValue = HandMaxWidthFraction;
             layout.FindPropertyRelative("MinStrip").floatValue = HandLayout.HardMinStrip;
-            layout.FindPropertyRelative("MaxStrip").floatValue = 0.8f * cardWidth;
+            layout.FindPropertyRelative("MaxStrip").floatValue = HandMaxStrip;
             layout.FindPropertyRelative("Lift").floatValue = HandLift;
             layout.FindPropertyRelative("HoverLift").floatValue = 18f;
             layout.FindPropertyRelative("ArcRadius").floatValue = HandArcRadius;
