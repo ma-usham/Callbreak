@@ -101,7 +101,10 @@ From the proposal they first picked "admob, applovin, unityads bidding only", th
   mode on, and AdMob's Ad Inspector.
 - **The owner's part** (`Docs/Setup/AdMob.md`, "What the owner does"):
   - Unity's payment and tax details;
-  - Unity's lines in `https://callbreak.dayzerogames.tech/app-ads.txt`, and that site as Unity's
-    Developer website;
-  - Play Console's Data safety for the Unity Ads SDK;
+  - Unity's lines in `https://dayzerogames.tech/app-ads.txt`, the company site Unity's Developer
+    website now points at (`callbreak.dayzerogames.tech/app-ads.txt` has them, checked 4 Nov);
   - test devices.
+- **Done with the owner on 4 Nov 2026:** Unity's Developer website set to
+  `https://dayzerogames.tech`. Play Console's Data safety now matches Unity Ads 4.20's guide:
+  purchase history shared for Advertising or marketing and Analytics, and App functionality added
+  to the sharing purposes of approximate location and diagnostics. Sent for Google's review.

@@ -297,12 +297,16 @@ their choice later. Settings then shows a **Privacy options** button under its p
    google.com, pub-1025159441369051, DIRECT, f08c47fec0942fa0
    ```
 
-   The file is at `https://callbreak.dayzerogames.tech/app-ads.txt`, and AdMob finds it (Apps >
-   app-ads.txt, 3 Nov 2026). With mediation (above), add Unity's lines under it: its own
-   `unity.com, 127840420, DIRECT, 96cabb5fbdde37a7` and about 150 RESELLER lines, copied from Unity
-   Dashboard > Monetization > Settings > Organization > App-ads.txt, which keeps the list current.
-   Unity also needs the site: its Developer website there was empty, so its crawler could not read
-   the file ("badUrlForm").
+   The file is at `https://callbreak.dayzerogames.tech/app-ads.txt`, the site on the Play listing,
+   and AdMob finds it (Apps > app-ads.txt). With mediation (above) it also carries Unity's lines:
+   its own `unity.com, 127840420, DIRECT, 96cabb5fbdde37a7` and 161 RESELLER lines, copied from
+   Unity Dashboard > Monetization > Settings > Organization > App-ads.txt, which keeps the list
+   current (all 163 lines checked against it on 4 Nov 2026).
+
+   Unity reads the file from its organization's **Developer website**, set to the company site
+   `https://dayzerogames.tech` on 4 Nov 2026 (it was empty: "badUrlForm"). So
+   `https://dayzerogames.tech/app-ads.txt` needs Unity's lines too; that day it had only the AdMob
+   line, and Unity listed its lines as missing there.
 
 6. **Unity Ads** (above, "Mediation"). In the Unity Dashboard (DayZero Games), add payment and tax
    details under Monetization > Payments. The consent messages need nothing: "Callbreak - European
@@ -317,7 +321,10 @@ their choice later. Settings then shows a **Privacy options** button under its p
    - Data safety: declare the data the Google Mobile Ads SDK collects and shares (see Google's
      guide "Prepare for Google Play's Data safety section" for AdMob: device and other identifiers,
      approximate location, app interactions, diagnostics), and with mediation what the Unity Ads
-     SDK collects too (Unity publishes its own Data safety guide).
+     SDK collects too (Unity publishes its own Data safety guide). Checked against Unity Ads
+     4.20's guide on 4 Nov 2026: every type it lists was declared. Purchase history became shared
+     (Advertising or marketing, Analytics), and Approximate location and Diagnostics gained App
+     functionality as a sharing purpose. Sent to Google for review that day.
    - Target audience: if it includes children, the Families policy applies and ad requests must be
      tagged; today nothing is tagged.
 8. **iOS (later).** There is no iOS AdMob app yet. With the plugin installed, an iOS build stops in
