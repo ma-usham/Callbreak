@@ -201,6 +201,9 @@ namespace Callbreak.Editor
             so.FindProperty("_pointer").objectReferenceValue = pointer;
             so.FindProperty("_pointerGroup").objectReferenceValue = pointerGroup;
             so.FindProperty("_buttonHeight").floatValue = ButtonHeight * 1.135f;
+
+            // Wide enough that the score's two lines never leave a word alone on a third.
+            so.FindProperty("_centreWidth").floatValue = 860f;
             so.ApplyModifiedPropertiesWithoutUndo();
 
             int uiLayer = LayerMask.NameToLayer("UI");

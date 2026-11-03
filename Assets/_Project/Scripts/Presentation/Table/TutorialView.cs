@@ -40,7 +40,7 @@ namespace Callbreak.Presentation.Table
         // The card's layout (canvas units at the 1080p reference).
         // In play the card stays above the right-hand seat and right of the top seat's fan, under the banner.
         [SerializeField] private float _cornerWidth = 740f;
-        [SerializeField] private float _centreWidth = 760f;
+        [SerializeField] private float _centreWidth = 860f;
         [SerializeField] private Vector2 _cornerMargin = new Vector2(70f, 160f);
         [SerializeField] private Vector2 _padding = new Vector2(34f, 22f);
         [SerializeField] private float _titleGap = 6f;
