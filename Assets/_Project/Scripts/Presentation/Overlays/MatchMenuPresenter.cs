@@ -242,9 +242,12 @@ namespace Callbreak.Presentation.Overlays
         {
             try
             {
+                // The practice match is not saved (ADR 084): its dialog does not promise a Resume.
+                bool kept = !(_session is OfflineMatchSession { IsPractice: true });
+                string bodyKey = MatchMenuText.LeaveBodyKeyFor(_session.Mode, LeavingClosesTheRoom, kept);
                 var request = new DialogRequest(
                     _localization.Get(LeaveTitleKey),
-                    _localization.Get(MatchMenuText.LeaveBodyKeyFor(_session.Mode, LeavingClosesTheRoom)),
+                    bodyKey != null ? _localization.Get(bodyKey) : string.Empty,
                     _localization.Get(LeaveConfirmKey),
                     _localization.Get(LeaveCancelKey));
                 bool confirmed = await _dialogs.ConfirmAsync(request, _lifetime.Token);

@@ -7,13 +7,14 @@ namespace Callbreak.Application.Sessions
     /// </summary>
     public sealed class MatchLaunchRequest
     {
-        public MatchLaunchRequest(MatchMode mode, BotDifficulty difficulty, bool resumeSaved = false, string ruleSetId = "nepali-standard", bool tutorial = false)
+        public MatchLaunchRequest(MatchMode mode, BotDifficulty difficulty, bool resumeSaved = false, string ruleSetId = "nepali-standard", bool tutorial = false, bool practice = false)
         {
             Mode = mode;
             Difficulty = difficulty;
             ResumeSaved = resumeSaved;
             RuleSetId = ruleSetId;
             Tutorial = tutorial;
+            Practice = practice;
         }
 
         public MatchMode Mode { get; }
@@ -30,5 +31,11 @@ namespace Callbreak.Application.Sessions
         /// practice match a new player accepts.
         /// </summary>
         public bool Tutorial { get; }
+
+        /// <summary>
+        /// Offline only: the first-run practice match (ADR 084). It is never saved, so leaving it, or
+        /// the app closing during it, leaves nothing to resume (the owner, 3 Nov 2026).
+        /// </summary>
+        public bool Practice { get; }
     }
 }

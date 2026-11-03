@@ -33,7 +33,8 @@ namespace Callbreak.Application.Sessions
     /// A new match is dealt from the seed, of a few fair draws, that gives the player the strongest
     /// hands (<see cref="FriendlyDeal"/>, ADR 056), so offline play is friendly at every level.
     /// A tutorial match (ADR 084) deals <see cref="TutorialDeal.First"/> instead and plays its first
-    /// hand with the <see cref="MatchTutorial"/>, whose captions the bots wait for.
+    /// hand with the <see cref="MatchTutorial"/>, whose captions the bots wait for. The first-run
+    /// practice match is never saved: nothing of it is left to resume.
     /// </summary>
     public sealed class OfflineMatchSession : IMatchSession
     {
@@ -47,6 +48,7 @@ namespace Callbreak.Application.Sessions
         private readonly BotDifficulty _difficulty;
         private readonly bool _resumed;
         private readonly MatchTutorial _tutorial;
+        private readonly bool _practice;
         private readonly List<MatchEvent> _outbox = new List<MatchEvent>();
         private readonly SessionSeat[] _seats = new SessionSeat[4];
 
@@ -111,6 +113,7 @@ namespace Callbreak.Application.Sessions
                 _engine = new MatchEngine(rules, _rng, new MatchSetup("offline-" + _seed.ToString("x16"), seats));
             }
 
+            _practice = request.Practice && !_resumed;
             var botSeats = new Dictionary<Seat, IBotStrategy>();
             IReadOnlyList<SeatProfile> profiles = _engine.ViewFor(Seat.South).Seats;
 
@@ -188,6 +191,9 @@ namespace Callbreak.Application.Sessions
 
         /// <summary>The guided first hand of a tutorial match (ADR 084); null for every other match.</summary>
         public MatchTutorial Tutorial => _tutorial;
+
+        /// <summary>The first-run practice match (ADR 084): never saved, so it is never offered for Resume.</summary>
+        public bool IsPractice => _practice;
 
         public void Start()
         {
@@ -384,7 +390,7 @@ namespace Callbreak.Application.Sessions
 
         private void SaveProgress()
         {
-            if (!_started || _ended)
+            if (!_started || _ended || _practice)
             {
                 return;
             }

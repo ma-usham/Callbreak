@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Callbreak.Application.Cosmetics;
+using Callbreak.Application.Flow;
 using Callbreak.Application.Profile;
 using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
@@ -396,6 +397,59 @@ namespace Callbreak.Tests.EditMode.Application.Sessions
 
             Assert.IsTrue(_store.HasSave);
             Assert.AreEqual(0, _stats.Current.gamesPlayed, "leaving an offline match records nothing");
+        }
+
+        [Test]
+        public void PracticeMatch_LeftPartWay_LeavesNothingToResume()
+        {
+            // The owner, 3 Nov 2026: "the practice match shouldnt be resumed later" (ADR 084).
+            OfflineMatchSession session = PracticeSession();
+            double now = 0;
+            PlayUntil(session, ref now, view => view.CompletedTricks.Count >= 2);
+
+            session.LeaveAsync(CancellationToken.None).Wait();
+
+            Assert.IsFalse(_store.HasSave, "Play Offline later starts a new match, with no Resume offer");
+        }
+
+        [Test]
+        public void PracticeMatch_PausedWhenTheAppGoesAway_SavesNothing()
+        {
+            // The app pauses (and an ordinary match saves) when it goes to the background, before it may be closed.
+            OfflineMatchSession session = PracticeSession();
+            double now = 0;
+            PlayUntil(session, ref now, view => view.CompletedTricks.Count >= 1);
+
+            session.Pause();
+
+            Assert.IsFalse(_store.HasSave);
+            Assert.IsTrue(session.IsPractice);
+        }
+
+        [Test]
+        public void OrdinaryEasyMatch_LeftPartWay_IsStillKeptForResume()
+        {
+            var session = new OfflineMatchSession(
+                new MatchLaunchRequest(MatchMode.Offline, BotDifficulty.Easy),
+                _store, new LowestCardBots(), _profile, _cosmetics, _settings, _stats, BotTiming.Instant);
+            session.Start();
+            double now = 0;
+            PlayUntil(session, ref now, view => view.CompletedTricks.Count >= 2);
+
+            session.LeaveAsync(CancellationToken.None).Wait();
+
+            Assert.IsFalse(session.IsPractice);
+            Assert.IsTrue(_store.HasSave);
+        }
+
+        /// <summary>The first-run practice match, its tutorial skipped so the bots play on.</summary>
+        private OfflineMatchSession PracticeSession()
+        {
+            var session = new OfflineMatchSession(
+                FirstRun.PracticeMatch(_settings), _store, new LowestCardBots(), _profile, _cosmetics, _settings, _stats, BotTiming.Instant);
+            session.Start();
+            session.Tutorial.Skip();
+            return session;
         }
 
         [Test]

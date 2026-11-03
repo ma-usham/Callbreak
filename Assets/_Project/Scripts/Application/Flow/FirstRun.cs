@@ -25,10 +25,13 @@ namespace Callbreak.Application.Flow
             return !profile.HasChosenName;
         }
 
-        /// <summary>The easy offline match the first-run offer starts: the tutorial, until it is done.</summary>
+        /// <summary>
+        /// The easy offline match the first-run offer starts: never kept for Resume, and the tutorial
+        /// until that is done (ADR 084).
+        /// </summary>
         public static MatchLaunchRequest PracticeMatch(ISettingsService settings)
         {
-            return new MatchLaunchRequest(MatchMode.Offline, BotDifficulty.Easy, tutorial: !settings.TutorialDone);
+            return new MatchLaunchRequest(MatchMode.Offline, BotDifficulty.Easy, tutorial: !settings.TutorialDone, practice: true);
         }
     }
 }

@@ -32,11 +32,13 @@ namespace Callbreak.Presentation.Table
 
         /// <param name="mode">The match being left.</param>
         /// <param name="hostsTheRoom">This device hosts the private room the match is played in, and its leaving closes the room.</param>
-        public static string LeaveBodyKeyFor(MatchMode mode, bool hostsTheRoom)
+        /// <param name="keptForResume">False for the first-run practice match, which is not saved (ADR 084).</param>
+        /// <returns>The body's key, or null when there is nothing to warn of.</returns>
+        public static string LeaveBodyKeyFor(MatchMode mode, bool hostsTheRoom, bool keptForResume = true)
         {
             if (mode == MatchMode.Offline)
             {
-                return LeaveBodyOfflineKey;
+                return keptForResume ? LeaveBodyOfflineKey : null;
             }
 
             return mode == MatchMode.PrivateRoom && hostsTheRoom ? LeaveBodyHostKey : LeaveBodyKey;

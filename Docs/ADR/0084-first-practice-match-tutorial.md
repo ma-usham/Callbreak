@@ -8,6 +8,9 @@
 
 > if you need figma design for point use that and design pointer in figma and use it in game
 
+> in practice match if we play and leve then if i tried playing offline then it says resume the previous
+> match that shouldnt happen. the practice match shouldnt be resumed later.
+
 ## Context
 
 - **The first run** (GDD §15, ADR 022) asks the player's name, opens How to Play by itself and then
@@ -58,9 +61,15 @@
   practice the offer promised, and the "You're ready" card sits on the first hand's results, where the
   score it explains is.
 - **It runs once.** `settings.json` schema 3 adds `tutorialDone`; finishing the tutorial, "Skip tutorial"
-  on any step, or the next round starting marks it. A player who leaves during the guided hand keeps the
-  match for Resume, which plays on as a plain match; nothing offers the tutorial again (the first-run
+  on any step, or the next round starting marks it. Nothing offers the tutorial again (the first-run
   offer itself comes once).
+- **The practice match is never kept for Resume** (the owner, later the same day).
+  `FirstRun.PracticeMatch` sets `MatchLaunchRequest.Practice`, and `OfflineMatchSession` never saves
+  such a match: not after a trick, not when it pauses (as the app goes to the background), and not when
+  it is left. Leaving it, or the app closing during it, leaves nothing to resume: Play Offline later
+  starts a new match, and the launch offers no Resume. Its "Leave match?" dialog drops the line "Your
+  match is saved…". Restart Game starts an ordinary easy match. Ordinary offline matches are saved as
+  before.
 - **The overlay** (`TutorialView`, `TutorialPresenter`; built by `TutorialOverlayBuilder` into the Table
   scene, canvas order 45: above the pages, below dialogs and toasts) uses the dialog's kit: the modal
   panel as a caption card, the serif crimson title, the brown body, the crimson Next and the ivory "Skip
@@ -82,7 +91,10 @@
   scoring in the first hand, then plays on. Every other match is unchanged.
 - The first practice match's first hand is the same for everyone; its rounds 2-5 are fair deals from the
   match's seed, without ADR 056's friendlier choice of seed.
-- `ISettingsService` gained `TutorialDone` / `MarkTutorialDone`; `MatchLaunchRequest` gained `Tutorial`;
+- A practice match left on a phone by an earlier build is still saved and offered once; starting a new
+  match replaces it.
+- `ISettingsService` gained `TutorialDone` / `MarkTutorialDone`; `MatchLaunchRequest` gained `Tutorial`
+  and `Practice`; `OfflineMatchSession` exposes `IsPractice`;
   `BiddingPanelView` exposes its chips' and Confirm's rects for the pointer.
 - Not added: a "Replay tutorial" entry in How to Play (UI the owner did not ask for; the launch request
   makes it a small change if wanted).

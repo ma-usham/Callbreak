@@ -177,6 +177,7 @@ namespace Callbreak.Tests.EditMode.Presentation
             Assert.AreEqual("ui.dialog.leave_match.body", MatchMenuText.LeaveBodyKeyFor(MatchMode.QuickMatch, false));
             Assert.AreEqual("ui.dialog.leave_match.body", MatchMenuText.LeaveBodyKeyFor(MatchMode.QuickMatch, true), "a Quick Match table has nobody else to close a room for");
             Assert.AreEqual("ui.dialog.leave_match.body_offline", MatchMenuText.LeaveBodyKeyFor(MatchMode.Offline, true));
+            Assert.IsNull(MatchMenuText.LeaveBodyKeyFor(MatchMode.Offline, false, keptForResume: false), "the practice match is not saved (ADR 084): the dialog says nothing it would not do");
 
             string host = Strings.Get(MatchMenuText.LeaveBodyHostKey);
             StringAssert.Contains("close", host);

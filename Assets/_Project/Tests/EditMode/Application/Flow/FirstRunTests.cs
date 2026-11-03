@@ -85,6 +85,7 @@ namespace Callbreak.Tests.EditMode.Application.Flow
             Assert.AreEqual(BotDifficulty.Easy, request.Difficulty);
             Assert.IsFalse(request.ResumeSaved);
             Assert.IsTrue(request.Tutorial, "ADR 084: the first practice match teaches the game");
+            Assert.IsTrue(request.Practice, "and is never kept for Resume");
         }
 
         [Test]
@@ -96,6 +97,7 @@ namespace Callbreak.Tests.EditMode.Application.Flow
 
             Assert.AreEqual(BotDifficulty.Easy, request.Difficulty);
             Assert.IsFalse(request.Tutorial);
+            Assert.IsTrue(request.Practice);
         }
     }
 }
