@@ -101,7 +101,7 @@ namespace Callbreak.Tests.EditMode.Unity
             }
         }
 
-        [TestCase(1920f, 1080f)]
+        [TestCase(2400f, 1080f)]
         [TestCase(2520f, 1080f)]
         [TestCase(1920f, 1440f)]
         public void WithRoom_TheBannerFitsAtTheTop_CoveringNothing(float width, float height)
@@ -153,9 +153,9 @@ namespace Callbreak.Tests.EditMode.Unity
         }
 
         [Test]
-        public void WithRoom_OnAStandardPhone_SeatAndTrickStayAtHome()
+        public void WithRoom_OnAWidePhone_SeatAndTrickStayAtHome()
         {
-            Open(1920f, 1080f);
+            Open(2520f, 1080f);
             Vector2 top = Anchored("Seat2");
             Vector2 trick = Anchored("TrickArea");
             Vector2 left = Anchored("Seat3");
@@ -183,8 +183,9 @@ namespace Callbreak.Tests.EditMode.Unity
             Assert.IsFalse(Find("BannerSlot").gameObject.activeSelf);
         }
 
-        [Test]
-        public void NarrowPhone_WhenBannerTouchesAvatar_SlidesTopSeatLeftWithoutDroppingIt()
+        [TestCase(840, 131)]
+        [TestCase(960, 150)]
+        public void NarrowPhone_WhenNormalSeatCannotClearBanner_HidesBannerAndLeavesSeatAtHome(int bannerWidth, int bannerHeight)
         {
             Open(1920f, 1080f);
             _view.Seat(2).Fan.SetCount(13);
@@ -193,6 +194,25 @@ namespace Callbreak.Tests.EditMode.Unity
             Assert.AreEqual(actual.xMin, predicted.xMin, 1f, "predicted left edge of all 13 cards");
             Assert.AreEqual(actual.xMax, predicted.xMax, 1f, "predicted right edge of all 13 cards");
             Assert.AreEqual(actual.yMax, predicted.yMax, 1f, "predicted top edge of all 13 cards");
+            Vector2 top = Anchored("Seat2");
+            Vector2 trick = Anchored("TrickArea");
+
+            _view.SetBannerRoom(true, new BannerSize(bannerWidth, bannerHeight));
+
+            Assert.IsFalse(_view.HasBannerRoom);
+            Assert.IsFalse(Find("BannerSlot").gameObject.activeSelf);
+            Assert.IsFalse(_view.TryGetBannerSlot(out _));
+            Assert.AreEqual(top, Anchored("Seat2"));
+            Assert.AreEqual(trick, Anchored("TrickArea"));
+            Assert.IsFalse(Box(Find("Logo")).Overlaps(Box(Find("SeatPlate2"))));
+            Assert.IsFalse(Box(Find("RoundPill")).Overlaps(Box(Find("SeatPill2"))));
+        }
+
+        [Test]
+        public void WiderPhone_WhenOnlySpeechTouchesBanner_SlidesNormalSeatJustEnoughToClearIt()
+        {
+            Open(2400f, 1080f);
+            _view.Seat(2).Fan.SetCount(13);
             Vector2 top = Anchored("Seat2");
             Vector2 trick = Anchored("TrickArea");
 

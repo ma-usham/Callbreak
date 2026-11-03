@@ -173,17 +173,17 @@ namespace Callbreak.Editor.Screens
         // The call bubble (a call as it is placed, "auto"), from the avatar's centre: right of the
         // local avatar, towards the hand; below a side seat's status pill; left of the top seat's
         // name and call, past their widest (its fan hangs below the avatar, its seconds disc and
-        // speech box is on the left, below the name and clear of a top-right banner).
+        // speech box are on the right).
         private static readonly Vector2[] BubbleOffsets =
         {
-            new Vector2(84f, 0f), new Vector2(0f, 123f), new Vector2(-262f, 58f), new Vector2(0f, 123f),
+            new Vector2(84f, 0f), new Vector2(0f, 123f), new Vector2(-262f, 0f), new Vector2(0f, 123f),
         };
 
         // ---- The speech box for quick phrases (ADR 027; the owner's reference image, as mockup 18
         // draws it): an ivory box with a golden rim and its tail at the bottom-left corner pointing
         // down at the speaker, the phrase in bold Heading Burgundy. It sits just above the avatar
-        // (left of the top seat's fan and below its name) and grows away from its tail: rightwards,
-        // leftwards on the right and top seats, whose tails are mirrored.
+        // (right of the top seat's, past its seconds disc) and grows away from its tail: rightwards,
+        // leftwards on the right seat, whose tail is mirrored.
         // The box is 9-sliced, its soft shadow inside the image: the rim is inset from the image's
         // edges by these margins (canvas units). The tail is an overlay drawn over the box's foot,
         // its bottom-left corner this far from the box image's; its tip ends this far from the rim's
@@ -205,11 +205,12 @@ namespace Callbreak.Editor.Screens
 
         // The tail's tip stops this far outside the avatar's timer ring (mockup px), up and 30° over
         // to the box's side, so that the tail, which leans 30°, points at the avatar's centre. The
-        // top seat's box stands right of its seconds disc, its rim's foot this far below the avatar's
-        // centre: above the right end of the fan, and below the banner's slot when the seat comes down
-        // to make room for it (ADR 072).
+        // top seat's box stands right of its seconds disc, with its rim's foot a little below the
+        // avatar's centre. A banner is shown only where the full seat, including this box, fits.
         private const float ChatTipGap = 8f;
         private const float ChatTipTurn = 30f;
+        private const float ChatBesideGap = 8f;
+        private const float ChatBesideDrop = 6f;
 
         // The local seat's box leans less and stands a little higher, so that its rim keeps clear of
         // the tops of the hand's first cards (y 737 to 728 there); its tail then points a little left
@@ -560,7 +561,7 @@ namespace Callbreak.Editor.Screens
             Vector2 bubbleCentre = avatarCentre + BubbleOffsets[seat];
             RectTransform bubble = UiBuildKit.CreateAt("Bubble", root, bubbleCentre, seatCentre, UiBuildKit.FromMock(90f, BubbleHeight));
             Sliced(bubble, LoadTableSprite("UI_NamePlate"));
-            TextMeshProUGUI bubbleText = Label("Text", bubble, nameStyle, "4");
+            TextMeshProUGUI bubbleText = Label("Text", bubble, nameStyle, string.Empty);
             bubble.gameObject.SetActive(false);
 
             // The chip: how the seat's player is connected (GDD §8; a fill-in bot has none, ADR 025).
@@ -811,8 +812,9 @@ namespace Callbreak.Editor.Screens
         {
             if (seat == 2)
             {
-                // Left of the full fan and below the round pill, away from a top-right banner.
-                return avatarCentre + new Vector2(-170f, 135f);
+                LayoutNode disc = ctx.Node("SeatTimerDisc0");
+                float left = avatarCentre.x + DiscOffsets[2].x + (disc.rect[2] / 2f) + ChatBesideGap;
+                return new Vector2(left + (ChatRimSide / UiBuildKit.ScaleX), avatarCentre.y + ChatBesideDrop);
             }
 
             float side = seat == 1 ? -1f : 1f;
@@ -831,7 +833,7 @@ namespace Callbreak.Editor.Screens
         /// </summary>
         private static (RectTransform box, TextMeshProUGUI text) BuildChat(RectTransform root, int seat, Vector2 seatCentre, Vector2 rimCorner)
         {
-            bool mirrored = seat == 1 || seat == 2;
+            bool mirrored = seat == 1;
             float side = mirrored ? -1f : 1f;
             Vector2 corner = rimCorner - new Vector2(side * ChatRimSide / UiBuildKit.ScaleX, -ChatRimBottom / UiBuildKit.ScaleY);
 

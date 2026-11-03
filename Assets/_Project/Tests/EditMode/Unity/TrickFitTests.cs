@@ -189,13 +189,13 @@ namespace Callbreak.Tests.EditMode.Unity
                 Assert.LessOrEqual(said.xMax, timer.xMin, words + " clear of the avatar");
             }
 
-            // The seconds disc stands right of the avatar; the speech box and bubble stand to the left,
-            // clear of the others and of the fan.
+            // The seconds disc and speech box stand right of the avatar; the auto-play bubble is
+            // left of the name, clear of the others and of the fan.
             Rect disc = Box(FindIn(seat, "SeatTimerDisc2"));
             Rect chat = Box(FindIn(seat, "Chat"));
             Rect bubble = Box(FindIn(seat, "Bubble"));
             Assert.GreaterOrEqual(disc.center.x, timer.center.x, "the seconds disc on the avatar's right");
-            Assert.LessOrEqual(chat.xMax, timer.xMin - 1f, "the speech box left of the avatar");
+            Assert.GreaterOrEqual(chat.xMin, disc.xMax - 0.5f, "the speech box right of the seconds disc");
             Assert.LessOrEqual(bubble.xMax, Mathf.Min(plate.xMin, pill.xMin), "the bubble left of the name and the call");
             Rect canvas = Box(_canvas.transform);
             foreach (Rect piece in new[] { plate, pill, disc, chat, bubble })
@@ -213,7 +213,7 @@ namespace Callbreak.Tests.EditMode.Unity
             }
 
             Assert.IsFalse(chat.Overlaps(disc), "the speech box clear of the disc");
-            if (bannerRoom)
+            if (_view.HasBannerRoom)
             {
                 Rect slot = Box(Find("BannerSlot"));
                 float bannerWidth = height > 1080f ? 600f : 840f;
@@ -231,6 +231,48 @@ namespace Callbreak.Tests.EditMode.Unity
                 {
                     Assert.IsFalse(piece.Overlaps(Box(Find(corner))), "clear of " + corner);
                 }
+            }
+        }
+
+        [TestCase(1920f, 1080f, 840, 131, false)]
+        [TestCase(1920f, 1080f, 960, 150, false)]
+        [TestCase(2400f, 1080f, 840, 131, true)]
+        [TestCase(2400f, 1080f, 960, 150, true)]
+        [TestCase(1920f, 1440f, 600, 94, true)]
+        public void BannerRoom_KeepsTheNormalTopSpeechLayout_AndHidesTheAdWhenItCannotFit(float width, float height, int bannerWidth, int bannerHeight, bool expectedRoom)
+        {
+            Open(width, height);
+            Vector2 home = Find("Seat2").anchoredPosition;
+            _view.SetBannerRoom(true, new BannerSize(bannerWidth, bannerHeight));
+            Assert.AreEqual(expectedRoom, _view.HasBannerRoom);
+            Deal();
+            RectTransform chat = FindIn(Find("Seat2"), "Chat");
+            Assert.GreaterOrEqual(Box(chat).xMin, Box(Find("SeatTimerDisc2")).xMax - 0.5f, "the normal speech box stays right of the avatar's seconds disc");
+            if (!expectedRoom)
+            {
+                Assert.AreEqual(home, Find("Seat2").anchoredPosition, "the narrow-phone fallback leaves the player at home");
+                Assert.IsFalse(Find("BannerSlot").gameObject.activeSelf);
+                return;
+            }
+
+            Rect slot = Box(Find("BannerSlot"));
+            Rect banner = Rect.MinMaxRect(slot.xMax - bannerWidth, slot.yMax - bannerHeight, slot.xMax, slot.yMax);
+            Assert.IsFalse(Box(chat).Overlaps(banner), "the normal speech box clears the banner");
+            Assert.IsFalse(Box(FindIn(chat, "Tail")).Overlaps(banner), "its original tail clears the banner");
+            Assert.IsFalse(Fan(2).Overlaps(banner), "all 13 cards clear the banner");
+        }
+
+        [Test]
+        public void SeatBubbles_StartHidden_WithoutASampleCallNumber()
+        {
+            Open(1920f, 1080f);
+            for (int seat = 0; seat < TableView.SeatCount; seat++)
+            {
+                RectTransform bubble = FindIn(Find("Seat" + seat), "Bubble");
+                Assert.IsFalse(bubble.gameObject.activeSelf);
+                var view = new SerializedObject(_view.Seat(seat));
+                var text = new SerializedObject(view.FindProperty("_bubbleText").objectReferenceValue);
+                Assert.IsEmpty(text.FindProperty("m_text").stringValue, "a call is already shown in the status pill");
             }
         }
 

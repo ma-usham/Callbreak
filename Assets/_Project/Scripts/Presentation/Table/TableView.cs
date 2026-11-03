@@ -67,8 +67,9 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private float _roundPillPadding = 30f;
 
         // The banner ad at the top of the table (the owner, 14 and 26 Oct 2026, ADR 051; ADR 057).
-        // While a banner may come, the table slides the top seat left only if its full footprint can
-        // clear the expected banner without crowding the logo and round pill. The slot is an empty
+        // The normal seat layout stays intact. A banner is hidden when the full seat cannot clear
+        // it without crowding the logo and round pill; otherwise only the necessary left shift is
+        // made. The slot is an empty
         // rectangle across the top of the HUD, from right of the logo and the round line to the right
         // edge, that the ad network's own view is placed over; it is off while the table makes no room.
         // The banner keeps the gap from the round line's pill, however long its words are, and sits in
