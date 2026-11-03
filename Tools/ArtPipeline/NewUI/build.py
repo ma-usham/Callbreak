@@ -10,9 +10,6 @@ under Assets/_Project/Art:
   Tables/Table_<Name>.png          the cloths, filling the screen at the table (cloths.dhaka, .dusk; themes.py's)
   Tables/Frame_<Name>.png          the cloths' borders, tiled round the screen, 2x: Frame_Dhaka (cloths.frame)
                                    for both dhaka cloths, and each theme's (themes.py)
-  Shop/Backgrounds/Thumb_<Name>.png  the Background shop's tiles, cropped as Figma's ScenePicture frames
-  Shop/Tables/Preview_<Name>.png   the Cloth shop's tiles, cropped as Figma's ClothPicture frames (these two
-                                   for the first three backgrounds and cloths only)
   Shop/Themes/Tile_<Theme>.png     the shop's theme tiles, a background over its cloth (tiles.py)
 The backgrounds and cloths cover the backdrop frame: 2230 x 1255 pixels for the 1920 x 1080 screen plus
 its margins for 21:9 and 4:3 (TableBackdropBuilder.FrameWidth/Height), so each scene is drawn with that
@@ -23,7 +20,7 @@ import sys
 import tempfile
 
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -53,16 +50,6 @@ THEME_CLOTHS = {name: cloth for _, name, _, cloth, _ in themes.THEMES}
 FRAMES = {"Frame": ("Dhaka", cloths.frame)}
 FRAMES.update({name: (name, border) for _, name, _, _, border in themes.THEMES})
 
-# The shop tiles' crops of the 1920 x 1080 picture, as Figma's ScenePicture / ClothPicture frames show them
-# (x, y, width; Durbar Square's, which Figma's shop has no tile for, on its right-hand temples); the height
-# follows from the game's picture size. The themes' pictures have no such crops: their tiles are tiles.py's.
-THUMBS = {"DurbarSquare": (1240, 220, 680), "PokharaLakeside": (1080, 180, 720), "MonasteryGarden": (1140, 220, 720)}
-THUMB_SIZE = (590, 670)
-PREVIEWS = {"GreenDhaka": (579, 141, 762), "IndigoDhaka": (579, 141, 762), "DuskHimalaya": (579, 141, 762)}
-PREVIEW_SIZE = (603, 633)
-PREVIEW_RADIUS = 36
-
-
 def write_svg(path, text):
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(text)
@@ -76,18 +63,6 @@ def grain(path, density, seed):
     shade = (rng.random(image.shape[:2]) < density) * rng.uniform(0.0, 0.07, image.shape[:2])
     image *= (1.0 - shade)[..., None]
     Image.fromarray(np.clip(image + 0.5, 0, 255).astype(np.uint8), "RGB").save(path, optimize=True)
-
-
-def crop(src, box, size, out, radius=0):
-    x, y, w = box
-    h = w * size[1] / size[0]
-    image = Image.open(src).convert("RGB").crop((round(x), round(y), round(x + w), round(y + h))).resize(size, Image.LANCZOS)
-    if radius:
-        mask = Image.new("L", (size[0] * 4, size[1] * 4), 0)
-        ImageDraw.Draw(mask).rounded_rectangle((0, 0, size[0] * 4 - 1, size[1] * 4 - 1), radius * 4, fill=255)
-        image = image.convert("RGBA")
-        image.putalpha(mask.resize(size, Image.LANCZOS))
-    image.save(out, optimize=True)
 
 
 def main():
@@ -109,24 +84,8 @@ def main():
         grain(out, 0.4, 58 + i)
         print("wrote", os.path.relpath(out, ROOT))
 
-    # The shop's crops, from the 1920 x 1080 picture alone.
+    # The cloths' borders, at twice the canvas size, without the bleed.
     S.set_bleed(0, 0)
-    for i, name, fn, out in pictures:
-        if name not in THUMBS and name not in PREVIEWS:
-            continue
-        svg = write_svg(os.path.join(work, f"{name}.svg"), fn())
-        flat = os.path.join(work, f"{name}.png")
-        render(svg, flat, 1920, 1080)
-        grain(flat, 0.4, 58 + i)
-        if name in THUMBS:
-            out = os.path.join(ART, "Shop", "Backgrounds", f"Thumb_{name}.png")
-            crop(flat, THUMBS[name], THUMB_SIZE, out)
-        else:
-            out = os.path.join(ART, "Shop", "Tables", f"Preview_{name}.png")
-            crop(flat, PREVIEWS[name], PREVIEW_SIZE, out, PREVIEW_RADIUS)
-        print("wrote", os.path.relpath(out, ROOT))
-
-    # The cloths' borders, at twice the canvas size.
     for key, (art_name, fn) in FRAMES.items():
         if only and key not in only:
             continue

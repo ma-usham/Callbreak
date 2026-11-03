@@ -1,5 +1,11 @@
 # Art pipeline
 
+> **Retired 3 Nov 2026 (ADR 081).** The game's art now comes from Figma and the vector scripts in
+> `NewUI/` (see `NewUI/README.md`). The mockups this pipeline read (`Assets/ArtRefrences`), its ChatGPT
+> working files (`ArtSource/Working`, `ArtSource/Prompts`), the kit scripts (`Kit/`), `fit-menu.ps1`,
+> `patch-menu-plate.ps1`, `text-check.ps1` and `export-decks.ps1` are gone. What follows is the record of
+> how the V1 art was made; `compose-decks.ps1` (the vintage deck, from `ArtSource/Cards`) still runs.
+
 Scripts that turn ChatGPT extractions into game-ready sprites and check the Unity build against
 the mockups. They were written for the main menu (screen 00); the same steps apply to every
 other screen.
