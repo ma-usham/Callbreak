@@ -299,6 +299,34 @@ namespace Callbreak.Tests.EditMode.Application
         }
 
         [Test]
+        public void MarkTutorialDone_ChangesOnlyTheFirstTimeAndSurvivesARestart()
+        {
+            // ADR 084: the guided first hand runs once.
+            var settings = new SettingsService(_store);
+            int changed = 0;
+            settings.Changed += () => changed++;
+            Assert.IsFalse(settings.TutorialDone);
+
+            settings.MarkTutorialDone();
+            settings.MarkTutorialDone();
+
+            Assert.IsTrue(settings.TutorialDone);
+            Assert.AreEqual(1, changed);
+            Assert.IsTrue(new SettingsService(_store).TutorialDone);
+        }
+
+        [Test]
+        public void FileFromBeforeTheTutorial_LoadsWithTheTutorialNotDone()
+        {
+            _store.Put(SettingsService.SaveKey, new SettingsData { schemaVersion = 2, howToPlaySeen = true });
+
+            var settings = new SettingsService(_store);
+
+            Assert.IsTrue(settings.HowToPlaySeen);
+            Assert.IsFalse(settings.TutorialDone);
+        }
+
+        [Test]
         public void IncrementCompletedMatches_CountsEveryCall()
         {
             var settings = new SettingsService(_store);

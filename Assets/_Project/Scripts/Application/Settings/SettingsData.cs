@@ -12,7 +12,7 @@ namespace Callbreak.Application.Settings
     [Serializable]
     public sealed class SettingsData
     {
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
 
         public int schemaVersion = CurrentVersion;
         public bool music = true;
@@ -28,5 +28,8 @@ namespace Callbreak.Application.Settings
         public int completedMatches;
         public bool beginnerAssist;
         public bool nameNudgeSeen;
+
+        /// <summary>The guided first hand has been finished or skipped (ADR 084, schema 3).</summary>
+        public bool tutorialDone;
     }
 }

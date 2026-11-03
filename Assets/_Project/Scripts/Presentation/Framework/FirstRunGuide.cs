@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Callbreak.Application.Flow;
 using Callbreak.Application.Ports;
 using Callbreak.Application.Profile;
-using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
 using Callbreak.Presentation.Screens;
 using UnityEngine;
@@ -14,7 +13,8 @@ namespace Callbreak.Presentation.Framework
 {
     /// <summary>
     /// GDD §15 "First-time experience" in the menu: the first time the app opens, How to Play
-    /// comes up by itself and, once it is closed, an easy practice match is offered. It only ever
+    /// comes up by itself and, once it is closed, an easy practice match is offered, whose first hand
+    /// is the guided tutorial (ADR 084). It only ever
     /// acts on the bare main menu, so an invite link or a rejoin goes first. The player's name is
     /// asked before all of it, by <see cref="NamePromptPresenter"/> (ADR 022). On that first launch
     /// the menu opens on How to Play's background and logo, without the rules, under the name
@@ -160,7 +160,8 @@ namespace Callbreak.Presentation.Framework
                     _lifetime.Token);
                 if (practice && !_disposed)
                 {
-                    _launcher.Launch(new MatchLaunchRequest(MatchMode.Offline, BotDifficulty.Easy));
+                    // ADR 084: until it has been finished or skipped, this match is the guided tutorial.
+                    _launcher.Launch(FirstRun.PracticeMatch(_settings));
                 }
             }
             catch (Exception e)

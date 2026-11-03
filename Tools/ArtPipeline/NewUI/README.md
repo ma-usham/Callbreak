@@ -144,6 +144,17 @@ python -P Tools/ArtPipeline/NewUI/claim_glow.py [out-dir]
 `MainMenuBuilder.AddDailyRewardsGlow()` and `DailyRewardsCustomizer.AddClaimGlows()` add them to the saved
 prefabs, and `ClaimHighlight` breathes them.
 
+## The tutorial's pointing hand: from Figma (ADR 084)
+
+The hand the first-hand tutorial points with is the Figma component Art/Tutorial Pointer 446:518 (section
+"Tutorial · Pointer (ADR 084)" 446:517 on the design-system page 164:2), uploaded from
+`tutorial_pointer.svg`: an ivory glove, index finger up, the thumb folded across the curled fingers, a
+crimson cuff with a gold band, outlined in the kit's dark crimson, with a soft drop shadow. Its two export
+cells (446:519 on black, 446:543 on white, 210 x 272) are shot at 1x with get_screenshot and the alpha is
+recovered (alpha = 1 - (white - black), colour = black / alpha) into `Art/UI/Table/UI_TutorialPointer.png`.
+The fingertip is at (82, 16), the sprite's pivot (0.390, 0.941). `TutorialOverlayBuilder.Build()` puts it in
+the tutorial overlay.
+
 ## The icons and the avatars: drawn here (ADR 065)
 
 `icons.py` draws every icon the game shows as vector art in the rebuild's palette (ink #131211,

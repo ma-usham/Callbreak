@@ -65,6 +65,8 @@ namespace Callbreak.Application.Settings
 
         public bool NameNudgeSeen => _data.nameNudgeSeen;
 
+        public bool TutorialDone => _data.tutorialDone;
+
         /// <summary>True when the file on disk came from a newer app version, so nothing is saved.</summary>
         public bool IsReadOnly => _readOnly;
 
@@ -221,6 +223,17 @@ namespace Callbreak.Application.Settings
             }
 
             _data.nameNudgeSeen = true;
+            Commit();
+        }
+
+        public void MarkTutorialDone()
+        {
+            if (_data.tutorialDone)
+            {
+                return;
+            }
+
+            _data.tutorialDone = true;
             Commit();
         }
 

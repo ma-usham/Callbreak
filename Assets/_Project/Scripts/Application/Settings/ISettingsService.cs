@@ -45,6 +45,9 @@ namespace Callbreak.Application.Settings
         /// <summary>The nudge to pick a name and avatar is shown once, after the first match (GDD §15).</summary>
         bool NameNudgeSeen { get; }
 
+        /// <summary>The first practice match's guided first hand was finished or skipped (ADR 084): it runs once.</summary>
+        bool TutorialDone { get; }
+
         void SetMusic(bool on);
 
         void SetSoundEffects(bool on);
@@ -75,6 +78,8 @@ namespace Callbreak.Application.Settings
         void IncrementCompletedMatches();
 
         void MarkNameNudgeSeen();
+
+        void MarkTutorialDone();
 
         void SetBeginnerAssist(bool on);
     }

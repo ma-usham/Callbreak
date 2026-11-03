@@ -30,6 +30,9 @@ namespace Callbreak.Bootstrap
         [SerializeField] private BiddingPanelView _bidding;
         [SerializeField] private UIScreen[] _screens = Array.Empty<UIScreen>();
 
+        // The first practice match's guided first hand (ADR 084), on its own canvas over the pages.
+        [SerializeField] private TutorialView _tutorial;
+
         protected override void Awake()
         {
             // The room can close while the table is still loading (the host left). Then there is
@@ -104,6 +107,12 @@ namespace Callbreak.Bootstrap
             RegisterPresenter<ScorecardView, ScorecardPresenter>(builder);
             RegisterPresenter<SettingsView, SettingsPresenter>(builder);
             RegisterPresenter<HowToPlayView, HowToPlayPresenter>(builder);
+            if (_tutorial != null)
+            {
+                builder.RegisterComponent(_tutorial);
+                builder.RegisterEntryPoint<TutorialPresenter>();
+            }
+
             RegisterBanner(builder);
         }
 

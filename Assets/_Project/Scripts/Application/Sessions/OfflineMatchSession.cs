@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Callbreak.Application.Cosmetics;
 using Callbreak.Application.Profile;
 using Callbreak.Application.Settings;
+using Callbreak.Application.Tutorial;
 using Callbreak.Bots;
 using Callbreak.Core.Cards;
 using Callbreak.Core.Commands;
@@ -31,6 +32,8 @@ namespace Callbreak.Application.Sessions
     /// worker (the game passes the thread pool, GDD §20), Hard bots think off the main thread.
     /// A new match is dealt from the seed, of a few fair draws, that gives the player the strongest
     /// hands (<see cref="FriendlyDeal"/>, ADR 056), so offline play is friendly at every level.
+    /// A tutorial match (ADR 084) deals <see cref="TutorialDeal.First"/> instead and plays its first
+    /// hand with the <see cref="MatchTutorial"/>, whose captions the bots wait for.
     /// </summary>
     public sealed class OfflineMatchSession : IMatchSession
     {
@@ -43,6 +46,7 @@ namespace Callbreak.Application.Sessions
         private readonly ulong _seed;
         private readonly BotDifficulty _difficulty;
         private readonly bool _resumed;
+        private readonly MatchTutorial _tutorial;
         private readonly List<MatchEvent> _outbox = new List<MatchEvent>();
         private readonly SessionSeat[] _seats = new SessionSeat[4];
 
@@ -82,6 +86,19 @@ namespace Callbreak.Application.Sessions
                 _difficulty = (BotDifficulty)save.difficulty;
                 _resumed = true;
             }
+            else if (request.Tutorial)
+            {
+                // ADR 084: the first hand is the tutorial's, dealt by the player; the shuffles after
+                // it are the match generator's own, which is the one a save keeps.
+                TutorialDeal deal = TutorialDeal.First;
+                _seed = (seeds ?? new CryptoRandom().NextSeed)();
+                _rng = new Pcg32Random(_seed);
+                SeatProfile[] seats = SeatRoster.Offline(
+                    profile.DisplayName, profile.AvatarId, cosmetics.SelectedDeckId,
+                    new Pcg32Random(_seed, 7), settings.CompletedMatches == 0);
+                _engine = new MatchEngine(rules, deal.Random(rules, _rng), new MatchSetup("offline-" + _seed.ToString("x16"), seats, deal.Dealer));
+                _tutorial = new MatchTutorial(deal, LocalSeat, settings.MarkTutorialDone);
+            }
             else
             {
                 // A new match gets the seed, of a few fair draws, that deals the player the
@@ -106,7 +123,8 @@ namespace Callbreak.Application.Sessions
                 SeatProfile p = profiles[s];
                 if (p.IsBot)
                 {
-                    botSeats[(Seat)s] = botFactory.Create(LevelOf(_difficulty));
+                    IBotStrategy strategy = botFactory.Create(LevelOf(_difficulty));
+                    botSeats[(Seat)s] = _tutorial != null ? new TutorialBot(strategy, TutorialDeal.First) : strategy;
                 }
 
                 int.TryParse(p.AvatarId, out int avatar);
@@ -168,6 +186,9 @@ namespace Callbreak.Application.Sessions
 
         public string MatchId => _engine.MatchId;
 
+        /// <summary>The guided first hand of a tutorial match (ADR 084); null for every other match.</summary>
+        public MatchTutorial Tutorial => _tutorial;
+
         public void Start()
         {
             if (_started)
@@ -201,6 +222,12 @@ namespace Callbreak.Application.Sessions
             // Time keeps being observed while paused, so Resume knows how long the pause lasted.
             _now = now;
             if (_status == SessionStatus.Paused)
+            {
+                return;
+            }
+
+            // A tutorial caption is up: the bots wait for its Next (ADR 084).
+            if (_tutorial != null && _tutorial.HoldsBots)
             {
                 return;
             }
@@ -327,6 +354,8 @@ namespace Callbreak.Application.Sessions
 
                 if (e.Visibility.IsVisibleTo(LocalSeat))
                 {
+                    // The tutorial hears of it first, so its step is known before the table plays the event.
+                    _tutorial?.Observe(e);
                     EventReceived?.Invoke(e);
                 }
             }

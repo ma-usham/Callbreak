@@ -1,5 +1,6 @@
 using Callbreak.Application.Flow;
 using Callbreak.Application.Profile;
+using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
 using Callbreak.Tests.EditMode.Support;
 using NUnit.Framework;
@@ -73,6 +74,28 @@ namespace Callbreak.Tests.EditMode.Application.Flow
             Assert.AreEqual(NameCheck.Ok, _profile.TrySetDisplayName("Bikash"));
 
             Assert.IsFalse(FirstRun.AsksName(_profile));
+        }
+
+        [Test]
+        public void PracticeMatch_ANewPlayer_IsAnEasyOfflineTutorial()
+        {
+            MatchLaunchRequest request = FirstRun.PracticeMatch(_settings);
+
+            Assert.AreEqual(MatchMode.Offline, request.Mode);
+            Assert.AreEqual(BotDifficulty.Easy, request.Difficulty);
+            Assert.IsFalse(request.ResumeSaved);
+            Assert.IsTrue(request.Tutorial, "ADR 084: the first practice match teaches the game");
+        }
+
+        [Test]
+        public void PracticeMatch_OnceTheTutorialIsDone_IsAPlainEasyMatch()
+        {
+            _settings.MarkTutorialDone();
+
+            MatchLaunchRequest request = FirstRun.PracticeMatch(_settings);
+
+            Assert.AreEqual(BotDifficulty.Easy, request.Difficulty);
+            Assert.IsFalse(request.Tutorial);
         }
     }
 }

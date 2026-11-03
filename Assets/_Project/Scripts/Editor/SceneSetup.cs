@@ -243,6 +243,16 @@ namespace Callbreak.Editor
             so.ApplyModifiedPropertiesWithoutUndo();
             scopeObject.SetActive(true);
 
+            // Over the pages: the first practice match's guided first hand (ADR 084).
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(TutorialOverlayBuilder.PrefabPath) != null)
+            {
+                TutorialOverlayBuilder.Place(scene);
+            }
+            else
+            {
+                missing.Add("TutorialOverlay");
+            }
+
             string result = Save(scene, TablePath, discardOpenChanges) + $" (table, call panel, {screens.Count} screens";
             return result + (missing.Count > 0 ? "; not built yet: " + string.Join(", ", missing) + ")" : ")");
         }

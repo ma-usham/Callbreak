@@ -1,4 +1,5 @@
 using Callbreak.Application.Profile;
+using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
 
 namespace Callbreak.Application.Flow
@@ -7,7 +8,8 @@ namespace Callbreak.Application.Flow
     /// GDD §15 "First-time experience": what the menu does by itself on a player's first visits.
     /// The menu asks for the player's name until one is chosen (ADR 022, in place of the GDD's
     /// nudge after the first match), and the primer opens once, the first time the app reaches the
-    /// main menu.
+    /// main menu. The practice match offered after it is the guided tutorial until that has been
+    /// finished or skipped (ADR 084).
     /// </summary>
     public static class FirstRun
     {
@@ -21,6 +23,12 @@ namespace Callbreak.Application.Flow
         public static bool AsksName(IProfileService profile)
         {
             return !profile.HasChosenName;
+        }
+
+        /// <summary>The easy offline match the first-run offer starts: the tutorial, until it is done.</summary>
+        public static MatchLaunchRequest PracticeMatch(ISettingsService settings)
+        {
+            return new MatchLaunchRequest(MatchMode.Offline, BotDifficulty.Easy, tutorial: !settings.TutorialDone);
         }
     }
 }

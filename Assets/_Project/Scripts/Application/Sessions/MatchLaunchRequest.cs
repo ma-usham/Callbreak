@@ -7,12 +7,13 @@ namespace Callbreak.Application.Sessions
     /// </summary>
     public sealed class MatchLaunchRequest
     {
-        public MatchLaunchRequest(MatchMode mode, BotDifficulty difficulty, bool resumeSaved = false, string ruleSetId = "nepali-standard")
+        public MatchLaunchRequest(MatchMode mode, BotDifficulty difficulty, bool resumeSaved = false, string ruleSetId = "nepali-standard", bool tutorial = false)
         {
             Mode = mode;
             Difficulty = difficulty;
             ResumeSaved = resumeSaved;
             RuleSetId = ruleSetId;
+            Tutorial = tutorial;
         }
 
         public MatchMode Mode { get; }
@@ -23,5 +24,11 @@ namespace Callbreak.Application.Sessions
         public bool ResumeSaved { get; }
 
         public string RuleSetId { get; }
+
+        /// <summary>
+        /// Offline only, a new match: its first hand is the guided tutorial (ADR 084), the first
+        /// practice match a new player accepts.
+        /// </summary>
+        public bool Tutorial { get; }
     }
 }

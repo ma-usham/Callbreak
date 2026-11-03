@@ -67,7 +67,17 @@ namespace Callbreak.Presentation.Table
             set => _chips.ReduceMotion = value;
         }
 
+        /// <summary>The Confirm button, for the tutorial's pointer (ADR 084).</summary>
+        public RectTransform ConfirmRect => (RectTransform)_confirmButton.transform;
+
         private RectTransform PanelRect => (RectTransform)_panel.transform;
+
+        /// <summary>The chip of <paramref name="call"/>, for the tutorial's pointer (ADR 084); null for a call the row does not offer.</summary>
+        public RectTransform ChipOf(int call)
+        {
+            int index = call - _minCall;
+            return index >= 0 && index < _chip.Length && _chip[index] != null && _chip[index].gameObject.activeSelf ? _chip[index] : null;
+        }
 
         /// <summary>The chips to offer: RuleSet.MinCall to RuleSet.MaxCall.</summary>
         public void SetCallRange(int minCall, int maxCall)
