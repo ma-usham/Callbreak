@@ -6,7 +6,8 @@ greet the player back to the game (below, "App open ads"), and an AdMob banner s
 during a match and on the main menu (below, "The banner on the table", "The banner on the main
 menu"). They come through the
 Google Mobile Ads Unity plugin (`com.google.ads.mobile` 11.5.0, from OpenUPM) and the External
-Dependency Manager it brings (`com.google.external-dependency-manager` 1.2.187, EDM4U). In the
+Dependency Manager it brings (`com.google.external-dependency-manager` 1.2.187, EDM4U). Unity Ads
+bids for the same ad requests through AdMob mediation (below, "Mediation"). In the
 Editor, in the tests and in desktop builds stand-ins take their place: one completes every Earn
 Coins ad (`StandInRewardedAds`), another never has an ad between matches (`StandInInterstitialAds`),
 and the banners are never there (`StandInBannerAds`). No ad network is touched there; ads are checked
@@ -175,6 +176,60 @@ main menu the same **320 x 50 banner**, of the same ad unit, sits in the **botto
   - `BannerSlot` sits a banner on its bottom edge for the menu (`AtBottom`);
   - tests: `BannerAdsTests` and `MenuBannerRoomTests` (EditMode), `MenuBannerFlowTests` (PlayMode).
 
+## Mediation: Unity Ads
+
+The owner (3 Nov 2026, ADR 085): "I want to add ads mediation in my game so that the ads gets
+filled". From the proposal they picked "admob, applovin, unityads bidding only", then, the same
+evening: "lets just use unity ads and admob for bidding".
+
+- **How it works.** The game asks AdMob for an ad on the same four ad units as before. For each
+  request AdMob runs a live auction (bidding) between Google's own advertisers and Unity Ads, and the
+  higher bid shows. When Google has no ad, Unity may. Nothing in the game's code changed: the Google
+  Mobile Ads SDK finds the adapter itself.
+- **Bidding only.** No waterfall: no reporting API key and no eCPM floors to keep up. Unity Ads'
+  waterfall ended on 31 Jan 2026 in any case.
+- **Who bids on what** (Google's AdMob mediation guides, Nov 2026):
+
+  | Format, ad unit | Mediation group | Ad sources | Unity placement |
+  | --- | --- | --- | --- |
+  | Rewarded, Earn Coins (`.../8532471334`) | Callbreak Android Rewarded | AdMob, Unity Ads | `BP_Rewarded_Android` |
+  | Interstitial, between matches (`.../4319920270`) | Callbreak Android Interstitial | AdMob, Unity Ads | `BP_Interstitial_Android` |
+  | Banner, table and menu (`.../8330163494`) | Callbreak Android Banner | AdMob, Unity Ads | `BP_Banner_Android` |
+  | App open (`.../9889671064`) | none: the AdMob (default) group | AdMob | none |
+
+  Unity Ads doesn't bid on app open ads (Liftoff Monetize, Mintegral and Pangle do, if they are ever
+  added).
+- **Unity's side** (Unity Dashboard, organization DayZero Games, project Callbreak, made 3 Nov 2026):
+  the app "Callbreak: Nepali Taas Game" (Google Play, `com.dayzerogames.callbreak`), general audience
+  (not directed to children), no developer data shared with Unity. Its Android **Game ID** is
+  `800422836`, and the three bidding placements are in the table above. AdMob's Unity Ads mappings
+  hold the Game ID and placement IDs; the app carries none of them.
+- **Payments.** Unity pays its share itself, to the owner's Unity account (Monetization >
+  Payments), with its own payment details, tax form, minimum payout and schedule. AdMob pays only
+  for Google's ads. AdMob's mediation report shows both sources' estimated earnings side by side.
+- **The adapter** (Google's, from OpenUPM, under the `com.google.ads.mobile` scope):
+  `com.google.ads.mobile.mediation.unity` 3.21.1, with the Android adapter
+  `com.google.ads.mediation:unity:4.20.1.0` and Unity Ads 4.20.1. It needs `com.google.ads.mobile`
+  11.0.0 or later and builds on the `play-services-ads` 25.4.0 the plugin ships. Unity's 3.22.0
+  (Unity Ads 4.21.0) would pull `play-services-ads` up to 25.5.0, so it waits until the plugin moves
+  there. EDM4U writes the two libraries into `mainTemplate.gradle`. (The AppLovin adapter, added
+  first, was taken out again.)
+- **Consent.** UMP stores the player's choice as IAB TCF strings on the phone. The adapter passes
+  that GDPR consent on to Unity Ads (since adapter 3.20.0), so the game calls nothing of Unity's. The
+  European regulations message in AdMob must list **Unity Ads** among its ad partners (below, "What
+  the owner does"). US state privacy choices are not passed on: the game shows no US states message.
+  If one is ever published, call `UnityAds.SetConsentMetaData("privacy.consent", ...)` before
+  `MobileAds.Initialize`.
+- **Release builds (R8).** No keep module is needed. The Google Mobile Ads SDK's own consumer rules
+  keep every adapter class (it creates them by name), and the Unity Ads library brings keep rules of
+  its own. A release build minified with R8 builds clean with it (ADR 085).
+- **Testing mediation.** Development builds use Google's test units, which never reach mediation.
+  To see Unity's ads, use a release build on a phone registered as an AdMob test device (below),
+  with test mode on in Unity's dashboard (Monetization > Testing, for that device or all devices).
+  AdMob's **Ad Inspector** shows which source filled each request and can test one source at a time;
+  on a test device it opens with the gesture chosen in AdMob > Settings > Test devices. Turn Unity's
+  test mode off before release.
+
 ## Checking the ads
 
 ADR 077 (the owner, 3 Nov 2026: "remove that test ads from the system. I will check on android
@@ -239,17 +294,25 @@ their choice later. Settings then shows a **Privacy options** button under its p
    google.com, pub-1025159441369051, DIRECT, f08c47fec0942fa0
    ```
 
-6. **Play Console.**
+   With mediation (above), add Unity's lines under it, copied from Unity's dashboard, as they are
+   specific to the owner's account.
+
+6. **Unity Ads** (above, "Mediation"). In the Unity Dashboard (DayZero Games), add payment and tax
+   details under Monetization > Payments. In AdMob > Privacy & messaging, add Unity Ads to the ad
+   partners of the European regulations message (and of a US states message, if there is one).
+
+7. **Play Console.**
    - App content > Ads: "Yes, my app contains ads" (rewarded ads, full-screen ads between
      matches and on the return to the game, and a banner during matches).
    - App content > Advertising ID: the app uses it, for advertising (the SDK adds the
      `com.google.android.gms.permission.AD_ID` permission).
    - Data safety: declare the data the Google Mobile Ads SDK collects and shares (see Google's
      guide "Prepare for Google Play's Data safety section" for AdMob: device and other identifiers,
-     approximate location, app interactions, diagnostics).
+     approximate location, app interactions, diagnostics), and with mediation what the Unity Ads
+     SDK collects too (Unity publishes its own Data safety guide).
    - Target audience: if it includes children, the Families policy applies and ad requests must be
      tagged; today nothing is tagged.
-7. **iOS (later).** There is no iOS AdMob app yet. With the plugin installed, an iOS build stops in
+8. **iOS (later).** There is no iOS AdMob app yet. With the plugin installed, an iOS build stops in
    the plugin's build step ("iOS Google Mobile Ads app ID is empty") until an iOS app id is entered
    in the plugin's settings, and a release iOS build shows no ads until `AdMobIds` has iOS units.
    Development iOS builds would use Google's iOS test units.
@@ -257,7 +320,8 @@ their choice later. Settings then shows a **Privacy options** button under its p
 ## The Android build
 
 - **Libraries.** EDM4U writes AdMob's Android libraries (play-services-ads 25.4.0, user-messaging-
-  platform 4.0.0, and three AndroidX libraries) into `Assets/Plugins/Android/mainTemplate.gradle`,
+  platform 4.0.0, and three AndroidX libraries), and Unity's mediation adapter (4.20.1.0) with
+  Unity Ads 4.20.1, into `Assets/Plugins/Android/mainTemplate.gradle`,
   between `// Android Resolver Dependencies Start` and `End`. That file is Unity 6000.3.18f1's own
   template, switched on in Player Settings > Publishing Settings > **Custom Main Gradle Template**.
   The plugin re-runs the resolver before every Android build; by hand it is **Assets > External
