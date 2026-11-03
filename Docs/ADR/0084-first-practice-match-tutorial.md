@@ -78,10 +78,12 @@
   are centred over a dim that takes every touch. While the match menu, the scorecard or settings cover
   the table the caption steps aside.
 - **The pointing hand was designed in Figma** at the owner's request: Art/Tutorial Pointer 446:518 on the
-  design-system page (an ivory glove, index finger up, thumb across the curled fingers, a crimson cuff
+  design-system page (an ivory glove, a slim index finger up, the other fingers curled, a crimson cuff
   with a gold band, the kit's dark-crimson outline and a soft shadow), exported on black and white with
   the alpha recovered into `UI_TutorialPointer.png`. On a card it shows the pull that plays it; on a chip
-  or a button it taps. With Reduce motion it stands still.
+  or a button it taps. With Reduce motion it stands still. On 4 Nov the owner hid its thumb in Figma
+  and asked for a narrower index finger: the finger went from 38 to 28 units wide about its centre, so
+  the fingertip, and the sprite's pivot, stayed where they were.
 - **Copy** is in `UI.csv` (`ui.tutorial.*`), reusing the rules primer's unused `rules.primer.*_title`,
   `rules.primer.score_body`, `rules.primer.highlight` and `rules.must_follow`.
 

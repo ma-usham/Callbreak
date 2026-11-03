@@ -148,8 +148,9 @@ prefabs, and `ClaimHighlight` breathes them.
 
 The hand the first-hand tutorial points with is the Figma component Art/Tutorial Pointer 446:518 (section
 "Tutorial · Pointer (ADR 084)" 446:517 on the design-system page 164:2), uploaded from
-`tutorial_pointer.svg`: an ivory glove, index finger up, the thumb folded across the curled fingers, a
-crimson cuff with a gold band, outlined in the kit's dark crimson, with a soft drop shadow. Its two export
+`tutorial_pointer.svg`: an ivory glove, a slim index finger up (28 wide), the other fingers curled and
+no thumb (the owner hid it, 4 Nov 2026), a crimson cuff with a gold band, outlined in the kit's dark
+crimson, with a soft drop shadow. Its two export
 cells (446:519 on black, 446:543 on white, 210 x 272) are shot at 1x with get_screenshot and the alpha is
 recovered (alpha = 1 - (white - black), colour = black / alpha) into `Art/UI/Table/UI_TutorialPointer.png`.
 The fingertip is at (82, 16), the sprite's pivot (0.390, 0.941). `TutorialOverlayBuilder.Build()` puts it in
