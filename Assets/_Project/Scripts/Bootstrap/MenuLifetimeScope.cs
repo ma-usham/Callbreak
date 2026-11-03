@@ -99,6 +99,9 @@ namespace Callbreak.Bootstrap
 
             // An app open ad may greet the player back on the bare main menu (ADR 047).
             builder.RegisterEntryPoint<ReturnToGameAdMoment>();
+
+            // Google Play's review card may follow a win, on the bare main menu (ADR 080).
+            builder.RegisterEntryPoint<ReviewMoment>();
         }
 
         /// <summary>

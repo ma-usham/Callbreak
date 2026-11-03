@@ -10,6 +10,7 @@ using Callbreak.Application.Ports;
 using Callbreak.Application.Analytics;
 using Callbreak.Application.Profile;
 using Callbreak.Application.Recording;
+using Callbreak.Application.Reviews;
 using Callbreak.Application.Rooms;
 using Callbreak.Application.Sessions;
 using Callbreak.Application.Settings;
@@ -147,6 +148,7 @@ namespace Callbreak.Bootstrap
             builder.Register<SceneLoader>(Lifetime.Singleton).As<ISceneLoader>();
             builder.Register<AppFlow>(Lifetime.Singleton).As<IAppFlow>();
             RegisterUpdates(builder);
+            RegisterReviews(builder);
 
             // Bots and online play (GDD §9, §24-27). Rooms and Quick Match live for the whole app,
             // because a room outlasts the Menu and Table scenes.
@@ -423,6 +425,31 @@ namespace Callbreak.Bootstrap
                     () => System.DateTime.UtcNow,
                     Debug.Log),
                 Lifetime.Singleton);
+        }
+
+        /// <summary>
+        /// Google Play's review card (the owner, 3 Nov 2026; ADR 080). On Android, Play's in-app review,
+        /// asked for on the bare main menu after a win (<see cref="ReviewPrompt"/>). In the Editor, in
+        /// the tests and on desktop, a stand-in that shows nothing. The rule is made at the start, so it
+        /// hears every match recorded from then on.
+        /// </summary>
+        private static void RegisterReviews(IContainerBuilder builder)
+        {
+#if !UNITY_EDITOR && UNITY_ANDROID
+            builder.Register<IStoreReview>(_ => new Callbreak.Infrastructure.Reviews.PlayStoreReview(), Lifetime.Singleton);
+#else
+            builder.Register<IStoreReview>(_ => new StandInStoreReview(), Lifetime.Singleton);
+#endif
+            builder.Register(
+                resolver => new ReviewPrompt(
+                    resolver.Resolve<ISaveStore>(),
+                    resolver.Resolve<IStatsService>(),
+                    resolver.Resolve<IStoreReview>(),
+                    () => System.DateTime.UtcNow,
+                    Debug.Log),
+                Lifetime.Singleton)
+                .As<IReviewPrompt>();
+            builder.RegisterBuildCallback(resolver => resolver.Resolve<IReviewPrompt>());
         }
 
         /// <summary>
