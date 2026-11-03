@@ -71,6 +71,22 @@ namespace Callbreak.Application.Economy
 
         public bool MayShow => !_disposed && Wanted;
 
+        public BannerSize ExpectedSize
+        {
+            get
+            {
+                try
+                {
+                    return _network.ExpectedSize;
+                }
+                catch (Exception e)
+                {
+                    _log("Banner ads: the expected size could not be read: " + e.Message);
+                    return default;
+                }
+            }
+        }
+
         /// <summary>Ads may be requested: the player doesn't own No Ads.</summary>
         private bool Wanted
         {

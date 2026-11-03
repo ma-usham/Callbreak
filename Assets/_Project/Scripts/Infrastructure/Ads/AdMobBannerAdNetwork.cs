@@ -44,6 +44,20 @@ namespace Callbreak.Infrastructure.Ads
             _start = start ?? throw new ArgumentNullException(nameof(start));
         }
 
+        public BannerSize ExpectedSize
+        {
+            get
+            {
+                float scale = MobileAds.Utils.GetDeviceScale();
+                if (scale <= 0f)
+                {
+                    scale = 1f;
+                }
+
+                return new BannerSize(Mathf.CeilToInt(320f * scale), Mathf.CeilToInt(50f * scale));
+            }
+        }
+
         public async Task<bool> StartAsync()
         {
             if (string.IsNullOrEmpty(_adUnitId))

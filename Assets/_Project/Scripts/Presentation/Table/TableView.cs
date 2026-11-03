@@ -67,24 +67,27 @@ namespace Callbreak.Presentation.Table
         [SerializeField] private float _roundPillPadding = 30f;
 
         // The banner ad at the top of the table (the owner, 14 and 26 Oct 2026, ADR 051; ADR 057).
-        // While a banner may come, the table makes room for it: the top seat and the trick come down
-        // a little (canvas units), so the banner covers nothing of the game. The top seat stands higher
-        // since ADR 060 and comes further down, to below the banner's slot; the trick comes down about
-        // half as far, still clear of the top seat's fan and of the hand. The slot is an empty
+        // The normal seat layout stays intact. A banner is hidden when the full seat cannot clear
+        // it without crowding the logo and round pill; otherwise only the necessary left shift is
+        // made. The slot is an empty
         // rectangle across the top of the HUD, from right of the logo and the round line to the right
         // edge, that the ad network's own view is placed over; it is off while the table makes no room.
         // The banner keeps the gap from the round line's pill, however long its words are, and sits in
         // the slot's top-right corner, where no button is (Scores and Settings stand under Home).
         [SerializeField] private RectTransform _bannerSlot;
-        [SerializeField] private float _bannerSeatDrop = 80f;
-        [SerializeField] private float _bannerTrickDrop = 40f;
         [SerializeField] private float _bannerGap = 48f;
+        [SerializeField] private RectTransform _bannerLogo;
+        [SerializeField] private RectTransform _bannerTopPlate;
+        [SerializeField] private RectTransform _bannerTopPill;
+        [SerializeField] private RectTransform _bannerTopTimerRing;
+        [SerializeField] private RectTransform _bannerTopDisc;
+        [SerializeField] private RectTransform _bannerTopChat;
+        [SerializeField] private RectTransform _bannerTopBubble;
 
         private readonly Vector3[] _bannerCorners = new Vector3[4];
         private readonly Vector3[] _pillCorners = new Vector3[4];
         private bool _bannerRoom;
         private Vector2 _topSeatHome;
-        private Vector2 _trickHome;
         private MotionHandle _coverMotion;
         private bool _reduceMotion;
 
@@ -252,35 +255,72 @@ namespace Callbreak.Presentation.Table
 
         /// <summary>
         /// Makes room at the top of the table for the banner ad, or gives it back (ADR 051, 057): the
-        /// slot, the top seat and the trick as the fields above describe; the logo and the round line
+        /// slot and the top seat as the fields above describe; the logo, round line and trick
         /// stay where they are. Called when the table opens, before anything is dealt. A prefab built
         /// before the slot keeps its look.
         /// </summary>
-        public void SetBannerRoom(bool room)
+        public void SetBannerRoom(bool room, BannerSize expectedSize)
         {
             if (_bannerSlot == null || room == _bannerRoom)
             {
                 return;
             }
 
-            _bannerRoom = room;
-            _bannerSlot.gameObject.SetActive(room);
-
-            // Seat 2 is the top seat (relative positions: 0 bottom, 1 right, 2 top, 3 left).
             var topSeat = (RectTransform)_seat[2].transform;
-            var trick = (RectTransform)_trick.transform;
-            if (room)
+            if (!room)
             {
-                _topSeatHome = topSeat.anchoredPosition;
-                _trickHome = trick.anchoredPosition;
-                topSeat.anchoredPosition = _topSeatHome + (Vector2.down * _bannerSeatDrop);
-                trick.anchoredPosition = _trickHome + (Vector2.down * _bannerTrickDrop);
-            }
-            else
-            {
+                _bannerRoom = false;
+                _bannerSlot.gameObject.SetActive(false);
                 topSeat.anchoredPosition = _topSeatHome;
-                trick.anchoredPosition = _trickHome;
+                return;
             }
+
+            _topSeatHome = topSeat.anchoredPosition;
+            RectTransform canvas = (RectTransform)GetComponentInParent<Canvas>().rootCanvas.transform;
+            float unitsPerPixel = canvas.GetComponent<Canvas>().renderMode == RenderMode.WorldSpace
+                ? 1f : canvas.rect.width / Screen.width;
+            float width = expectedSize.Width * unitsPerPixel;
+            float height = expectedSize.Height * unitsPerPixel;
+            TopSeatBannerLayout.Bounds slot = BoundsOf(_bannerSlot, canvas);
+            if (width <= 0f || height <= 0f || width > slot.Right - slot.Left || height > slot.Top - slot.Bottom)
+            {
+                return;
+            }
+
+            var banner = new TopSeatBannerLayout.Bounds(slot.Right - width, slot.Top - height, slot.Right, slot.Top);
+            var pieces = new[]
+            {
+                BoundsOf(_bannerTopPlate, canvas), BoundsOf(_bannerTopPill, canvas),
+                BoundsOf(_bannerTopTimerRing, canvas), BoundsOf(_bannerTopDisc, canvas),
+                BoundsOf(_seat[2].Fan.FullHandBounds(), canvas), BoundsOf(_bannerTopChat, canvas),
+                BoundsOf(_bannerTopBubble, canvas)
+            };
+            var obstacles = new[] { BoundsOf(_bannerLogo, canvas), BoundsOf(_roundPill, canvas) };
+            TopSeatBannerLayout.Placement placement = TopSeatBannerLayout.Place(banner, pieces, obstacles, 8f, _bannerGap);
+            if (!placement.Fits)
+            {
+                return;
+            }
+
+            topSeat.anchoredPosition = _topSeatHome + (Vector2.left * placement.LeftShift);
+            _bannerRoom = true;
+            _bannerSlot.gameObject.SetActive(true);
+        }
+
+        private static TopSeatBannerLayout.Bounds BoundsOf(RectTransform rect, RectTransform canvas)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            Vector3 bottomLeft = canvas.InverseTransformPoint(corners[0]);
+            Vector3 topRight = canvas.InverseTransformPoint(corners[2]);
+            return new TopSeatBannerLayout.Bounds(bottomLeft.x, bottomLeft.y, topRight.x, topRight.y);
+        }
+
+        private static TopSeatBannerLayout.Bounds BoundsOf(Rect rect, RectTransform canvas)
+        {
+            Vector3 bottomLeft = canvas.InverseTransformPoint(rect.min);
+            Vector3 topRight = canvas.InverseTransformPoint(rect.max);
+            return new TopSeatBannerLayout.Bounds(bottomLeft.x, bottomLeft.y, topRight.x, topRight.y);
         }
 
         /// <summary>

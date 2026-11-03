@@ -72,17 +72,16 @@ namespace Callbreak.Editor.Screens
         // ---- The trick, by relative seat (0 bottom, 1 right, 2 top, 3 left), as the owner's own table
         // mock-ups lay it (2 Nov 2026, ADR 070, in place of ADR 062's full-size cross: "when throwing a
         // card make it a bit small so that it feels like card is being thrown like in real"). A thrown
-        // card shrinks to TrickCardScale of the hand's as it flies, 140 x 195 canvas units. The top
+        // card shrinks to TrickCardScale of the hand's as it flies, about 150 x 208 canvas units. The top
         // and the bottom card stand upright, one above the other, TrickColumnGap apart; the side cards
         // lie sideways beside them at the centre's height, their tops towards the players who played
         // them, TrickSideGap clear of the column, so the four make a "+" (the owner, 2 Nov 2026: "the
         // thrown card at any angle kinda looks like something is off ... rotated on 90 like we did
         // before"; ADR 075, in place of ADR 070's 8° lean). The deck lies at the centre,
         // as small, while a round is dealt. The cross stands midway between the top seat's fan and a
-        // lifted hand card with the banner's room made (TableView brings the top seat down 80 canvas
-        // units and the trick 40): since the top seat rose (ADR 072), about the screen's middle.
-        private static readonly Vector2 TrickCentre = new Vector2(836.2f, 472.2f);
-        private const float TrickCardScale = 0.75f * HandCardScale;
+        // lifted hand card, about the screen's middle.
+        private static readonly Vector2 TrickCentre = new Vector2(836.2f, 446.2f);
+        private const float TrickCardScale = 0.8f * HandCardScale;
         private const float TrickColumnGap = 12f;
         private const float TrickSideGap = 8f;
         private const float TrickSideTurn = 90f;
@@ -206,9 +205,8 @@ namespace Callbreak.Editor.Screens
 
         // The tail's tip stops this far outside the avatar's timer ring (mockup px), up and 30° over
         // to the box's side, so that the tail, which leans 30°, points at the avatar's centre. The
-        // top seat's box stands right of its seconds disc, its rim's foot this far below the avatar's
-        // centre: above the right end of the fan, and below the banner's slot when the seat comes down
-        // to make room for it (ADR 072).
+        // top seat's box stands right of its seconds disc, with its rim's foot a little below the
+        // avatar's centre. A banner is shown only where the full seat, including this box, fits.
         private const float ChatTipGap = 8f;
         private const float ChatTipTurn = 30f;
         private const float ChatBesideGap = 8f;
@@ -235,7 +233,7 @@ namespace Callbreak.Editor.Screens
         // canvas units. While a banner may come, its slot spans the top of the safe area from this far
         // right of the logo and the round line to the right edge, as tall as the largest standard
         // banner (320 x 50 dp is 150 units on a 360 dp-tall phone) and a little more; the banner sits
-        // in its top-right corner. TableView brings the top seat and the trick down to clear it.
+        // in its top-right corner. TableView shifts the top seat left only where it fits.
         private const float BannerGap = 48f;
         private const float BannerSlotHeight = 155f;
 
@@ -563,7 +561,7 @@ namespace Callbreak.Editor.Screens
             Vector2 bubbleCentre = avatarCentre + BubbleOffsets[seat];
             RectTransform bubble = UiBuildKit.CreateAt("Bubble", root, bubbleCentre, seatCentre, UiBuildKit.FromMock(90f, BubbleHeight));
             Sliced(bubble, LoadTableSprite("UI_NamePlate"));
-            TextMeshProUGUI bubbleText = Label("Text", bubble, nameStyle, "4");
+            TextMeshProUGUI bubbleText = Label("Text", bubble, nameStyle, string.Empty);
             bubble.gameObject.SetActive(false);
 
             // The chip: how the seat's player is connected (GDD §8; a fill-in bot has none, ADR 025).
@@ -630,7 +628,17 @@ namespace Callbreak.Editor.Screens
                 button.targetGraphic = ringFace;
                 NoNavigation(button);
                 so.FindProperty("_avatarButton").objectReferenceValue = button;
-                so.FindProperty("_fan").objectReferenceValue = BuildFan(ctx, seat, pool, avatarCentre);
+                OpponentHandView fan = BuildFan(ctx, seat, pool, avatarCentre);
+                so.FindProperty("_fan").objectReferenceValue = fan;
+                if (seat == 2)
+                {
+                    ctx.Bound["_bannerTopPlate"] = ctx.Nodes["SeatPlate2"];
+                    ctx.Bound["_bannerTopPill"] = statusPill;
+                    ctx.Bound["_bannerTopTimerRing"] = timerRing;
+                    ctx.Bound["_bannerTopDisc"] = disc;
+                    ctx.Bound["_bannerTopChat"] = chat;
+                    ctx.Bound["_bannerTopBubble"] = bubble;
+                }
             }
 
             so.ApplyModifiedPropertiesWithoutUndo();
@@ -1076,6 +1084,7 @@ namespace Callbreak.Editor.Screens
             slot.offsetMax = Vector2.zero;
             slot.gameObject.SetActive(false);
             ctx.Bound["_bannerSlot"] = slot;
+            ctx.Bound["_bannerLogo"] = ctx.Nodes["Logo"];
         }
 
         /// <summary>

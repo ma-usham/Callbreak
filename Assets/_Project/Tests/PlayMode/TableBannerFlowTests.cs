@@ -15,8 +15,8 @@ namespace Callbreak.Tests.PlayMode
     /// <summary>
     /// The banner ad at the top of the table (the owner, 26 Oct 2026, ADR 051) in the real Boot, Menu
     /// and Table scenes, over a scripted banner network (as AdMob is on phones) and the game's own No
-    /// Ads, in an offline match. While No Ads isn't owned the table makes room when it opens (the top
-    /// seat and the trick come down; the logo and the round line under it stay on the left, ADR 057)
+    /// Ads, in an offline match. While No Ads isn't owned the table makes room when it opens only
+    /// where the normal player layout fits beside the banner (ADR 087)
     /// and the banner shows in the top-right corner of its slot while the bare table is in front; under the
     /// scorecard, settings and the match menu it is off the screen. Buying No Ads takes it away and the
     /// table keeps its look for the rest of the match; a player who owns No Ads opens the table as it
@@ -123,6 +123,29 @@ namespace Callbreak.Tests.PlayMode
             Assert.AreEqual(requestedOnTheMenu, _network.Starts + _network.Loads, "the table requests nothing");
         }
 
+        [UnityTest]
+        public IEnumerator WhenTheNormalLayoutHasNoRoom_TheBannerNeverShows_EvenWhenTheTableComesBackInFront()
+        {
+            yield return Boot();
+            _network.ExpectedSize = new BannerSize(Screen.width * 2, Screen.height);
+            yield return StartOfflineMatch();
+            TableView table = Object.FindFirstObjectByType<TableView>();
+            yield return null;
+
+            Assert.IsFalse(table.HasBannerRoom);
+            Assert.IsFalse(table.TryGetBannerSlot(out _), "no slot for an ad that cannot fit");
+            Assert.IsNotNull(_network.Banner, "the screen's ad service preloads a banner off screen");
+            Assert.IsFalse(_network.Banner.OnScreen);
+            Assert.AreEqual(0, _network.Banner.Shows, "a loaded banner is never placed on this table");
+
+            GameFixture.PressIn(table, "ScoresButton");
+            yield return null;
+            Assert.IsTrue(_game.TableRouter.Back());
+            yield return null;
+            Assert.IsFalse(_network.Banner.OnScreen, "returning to the table keeps the fallback");
+            Assert.AreEqual(0, _network.Banner.Shows);
+        }
+
         private IEnumerator Boot()
         {
             yield return _game.Boot(extra: builder => builder.RegisterInstance<IBannerAdNetwork>(_network));
@@ -163,6 +186,8 @@ namespace Callbreak.Tests.PlayMode
         /// <summary>A banner network that starts and loads at once; its banner is tiny, so it fits any Game view.</summary>
         private sealed class ScriptedBannerNetwork : IBannerAdNetwork
         {
+            public BannerSize ExpectedSize { get; set; } = new BannerSize(32, 5);
+
             public int Starts { get; private set; }
 
             public int Loads { get; private set; }
@@ -197,8 +222,11 @@ namespace Callbreak.Tests.PlayMode
 
             public int Destroys { get; private set; }
 
+            public int Shows { get; private set; }
+
             public void ShowAt(int x, int y)
             {
+                Shows++;
                 X = x;
                 Y = y;
                 OnScreen = true;

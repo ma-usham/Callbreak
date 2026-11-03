@@ -1,3 +1,4 @@
+using Callbreak.Application.Economy;
 using Callbreak.Presentation.Table;
 using NUnit.Framework;
 using UnityEditor;
@@ -10,19 +11,18 @@ namespace Callbreak.Tests.EditMode.Unity
     /// 2026, ADR 057), on the table prefab laid out on a 16:9, 21:9 and 4:3 canvas. Scores and
     /// Settings stand under Home as icons, clear of the left seat. The CALLBREAK logo stands right of
     /// Home, and "ROUND 1 / 5" under it on a status pill that keeps the width of its words; the top
-    /// centre has neither. With room made, the logo and the round line stay, the top seat and the trick
-    /// come down, and the banner's slot spans the top of the safe area from right of the logo and the
-    /// round line to the right edge, tall enough for the largest standard banner (320 x 50 dp on a 360
-    /// dp-tall phone: 960 x 150 canvas units), clear of every button and of the top seat; the banner
-    /// sits in its top-right corner. Giving the room back puts everything where it was. The prefab is
+    /// centre has neither. With room made, the logo and the round line stay, the top seat slides left
+    /// only where the actual banner rectangle needs it, and the trick does not move. The banner's slot
+    /// spans the top of the safe area to the right edge; the banner sits in its top-right corner.
+    /// Giving the room back puts everything where it was. The prefab is
     /// the built one, so these live outside the folders the dotnet harness compiles.
     /// </summary>
     public sealed class TableBannerRoomTests
     {
         private const string TablePrefab = "Assets/_Project/Prefabs/UI/Screens/Table.prefab";
 
-        /// <summary>The largest standard banner on a phone, in canvas units (320 x 50 dp, 360 dp tall).</summary>
-        private static readonly Vector2 PhoneBanner = new Vector2(960f, 150f);
+        /// <summary>A standard banner on a 420 dpi, 1080 px-high phone, in canvas units.</summary>
+        private static readonly Vector2 PhoneBanner = new Vector2(840f, 131f);
 
         /// <summary>A 320 x 50 dp banner on a 4:3 tablet 1024 dp wide, in canvas units.</summary>
         private static readonly Vector2 TabletBanner = new Vector2(600f, 94f);
@@ -101,7 +101,7 @@ namespace Callbreak.Tests.EditMode.Unity
             }
         }
 
-        [TestCase(1920f, 1080f)]
+        [TestCase(2400f, 1080f)]
         [TestCase(2520f, 1080f)]
         [TestCase(1920f, 1440f)]
         public void WithRoom_TheBannerFitsAtTheTop_CoveringNothing(float width, float height)
@@ -109,7 +109,8 @@ namespace Callbreak.Tests.EditMode.Unity
             Open(width, height);
             _view.SetRound("ROUND 1 / 5");
 
-            _view.SetBannerRoom(true);
+            Vector2 banner = height > 1080f ? TabletBanner : PhoneBanner;
+            _view.SetBannerRoom(true, new BannerSize((int)banner.x, (int)banner.y));
 
             Assert.IsTrue(_view.HasBannerRoom);
             Assert.IsTrue(Find("Logo").gameObject.activeSelf, "the logo stays");
@@ -126,7 +127,9 @@ namespace Callbreak.Tests.EditMode.Unity
             Assert.GreaterOrEqual(slot.xMin, logo.xMax + 47.5f, "clear of the logo");
             Assert.GreaterOrEqual(slot.xMin, pill.xMax + 47.5f, "and of the round line's pill");
 
-            // No button under the slot (AdMob: no ad next to buttons). The table's own tap catchers
+            Rect ad = Rect.MinMaxRect(slot.xMax - banner.x, slot.yMax - banner.y, slot.xMax, slot.yMax);
+
+            // No button under the banner rectangle (AdMob: no ad next to buttons). The table's own tap catchers
             // cover the whole screen and are not buttons a player aims at.
             foreach (UnityEngine.UI.Button button in _canvas.GetComponentsInChildren<UnityEngine.UI.Button>(false))
             {
@@ -136,49 +139,99 @@ namespace Callbreak.Tests.EditMode.Unity
                     continue;
                 }
 
-                Assert.IsFalse(box.Overlaps(slot), button.name + " clear of the banner's slot");
+                Assert.IsFalse(box.Overlaps(ad), button.name + " clear of the banner");
             }
 
-            Vector2 banner = height > 1080f ? TabletBanner : PhoneBanner;
             Assert.GreaterOrEqual(slot.width, banner.x, "the banner fits across");
             Assert.GreaterOrEqual(slot.height, banner.y, "and down");
 
-            // Nothing of the game under the slot: the top seat (name plate, status pill, avatar,
-            // fan, speech box) and the trick are below it.
-            foreach (string piece in new[] { "SeatPlate2", "SeatPill2", "SeatRing2", "SeatFan2", "TrickArea" })
+            // The seat clears the actual banner rectangle; the trick can stay under the empty slot.
+            foreach (string piece in new[] { "SeatPlate2", "SeatPill2", "SeatRing2", "SeatFan2" })
             {
-                Assert.LessOrEqual(Box(Find(piece)).yMax, slot.yMin, piece + " below the banner");
+                Assert.IsFalse(Box(Find(piece)).Overlaps(ad), piece + " clear of the banner");
             }
         }
 
         [Test]
-        public void WithRoom_TheTopSeatAndTheTrickComeDown_AndNothingElseMoves()
+        public void WithRoom_OnAWidePhone_SeatAndTrickStayAtHome()
         {
-            Open(1920f, 1080f);
+            Open(2520f, 1080f);
             Vector2 top = Anchored("Seat2");
             Vector2 trick = Anchored("TrickArea");
             Vector2 left = Anchored("Seat3");
             Vector2 right = Anchored("Seat1");
             Vector2 local = Anchored("Seat0");
 
-            _view.SetBannerRoom(true);
+            _view.SetBannerRoom(true, new BannerSize(840, 131));
 
-            Assert.AreEqual(top + new Vector2(0f, -80f), Anchored("Seat2"));
-            Assert.AreEqual(trick + new Vector2(0f, -40f), Anchored("TrickArea"));
+            Assert.AreEqual(top, Anchored("Seat2"), "the banner clears the top seat at home");
+            Assert.AreEqual(trick, Anchored("TrickArea"), "the trick stays put");
             Assert.AreEqual(left, Anchored("Seat3"));
             Assert.AreEqual(right, Anchored("Seat1"));
             Assert.AreEqual(local, Anchored("Seat0"));
 
-            _view.SetBannerRoom(true);
-            Assert.AreEqual(top + new Vector2(0f, -80f), Anchored("Seat2"), "asked twice, it comes down once");
+            Vector2 shifted = Anchored("Seat2");
+            _view.SetBannerRoom(true, new BannerSize(840, 131));
+            Assert.AreEqual(shifted, Anchored("Seat2"), "asked twice, nothing moves");
 
-            _view.SetBannerRoom(false);
+            _view.SetBannerRoom(false, default);
 
             Assert.AreEqual(top, Anchored("Seat2"), "everything back where it was");
             Assert.AreEqual(trick, Anchored("TrickArea"));
             Assert.IsTrue(Find("Logo").gameObject.activeSelf);
             Assert.IsTrue(Find("RoundLabel").gameObject.activeSelf);
             Assert.IsFalse(Find("BannerSlot").gameObject.activeSelf);
+        }
+
+        [TestCase(840, 131)]
+        [TestCase(960, 150)]
+        public void NarrowPhone_WhenNormalSeatCannotClearBanner_HidesBannerAndLeavesSeatAtHome(int bannerWidth, int bannerHeight)
+        {
+            Open(1920f, 1080f);
+            _view.Seat(2).Fan.SetCount(13);
+            Rect predicted = _view.Seat(2).Fan.FullHandBounds();
+            Rect actual = FanCards(_view.Seat(2).Fan);
+            Assert.AreEqual(actual.xMin, predicted.xMin, 1f, "predicted left edge of all 13 cards");
+            Assert.AreEqual(actual.xMax, predicted.xMax, 1f, "predicted right edge of all 13 cards");
+            Assert.AreEqual(actual.yMax, predicted.yMax, 1f, "predicted top edge of all 13 cards");
+            Vector2 top = Anchored("Seat2");
+            Vector2 trick = Anchored("TrickArea");
+
+            _view.SetBannerRoom(true, new BannerSize(bannerWidth, bannerHeight));
+
+            Assert.IsFalse(_view.HasBannerRoom);
+            Assert.IsFalse(Find("BannerSlot").gameObject.activeSelf);
+            Assert.IsFalse(_view.TryGetBannerSlot(out _));
+            Assert.AreEqual(top, Anchored("Seat2"));
+            Assert.AreEqual(trick, Anchored("TrickArea"));
+            Assert.IsFalse(Box(Find("Logo")).Overlaps(Box(Find("SeatPlate2"))));
+            Assert.IsFalse(Box(Find("RoundPill")).Overlaps(Box(Find("SeatPill2"))));
+        }
+
+        [Test]
+        public void WiderPhone_WhenOnlySpeechTouchesBanner_SlidesNormalSeatJustEnoughToClearIt()
+        {
+            Open(2400f, 1080f);
+            _view.Seat(2).Fan.SetCount(13);
+            Vector2 top = Anchored("Seat2");
+            Vector2 trick = Anchored("TrickArea");
+
+            _view.SetBannerRoom(true, new BannerSize(960, 150));
+
+            Assert.IsTrue(_view.HasBannerRoom);
+            Assert.Less(Anchored("Seat2").x, top.x);
+            Assert.AreEqual(top.y, Anchored("Seat2").y, 0.01f);
+            Assert.AreEqual(trick, Anchored("TrickArea"));
+            Rect slot = Box(Find("BannerSlot"));
+            Rect banner = Rect.MinMaxRect(slot.xMax - 960f, slot.yMax - 150f, slot.xMax, slot.yMax);
+            foreach (string piece in new[] { "SeatPlate2", "SeatPill2", "SeatTimerRing2", "SeatTimerDisc2" })
+            {
+                Assert.IsFalse(Box(Find(piece)).Overlaps(banner), piece + " clears the banner");
+            }
+
+            Assert.IsFalse(FanCards(_view.Seat(2).Fan).Overlaps(banner), "all 13 rendered fan cards clear the banner");
+            Assert.IsFalse(Box(Find("Logo")).Overlaps(Box(Find("SeatPlate2"))));
+            Assert.IsFalse(Box(Find("RoundPill")).Overlaps(Box(Find("SeatPill2"))));
         }
 
         [Test]
@@ -273,6 +326,26 @@ namespace Callbreak.Tests.EditMode.Unity
             var corners = new Vector3[4];
             ((RectTransform)transform).GetWorldCorners(corners);
             return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
+        }
+
+        private static Rect FanCards(OpponentHandView fan)
+        {
+            float left = float.MaxValue, bottom = float.MaxValue;
+            float right = float.MinValue, top = float.MinValue;
+            foreach (CardView card in fan.Area.GetComponentsInChildren<CardView>(false))
+            {
+                var corners = new Vector3[4];
+                card.Rect.GetWorldCorners(corners);
+                foreach (Vector3 corner in corners)
+                {
+                    left = Mathf.Min(left, corner.x);
+                    bottom = Mathf.Min(bottom, corner.y);
+                    right = Mathf.Max(right, corner.x);
+                    top = Mathf.Max(top, corner.y);
+                }
+            }
+
+            return Rect.MinMaxRect(left, bottom, right, top);
         }
     }
 }
