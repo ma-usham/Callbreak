@@ -269,11 +269,11 @@ namespace Callbreak.Tests.EditMode.Unity
             Open(2400f, 1080f);
             Deal();
 
-            // Over a fifth and under a quarter of the screen's height: the owner asked for the cards "by
-            // small amount" larger than a fifth (3 Nov 2026, ADR 083), having found 9% larger than the
-            // shared card "way too big" (ADR 062).
+            // About a quarter of the screen's height: the owner asked for the cards "by small amount"
+            // larger than a fifth twice (3 Nov 2026, ADR 083; 4 Nov 2026, ADR 086), having found 9% larger
+            // than the shared card "way too big" (ADR 062).
             Vector2 card = SizeOf(Find("HandLayer").GetComponentInChildren<CardView>(false));
-            Assert.That(card.y / Box(_canvas.transform).height, Is.InRange(0.21f, 0.24f), "a card is a little over a fifth of the screen's height");
+            Assert.That(card.y / Box(_canvas.transform).height, Is.InRange(0.22f, 0.26f), "a card is about a quarter of the screen's height");
 
             // Every face's rank, the first ink from the top of its corner, stands MinRank canvas units
             // or more at the table's size, in every deck.

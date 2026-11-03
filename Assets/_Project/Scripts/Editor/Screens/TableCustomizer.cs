@@ -42,7 +42,7 @@ namespace Callbreak.Editor.Screens
         // its whole middle card shows, HandBelow canvas units of cloth under it (the end cards, bent
         // lower, still run off the bottom edge).
         private const float HandBelow = 10f;
-        private const float HandShows = HandCardHeight + HandBelow; // 253 canvas units
+        private const float HandShows = HandCardHeight + HandBelow; // 270 canvas units
         private const float HandCentreX = 836.2f;               // the trick's centre
         private const float HandWidthFraction = 0.772f;         // 94.5 px between cards on the mockup; the GDD says 70%
 
@@ -56,10 +56,10 @@ namespace Callbreak.Editor.Screens
 
         // The hand's cards are under a quarter of the screen's height: the owner found them "way too
         // big" at 9% larger than the shared card (30 Oct 2026), so they were drawn at 0.8 of it (ADR
-        // 062's addendum), then asked for them "by small amount" larger (3 Nov 2026, ADR 083): at
-        // HandCardScale of it, 175 x 243 canvas units (Figma's card shape since ADR 068). The touch
-        // area reaches HandTouchAbove canvas units above the middle card.
-        private const float HandCardScale = 0.86f;
+        // 062's addendum), then asked for them "by small amount" larger twice (3 Nov 2026, ADR 083: 0.86;
+        // 4 Nov 2026, ADR 086): at HandCardScale of it, 187 x 260 canvas units (Figma's card shape since
+        // ADR 068). The touch area reaches HandTouchAbove canvas units above the middle card.
+        private const float HandCardScale = 0.92f;
         private const float HandCardHeight = HandCardScale * TableCardBuilder.CardHeight;
         private const float HandTouchAbove = 35f;
 
@@ -72,7 +72,7 @@ namespace Callbreak.Editor.Screens
         // ---- The trick, by relative seat (0 bottom, 1 right, 2 top, 3 left), as the owner's own table
         // mock-ups lay it (2 Nov 2026, ADR 070, in place of ADR 062's full-size cross: "when throwing a
         // card make it a bit small so that it feels like card is being thrown like in real"). A thrown
-        // card shrinks to TrickCardScale of the hand's as it flies, 131 x 182 canvas units. The top
+        // card shrinks to TrickCardScale of the hand's as it flies, 140 x 195 canvas units. The top
         // and the bottom card stand upright, one above the other, TrickColumnGap apart; the side cards
         // lie sideways beside them at the centre's height, their tops towards the players who played
         // them, TrickSideGap clear of the column, so the four make a "+" (the owner, 2 Nov 2026: "the
