@@ -163,6 +163,8 @@ namespace Callbreak.Tests.PlayMode
         /// <summary>A banner network that starts and loads at once; its banner is tiny, so it fits any Game view.</summary>
         private sealed class ScriptedBannerNetwork : IBannerAdNetwork
         {
+            public BannerSize ExpectedSize => new BannerSize(32, 5);
+
             public int Starts { get; private set; }
 
             public int Loads { get; private set; }

@@ -25,6 +25,9 @@ namespace Callbreak.Application.Economy
         /// </summary>
         bool MayShow { get; }
 
+        /// <summary>The banner's expected screen-pixel size, available before one loads.</summary>
+        BannerSize ExpectedSize { get; }
+
         /// <summary>
         /// The banner may show in <paramref name="slot"/>: now when one is loaded and fits there,
         /// otherwise as soon as one is. Asked again with the same slot, nothing changes; with another,

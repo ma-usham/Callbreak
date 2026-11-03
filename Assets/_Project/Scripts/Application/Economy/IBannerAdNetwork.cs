@@ -10,6 +10,9 @@ namespace Callbreak.Application.Economy
     /// </summary>
     public interface IBannerAdNetwork
     {
+        /// <summary>The standard banner's expected screen-pixel size before it loads.</summary>
+        BannerSize ExpectedSize { get; }
+
         /// <summary>
         /// Gets the network ready to request ads: the player's consent where the law asks for it, then
         /// the SDK. True when ads may be requested; false when they may not yet (no consent, no
@@ -19,6 +22,20 @@ namespace Callbreak.Application.Economy
 
         /// <summary>Loads one banner, off the screen; null when none came (no fill, no network, no consent).</summary>
         Task<IBannerAd> LoadAsync();
+    }
+
+    /// <summary>A banner's width and height in screen pixels.</summary>
+    public readonly struct BannerSize
+    {
+        public BannerSize(int width, int height)
+        {
+            Width = width;
+            Height = height;
+        }
+
+        public int Width { get; }
+
+        public int Height { get; }
     }
 
     /// <summary>

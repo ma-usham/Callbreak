@@ -115,6 +115,33 @@ namespace Callbreak.Presentation.Table
 
         public float CardScale => _cardScale;
 
+        /// <summary>The world-space rectangle a full 13-card fan will occupy, before any cards are dealt.</summary>
+        public Rect FullHandBounds()
+        {
+            Vector2 half = _pool.CardSize * (_cardScale * 0.5f);
+            float left = float.MaxValue, bottom = float.MaxValue;
+            float right = float.MinValue, top = float.MinValue;
+            for (int i = 0; i < Deck.HandSize; i++)
+            {
+                CardPlacement pose = PlacementOf(i, Deck.HandSize);
+                Quaternion rotation = Quaternion.Euler(0f, 0f, pose.Rotation);
+                foreach (Vector2 corner in new[]
+                {
+                    new Vector2(-half.x, -half.y), new Vector2(-half.x, half.y),
+                    new Vector2(half.x, half.y), new Vector2(half.x, -half.y)
+                })
+                {
+                    Vector3 point = _area.TransformPoint(pose.Position + (Vector2)(rotation * corner));
+                    left = Mathf.Min(left, point.x);
+                    bottom = Mathf.Min(bottom, point.y);
+                    right = Mathf.Max(right, point.x);
+                    top = Mathf.Max(top, point.y);
+                }
+            }
+
+            return Rect.MinMaxRect(left, bottom, right, top);
+        }
+
         /// <summary>With Reduce motion the cards jump to their new places instead of gliding (GDD §14).</summary>
         public bool ReduceMotion { get; set; }
 

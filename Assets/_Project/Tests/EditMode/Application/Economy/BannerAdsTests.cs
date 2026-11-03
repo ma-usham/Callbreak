@@ -634,6 +634,8 @@ namespace Callbreak.Tests.EditMode.Application
 
         private sealed class ScriptedNetwork : IBannerAdNetwork
         {
+            public BannerSize ExpectedSize => new BannerSize(BannerWidth, BannerHeight);
+
             private TaskCompletionSource<bool> _start;
             private TaskCompletionSource<IBannerAd> _load;
 

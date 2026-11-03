@@ -11,6 +11,8 @@ namespace Callbreak.Application.Economy
 
         public bool MayShow => false;
 
+        public BannerSize ExpectedSize => default;
+
         public void ShowIn(BannerSlot slot)
         {
         }

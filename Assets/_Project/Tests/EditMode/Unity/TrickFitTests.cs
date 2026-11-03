@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using Callbreak.Application.Economy;
 using Callbreak.Application.Cosmetics;
 using Callbreak.Core.Cards;
 using Callbreak.Presentation.Feedback;
@@ -15,7 +16,7 @@ namespace Callbreak.Tests.EditMode.Unity
     /// so that it feels like card is being thrown like in real", "move our cards a bit up and remove
     /// the tips/suggestion box"; ADR 070, in place of ADR 062's full-size cross). On the table prefab
     /// laid out on a 16:9, 20:9, 21:9 and 4:3 canvas, with and without its room for the banner ad
-    /// (ADR 051, 057): a trick card is three quarters of the hand's card; the four lie apart in a
+    /// (ADR 051, 057, 087): a trick card is four fifths of the hand's card; the four lie apart in a
     /// "+" round the middle, the top and the bottom one upright, the side ones lying sideways towards
     /// their players (ADR 075); the top one is below the top seat and its full fan, the side ones clear the
     /// side seats and their fans, and the bottom one is above the hand with a card lifted. There is
@@ -57,7 +58,7 @@ namespace Callbreak.Tests.EditMode.Unity
         private const float Clear = 5f;
 
         /// <summary>A thrown card's size, of the hand card's.</summary>
-        private const float TrickShare = 0.75f;
+        private const float TrickShare = 0.8f;
 
         /// <summary>How far a side card is turned towards its player, in degrees: it lies sideways (ADR 075).</summary>
         private const float SideLean = 90f;
@@ -84,10 +85,10 @@ namespace Callbreak.Tests.EditMode.Unity
         public void AFullTrick_OfSmallerCards_LiesApartRoundTheMiddle_ClearOfTheSeatsAndTheHand(float width, float height, bool bannerRoom)
         {
             Open(width, height);
-            _view.SetBannerRoom(bannerRoom);
+            _view.SetBannerRoom(bannerRoom, height > 1080f ? new BannerSize(600, 94) : new BannerSize(840, 131));
             Rect[] trick = Deal();
 
-            // Three quarters of the hand's card, upright at the top and the bottom, lying sideways
+            // Four fifths of the hand's card, upright at the top and the bottom, lying sideways
             // with its top towards the player who played it at the sides (seats: 0 bottom, 1 right,
             // 2 top, 3 left; a positive angle turns anticlockwise, so the left card's top points left).
             float[] leans = { 0f, -SideLean, 0f, SideLean };
@@ -161,7 +162,7 @@ namespace Callbreak.Tests.EditMode.Unity
         public void TheTopSeat_HasItsNameAndCallLeftOfItsAvatar_AndStandsWhereItsNameDid(float width, float height, bool bannerRoom)
         {
             Open(width, height);
-            _view.SetBannerRoom(bannerRoom);
+            _view.SetBannerRoom(bannerRoom, height > 1080f ? new BannerSize(600, 94) : new BannerSize(840, 131));
             Deal();
             RectTransform seat = Find("Seat2");
             Rect timer = Box(Find("SeatTimerRing2"));
@@ -188,13 +189,13 @@ namespace Callbreak.Tests.EditMode.Unity
                 Assert.LessOrEqual(said.xMax, timer.xMin, words + " clear of the avatar");
             }
 
-            // The seconds disc and the speech box stand right of the avatar, the bubble left of the
-            // name; each clear of the others and of the fan, under the banner's slot when there is one.
+            // The seconds disc stands right of the avatar; the speech box and bubble stand to the left,
+            // clear of the others and of the fan.
             Rect disc = Box(FindIn(seat, "SeatTimerDisc2"));
             Rect chat = Box(FindIn(seat, "Chat"));
             Rect bubble = Box(FindIn(seat, "Bubble"));
             Assert.GreaterOrEqual(disc.center.x, timer.center.x, "the seconds disc on the avatar's right");
-            Assert.GreaterOrEqual(chat.xMin, disc.xMax - 0.5f, "the speech box right of the disc");
+            Assert.LessOrEqual(chat.xMax, timer.xMin - 1f, "the speech box left of the avatar");
             Assert.LessOrEqual(bubble.xMax, Mathf.Min(plate.xMin, pill.xMin), "the bubble left of the name and the call");
             Rect canvas = Box(_canvas.transform);
             foreach (Rect piece in new[] { plate, pill, disc, chat, bubble })
@@ -215,9 +216,12 @@ namespace Callbreak.Tests.EditMode.Unity
             if (bannerRoom)
             {
                 Rect slot = Box(Find("BannerSlot"));
-                foreach (Rect piece in new[] { plate, pill, timer, disc, chat, bubble })
+                float bannerWidth = height > 1080f ? 600f : 840f;
+                float bannerHeight = height > 1080f ? 94f : 131f;
+                Rect banner = Rect.MinMaxRect(slot.xMax - bannerWidth, slot.yMax - bannerHeight, slot.xMax, slot.yMax);
+                foreach (Rect piece in new[] { plate, pill, timer, disc, chat, bubble, Fan(2) })
                 {
-                    Assert.LessOrEqual(piece.yMax, slot.yMin, "below the banner's slot");
+                    Assert.IsFalse(piece.Overlaps(banner), "the top seat clears the banner rectangle");
                 }
             }
 

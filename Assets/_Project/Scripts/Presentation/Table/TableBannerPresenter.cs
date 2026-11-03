@@ -46,7 +46,7 @@ namespace Callbreak.Presentation.Table
             _toast = toast;
         }
 
-        public void Start() => _table.SetBannerRoom(_banner.MayShow);
+        public void Start() => _table.SetBannerRoom(_banner.MayShow, _banner.ExpectedSize);
 
         public void Tick()
         {

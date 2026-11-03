@@ -23,6 +23,9 @@ namespace Callbreak.Presentation.Table
 
         public int Free => _free.Count;
 
+        /// <summary>The shared card's unscaled size, for predicting a full opponent fan before it is dealt.</summary>
+        public Vector2 CardSize => _prefab.Size;
+
         private void Awake()
         {
             Prewarm(DeckSize);
