@@ -188,7 +188,9 @@ evening: "lets just use unity ads and admob for bidding".
   Mobile Ads SDK finds the adapter itself.
 - **Bidding only.** No waterfall: no reporting API key and no eCPM floors to keep up. Unity Ads'
   waterfall ended on 31 Jan 2026 in any case.
-- **Who bids on what** (Google's AdMob mediation guides, Nov 2026):
+- **Who bids on what.** The mediation groups were made in AdMob with the owner on 3 Nov 2026, all
+  countries, enabled. Unity Ads' bidding agreement was accepted then. AppLovin, an earlier bidding
+  partner of the account, has nothing mapped.
 
   | Format, ad unit | Mediation group | Ad sources | Unity placement |
   | --- | --- | --- | --- |
@@ -216,8 +218,8 @@ evening: "lets just use unity ads and admob for bidding".
   first, was taken out again.)
 - **Consent.** UMP stores the player's choice as IAB TCF strings on the phone. The adapter passes
   that GDPR consent on to Unity Ads (since adapter 3.20.0), so the game calls nothing of Unity's. The
-  European regulations message in AdMob must list **Unity Ads** among its ad partners (below, "What
-  the owner does"). US state privacy choices are not passed on: the game shows no US states message.
+  European regulations message in AdMob must list **Unity Ads** among its ad partners, and it does
+  (below, "What the owner does"). US state privacy choices are not passed on: the game shows no US states message.
   If one is ever published, call `UnityAds.SetConsentMetaData("privacy.consent", ...)` before
   `MobileAds.Initialize`.
 - **Release builds (R8).** No keep module is needed. The Google Mobile Ads SDK's own consumer rules
@@ -286,7 +288,8 @@ their choice later. Settings then shows a **Privacy options** button under its p
 4. **Link the Play listing.** Once the game is on Google Play: AdMob > Apps > Callbreak > App
    settings > link the app to its store listing. AdMob then reviews the app; until then it shows
    "Requires review, limited ad serving", and real ads, rewarded and between matches, are few or
-   none (test ads are not affected).
+   none (test ads are not affected). Done: on 3 Nov 2026 AdMob showed Callbreak as "Ready, ad
+   serving enabled", linked to Google Play.
 5. **app-ads.txt.** The Play listing needs a developer website. Put a file at
    `https://<that domain>/app-ads.txt` with this line:
 
@@ -294,12 +297,17 @@ their choice later. Settings then shows a **Privacy options** button under its p
    google.com, pub-1025159441369051, DIRECT, f08c47fec0942fa0
    ```
 
-   With mediation (above), add Unity's lines under it, copied from Unity's dashboard, as they are
-   specific to the owner's account.
+   The file is at `https://callbreak.dayzerogames.tech/app-ads.txt`, and AdMob finds it (Apps >
+   app-ads.txt, 3 Nov 2026). With mediation (above), add Unity's lines under it: its own
+   `unity.com, 127840420, DIRECT, 96cabb5fbdde37a7` and about 150 RESELLER lines, copied from Unity
+   Dashboard > Monetization > Settings > Organization > App-ads.txt, which keeps the list current.
+   Unity also needs the site: its Developer website there was empty, so its crawler could not read
+   the file ("badUrlForm").
 
 6. **Unity Ads** (above, "Mediation"). In the Unity Dashboard (DayZero Games), add payment and tax
-   details under Monetization > Payments. In AdMob > Privacy & messaging, add Unity Ads to the ad
-   partners of the European regulations message (and of a US states message, if there is one).
+   details under Monetization > Payments. The consent messages need nothing: "Callbreak - European
+   regulations" (published 28 Oct 2026) uses AdMob's commonly used ad partners, which include Unity
+   Ads (IAB vendor 1549). If they are ever switched to a hand-picked list, keep Unity Ads on it.
 
 7. **Play Console.**
    - App content > Ads: "Yes, my app contains ads" (rewarded ads, full-screen ads between

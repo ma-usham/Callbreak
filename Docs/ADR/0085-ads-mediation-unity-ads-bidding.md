@@ -39,7 +39,8 @@ From the proposal they first picked "admob, applovin, unityads bidding only", th
     with Unity Ads (the owner's choice);
   - Android Game ID `800422836`;
   - three bidding placements: `BP_Rewarded_Android`, `BP_Interstitial_Android`, `BP_Banner_Android`.
-- **The mediation groups** (AdMob, Android, one per format):
+- **The mediation groups** (AdMob, Android, one per format, made with the owner on 3 Nov 2026, all
+  countries, enabled; the owner accepted Unity Ads' bidding agreement):
 
   | Group | Ad unit | Ad sources | Unity placement |
   | --- | --- | --- | --- |
@@ -63,9 +64,10 @@ From the proposal they first picked "admob, applovin, unityads bidding only", th
   unchanged. Unity's IDs live only in AdMob's mappings.
 - **Consent.** UMP keeps the player's choice as IAB TCF strings. The adapter (since 3.20.0) passes
   that GDPR consent on to Unity Ads, so nothing is called. AdMob's European regulations message must
-  list Unity Ads among its ad partners. US state choices are not passed on, as the game shows no US
-  states message. If one is published, `UnityAds.SetConsentMetaData("privacy.consent", ...)` must be
-  called before `MobileAds.Initialize`.
+  list Unity Ads among its ad partners, and it does: "Callbreak - European regulations" uses the
+  commonly used ad partners, Unity Ads (IAB vendor 1549) among them. US state choices are not
+  passed on, as the game shows no US states message. If one is published,
+  `UnityAds.SetConsentMetaData("privacy.consent", ...)` must be called before `MobileAds.Initialize`.
 - **No R8 keep module.** The SDK's own consumer rules (`play-services-ads-api`) keep every class that
   implements or extends its mediation adapter types. The Unity Ads library carries keep rules of its
   own (`-keep class com.unity3d.ads.** { *; }`, `com.unity3d.services.**` and more). Nothing in the
@@ -99,7 +101,7 @@ From the proposal they first picked "admob, applovin, unityads bidding only", th
   mode on, and AdMob's Ad Inspector.
 - **The owner's part** (`Docs/Setup/AdMob.md`, "What the owner does"):
   - Unity's payment and tax details;
-  - Unity's lines in `app-ads.txt`;
-  - Unity Ads among the consent messages' ad partners;
+  - Unity's lines in `https://callbreak.dayzerogames.tech/app-ads.txt`, and that site as Unity's
+    Developer website;
   - Play Console's Data safety for the Unity Ads SDK;
   - test devices.
